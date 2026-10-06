@@ -1,6 +1,7 @@
 """Shell:B Web — FastAPI backend serving the UI and the agent API."""
 import asyncio
 import json
+import os
 import re
 import shutil
 import time
