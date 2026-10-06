@@ -126,17 +126,17 @@ address (`_ShortNameRedirect` in app.py). Check with `tailscale serve status`; r
 
 ```mermaid
 flowchart TD
-    User(["Client Browser / Tailscale Device"]) <-->|Tailscale HTTPS :8443 / Loopback :8200| Web["Shell:B Web Server\n(FastAPI / React 19 / Uvicorn)"]
+    User(["Client Browser / Tailscale Device"]) <-->|"Tailscale HTTPS :8443 / Loopback :8200"| Web["Shell:B Web Server<br/>FastAPI / React 19 / Uvicorn"]
     
-    subgraph Local Hardware & Service Stack
-        Web <-->|Streaming Tokens & Prompts| Ollama["Ollama Serving\n(Qwen3.6 / Swift / Coder)"]
-        Web <-->|Isolated Execution (/work)| Sandbox["Docker Sandbox\n(--network none)"]
-        Web <-->|Private Web Search| Vassago["VASSAGO\n(SearXNG :8080)"]
-        Web <-->|Whisper VAD & Kokoro TTS| Hermes["HERMES Voice\n(Port :8001)"]
-        Web <-->|MusicGen / AudioCraft| Orpheus["ORPHEUS Audio\n(Port :8002)"]
-        Web <-->|FLUX / ComfyUI Pipelines| Nyx["NYX Visuals\n(Port :8188)"]
-        Web <-->|ZIM Offline Wikipedia & Maps| Kiwix["Kiwix & Protomaps\n(Local Archives)"]
-        Web <-->|FTS5 Search, Vectors, State| DB[("SQLite DB\nshellb.db + Embeddings")]
+    subgraph LocalStack ["Local Hardware and Service Stack"]
+        Web <-->|"Streaming Tokens and Prompts"| Ollama["Ollama Serving<br/>Qwen3.6 / Swift / Coder"]
+        Web <-->|"Isolated Execution: /work"| Sandbox["Docker Sandbox<br/>network none"]
+        Web <-->|"Private Web Search"| Vassago["VASSAGO<br/>SearXNG :8080"]
+        Web <-->|"Whisper VAD and Kokoro TTS"| Hermes["HERMES Voice<br/>Port :8001"]
+        Web <-->|"MusicGen and AudioCraft"| Orpheus["ORPHEUS Audio<br/>Port :8002"]
+        Web <-->|"FLUX and ComfyUI Pipelines"| Nyx["NYX Visuals<br/>Port :8188"]
+        Web <-->|"ZIM Offline Wikipedia and Maps"| Kiwix["Kiwix and Protomaps<br/>Local Archives"]
+        Web <-->|"FTS5 Search, Vectors, State"| DB[("SQLite DB<br/>shellb.db + Embeddings")]
     end
 ```
 

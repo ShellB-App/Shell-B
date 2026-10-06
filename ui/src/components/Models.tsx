@@ -104,7 +104,7 @@ export function Models({ busyTurns }: { busyTurns: number }) {
             <h1 className="text-2xl font-semibold tracking-tight flex-1">Models</h1>
             <button className={btn.icon} onClick={load} title="Refresh"><RotateCw className="w-4 h-4" /></button>
           </div>
-          <p className="text-sm text-[var(--text-secondary)]">What's installed, what's holding memory right now, and room to change both. The CPU and GPU share one pool of memory on this DGX Spark, so a loaded model is memory nothing else can use.</p>
+          <p className="text-sm text-[var(--text-secondary)]">What's installed, what's holding memory right now, and room to change both. A loaded model uses unified memory nothing else can use.</p>
           {error && <div className="mt-3 flex items-start gap-2 text-xs text-red-400"><AlertTriangle className="w-3.5 h-3.5 mt-px shrink-0" />{error}</div>}
         </div>
 

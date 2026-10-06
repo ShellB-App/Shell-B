@@ -146,7 +146,11 @@ export function App() {
   const [groupRefresh, setGroupRefresh] = useState(0);
   const [focusTick, setFocusTick] = useState(0); // bumped by newChat so the composer refocuses even when already on a blank chat
   const pendingGroup = useRef<string | null>(null); // project the next new chat is created in
-  const [sidebar, setSidebar] = useState(() => window.innerWidth >= 768);
+  const [sidebar, setSidebar] = useState(() =>
+    window.innerWidth >= 768 &&
+    !/[?&](?:sidebar=0|nosidebar|shot)\b/.test(location.search) &&
+    (!location.hash || /^#\/(?:c\/|$)/.test(location.hash))
+  );
   const [panel, setPanel] = useState<{ id: string; version?: number } | null>(null);
   const [modal, setModal] = useState<null | 'agents' | 'tools' | 'settings' | 'palette'>(null);
   const [formFactorOpen, setFormFactorOpen] = useState(false);
@@ -817,7 +821,7 @@ export function App() {
               onVoiceMode={voiceMode ? undefined : () => setVoiceMode(true)}
             />
             <div className="text-center text-[10px] text-[var(--text-muted)] mt-1.5">
-              {activeModel}{agent.cloud ? '' : ' on this DGX Spark'} · Shell:B can make mistakes; check anything important.
+              {activeModel}{agent.cloud ? '' : ' · local'} · Shell:B can make mistakes; check anything important.
             </div>
           </div>
         </div>

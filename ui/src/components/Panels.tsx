@@ -342,7 +342,7 @@ function SystemTab({ status, models, onOpenTab }: { status?: Status; models: Mod
           </table>
         </div>
       </div>
-      <div className="text-[11px] text-[var(--text-muted)]">Shell:B Web v{status?.version} · everything above runs on this DGX Spark.</div>
+      <div className="text-[11px] text-[var(--text-muted)]">Shell:B Web v{status?.version} · everything above runs locally on this system.</div>
     </div>
   );
 }
