@@ -1,7 +1,112 @@
-# Shell:B Web
+<div align="center">
 
-The Shell:B chat interface: a local, Claude-desktop-style web app over the Shell:B stack. Everything runs on this
-DGX Spark. Nothing leaves the building unless you switch on Cloud AI or an online connector.
+# 🐚 SHELL : B
+
+**Local-first AI workstation, autonomous multi-agent cockpit, and creative operating system.**
+
+*Built here. Runs here. Stays here. Nothing leaves your machine.*
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-blue.svg?style=for-the-badge&logo=gnu" alt="License: AGPL v3" /></a>
+  <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.12" /></a>
+  <a href="https://react.dev"><img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React 19" /></a>
+  <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" /></a>
+  <a href="https://tailwindcss.com"><img src="https://img.shields.io/badge/Tailwind-3.4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" /></a>
+  <a href="https://ollama.ai"><img src="https://img.shields.io/badge/Ollama-Native%20Local-black?style=for-the-badge&logo=ollama&logoColor=white" alt="Ollama" /></a>
+  <a href="https://docker.com"><img src="https://img.shields.io/badge/Docker-Sandboxed%20Execution-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Sandbox" /></a>
+  <a href="https://tailscale.com"><img src="https://img.shields.io/badge/Tailscale-Mesh%20TLS-2563EB?style=for-the-badge&logo=tailscale&logoColor=white" alt="Tailscale" /></a>
+  <img src="https://img.shields.io/badge/Zero-Cloud%20Telemetry-10b981?style=for-the-badge&logo=shield" alt="Zero Telemetry" />
+</p>
+
+---
+
+<p align="center">
+  <img src="screenshots/hero-dark.png" alt="Shell:B Cockpit" width="100%" />
+</p>
+
+<p align="center">
+  <b><a href="#-dedication--the-ethos">Dedication & Ethos</a></b> •
+  <b><a href="#-the-agent-swarm">Agent Swarm</a></b> •
+  <b><a href="#-interface-showcase">Showcase</a></b> •
+  <b><a href="#what-it-does">Features</a></b> •
+  <b><a href="#%EF%B8%8F-architecture">Architecture</a></b> •
+  <b><a href="#-access--networking">Networking</a></b>
+</p>
+
+</div>
+
+---
+
+The Shell:B chat interface: a local, Claude-desktop-style web app over the Shell:B stack. Everything runs entirely on your own local hardware — whether a multi-GPU workstation, home server, desktop, or laptop. Nothing leaves the building unless you explicitly switch on Cloud AI or an online connector.
+
+## 💛 Dedication & The Ethos
+
+> **For Shelby.**  
+> *This project is named in honor of and dedicated to my best friend, Shelby.*
+
+A significant portion of Shell:B was coded in collaboration with AI — notably driven by the **Shell:B** models themselves. This recursive craftsmanship is fundamental to the ethos of the application: **the app evolves according to the needs and self-reflection of the AI**.
+
+Shell:B is not a rigid or prescriptive appliance; it is a **living, extensible scaffold** designed for you to make entirely your own.
+
+---
+
+## 🤖 The Agent Swarm
+
+Shell:B is not a single generic chatbot; it is a collaborative swarm of specialized agents. Each persona has its own tuned system prompt, temperature, reasoning effort, tool permissions, and context configuration — all editable on the fly in the **Agent Lab**.
+
+| Agent | Glyph | Domain & Specialty | Core Model | Tools & Capabilities |
+| :--- | :---: | :--- | :--- | :--- |
+| **Shell:B** | `✦` | **The Orchestrator**<br>Central intelligence, complex multi-step orchestration, tool delegation, and general problem solving. | `ShellB-Swift` | Web search & fetch, document OCR, Python sandbox, artifacts, audio/visual generation, memory, sub-agent delegation. |
+| **Hephaestus** | `⚒` | **Engineering & Code Forge**<br>Writes, executes, tests, and debugs production-quality software. Inspects git diffs and commits code. | `ShellB-Forge`<br>*(Qwen3-Coder-Next)* | Isolated Docker sandbox execution, artifact generation, code verification, multi-file editing. |
+| **Daedalus** | `◭` | **Creative Studio & Product Design**<br>Architects interactive web apps, slide decks, playable games, Three.js 3D scenes, and branding with legendary design standards. | `ShellB-Swift` | Full-stack project generation, live preview canvas, asset creation, Three.js/HTML5 game synthesis. |
+| **Minerva** | `◈` | **Deep Research & Analysis**<br>Autonomous web research, primary source triangulation, citation formatting, and Research Board curation. | `ShellB-Swift` | VASSAGO web search, Trafilatura page extraction, quantitative computing, persistent research boards. |
+| **Mimir** | `◇` | **Knowledge & Reference Desk**<br>Zero-internet factual reference. Consults local Kiwix ZIM Wikipedia, personal Codex, and past conversation memory. | `ShellB-Swift` | Offline Kiwix ZIM reader, episodic FTS5 message search, semantic memory recall, strict source attribution. |
+| **Heimdall** | `◉` | **Sensory Cortex & Vision**<br>Document inspection, blueprint and diagram analysis, screenshot review, and high-precision character transcription. | `ShellB-Swift` | Dual-engine OCR (RapidOCR for part numbers/code, vision model for handwriting/tables), PyMuPDF rendering. |
+| **NYX** | `✿` | **Generative Visuals & Audio**<br>Digital artist and sound studio. Produces high-fidelity imagery, textures, sprite sheets, and musical compositions. | `ShellB-Swift` | FLUX via ComfyUI, sprite/texture generators, 3D asset generation, MusicGen & AudioCraft pipelines. |
+| **Atlas** | `🧭` | **Worlds & Cartography**<br>Planetary cartographer, orbital navigator, and expedition planner across 22 solar system bodies. | `ShellB-Swift` | 15,700+ IAU planetary gazetteer, orbital ephemeris, geodesic routes, offline Valhalla turn-by-turn navigation. |
+| **Magpie** | `◆` | **Asset Scout & Librarian**<br>Collects, verifies, and catalogs reusable sounds, textures, sprites, models, and fonts into shared asset libraries. | `ShellB-Swift` | Web scraping, asset pack unpacking, automated metadata tagging, licensing and credits attribution. |
+| **Spark** | `⚡` | **Instant Reflex**<br>Zero-deliberation instant answers for quick rewrites, code conversions, regex, and rapid lookups. | `ShellB-Swift` | Fast-path text processing with minimal latency and no chain-of-thought overhead. |
+
+---
+
+## 📸 Interface Showcase
+
+<table width="100%">
+  <tr>
+    <td width="50%" valign="top">
+      <h3 align="center">🎨 Studio with Daedalus</h3>
+      <a href="screenshots/studio-daedalus.png"><img src="screenshots/studio-daedalus.png" alt="Studio with Daedalus" /></a>
+      <p align="center"><i>Interactive design studio: web apps, slide decks, playable games, and Three.js 3D scenes.</i></p>
+    </td>
+    <td width="50%" valign="top">
+      <h3 align="center">⚡ Code with Hephaestus</h3>
+      <a href="screenshots/code-hephaestus.png"><img src="screenshots/code-hephaestus.png" alt="Code with Hephaestus" /></a>
+      <p align="center"><i>Git-backed workspace: agent edits, sandboxed testing, diff review, and rollback commits.</i></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3 align="center">📻 Shell:B FM · Live DJ Workstation</h3>
+      <a href="screenshots/radio-workstation.png"><img src="screenshots/radio-workstation.png" alt="Radio and DJ Rig" /></a>
+      <p align="center"><i>Procedural neural radio stations, dual-deck DJ rig, stem mixer, and track forge.</i></p>
+    </td>
+    <td width="50%" valign="top">
+      <h3 align="center">🧠 Unified Memory & Models</h3>
+      <a href="screenshots/models-memory.png"><img src="screenshots/models-memory.png" alt="Models and VRAM Dashboard" /></a>
+      <p align="center"><i>Live hardware resource management, one-click GGUF model downloader, and VRAM eviction.</i></p>
+    </td>
+  </tr>
+</table>
+
+<details>
+  <summary><b>☀️ Click to view Light Mode interface</b></summary>
+  <br />
+  <img src="screenshots/hero-light.png" alt="Shell:B Light Theme" width="100%" />
+</details>
+
+---
+
+## 🌐 Access & Networking
 
 **URL:** `https://<tailscale-device>.<tailnet>.ts.net:8443` (Tailscale HTTPS: needed for mic, clipboard and
 notifications) or `http://localhost:8200` (LAN) · service `shellb-web` (systemd user unit, port 8200)
@@ -14,6 +119,28 @@ owner login; cookies get the Secure flag from `X-Forwarded-Proto`. On plain http
 the HTTPS address (`ui/src/secureUrl.ts`). The certificate covers only the full name: `https://<device>:8443`
 fails with ERR_SSL_PROTOCOL_ERROR, so `http://<device>:8200` (MagicDNS short name) redirects page loads to the HTTPS
 address (`_ShortNameRedirect` in app.py). Check with `tailscale serve status`; remove with `tailscale serve --https=8443 off`.
+
+---
+
+## 🏛️ Architecture
+
+```mermaid
+flowchart TD
+    User(["Client Browser / Tailscale Device"]) <-->|Tailscale HTTPS :8443 / Loopback :8200| Web["Shell:B Web Server\n(FastAPI / React 19 / Uvicorn)"]
+    
+    subgraph Local Hardware & Service Stack
+        Web <-->|Streaming Tokens & Prompts| Ollama["Ollama Serving\n(Qwen3.6 / Swift / Coder)"]
+        Web <-->|Isolated Execution (/work)| Sandbox["Docker Sandbox\n(--network none)"]
+        Web <-->|Private Web Search| Vassago["VASSAGO\n(SearXNG :8080)"]
+        Web <-->|Whisper VAD & Kokoro TTS| Hermes["HERMES Voice\n(Port :8001)"]
+        Web <-->|MusicGen / AudioCraft| Orpheus["ORPHEUS Audio\n(Port :8002)"]
+        Web <-->|FLUX / ComfyUI Pipelines| Nyx["NYX Visuals\n(Port :8188)"]
+        Web <-->|ZIM Offline Wikipedia & Maps| Kiwix["Kiwix & Protomaps\n(Local Archives)"]
+        Web <-->|FTS5 Search, Vectors, State| DB[("SQLite DB\nshellb.db + Embeddings")]
+    end
+```
+
+---
 
 ## What it does
 
