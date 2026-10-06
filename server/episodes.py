@@ -171,6 +171,7 @@ def stale(limit=PER_SWEEP) -> list[str]:
         rows = c.execute("""
 SELECT m.conv_id, count(*) AS n, max(m.created) AS last FROM messages m
 LEFT JOIN conv_summary s ON s.conv_id = m.conv_id
+WHERE m.conv_id NOT IN (SELECT id FROM conversations WHERE incognito=1)
 GROUP BY m.conv_id HAVING n >= 2 AND last < ? AND (max(s.msg_count) IS NULL OR max(s.msg_count) != n)
 ORDER BY last DESC LIMIT ?""", (time.time() - QUIET, limit)).fetchall()
     return [r["conv_id"] for r in rows]
@@ -180,6 +181,11 @@ async def _sweep():
     import memory
     await asyncio.sleep(20)  # let startup settle
     while True:
+        try:
+            import privacy
+            privacy.sweep()  # incognito chats past their time are deleted
+        except Exception as e:  # noqa: BLE001
+            print(f"incognito sweep: {type(e).__name__}: {e}")
         try:
             if not busy():
                 settings = _settings()

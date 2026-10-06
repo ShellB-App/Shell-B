@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import {
-  BookMarked, Brain, Check, ChevronDown, ChevronRight, Eye, History, Loader2, Moon, MessageSquare, Pin, PinOff, Plus, RotateCcw, Search,
+  BookMarked, Brain, Check, ChevronDown, ChevronRight, Eye, History, Loader2, Lock, LockOpen, Moon, MessageSquare, Pencil, Pin, PinOff, Plus, RotateCcw, Search,
   Sparkles, Trash2, Undo2, X,
 } from 'lucide-react';
 import { api, req } from '../api';
-import type { LearnedItem, Message } from '../types';
+import type { LearnedItem, Message, RecalledMemory } from '../types';
 import { btn, relTime } from './common';
+import { BriefSettingsRow } from './FollowUps';
+import { HistoryImport } from './HistoryImport';
 
 // Long-term memory v2 (server/memory.py): the Settings → Memory tab and the "learned" note under chat replies.
 
@@ -14,6 +16,8 @@ export interface MemoryRow {
   id: string; text: string; tags: string[]; createdAt: number; updatedAt: number;
   category: string; status: 'active' | 'pending' | 'retired'; pinned: boolean; core: boolean;
   origin: 'user' | 'agent' | 'auto' | 'history' | 'feedback' | 'reflection'; source: string | null; expires: number | null; note: string; replaces: string | null;
+  /** never put in a prompt for a cloud agent (server/privacy.py) */
+  localOnly?: boolean;
 }
 interface Category { id: string; label: string; core: boolean }
 interface Backfill { running: boolean; done: number; total: number; found: number; error: string; remaining: number | null }
@@ -23,7 +27,7 @@ const J = (body: unknown) => JSON.stringify(body);
 const mem = {
   list: () => req<Overview>('/api/memory'),
   add: (text: string, category: string) => req<Overview & { duplicate?: string }>('/api/memory', { method: 'POST', body: J({ text, category }) }),
-  patch: (id: string, b: Partial<{ text: string; category: string; pinned: boolean; expires: string | null }>) =>
+  patch: (id: string, b: Partial<{ text: string; category: string; pinned: boolean; expires: string | null; localOnly: boolean }>) =>
     req<Overview>(`/api/memory/${id}`, { method: 'PATCH', body: J(b) }),
   act: (id: string, action: 'forget' | 'restore' | 'accept' | 'reject' | 'undo', msg = '') =>
     req<Overview>(`/api/memory/${id}/${action}${msg ? `?msg=${encodeURIComponent(msg)}` : ''}`, { method: 'POST' }),
@@ -138,6 +142,7 @@ export function MemoryManager() {
         {!bf.running && bf.remaining === 0 && <button className={btn.ghost} onClick={() => run(mem.backfillReset())}>Read them again</button>}
       </div>
       <ReflectionRow onDone={load} />
+      <BriefSettingsRow compact />
 
       <div className="relative">
         <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
@@ -179,6 +184,8 @@ export function MemoryManager() {
           </pre>
         )}
       </div>
+
+      <HistoryImport learning={bf.running} onLearn={() => run(mem.backfill())} />
     </div>
   );
 }
@@ -281,8 +288,15 @@ function MemoryItem({ m, categories, onRun }: { m: MemoryRow } & RowProps) {
           <span>· {ORIGIN[m.origin]} {relTime(m.createdAt)}</span>
           {m.source && <a href={`#/c/${m.source}`} className="inline-flex items-center gap-0.5 hover:text-[var(--text-primary)]" title="Open the chat it came from"><MessageSquare className="w-2.5 h-2.5" />chat</a>}
           {m.expires && <span>· until {day(m.expires)}</span>}
+          {m.localOnly && <span>· local only</span>}
         </div>
       </div>
+      <button className={clsx(btn.icon, m.localOnly ? 'text-[var(--accent)]' : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100')}
+        aria-pressed={!!m.localOnly}
+        title={m.localOnly ? 'Local only: never sent to cloud agents. Click to allow' : 'Keep local: never send this to cloud agents'}
+        onClick={() => onRun(mem.patch(m.id, { localOnly: !m.localOnly }))}>
+        {m.localOnly ? <Lock className="w-3.5 h-3.5" /> : <LockOpen className="w-3.5 h-3.5" />}
+      </button>
       {!catCore && (
         <button className={clsx(btn.icon, m.pinned ? 'text-[var(--accent)]' : 'opacity-0 group-hover:opacity-100')}
           title={m.pinned ? 'Recall only when relevant' : 'Always know this'} onClick={() => onRun(mem.patch(m.id, { pinned: !m.pinned }))}>
@@ -380,6 +394,81 @@ export function LearnedNote({ message, fresh }: { message: Message; fresh: boole
           )}
         </div>
       ))}
+    </div>
+  );
+}
+
+/** C5: the memories a reply was given, under it. Only shown when some were picked for this message (the core profile
+ *  goes in every prompt, so on its own it would add a line to every reply). Each can be corrected or forgotten here. */
+export function RecalledNote({ message }: { message: Message }) {
+  const [open, setOpen] = useState(false);
+  const [showCore, setShowCore] = useState(false);
+  const [edits, setEdits] = useState<Record<string, string>>({});   // id -> saved text
+  const [gone, setGone] = useState<Set<string>>(new Set());
+  const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
+  const [err, setErr] = useState('');
+  const all = (message.recalled ?? []).filter(m => !gone.has(m.id));
+  const relevant = all.filter(m => m.relevant);
+  if (!relevant.length && !gone.size) return null;
+  const core = all.filter(m => !m.relevant);
+  const save = async () => {
+    if (!editing) return;
+    const text = editing.text.trim();
+    if (!text) return;
+    try { await mem.patch(editing.id, { text }); setEdits(e => ({ ...e, [editing.id]: text })); setEditing(null); setErr(''); }
+    catch (e) { setErr(String(e)); }
+  };
+  const forget = async (m: RecalledMemory) => {
+    try { await mem.act(m.id, 'forget'); setGone(s => new Set(s).add(m.id)); setErr(''); }
+    catch (e) { setErr(String(e)); }
+  };
+  const row = (m: RecalledMemory) => (
+    <li key={m.id} className="group/r flex items-start gap-1.5">
+      <span className="mt-[5px] w-1 h-1 rounded-full bg-current opacity-50 shrink-0" />
+      {editing?.id === m.id ? (
+        <form className="flex-1 flex items-center gap-1" onSubmit={e => { e.preventDefault(); save(); }}>
+          <input autoFocus value={editing.text} onChange={e => setEditing({ id: m.id, text: e.target.value })}
+            onKeyDown={e => { if (e.key === 'Escape') setEditing(null); }}
+            className="flex-1 min-w-0 bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded px-1.5 py-0.5 text-[11px] text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent)]" />
+          <button type="submit" className="inline-flex items-center gap-0.5 hover:text-[var(--text-primary)]"><Check className="w-3 h-3" />Save</button>
+          <button type="button" className="hover:text-[var(--text-primary)]" onClick={() => setEditing(null)} title="Cancel"><X className="w-3 h-3" /></button>
+        </form>
+      ) : (
+        <>
+          <span className="min-w-0 flex-1">{edits[m.id] ?? m.text}{edits[m.id] && <span className="opacity-60"> (corrected)</span>}</span>
+          <span className="shrink-0 flex items-center gap-1.5 opacity-0 group-hover/r:opacity-100 focus-within:opacity-100">
+            <button className="inline-flex items-center gap-0.5 hover:text-[var(--text-primary)]" title="Correct this memory"
+              onClick={() => setEditing({ id: m.id, text: edits[m.id] ?? m.text })}><Pencil className="w-3 h-3" />Edit</button>
+            <button className="inline-flex items-center gap-0.5 hover:text-[var(--text-primary)]" title="Forget this memory"
+              onClick={() => forget(m)}><Trash2 className="w-3 h-3" />Forget</button>
+          </span>
+        </>
+      )}
+    </li>
+  );
+  return (
+    <div className="mt-1.5 text-[11px] text-[var(--text-muted)]">
+      <button className="inline-flex items-center gap-1 hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent)] rounded"
+        onClick={() => setOpen(o => !o)} aria-expanded={open}>
+        {open ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+        <BookMarked className="w-3 h-3 text-amber-400/80" />
+        Recalled {relevant.length} {relevant.length === 1 ? 'memory' : 'memories'}
+        {core.length > 0 && <span className="opacity-70">· plus your profile ({core.length})</span>}
+      </button>
+      {open && (
+        <div className="mt-1 ml-4 max-w-[65ch]">
+          {relevant.length > 0 && <ul className="space-y-0.5">{relevant.map(row)}</ul>}
+          {core.length > 0 && (
+            <>
+              <button className="mt-1 inline-flex items-center gap-1 hover:text-[var(--text-secondary)]" onClick={() => setShowCore(v => !v)}>
+                {showCore ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}Profile (in every reply)
+              </button>
+              {showCore && <ul className="mt-0.5 space-y-0.5">{core.map(row)}</ul>}
+            </>
+          )}
+          {err && <div className="mt-1 text-red-400">{err}</div>}
+        </div>
+      )}
     </div>
   );
 }

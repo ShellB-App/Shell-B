@@ -395,6 +395,10 @@ DEFAULT_SETTINGS = {
     "memoryReflection": True,  # nightly tidy-up of memories + weekly digest in Activity (reflection.py)
     "memoryReflectionHour": 3, # local hour it runs, once nobody is chatting
     "memoryLearning": "auto",  # learn from each chat after the reply: auto (apply now) | review (ask first) | off; memory.py
+    "followUps": True,         # note promises and "remind me" requests from chats as follow-ups (commitments.py)
+    "morningBrief": True,      # daily brief in Activity: follow-ups due, calendar, overnight work, waiting approvals
+    "morningBriefTime": "07:30",  # local HH:MM; only if the owner was around in the last few days
+    "briefWeatherPlace": "",   # town for the brief's weather line (Open-Meteo); "" = no weather
     "promptSuggestions": True,  # predict the next message as ghost text in the composer (utility model; composer.py)
     "maxToolRounds": 16,
     "runawayLoopChecker": True, # check progress every loopCheckInterval turns: extends budget if productive, pauses if stuck

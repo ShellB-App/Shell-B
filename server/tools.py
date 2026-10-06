@@ -739,6 +739,9 @@ async def memory_forget(args, ctx):
 
 async def memory_search(args, ctx):
     hits = await search_memories(str(args.get("query") or ""), ctx.settings, k=int(args.get("k") or 6))
+    import providers
+    if providers.is_cloud((ctx.agent or {}).get("model", "")):  # privacy.py: local-only memories stay on this machine
+        hits = [h for h in hits if not h.get("localOnly")]
     if not hits:
         return ToolResult("No matching memories.")
     return ToolResult("\n".join(f"- [{h['id']}] ({h['category']}, {h['score']:.2f}) {h['text']}" for h in hits))

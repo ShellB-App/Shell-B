@@ -89,8 +89,8 @@ export const api = {
   conversation: (id: string) => req<Conversation>(`/api/conversations/${id}`),
   library: () => req<Library>('/api/library'),
   workspaceFiles: (convId: string) => req<WorkspaceFile[]>(`/api/workspace/${convId}`),
-  createConversation: (agentId?: string, groupId?: string) =>
-    req<ConversationSummary>('/api/conversations', { method: 'POST', body: json({ agentId, groupId }) }),
+  createConversation: (agentId?: string, groupId?: string, incognito?: boolean) =>
+    req<ConversationSummary>('/api/conversations', { method: 'POST', body: json({ agentId, groupId, incognito: incognito || undefined }) }),
   chatProjects: () => req<ChatProject[]>('/api/chat-projects'),
   chatProject: (id: string) => req<ChatProjectDetail>(`/api/chat-projects/${id}`),
   createChatProject: (p: Pick<ChatProject, 'name' | 'description' | 'instructions' | 'emoji'>) =>

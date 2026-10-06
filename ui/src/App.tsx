@@ -16,6 +16,7 @@ import { findMention } from './components/ComposerShortcuts';
 import { ArtifactPanel } from './components/ArtifactPanel';
 import { AgentLab } from './components/AgentLab';
 import { CommandPalette, SettingsModal } from './components/Panels';
+import { IncognitoMark, IncognitoNote, IncognitoStrip } from './components/Incognito';
 import { IntegrationsModal } from './components/Integrations';
 import { NewProjectDialog, ProjectGlyph, ProjectPage, ProjectsIndex } from './components/Projects';
 import { AgentAvatar, btn } from './components/common';
@@ -29,6 +30,7 @@ import { Notes } from './components/Notes';
 import { Models } from './components/Models';
 import { Wiki } from './components/Wiki';
 import { OfflineData } from './components/OfflineData';
+import { Generate } from './components/Generate';
 import { Downloads } from './components/Downloads';
 import { VoiceMode } from './components/VoiceMode';
 import { ResearchBoardView, ResearchIndex } from './components/Research';
@@ -104,6 +106,7 @@ const readGibberlink = () => /^#\/gibberlink\b/.test(location.hash);
 const readMaps = () => /^#\/(worlds|maps)\b/.test(location.hash);  // #/maps: the app's old name
 const readWiki = () => { const m = /^#\/wiki(\/.*)?$/.exec(location.hash); return m ? m[1] ?? '' : null; };
 const readData = () => /^#\/data\b/.test(location.hash);
+const readGenerate = () => /^#\/generate\b/.test(location.hash);
 const readCodex = () => { const m = /^#\/codex(?:\/(.*))?$/.exec(location.hash); return m ? m[1] ?? '' : null; };
 const readResearch = () => { const m = /^#\/research(?:\/([\w-]+))?/.exec(location.hash); return m ? { boardId: m[1] } : null; };
 const readAssets = () => { const m = /^#\/assets(?:\/([\w-]+))?/.exec(location.hash); return m ? { libId: m[1] } : null; };
@@ -136,6 +139,7 @@ export function App() {
   const [mapsRoute, setMapsRoute] = useState(readMaps);
   const [wikiRoute, setWikiRoute] = useState(readWiki);
   const [dataRoute, setDataRoute] = useState(readData);
+  const [generateRoute, setGenerateRoute] = useState(readGenerate);
   const [research, setResearch] = useState(readResearch);
   const [plans, setPlans] = useState(readPlans);
   const [assetRoute, setAssetRoute] = useState(readAssets);
@@ -145,6 +149,7 @@ export function App() {
   const [newProject, setNewProject] = useState(false);
   const [groupRefresh, setGroupRefresh] = useState(0);
   const [focusTick, setFocusTick] = useState(0); // bumped by newChat so the composer refocuses even when already on a blank chat
+  const [incognitoDraft, setIncognitoDraft] = useState(false); // the blank chat becomes incognito when sent (components/Incognito.tsx)
   const pendingGroup = useRef<string | null>(null); // project the next new chat is created in
   const [sidebar, setSidebar] = useState(() =>
     window.innerWidth >= 768 &&
@@ -162,6 +167,11 @@ export function App() {
   const scroller = useRef<HTMLDivElement>(null);
   const loadConvs = useCallback(() => api.conversations().then(setConvs), []);
   const loadGroups = useCallback(() => api.chatProjects().then(setGroups).catch(() => {}), []);
+  useEffect(() => {  // chats added outside a turn (Settings → Memory → Import history)
+    const f = () => { loadConvs(); loadGroups(); };
+    window.addEventListener('shellb-chats-changed', f);
+    return () => window.removeEventListener('shellb-chats-changed', f);
+  }, [loadConvs, loadGroups]);
   const { conv, setConv, convRef, busy, send: sendTurn, stop } = useChat({
     onEvent: (ev, id) => {
       if (ev.type === 'artifact' && convRef.current?.id === id) setPanel({ id: ev.artifact.id, version: ev.artifact.version });
@@ -212,8 +222,8 @@ export function App() {
       .catch(e => setLoadError(String(e)));
     api.models().then(setModels).catch(() => {});
     loadGroups();
-    const m = /[?&]modal=(agents|tools|settings|memory|system|network|apikeys|palette)/.exec(location.search)?.[1];
-    if (m === 'memory' || m === 'system' || m === 'network' || m === 'apikeys') { setSettingsTab(m as SettingsTabId); setModal('settings'); }
+    const m = /[?&]modal=(agents|tools|settings|memory|system|network|apikeys|notifications|palette)/.exec(location.search)?.[1];
+    if (m === 'memory' || m === 'system' || m === 'network' || m === 'apikeys' || m === 'notifications') { setSettingsTab(m as SettingsTabId); setModal('settings'); }
     else if (m) setModal(m as 'agents' | 'tools' | 'settings' | 'palette');
     const poll = () => api.status().then(setStatus).catch(() => setStatus(undefined));
     poll();
@@ -269,6 +279,7 @@ export function App() {
       setMapsRoute(readMaps());
       setWikiRoute(readWiki());
       setDataRoute(readData());
+      setGenerateRoute(readGenerate());
       setModal(m => (m === 'palette' ? m : null));  // following a link out of Settings or the Agent Lab closes it
       if (/^#\/memory\b/.test(location.hash)) {  // #/memory (Activity links) opens Settings → Memory over the current chat
         setSettingsTab('memory'); setModal('settings');
@@ -293,7 +304,8 @@ export function App() {
     return () => window.removeEventListener('hashchange', onHash);
   }, [openConversation]);
 
-  const newChat = useCallback((aid?: string) => {
+  const newChat = useCallback((aid?: string, incognito = false) => {
+    setIncognitoDraft(incognito);
     setConv(null);
     setStudio(null);
     setCode(null);
@@ -311,6 +323,7 @@ export function App() {
     setMapsRoute(false);
     setWikiRoute(null);
     setDataRoute(false);
+    setGenerateRoute(false);
     setGroupRoute(null);
     pendingGroup.current = null;
     setPanel(null);
@@ -322,7 +335,7 @@ export function App() {
 
   const ensureConversation = useCallback(async () => {
     if (convRef.current) return convRef.current.id;
-    const c = await api.createConversation(agentId, pendingGroup.current ?? undefined);
+    const c = await api.createConversation(agentId, pendingGroup.current ?? undefined, !pendingGroup.current && incognitoDraft);
     pendingGroup.current = null;
     const full: Conversation = { ...c, messages: [], artifacts: [] };
     convRef.current = full;
@@ -330,10 +343,11 @@ export function App() {
     setConvs(prev => [c, ...prev]);
     history.replaceState(null, '', `#/c/${c.id}`);
     return c.id;
-  }, [agentId]);
+  }, [agentId, incognitoDraft]);
 
   // ── chat ────────────────────────────────────────────────────────────────
   const [voiceMode, setVoiceMode] = useState(false);  // hands-free conversation (components/VoiceMode.tsx)
+  const incognito = conv ? !!conv.incognito : incognitoDraft;
   const send = useCallback(async (content: string, attachments: Attachment[], fromMessageId?: string, routeTo?: string, mode?: 'plan', voice?: boolean) => {
     if (busy || !agent) return;
     const id = await ensureConversation();
@@ -580,7 +594,7 @@ export function App() {
       {rail}
       <Sidebar
         conversations={convs} activeId={conv?.id} agents={agents} status={status} open={sidebar} favoritesActive={library === 'favorites'}
-        onClose={() => setSidebar(false)} onSelect={openConversation} onNew={() => newChat()}
+        onClose={() => setSidebar(false)} onSelect={openConversation} onNew={() => newChat()} onNewIncognito={() => newChat(undefined, true)}
         onDelete={async id => { await api.deleteConversation(id); if (conv?.id === id) newChat(); loadConvs(); }}
         onPin={async (id, pinned) => { await api.patchConversation(id, { pinned }); loadConvs(); }}
         onRename={async (id, title) => { await api.patchConversation(id, { title }); if (conv?.id === id) setConv(c => (c ? { ...c, title } : c)); loadConvs(); }}
@@ -599,7 +613,7 @@ export function App() {
                 <Radio className="w-4 h-4 text-[#ff2e97]" />
                 Shell:B FM · Radio &amp; DJ Workstation
               </span>
-            ) : secretaryRoute ? <span className="text-sm font-medium">Secretary</span> : gibberlinkRoute ? <span className="text-sm font-medium">Gibberlink</span> : mapsRoute ? <span className="text-sm font-medium">Worlds</span> : wikiRoute !== null ? <span className="text-sm font-medium">Wiki</span> : dataRoute ? <span className="text-sm font-medium">Offline data</span> : assetRoute ? (
+            ) : secretaryRoute ? <span className="text-sm font-medium">Secretary</span> : gibberlinkRoute ? <span className="text-sm font-medium">Gibberlink</span> : mapsRoute ? <span className="text-sm font-medium">Worlds</span> : wikiRoute !== null ? <span className="text-sm font-medium">Wiki</span> : dataRoute ? <span className="text-sm font-medium">Offline data</span> : generateRoute ? <span className="text-sm font-medium">Generate</span> : assetRoute ? (
               <button className="text-sm font-medium hover:text-[var(--accent)] flex items-center gap-1.5" onClick={() => openAssets()}>
                 <Shapes className="w-4 h-4 text-lime-500" />Assets
               </button>
@@ -626,7 +640,8 @@ export function App() {
                   </button>
                 )}
                 <AgentAvatar agent={agent} size={18} />
-                <span className="text-sm font-medium truncate">{conv?.title ?? `New chat with ${agent.name}`}</span>
+                <span className="text-sm font-medium truncate">{conv?.title ?? (incognito ? `Incognito chat with ${agent.name}` : `New chat with ${agent.name}`)}</span>
+                {incognito && <IncognitoMark />}
                 {conv && <FavoriteStar kind="chat" id={conv.id} title={conv.title} />}
                 {conv && (
                   <div className="flex items-center gap-0.5 ml-1">
@@ -686,6 +701,8 @@ export function App() {
           <div className="flex-1 min-h-0"><Wiki route={wikiRoute} /></div>
         ) : dataRoute ? (
           <div className="flex-1 min-h-0"><OfflineData /></div>
+        ) : generateRoute ? (
+          <div className="flex-1 min-h-0"><Generate /></div>
         ) : assetRoute ? (
           <div className="flex-1 min-h-0">
             {assetRoute.libId ? (
@@ -750,6 +767,7 @@ export function App() {
             )}
           </div>
         ) : (<>
+        {incognito && <IncognitoStrip updatedAt={conv ? (messages[messages.length - 1]?.timestamp ?? conv.updatedAt) : undefined} />}
         <div className="flex-1 min-h-0 relative">
           <div ref={scroller} className="h-full overflow-y-auto"
             onScroll={e => { const el = e.currentTarget; setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 80); }}>
@@ -816,10 +834,11 @@ export function App() {
               onEffort={e => setEfforts(prev => ({ ...prev, [agent.id]: e }))}
               modelChoices={modelChoices} onModel={m => setModelPicks(prev => ({ ...prev, [agent.id]: m }))}
               onAgent={selectAgent} busy={busy || !!conv?.streaming} onSend={(t, a, o) => send(t, a, undefined, o?.agentId, o?.mode)} onStop={stop}
-              convId={conv?.id} onCommand={() => newChat()} planMode={planMode} onPlanMode={setPlanMode}
+              convId={conv?.id} onCommand={c => newChat(undefined, c === 'incognito')} planMode={planMode} onPlanMode={setPlanMode}
               ensureConversation={ensureConversation} voiceOk={voiceOk} focusKey={`${conv?.id ?? 'new'}:${focusTick}`}
               onVoiceMode={voiceMode ? undefined : () => setVoiceMode(true)}
             />
+            {incognito && <IncognitoNote />}
             <div className="text-center text-[10px] text-[var(--text-muted)] mt-1.5">
               {activeModel}{agent.cloud ? '' : ' · local'} · Shell:B can make mistakes; check anything important.
             </div>

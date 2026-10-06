@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
-import { Edit2, FolderInput, FolderKanban, GitFork, Loader2, PanelLeftClose, Pin, Plus, Search, Settings, SquarePen, Star, Trash2, X } from 'lucide-react';
+import { Edit2, EyeOff, FolderInput, FolderKanban, GitFork, Loader2, PanelLeftClose, Pin, Plus, Search, Settings, SquarePen, Star, Trash2, X } from 'lucide-react';
 import type { Agent, ChatHit, ChatProject, ConversationSummary, Status } from '../types';
 import { ProjectGlyph } from './Projects';
 import { fmtBytes } from '../api';
@@ -19,6 +19,8 @@ interface Props {
   onClose: () => void;
   onSelect: (id: string) => void;
   onNew: () => void;
+  /** a chat that isn't remembered and is deleted after 24 h (components/Incognito.tsx) */
+  onNewIncognito?: () => void;
   onDelete: (id: string) => void;
   onPin: (id: string, pinned: boolean) => void;
   onRename: (id: string, title: string) => void;
@@ -97,6 +99,9 @@ export function Sidebar(p: Props) {
         ) : (
           <span className="flex-1 min-w-0 truncate">{c.title}</span>
         )}
+        {c.incognito && editing !== c.id && (
+          <span title="Incognito: not remembered, deleted after 24 h" className="shrink-0"><EyeOff className="w-3 h-3 text-slate-500 dark:text-slate-400" aria-label="Incognito" /></span>
+        )}
         {c.groupId && editing !== c.id && <span title={p.groups.find(g => g.id === c.groupId)?.name}><ProjectGlyph project={p.groups.find(g => g.id === c.groupId)} size={14} /></span>}
         {c.streaming && <Loader2 className="w-3 h-3 animate-spin text-[var(--accent)] shrink-0" />}
         {editing !== c.id && (
@@ -111,9 +116,11 @@ export function Sidebar(p: Props) {
               <button className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--accent)]" title={c.pinned ? 'Unpin' : 'Pin'} onClick={() => p.onPin(c.id, !c.pinned)}>
                 <Pin className={clsx('w-3 h-3', c.pinned && 'fill-[var(--accent)] text-[var(--accent)]')} />
               </button>
-              <button className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)]" title="Move to project" onClick={() => setMoving(moving === c.id ? null : c.id)}>
-                <FolderInput className="w-3 h-3" />
-              </button>
+              {!c.incognito && (
+                <button className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)]" title="Move to project" onClick={() => setMoving(moving === c.id ? null : c.id)}>
+                  <FolderInput className="w-3 h-3" />
+                </button>
+              )}
               {p.onFork && (
                 <button className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)]" title="Fork chat" onClick={() => p.onFork?.(c.id)}>
                   <GitFork className="w-3 h-3" />
@@ -166,10 +173,18 @@ export function Sidebar(p: Props) {
               <PanelLeftClose className="w-4 h-4" />
             </button>
           </div>
-          <button onClick={p.onNew} className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-[var(--accent)] hover:brightness-110 text-white text-sm font-medium transition shadow-md">
-            <span className="flex items-center gap-2"><SquarePen className="w-4 h-4" />New chat</span>
-            <kbd className="text-[10px] opacity-75 font-mono hidden md:inline">Ctrl ⇧ O</kbd>
-          </button>
+          <div className="flex items-stretch gap-2">
+            <button onClick={p.onNew} className="flex-1 min-w-0 flex items-center justify-between px-3 py-2 rounded-xl bg-[var(--accent)] hover:brightness-110 text-white text-sm font-medium transition shadow-md">
+              <span className="flex items-center gap-2"><SquarePen className="w-4 h-4" />New chat</span>
+              <kbd className="text-[10px] opacity-75 font-mono hidden md:inline">Ctrl ⇧ O</kbd>
+            </button>
+            {p.onNewIncognito && (
+              <button onClick={p.onNewIncognito} title="New incognito chat: not remembered, deleted after 24 h" aria-label="New incognito chat"
+                className="shrink-0 px-2.5 rounded-xl border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/60 transition">
+                <EyeOff className="w-4 h-4" />
+              </button>
+            )}
+          </div>
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
             <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search chats, messages and favorites"

@@ -71,7 +71,7 @@ def _image_b64(url: str, conv_id: str):
     prefix = f"/api/workspace/{conv_id}/"
     if url.startswith(prefix):
         p = (WORKSPACES / conv_id / unquote(url[len(prefix):])).resolve()
-        if p.is_file() and str(p).startswith(str(WORKSPACES.resolve())):
+        if p.is_file() and p.is_relative_to((WORKSPACES / conv_id).resolve()):  # this chat's /work only
             import projects as P  # also enlarges tiny images, which crash the vision runner
             try:
                 return base64.b64encode(P.downscale(p.read_bytes(), 1600)).decode()
@@ -493,6 +493,9 @@ class Turn:
             names = [t for t in names if t != "ask_agent"]
         if providers.is_cloud(self.model) and not self.settings.get("cloudMemory", False):
             names = [t for t in names if t not in ("memory_save", "memory_forget", "memory_search", "recall_conversations")]
+        import privacy
+        if privacy.is_incognito(self.conv_id):  # incognito: nothing recalled, nothing remembered
+            names = [t for t in names if t not in privacy.MEMORY_TOOLS]
         if self.plan:  # MCP tools are unknown quantities, so planning goes without them
             self.mcp_specs = {}
             return [t for t in names if planmode.offered(t)]
@@ -503,6 +506,7 @@ class Turn:
     async def run(self, messages, sink: Sink, effort: str):
         info = await model_info(self.model)
         tool_names = self.enabled_tools(info)
+        self.offered = set(tool_names)  # _run_tools refuses anything else, whatever name the model makes up
         schemas = [ask_agent_schema(delegates(self.agent, self.agents, self.settings)) if n == "ask_agent"
                    else self.mcp_specs[n]["schema"] if n in self.mcp_specs
                    else remote.TOOLS[n]["schema"] if self.remote and n in remote.TOOLS else TOOLS[n]["schema"] for n in tool_names]
@@ -873,6 +877,8 @@ class Turn:
                 if not loop_err:
                     if isinstance(args, dict) and args.get("_truncated"):
                         res = ToolResult("The tool input was cut off (output limit reached). Send a smaller input.", error=True)
+                    elif getattr(self, "offered", None) is not None and name not in self.offered:
+                        res = ToolResult(f"{name!r} isn't one of your tools in this chat.", error=True)
                     elif self.plan and not planmode.allowed(name, args):
                         res = ToolResult(planmode.refusal(name, args), error=True)
                     elif self.remote and name in remote.TOOLS:
@@ -1051,10 +1057,11 @@ def _short_args(args):
 async def recall(agent, text, settings):
     if not ({"memory_search", "memory_save"} & set(agent.get("tools", []))):
         return []
-    if providers.is_cloud(agent.get("model", "")) and not settings.get("cloudMemory", False):
+    cloud = providers.is_cloud(agent.get("model", ""))
+    if cloud and not settings.get("cloudMemory", False):
         return []
     try:
-        return await memory.recall(text, settings)
+        return await memory.recall(text, settings, cloud=cloud)  # local-only memories never reach a cloud agent
     except Exception:
         return []
 

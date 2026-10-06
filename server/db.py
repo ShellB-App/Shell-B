@@ -62,6 +62,8 @@ def init():
             c.execute("ALTER TABLE conversations ADD COLUMN project_id TEXT")
         if "group_id" not in cols:  # chat Projects (groups of chats + knowledge); unrelated to Studio projects
             c.execute("ALTER TABLE conversations ADD COLUMN group_id TEXT")
+        if "incognito" not in cols:  # privacy.py: never remembered, learned from or searched; deleted after a while
+            c.execute("ALTER TABLE conversations ADD COLUMN incognito INTEGER DEFAULT 0")
         c.executescript("""
 CREATE TABLE IF NOT EXISTS groups(
   id TEXT PRIMARY KEY, name TEXT, description TEXT, instructions TEXT, emoji TEXT, color TEXT,
@@ -92,6 +94,7 @@ def _conv(row):
         "pinned": bool(row["pinned"]), "createdAt": row["created"] * 1000, "updatedAt": row["updated"] * 1000,
         "projectId": row["project_id"],
         "groupId": row["group_id"] if "group_id" in row.keys() else None,
+        "incognito": bool(row["incognito"]) if "incognito" in row.keys() else False,
     }
 
 

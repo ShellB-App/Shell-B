@@ -82,6 +82,8 @@ def text_search(q: str, mode="any", limit=60, exclude=None, conv_id=None) -> dic
     if conv_id:
         sql += " AND conv_id = ?"
         params.append(conv_id)
+    else:  # incognito chats are never found from outside (privacy.py)
+        sql += " AND conv_id NOT IN (SELECT id FROM conversations WHERE incognito=1)"
     sql += " ORDER BY rank LIMIT ?"
     params.append(limit)
     with db.conn() as c:
@@ -102,7 +104,8 @@ def text_search(q: str, mode="any", limit=60, exclude=None, conv_id=None) -> dic
 
 async def semantic_search(q: str, settings: dict, k=8, exclude=None) -> dict[str, float]:
     with db.conn() as c:
-        rows = c.execute("SELECT conv_id, embedding FROM conv_summary WHERE embedding IS NOT NULL").fetchall()
+        rows = c.execute("SELECT conv_id, embedding FROM conv_summary WHERE embedding IS NOT NULL "
+                         "AND conv_id NOT IN (SELECT id FROM conversations WHERE incognito=1)").fetchall()
     rows = [r for r in rows if r["conv_id"] != exclude]
     if not rows or not q.strip():
         return {}
@@ -144,7 +147,7 @@ def _clip(text: str, n: int) -> str:
 
 def read(conv_id: str, around: str = "", budget=12000) -> str | None:
     conv = db.get_conversation(conv_id)
-    if not conv:
+    if not conv or conv.get("incognito"):  # incognito chats can't be read back (privacy.py)
         return None
     msgs = [m for m in db.list_messages(conv_id) if (m["content"] or "").strip()]
     start = 0
@@ -172,7 +175,8 @@ def recent(exclude=None, n=6) -> str:
     """For the system prompt: the latest conversations with summaries, one line each."""
     with db.conn() as c:
         rows = c.execute("SELECT c.id, c.title, c.updated, s.summary FROM conversations c JOIN conv_summary s ON s.conv_id=c.id "
-                         "WHERE c.id != ? AND s.summary != '' AND s.msg_count >= 4 ORDER BY c.updated DESC LIMIT ?",
+                         "WHERE c.id != ? AND s.summary != '' AND s.msg_count >= 4 AND COALESCE(c.incognito, 0) = 0 "
+                         "ORDER BY c.updated DESC LIMIT ?",
                          (exclude or "", n)).fetchall()
 
     def short(t, n=220):

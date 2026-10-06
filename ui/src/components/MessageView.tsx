@@ -19,7 +19,8 @@ import { LinkContext, adoptOrphanHtml, extractDefs, plainText, type Def } from '
 import { ProcessCard } from './ProcessCard';
 import { QuestionCard } from './QuestionCard';
 import { AgentAvatar, btn, relTime } from './common';
-import { LearnedNote } from './MemoryManager';
+import { LearnedNote, RecalledNote } from './MemoryManager';
+import { FollowUpNote } from './FollowUps';
 import { useFeedback } from './Feedback';
 
 import { ArtifactCard, DownloadChip } from './message/ArtifactCard';
@@ -323,7 +324,9 @@ export const MessageView = memo(function MessageView({
           </div>
         )}
         {!streaming && feedback.box}
+        {!streaming && <RecalledNote message={message} />}
         {!streaming && <LearnedNote message={message} fresh={isLast} />}
+        {!streaming && <FollowUpNote message={message} fresh={isLast} />}
       </div>
     </LinkContext.Provider>
   );

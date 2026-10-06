@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { BookMarked, Brain, CalendarClock, Check, CheckCheck, ChevronDown, HardDrive, Inbox, ListTodo, Loader2, Mail, MessageSquare, Rocket, Shapes, ShieldQuestion,
-  Telescope, Trash2, Workflow, XCircle } from 'lucide-react';
+  Sunrise, Telescope, Trash2, Workflow, XCircle } from 'lucide-react';
 import { api } from '../api';
 import type { ActivityItem, ActivitySource, ActivitySummary, PendingApproval } from '../types';
 import { btn, relTime } from './common';
+import { BriefNowButton, BriefRow, FollowUpsPanel, useFollowUpCounts } from './FollowUps';
 
 const SOURCES: Record<ActivitySource, { label: string; icon: typeof Inbox; color: string }> = {
   schedule: { label: 'Scheduled', icon: CalendarClock, color: 'text-emerald-400' },
@@ -16,6 +17,7 @@ const SOURCES: Record<ActivitySource, { label: string; icon: typeof Inbox; color
   codex: { label: 'Codex', icon: BookMarked, color: 'text-indigo-400' },
   memory: { label: 'Memory', icon: Brain, color: 'text-amber-400' },
   data: { label: 'Offline data', icon: HardDrive, color: 'text-cyan-400' },
+  brief: { label: 'Briefs', icon: Sunrise, color: 'text-orange-400' },
 };
 
 const STATUS: Record<string, [string, string]> = {
@@ -126,6 +128,12 @@ export function Activity({ live }: { live?: ActivitySummary }) {
   const [loaded, setLoaded] = useState(false);
   const [more, setMore] = useState(false);
   const [error, setError] = useState('');
+  // #/activity/follow-ups opens the Follow-ups tab (server/commitments.py); briefs link there
+  const readTab = () => (/^#\/activity\/follow-ups/.test(location.hash) ? 'follow-ups' : 'feed');
+  const [tab, setTab] = useState<'feed' | 'follow-ups'>(readTab);
+  useEffect(() => { const f = () => setTab(readTab()); window.addEventListener('hashchange', f); return () => window.removeEventListener('hashchange', f); }, []);
+  const [fuTick, setFuTick] = useState(0);
+  const fuCounts = useFollowUpCounts(fuTick);
 
   const query = { source, only: filter === 'all' ? undefined : filter };
   const load = useCallback(async () => {
@@ -187,11 +195,23 @@ export function Activity({ live }: { live?: ActivitySummary }) {
       <div className="max-w-3xl mx-auto px-4 py-8 animate-fade-in">
         <div className="flex flex-wrap items-center gap-2 mb-1">
           <h1 className="text-2xl font-semibold tracking-tight flex-1">Activity</h1>
+          <BriefNowButton onDone={() => { load(); setFuTick(t => t + 1); }} />
           <button className={btn.ghost} onClick={allRead} disabled={!counts.unread}><CheckCheck className="w-3.5 h-3.5" />Mark all read</button>
           <button className={btn.ghost} onClick={clearRead}><Trash2 className="w-3.5 h-3.5" />Clear read</button>
         </div>
         <p className="text-sm text-[var(--text-secondary)] mb-5">What scheduled runs, to-dos, Mega Plans, asset scouts, notebooks and self-deploys did while you were away, and anything agents are waiting on you for.</p>
         {error && <div className="mb-4 text-xs text-red-500 dark:text-red-400">{error}</div>}
+        <div role="tablist" className="flex gap-4 mb-5 border-b border-[var(--border-subtle)]">
+          {([['feed', 'Feed', counts.unread], ['follow-ups', 'Follow-ups', fuCounts ? fuCounts.overdue + fuCounts.today || fuCounts.open : 0]] as const).map(([id, label, n]) => (
+            <button key={id} role="tab" aria-selected={tab === id}
+              onClick={() => { location.hash = id === 'feed' ? '#/activity' : '#/activity/follow-ups'; setTab(id); }}
+              className={clsx('-mb-px pb-2 text-sm border-b-2 transition flex items-center gap-1.5 focus-visible:outline-none focus-visible:text-[var(--text-primary)]',
+                tab === id ? 'border-[var(--accent)] text-[var(--text-primary)] font-medium' : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]')}>
+              {label}
+              {!!n && <span className={clsx('font-mono text-[10px] px-1 rounded', id === 'follow-ups' && fuCounts && fuCounts.overdue ? 'bg-red-500/15 text-red-500 dark:text-red-400' : 'bg-[var(--bg-tertiary)] text-[var(--text-muted)]')}>{n}</span>}
+            </button>
+          ))}
+        </div>
 
         {pending.length > 0 && (
           <section className="mb-6">
@@ -202,6 +222,7 @@ export function Activity({ live }: { live?: ActivitySummary }) {
           </section>
         )}
 
+        {tab === 'follow-ups' ? <FollowUpsPanel onChange={() => setFuTick(t => t + 1)} /> : (<>
         <div className="flex flex-wrap gap-1.5 mb-2">
           {chip(filter === 'all', 'All', () => setFilter('all'))}
           {chip(filter === 'attention', 'Needs you', () => setFilter('attention'), counts.attention)}
@@ -229,13 +250,16 @@ export function Activity({ live }: { live?: ActivitySummary }) {
               <section key={day}>
                 <h2 className="text-xs font-medium text-[var(--text-muted)] mb-1.5 px-1">{day}</h2>
                 <div className="space-y-1">
-                  {list.map(it => <Row key={it.id} it={it} onOpen={() => open(it)} onToggle={() => setRead([it.id], !it.read)} onDelete={() => remove(it.id)} />)}
+                  {list.map(it => it.source === 'brief' && it.title.startsWith('Morning brief')
+                    ? <BriefRow key={it.id} it={it} onOpen={() => open(it)} onDelete={() => remove(it.id)} />
+                    : <Row key={it.id} it={it} onOpen={() => open(it)} onToggle={() => setRead([it.id], !it.read)} onDelete={() => remove(it.id)} />)}
                 </div>
               </section>
             ))}
             {more && <div className="flex justify-center"><button className={btn.subtle} onClick={older}>Show older</button></div>}
           </div>
         )}
+        </>)}
       </div>
     </div>
   );

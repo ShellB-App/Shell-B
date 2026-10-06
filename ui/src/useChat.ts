@@ -13,6 +13,7 @@ export function applyEvent(m: Message, ev: StreamEvent): Message {
     }
     case 'block_update': blocks[ev.index] = ev.block; return { ...m, blocks };
     case 'model': return { ...m, model: ev.model, note: ev.note };
+    case 'memories': return { ...m, recalled: ev.memories };
     default: return m;
   }
 }
@@ -70,7 +71,7 @@ export function useChat(opts: { onEvent?: (ev: StreamEvent, convId: string) => v
           case 'done':
             mine(c => ({ ...c, messages: c.messages.map(m => (m.id === liveId ? ev.message : m)) }));
             break;
-          case 'block_start': case 'block_delta': case 'block_update': case 'model':
+          case 'block_start': case 'block_delta': case 'block_update': case 'model': case 'memories':
             mine(c => ({ ...c, messages: c.messages.map(m => (m.id === liveId ? applyEvent(m, ev) : m)) }));
             break;
           default:

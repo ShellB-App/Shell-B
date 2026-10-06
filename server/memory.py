@@ -56,7 +56,8 @@ def init():
         cols = {r["name"] for r in c.execute("PRAGMA table_info(memories)")}
         for col, decl in (("category", "TEXT"), ("status", "TEXT DEFAULT 'active'"), ("pinned", "INTEGER DEFAULT 0"),
                           ("origin", "TEXT DEFAULT 'user'"), ("source", "TEXT"), ("updated", "REAL"),
-                          ("expires", "REAL"), ("note", "TEXT"), ("replaces", "TEXT")):
+                          ("expires", "REAL"), ("note", "TEXT"), ("replaces", "TEXT"),
+                          ("local_only", "INTEGER DEFAULT 0")):  # privacy.py: never sent to cloud agents
             if col not in cols:
                 c.execute(f"ALTER TABLE memories ADD COLUMN {col} {decl}")
         c.execute("UPDATE memories SET status='active' WHERE status IS NULL")
@@ -76,6 +77,7 @@ def _row(r, with_embedding=False) -> dict:
          "origin": r["origin"] or "user", "source": r["source"], "updatedAt": (r["updated"] or r["created"]) * 1000,
          "expires": r["expires"] * 1000 if r["expires"] else None, "note": r["note"] or "", "replaces": r["replaces"]}
     m["core"] = m["pinned"] or m["category"] in CORE
+    m["localOnly"] = bool(r["local_only"]) if "local_only" in r.keys() else False
     if with_embedding:
         m["embedding"] = r["embedding"]
     return m
@@ -142,7 +144,7 @@ def _expiry(value) -> float | None:
 
 
 async def add(text, *, category="other", origin="user", source=None, status="active", expires=None, pinned=False,
-              replaces=None, tags=None, settings=None, created=None) -> tuple[str, dict | None]:
+              replaces=None, tags=None, settings=None, created=None, local_only=False) -> tuple[str, dict | None]:
     """Store one memory. Returns (id, duplicate): when an active or pending memory already says the same thing,
     nothing is stored and the duplicate comes back instead."""
     settings = settings or _settings()
@@ -155,11 +157,15 @@ async def add(text, *, category="other", origin="user", source=None, status="act
         return dup["id"], dup
     mid = db.new_id("mem")
     now = created or time.time()  # a rewrite or merge keeps the date the fact was first noted
+    # a correction or merge of a local-only memory stays local-only (privacy.py)
+    local_only = local_only or any((get(t) or {}).get("localOnly") for t in targets(replaces))
     with db.conn() as c:
         c.execute("INSERT INTO memories(id, text, tags, embedding, created, category, status, pinned, origin, source, "
                   "updated, expires, note, replaces) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                   (mid, text, json.dumps(tags or []), vec.astype(np.float32).tobytes(), now, _category(category),
                    status, int(bool(pinned)), origin, source, now, _expiry(expires), "", replaces))
+        if local_only:
+            c.execute("UPDATE memories SET local_only=1 WHERE id=?", (mid,))
     if status == "active":
         for old in targets(replaces):
             retire(old, f"Replaced by a newer memory ({mid})")
@@ -182,7 +188,8 @@ def _nearest(vec, statuses, min_score):
     return mems[i] if scores[i] >= min_score else None
 
 
-async def update(mid: str, *, text=None, category=None, pinned=None, expires="keep", settings=None) -> dict:
+async def update(mid: str, *, text=None, category=None, pinned=None, expires="keep", settings=None,
+                 local_only=None) -> dict:
     m = get(mid)
     if not m:
         raise KeyError(mid)
@@ -195,6 +202,8 @@ async def update(mid: str, *, text=None, category=None, pinned=None, expires="ke
         sets.append("category=?"); args.append(_category(category))
     if pinned is not None:
         sets.append("pinned=?"); args.append(int(bool(pinned)))
+    if local_only is not None:
+        sets.append("local_only=?"); args.append(int(bool(local_only)))
     if expires != "keep":
         sets.append("expires=?"); args.append(_expiry(expires))
     with db.conn() as c:
@@ -320,15 +329,26 @@ async def classify_uncategorized(settings: dict):
         _classifying = False
 
 
-async def recall(text: str, settings: dict) -> list[dict]:
-    """Core memories (always) plus the ones most related to this message."""
+async def recall(text: str, settings: dict, cloud: bool = False) -> list[dict]:
+    """Core memories (always) plus the ones most related to this message. For a cloud agent (`cloud`), memories
+    marked local-only are left out."""
     await classify_uncategorized(settings)
-    base = core()
+    active = rows()
+    hidden = {m["id"] for m in active if m["localOnly"]} if cloud else set()
+    base = core([m for m in active if m["id"] not in hidden])
     try:
-        extra = await search(text, settings, k=RELEVANT_K, min_score=RELEVANT_MIN, exclude={m["id"] for m in base})
+        extra = await search(text, settings, k=RELEVANT_K, min_score=RELEVANT_MIN,
+                             exclude={m["id"] for m in base} | hidden)
     except Exception:  # noqa: BLE001  embeddings down: the profile still works
         extra = []
     return base + extra
+
+
+def recalled_view(memories: list[dict]) -> list[dict]:
+    """What a reply was given, for the note under it: core memories go in every prompt, `relevant` ones were picked
+    for this message by similarity."""
+    return [{"id": m["id"], "text": m["text"], "category": m.get("category"), "relevant": "score" in m}
+            for m in memories]
 
 
 def _when(m) -> str:
@@ -536,6 +556,9 @@ def after_turn(conv_id: str, msg_id: str, user_text: str, reply: str, agent: dic
     text = (user_text or "").split("\n\n[Selected element in ")[0].strip()
     if mode not in ("auto", "review") or len(text) < 12 or not agent:
         return
+    import privacy
+    if privacy.is_incognito(conv_id):  # incognito chats teach Shell:B nothing
+        return
     _learned[msg_id] = {"state": "running", "items": []}
     t = asyncio.create_task(_learn_turn(conv_id, msg_id, text, reply, settings, mode))
     _tasks.add(t)
@@ -598,7 +621,7 @@ def _history_convs() -> list[dict]:
     done = set(db.kv_get("memory_backfilled", []))
     out = []
     for conv in db.list_conversations():
-        if conv["id"] in done or (conv.get("title") or "").startswith(SKIP_TITLES):
+        if conv["id"] in done or conv.get("incognito") or (conv.get("title") or "").startswith(SKIP_TITLES):
             continue
         try:
             if megaplan.link_of(conv["id"]):
@@ -657,7 +680,8 @@ async def api_add(req: Request):
     b = await req.json()
     try:
         mid, dup = await add(b.get("text"), category=b.get("category") or "other", origin="user",
-                             pinned=bool(b.get("pinned")), expires=b.get("expires"))
+                             pinned=bool(b.get("pinned")), expires=b.get("expires"),
+                             local_only=bool(b.get("localOnly")))
     except ValueError as e:
         raise HTTPException(400, str(e))
     return {**_summary(), "added": None if dup else mid, "duplicate": dup and dup["text"]}
@@ -668,7 +692,7 @@ async def api_update(mid: str, req: Request):
     b = await req.json()
     try:
         await update(mid, text=b.get("text"), category=b.get("category"), pinned=b.get("pinned"),
-                     expires=b["expires"] if "expires" in b else "keep")
+                     expires=b["expires"] if "expires" in b else "keep", local_only=b.get("localOnly"))
     except KeyError:
         raise HTTPException(404, "No such memory")
     return _summary()
@@ -729,8 +753,9 @@ def api_learned(msg_id: str):
 
 
 @router.post("/backfill")
-def api_backfill():
+async def api_backfill():  # async: create_task needs the event loop (a plain def runs in a worker thread)
     if not _backfill["running"]:
+        _backfill["running"] = True  # set before the task starts, so a double click can't start two
         t = asyncio.create_task(_backfill_run())
         _tasks.add(t)
         t.add_done_callback(_tasks.discard)

@@ -1,10 +1,10 @@
-import { AudioLines, BookMarked, BookOpen, Brain, BrainCircuit, Boxes, CalendarClock, CodeXml, Cpu, HardDrive, Inbox, LibraryBig, Map as MapIcon, MessageSquare, NotebookPen, Palette, Radio, RadioTower, Settings, Shapes, Telescope, Workflow, type LucideIcon } from 'lucide-react';
+import { AudioLines, BookMarked, BookOpen, Brain, BrainCircuit, Boxes, CalendarClock, CodeXml, Cpu, HardDrive, ImagePlus, Inbox, LibraryBig, Map as MapIcon, MessageSquare, NotebookPen, Palette, Radio, RadioTower, Settings, Shapes, Telescope, Workflow, type LucideIcon } from 'lucide-react';
 import { useSyncExternalStore } from 'react';
 import type { Status } from '../types';
 import { dj } from '../dj/engine';
 
 export type AppId = 'chat' | 'studio' | 'code' | 'library' | 'maps' | 'wiki' | 'notes' | 'codex' | 'memory' | 'research' | 'plans' | 'assets' | 'scheduled' | 'activity'
-  | 'secretary' | 'gibberlink' | 'radio' | 'models' | 'data' | 'agents' | 'tools' | 'settings';
+  | 'secretary' | 'gibberlink' | 'radio' | 'generate' | 'models' | 'data' | 'agents' | 'tools' | 'settings';
 
 export type AppGroup = 'chat' | 'make' | 'know' | 'run' | 'system';
 
@@ -52,6 +52,8 @@ export const APPS: AppDef[] = [
   { id: 'radio', label: 'Radio / DJ', hint: 'Procedural FM station, dual-deck DJ rig, stem mixer and track forge', icon: Radio, tint: '#ff2e97', group: 'make',
     hash: '#/radio', route: /^#\/(radio|dj|fm)\b/, keywords: 'radio dj fm music synth procedural beats stems mixer synthfield generator turntable',
     live: () => dj.state.playing ? { label: `Radio · ${dj.state.song ? `${dj.state.song.title} (${dj.state.song.bpm} BPM)` : 'on air'}`, busy: true } : undefined },
+  { id: 'generate', label: 'Generate', hint: 'Make images, music and sound effects directly and compare variations', icon: ImagePlus, tint: '#38bdf8', group: 'make',
+    hash: '#/generate', route: /^#\/generate\b/, keywords: 'image flux comfyui nyx music musicgen orpheus sound effect sfx stable audio playground seed variations' },
   { id: 'library', label: 'Library', hint: 'Every artifact and web app built in Shell:B', icon: LibraryBig, tint: '#fbbf24', group: 'know',
     hash: '#/library', route: /^#\/library\b/, keywords: 'artifacts web apps' },
   { id: 'maps', label: 'Worlds', hint: 'The solar system, plus offline maps of Earth, the Moon, Mars and other worlds', icon: MapIcon, tint: '#4ade80', group: 'know',

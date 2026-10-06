@@ -244,6 +244,8 @@ async def wait_approval(aid: str, abort: asyncio.Event, meta: dict | None = None
     fut = asyncio.get_running_loop().create_future()
     _pending[aid] = fut
     _meta[aid] = {**(meta or {}), "since": time.time()}
+    import notify
+    notify.approval(aid, _meta[aid])  # pushes to the owner's devices if still unanswered after a short grace
     stop = asyncio.create_task(abort.wait())
     try:
         done, _ = await asyncio.wait({fut, stop}, timeout=timeout, return_when=asyncio.FIRST_COMPLETED)

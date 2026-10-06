@@ -160,7 +160,10 @@ async def api_feedback(req: Request):
 
     learned, why = None, ""
     said = "; ".join([REASONS[r] for r in reasons] + ([note] if note else []))
-    if b.get("remember") and (note or DIRECTIONAL & set(reasons)):
+    import privacy
+    if b.get("remember") and privacy.is_incognito(conv_id):  # incognito chats teach Shell:B nothing
+        why = "Thanks. This chat is incognito, so nothing was added to memory."
+    elif b.get("remember") and (note or DIRECTIONAL & set(reasons)):
         settings = memory._settings()
         try:
             async with memory._lock:

@@ -30,12 +30,14 @@ import schedules
 import research
 import notebook
 import activity
+import notify
 import megaplan
 import todos
 import favorites
 import codex
 import codex_secrets
 import media
+import generate
 import modelhub
 import appstate
 import studio_tools
@@ -66,10 +68,12 @@ import memory
 import episodes
 import feedback
 import reflection
+import commitments
 import gibberlink
 import secretary
 import backup
 import speech
+import importer
 from agent import Sink, Turn, build_system, history_messages, make_title, model_info, recall, user_payload
 from defaults import DEFAULT_AGENTS, DEFAULT_SETTINGS
 from tools import COMFY, FILES, OLLAMA, ORPHEUS, SANDBOX_IMAGE, SEARXNG, TOOLS, WORKSPACES
@@ -153,9 +157,12 @@ app.include_router(todos.router)
 favorites.init()
 app.include_router(favorites.router)
 app.include_router(activity.router)
+app.include_router(commitments.router)
+app.include_router(notify.router)
 app.include_router(codex_secrets.router)
 app.include_router(codex.router)
 app.include_router(media.router)
+app.include_router(generate.router)
 app.include_router(reflection.router)  # before memory.router, whose /{mid}/{action} would match /reflection/run
 app.include_router(memory.router)
 app.include_router(episodes.router)
@@ -187,6 +194,9 @@ app.include_router(backup.router)
 app.include_router(mcp_router.router)
 app.include_router(skills_router.router)
 app.include_router(speech.router)
+importer.init()
+commitments.init()  # tables at import like the others; start() runs it again (idempotent) and starts the brief loop
+app.include_router(importer.router)
 
 
 
@@ -207,6 +217,8 @@ async def _start_mcp():
     episodes.start()
     reflection.busy = lambda: bool(ACTIVE)
     reflection.start()
+    commitments.busy = lambda: bool(ACTIVE)
+    commitments.start()
     datasets.start()
     backup.start_scheduler()
     await devserver.serve_proxy()
@@ -224,6 +236,7 @@ async def _shutdown():
     todos.stop()
     episodes.stop()
     reflection.stop()
+    commitments.stop()
     datasets.stop()
     backup.stop_scheduler()
     for t in list(_TASKS):
@@ -290,6 +303,10 @@ async def new_conversation(req: Request):
     gid = body.get("groupId") if body.get("groupId") and groups.get(body["groupId"]) else None
     if gid:
         groups.touch(gid)
+    if body.get("incognito"):  # privacy.py: not remembered, learned from or searched; deleted after a while
+        import privacy
+        conv = db.create_conversation(body.get("agentId") or get_settings()["defaultAgent"])
+        return privacy.mark_incognito(conv["id"])
     return db.create_conversation(body.get("agentId") or get_settings()["defaultAgent"], group_id=gid)
 
 
@@ -325,6 +342,8 @@ async def patch_conversation(conv_id: str, req: Request):
     if "groupId" in body:
         if body["groupId"] and not groups.get(body["groupId"]):
             raise HTTPException(404, "No such project")
+        if body["groupId"] and (db.get_conversation(conv_id) or {}).get("incognito"):
+            raise HTTPException(400, "Incognito chats can't join a project")
         extra["groupId"] = body["groupId"]
     return db.update_conversation(conv_id, title=body.get("title"), agentId=body.get("agentId"), pinned=body.get("pinned"), **extra)
 
@@ -505,6 +524,9 @@ async def fork_conversation(conv_id: str, req: Request):
         group_id=conv.get("groupId")
     )
     new_cid = new_conv["id"]
+    if conv.get("incognito"):  # a fork of an incognito chat is incognito too
+        import privacy
+        privacy.mark_incognito(new_cid)
 
     # Duplicate messages and map IDs
     msg_id_map = {}
@@ -534,7 +556,7 @@ async def fork_conversation(conv_id: str, req: Request):
     new_ws = WORKSPACES / new_cid
     if old_ws.is_dir():
         try:
-            shutil.copytree(old_ws, new_ws, dirs_exist_ok=True)
+            await asyncio.to_thread(shutil.copytree, old_ws, new_ws, symlinks=True, dirs_exist_ok=True)
         except Exception as e:
             print(f"Warning: failed to copy workspace files for forked conv {conv_id} -> {new_cid}: {e}")
 
@@ -700,7 +722,7 @@ def begin_turn(conv, body, stream=True, note=""):
                                                                           f"using {turn.model} for this turn"})
                 info = await model_info(turn.model)
             num_ctx = int(agent.get("numCtx") or info["numCtx"] or 32768)
-            memories = await recall(agent, content, settings)
+            memories = [] if conv.get("incognito") else await recall(agent, content, settings)
             tool_names = turn.enabled_tools(info)
             system = build_system(agent, tool_names, effort, db.latest_artifacts(conv_id), memories, agents, settings,
                                   project_id=project_id,
@@ -708,6 +730,9 @@ def begin_turn(conv, body, stream=True, note=""):
                                   user_text=content)
             if note:
                 system += "\n\n" + note
+            if conv.get("incognito"):
+                import privacy
+                system += "\n\n" + privacy.PROMPT_NOTE
             if plan:
                 system += "\n\n" + planmode.NOTE
             if body.get("voice") and stream:
@@ -725,8 +750,10 @@ def begin_turn(conv, body, stream=True, note=""):
                 msgs[-1]["content"] += planmode.REMINDER
             if body.get("voice") and stream:
                 msgs[-1]["content"] += VOICE_REMINDER
-            if memories:
-                await emit({"type": "memories", "memories": memories})
+            recalled = memory.recalled_view(memories)
+            if recalled:  # shown (and editable) under the reply
+                live["recalled"] = recalled
+                await emit({"type": "memories", "memories": recalled})
             status = await turn.run(msgs, sink, effort)
         except Exception as e:
             status, error = "error", f"{type(e).__name__}: {e}"
@@ -737,11 +764,12 @@ def begin_turn(conv, body, stream=True, note=""):
             final["error"] = error
         final["content"] = "\n\n".join(b["text"] for b in sink.blocks if b["type"] == "text")
         db.add_message(conv_id, "assistant", final["content"],
-                       {k: final[k] for k in ("agentId", "model", "blocks", "status", "durationMs", "usage", "mode") if k in final}
+                       {k: final[k] for k in ("agentId", "model", "blocks", "status", "durationMs", "usage", "mode", "recalled") if k in final}
                        | ({"error": error} if error else {}), msg_id=asst_id)
         ACTIVE.pop(conv_id, None)
         if stream and status == "complete" and not abort.is_set():
             memory.after_turn(conv_id, asst_id, content, final["content"], agent)
+            commitments.after_turn(conv_id, asst_id, content, final["content"], agent)
         if project_id:
             try:
                 sha = await asyncio.to_thread(projects.commit, project_id,
@@ -1111,6 +1139,11 @@ def workspace_list(conv_id: str):
 
 # Agent-written HTML/SVG opened in a tab must not run with the app's origin (it could read the admin key).
 ACTIVE_TYPES = (".html", ".htm", ".svg", ".xml", ".xhtml")
+# Everything else that isn't plainly passive gets the sandbox too (.shtml, .xht, .xsl… are served as pages).
+# PDFs stay off the list: Chrome won't render a PDF under a sandbox CSP.
+PASSIVE_TYPES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".avif", ".bmp", ".ico", ".mp3", ".wav", ".ogg", ".oga",
+                 ".flac", ".m4a", ".aac", ".opus", ".mp4", ".webm", ".mov", ".m4v", ".woff", ".woff2", ".ttf", ".otf",
+                 ".pdf", ".txt", ".md", ".csv", ".json", ".py", ".js", ".css", ".ts", ".tsx", ".glb", ".gltf", ".zip"}
 
 
 @app.get("/api/workspace/{conv_id}/{path:path}")
@@ -1123,7 +1156,7 @@ def workspace_file(conv_id: str, path: str, download: bool = False):
         return FileResponse(p, filename=p.name)
     # chat artifacts load /work files (fonts need CORS) from their sandboxed, opaque-origin frame
     headers = {"X-Content-Type-Options": "nosniff", "Access-Control-Allow-Origin": "*"}
-    if p.suffix.lower() in ACTIVE_TYPES:
+    if p.suffix.lower() in ACTIVE_TYPES or p.suffix.lower() not in PASSIVE_TYPES:
         headers["Content-Security-Policy"] = "sandbox allow-scripts allow-popups allow-forms allow-modals allow-downloads"
         if p.suffix.lower() in (".html", ".htm"):  # known CDN URLs → /vendor, so the page works offline
             return Response(offline.localize(p.read_text(errors="replace")), media_type="text/html; charset=utf-8", headers=headers)

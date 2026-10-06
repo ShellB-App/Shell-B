@@ -16,7 +16,7 @@ from fastapi import APIRouter, HTTPException, Request
 import db
 
 router = APIRouter(prefix="/api/activity")
-SOURCES = ("schedule", "todo", "plan", "scout", "notebook", "deploy", "codex", "memory", "data")
+SOURCES = ("schedule", "todo", "plan", "scout", "notebook", "deploy", "codex", "memory", "data", "brief")
 ATTENTION = ("failed", "blocked", "paused", "interrupted", "rolled-back", "restart-pending", "review")
 KEEP = 2000           # events kept; the oldest read ones go first
 BODY_LIMIT = 600
@@ -46,10 +46,13 @@ def post(source: str, status: str, title: str, body: str = "", link: str = "", r
         if len(body) > BODY_LIMIT:
             body = body[:BODY_LIMIT].rsplit(" ", 1)[0] + "…"
         with db.conn() as c:
-            c.execute("INSERT OR IGNORE INTO activity VALUES(?,?,?,?,?,?,?,?,0)",
-                      (db.new_id("act"), time.time(), source, status, title[:200], body, link, ref))
+            new = c.execute("INSERT OR IGNORE INTO activity VALUES(?,?,?,?,?,?,?,?,0)",
+                            (db.new_id("act"), time.time(), source, status, title[:200], body, link, ref)).rowcount
             c.execute("DELETE FROM activity WHERE id IN (SELECT id FROM activity ORDER BY read DESC, ts ASC "
                       "LIMIT max(0, (SELECT count(*) FROM activity) - ?))", (KEEP,))
+        if new:  # a deduped repeat (same ref) doesn't notify again
+            import notify
+            notify.event(source, status, title, link, ref)
     except Exception as e:  # noqa: BLE001
         print(f"activity.post failed: {type(e).__name__}: {e}")
 

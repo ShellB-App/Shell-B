@@ -155,6 +155,7 @@ export function Composer({
   async function submit() {
     if (busy || uploading || (!text.trim() && atts.length === 0)) return;
     if (/^\/(new|clear)\s*$/.test(text.trim()) && onCommand) { setText(''); onCommand('new'); return; }
+    if (/^\/incognito\s*$/.test(text.trim()) && onCommand) { setText(''); onCommand('incognito'); return; }
     if (/^\/plan\s*$/.test(text.trim()) && onPlanMode) { setText(''); onPlanMode(!planMode); return; }
     // "/plan <request>" plans just this request
     const planOnce = !!onPlanMode && /^\/plan\s/.test(text.trim());

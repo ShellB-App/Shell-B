@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import {
-  Archive, AudioLines, BookMarked, Boxes, Brain, Inbox, Sparkles, Cpu, Monitor, Moon, Plus, Search, Settings as SettingsIcon, SlidersHorizontal, SquarePen, Star, Sun, Trash2, BrainCircuit, MessageSquare, KeyRound, Hash, Network, ShieldCheck,
+  Archive, AudioLines, Bell, BookMarked, Boxes, Brain, EyeOff, Inbox, Sparkles, Cpu, Monitor, Moon, Plus, Search, Settings as SettingsIcon, SlidersHorizontal, SquarePen, Star, Sun, Trash2, BrainCircuit, MessageSquare, KeyRound, Hash, Network, ShieldCheck,
 } from 'lucide-react';
 import type { Agent, ChatHit, ConversationSummary, Memory, ModelInfo, Settings, SettingsTabId, Status, ToolInfo } from '../types';
 import { api, fmtBytes } from '../api';
@@ -13,6 +13,7 @@ import { APPS, shortcutLabel, useRailOrder, type AppId } from './apps';
 import { AccountTab } from './Account';
 import { ApiKeysSettings } from './ApiKeysSettings';
 import { BackupsTab } from './BackupsTab';
+import { NotificationsTab } from './NotificationsSettings';
 import { MemoryManager } from './MemoryManager';
 import { SpeechTab } from './SpeechSettings';
 import { SCALES, setScale, useScale } from '../uiScale';
@@ -91,6 +92,7 @@ export function SettingsContent(p: SettingsProps) {
     { id: 'memory', label: 'Memory', icon: Brain },
     { id: 'shortcuts', label: 'Shortcuts', icon: Hash },
     { id: 'system', label: 'System', icon: Cpu },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'backups', label: 'Backups', icon: Archive },
     { id: 'account', label: 'Account', icon: ShieldCheck },
   ] as const;
@@ -113,6 +115,7 @@ export function SettingsContent(p: SettingsProps) {
         {tab === 'memory' && <MemoryManager />}
         {tab === 'shortcuts' && <ShortcutsTab />}
         {tab === 'system' && <SystemTab status={p.status} models={p.models} onOpenTab={setTab} />}
+        {tab === 'notifications' && <NotificationsTab />}
         {tab === 'backups' && <BackupsTab />}
         {tab === 'account' && <AccountTab />}
       </div>
@@ -356,7 +359,7 @@ interface PaletteProps {
   conversations: ConversationSummary[];
   theme: 'dark' | 'light';
   actions: {
-    newChat: (agentId?: string) => void; openConversation: (id: string) => void; toggleTheme: () => void; toggleSkin: () => void;
+    newChat: (agentId?: string, incognito?: boolean) => void; openConversation: (id: string) => void; toggleTheme: () => void; toggleSkin: () => void;
     openApp: (app: AppId) => void; openSettings: (tab?: SettingsTabId) => void;
   };
 }
@@ -384,6 +387,8 @@ export function CommandPalette({ open, onClose, agents, conversations, theme, ac
     const ql = q.toLowerCase();
     const cmds = ([
       { id: 'new', label: 'New chat', icon: <SquarePen className="w-4 h-4" />, run: () => actions.newChat() },
+      { id: 'new-incognito', label: 'New incognito chat', hint: 'Not remembered · deleted after 24 h', search: 'private incognito forget',
+        icon: <EyeOff className="w-4 h-4 text-slate-500 dark:text-slate-400" />, run: () => actions.newChat(undefined, true) },
       ...agents.map(a => ({ id: `agent-${a.id}`, label: `New chat with ${a.name}`, hint: a.title, icon: <AgentAvatar agent={a} size={16} />, run: () => actions.newChat(a.id) })),
       { id: 'theme', label: `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`, icon: theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />, run: actions.toggleTheme },
       ...THEMES.map(t => ({ id: `theme-${t.id}`, label: `Theme: ${t.label}`, hint: t.id === currentTheme() ? 'current' : undefined, search: `skin look style ${t.blurb}`,
@@ -409,7 +414,7 @@ export function CommandPalette({ open, onClose, agents, conversations, theme, ac
       .map(f => ({ id: `fav-${f.kind}-${f.ref}-${f.sub}`, label: f.title, hint: `★ ${FAV_LABEL[f.kind]}`, icon: <FavIcon f={f} agents={agents} />, run: () => { location.hash = f.href; } }));
     const starred = new Set(favs.filter(f => f.kind === 'chat').map(f => f.ref));
     const convs: Item[] = conversations.filter(c => !starred.has(c.id) && c.title.toLowerCase().includes(ql)).slice(0, 8)
-      .map(c => ({ id: c.id, label: c.title, hint: relTime(c.updatedAt), icon: <MessageSquare className="w-4 h-4" />, run: () => actions.openConversation(c.id) }));
+      .map(c => ({ id: c.id, label: c.title, hint: relTime(c.updatedAt), icon: c.incognito ? <EyeOff className="w-4 h-4 text-slate-500 dark:text-slate-400" /> : <MessageSquare className="w-4 h-4" />, run: () => actions.openConversation(c.id) }));
 
     const ftsItems: Item[] = [];
     for (const h of msgHits) {

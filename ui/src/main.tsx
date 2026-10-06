@@ -13,6 +13,7 @@ import { AuthGate } from './components/AuthGate';
 import { SynthDJ } from './dj/SynthDJ';
 import { Splash } from './components/Splash';
 import { Screensaver } from './components/Screensaver';
+import './notify';  // notification clicks route the app; hidden-tab notifications on devices without push
 
 function ShellRoot() {
   const formFactor = useFormFactor();

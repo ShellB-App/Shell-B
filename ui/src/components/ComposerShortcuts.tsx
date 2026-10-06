@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
 import clsx from 'clsx';
 import {
-  AppWindow, AtSign, BookOpen, Brain, Calendar, Clipboard, Clock, Code2, FileText, FlaskConical, FolderKanban, Globe, Hash,
+  AppWindow, AtSign, BookOpen, Brain, Calendar, Clipboard, Clock, Code2, EyeOff, FileText, FlaskConical, FolderKanban, Globe, Hash,
   Image as ImageIcon, Library, ListChecks, MessageSquarePlus, Music, Search, Sparkles, Terminal, UserRound, Variable, Wand2, Zap,
 } from 'lucide-react';
 import type { Agent, Attachment, Effort } from '../types';
@@ -17,7 +17,7 @@ import { AgentAvatar } from './common';
  *      a URL), which becomes a chip and is inlined for the agent by the server (server/composer.py).
  */
 
-export type ComposerCommand = 'new';
+export type ComposerCommand = 'new' | 'incognito';
 
 interface Item {
   key: string;
@@ -179,6 +179,10 @@ export function useShortcuts(o: Opts) {
       if (o.onCommand && match(q, 'new', 'clear')) {
         out.push({ key: 'new', group: 'Actions', label: '/new', hint: 'Start a new chat', icon: <MessageSquarePlus className="w-3.5 h-3.5" />,
           run: () => { replaceToken(''); o.onCommand?.('new'); } });
+      }
+      if (o.onCommand && match(q, 'incognito', 'private')) {
+        out.push({ key: 'incognito', group: 'Actions', label: '/incognito', hint: 'New chat that isn’t remembered and is deleted after 24 h',
+          icon: <EyeOff className="w-3.5 h-3.5" />, run: () => { replaceToken(''); o.onCommand?.('incognito'); } });
       }
       if (o.onPlanMode && match(q, 'plan')) {
         out.push({ key: 'plan', group: 'Actions', label: '/plan', icon: <ListChecks className="w-3.5 h-3.5" />,

@@ -222,6 +222,11 @@ export interface Message {
   mode?: 'plan';
   /** what Shell:B learned about the user from this exchange (server/memory.py after_turn) */
   learned?: LearnedItem[];
+  /** follow-ups noted from this exchange (server/commitments.py after_turn) */
+  followUps?: FollowUpNoted[];
+  /** memories the reply was given (server/memory.py recalled_view): `relevant` ones were picked for this message,
+   *  the rest are the core profile that goes in every prompt */
+  recalled?: RecalledMemory[];
   /** spoken in hands-free voice mode and transcribed (components/VoiceMode.tsx) */
   voice?: boolean;
   /** the owner's rating of this reply (server/feedback.py) */
@@ -256,6 +261,9 @@ export interface MessageFeedback {
 
 export interface LearnedItem { op: 'add' | 'update' | 'retire'; id: string; text: string; old?: string; reason?: string; status: 'active' | 'pending' | 'retired' }
 
+/** A follow-up the learner noted (`add`) or closed (`done`) from a chat turn. `who`: me | agent. */
+export interface FollowUpNoted { op: 'add' | 'done'; id: string; text: string; due?: string | null; who?: string }
+
 export type ArtifactType = 'html' | 'svg' | 'markdown' | 'mermaid' | 'code';
 
 export interface ArtifactVersion {
@@ -287,6 +295,8 @@ export interface ConversationSummary {
   streaming?: boolean;
   projectId?: string | null;
   groupId?: string | null;
+  /** not remembered, learned from or searched; deleted after 24 h (server/privacy.py) */
+  incognito?: boolean;
 }
 
 /** A chat Project: groups chats with shared instructions and knowledge (not a Studio design project). */
@@ -392,6 +402,8 @@ export interface Settings {
   theme?: string;
 }
 
+export interface RecalledMemory { id: string; text: string; category?: string; relevant: boolean }
+
 export interface Memory { id: string; text: string; tags: string[]; createdAt: number }
 
 export interface Status {
@@ -417,7 +429,7 @@ export interface DownloadItem {
   done: number; total: number; rate: number | null; note?: string | null; started?: number; link: string;
 }
 
-export type ActivitySource = 'schedule' | 'todo' | 'plan' | 'scout' | 'notebook' | 'deploy' | 'codex' | 'memory' | 'data';
+export type ActivitySource = 'schedule' | 'todo' | 'plan' | 'scout' | 'notebook' | 'deploy' | 'codex' | 'memory' | 'data' | 'brief';
 
 /** Unread events, how many of them need the owner, and approvals agents are waiting on right now. */
 export interface ActivitySummary { unread: number; attention: number; pending: number }
@@ -627,7 +639,7 @@ export type StreamEvent =
   | { type: 'block_update'; index: number; block: Block }
   | { type: 'artifact'; artifact: ArtifactVersion }
   | { type: 'model'; model: string; note: string }
-  | { type: 'memories'; memories: Memory[] }
+  | { type: 'memories'; memories: RecalledMemory[] }
   | { type: 'title'; title: string }
   | { type: 'error'; error: string }
   | { type: 'file'; path: string; action: 'created' | 'modified' | 'deleted' }
@@ -852,4 +864,4 @@ export interface BackupRestoreResult {
   safetyBackup?: BackupInfo;
 }
 
-export type SettingsTabId = 'general' | 'speech' | 'network' | 'memory' | 'shortcuts' | 'system' | 'backups' | 'account' | 'apikeys';
+export type SettingsTabId = 'general' | 'speech' | 'network' | 'memory' | 'shortcuts' | 'system' | 'backups' | 'account' | 'apikeys' | 'notifications';
