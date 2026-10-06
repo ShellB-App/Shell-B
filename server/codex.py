@@ -70,7 +70,12 @@ CREATE TABLE IF NOT EXISTS codex_chunks(
 _restart: list[str] = []
 
 
+_LOOP: asyncio.AbstractEventLoop | None = None
+
+
 def start():
+    global _LOOP
+    _LOOP = asyncio.get_running_loop()
     for eid in _restart:
         e = get(eid)
         if e and e["kind"] == "link" and e["meta"].get("snapshot", {}).get("status") == "pending":
@@ -86,6 +91,11 @@ def allowed(agent: dict, settings: dict) -> bool:
 
 
 def _spawn(coro):
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:  # a sync endpoint (worker thread), e.g. re-snapshot or relink
+        _LOOP.call_soon_threadsafe(_spawn, coro)
+        return
     t = asyncio.create_task(coro)
     _TASKS.add(t)
     t.add_done_callback(_TASKS.discard)

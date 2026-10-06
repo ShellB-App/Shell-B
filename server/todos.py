@@ -575,7 +575,7 @@ def api_clear(gid: str):
 
 
 @router.post("/api/chat-projects/{gid}/todos/{tid}/run")
-def api_run_one(gid: str, tid: str):
+async def api_run_one(gid: str, tid: str):  # async: _wake() sets an asyncio.Event
     _need(gid)
     try:
         run_one(tid)
@@ -585,7 +585,7 @@ def api_run_one(gid: str, tid: str):
 
 
 @router.post("/api/chat-projects/{gid}/todos-start")
-def api_start(gid: str):
+async def api_start(gid: str):  # async: _wake() sets an asyncio.Event
     _need(gid)
     try:
         start_list(gid)

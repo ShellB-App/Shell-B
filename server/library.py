@@ -10,6 +10,7 @@ Refs: proj-… (Studio/Code project), rb-… (research notebook), grp-… (chat 
 artifact), media (generated images/music). A unique title fragment also works.
 """
 import asyncio
+import os
 import re
 import shutil
 from pathlib import Path
@@ -391,7 +392,9 @@ async def library(args, ctx):
                     dest.write_text(text)
                 elif f.is_dir():
                     shutil.rmtree(dest, ignore_errors=True)
-                    shutil.copytree(f, dest, ignore=shutil.ignore_patterns(".git", "node_modules", "__pycache__"))
+                    skip = shutil.ignore_patterns(".git", "node_modules", "__pycache__")
+                    # symlinks are dropped: copytree would follow them and copy host files out of /work
+                    shutil.copytree(f, dest, ignore=lambda d, names: set(skip(d, names)) | {n for n in names if os.path.islink(os.path.join(d, n))})
                 else:
                     shutil.copy2(f, dest)
                 return [dest] if dest.is_file() else [p for p in dest.rglob("*") if p.is_file()]

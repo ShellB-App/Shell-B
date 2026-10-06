@@ -125,7 +125,12 @@ async def download(ctx, url: str) -> Path:
         else _work_root(ctx) / "downloads"
     d.mkdir(parents=True, exist_ok=True)
     dest = d / name
-    dest.write_bytes(bytes(data))
+    # the sandbox can turn /work/downloads (or a file in it) into a symlink; this write runs on the host
+    if not ctx.project_id and not d.resolve().is_relative_to(_work_root(ctx).resolve()):
+        raise ValueError("The downloads folder points outside the workspace.")
+    fd = os.open(dest, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o644)
+    with os.fdopen(fd, "wb") as fh:
+        fh.write(bytes(data))
     return dest
 
 

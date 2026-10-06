@@ -771,7 +771,8 @@ def _sources(ctx, files) -> list[tuple[Path, str]]:
         else:
             p = library._dest(ctx, f)
             if p.is_dir():
-                out += [(q, str(q.relative_to(p))) for q in sorted(p.rglob("*")) if q.is_file() and ".git" not in q.parts]
+                out += [(q, str(q.relative_to(p))) for q in sorted(p.rglob("*"))
+                        if q.is_file() and ".git" not in q.parts and not q.is_symlink() and q.resolve().is_relative_to(root)]
             elif p.is_file():
                 out.append((p, p.name))
             else:
@@ -1571,7 +1572,7 @@ def jobs_stop(jid: str):
 
 
 @router.post("/jobs/{jid}/retry")
-def jobs_retry(jid: str):
+async def jobs_retry(jid: str):  # async: _wake is an asyncio.Event the worker waits on
     j = get_job(jid)
     if not j:
         raise HTTPException(404)

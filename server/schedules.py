@@ -497,7 +497,7 @@ def api_delete(sid: str):
 
 
 @router.post("/api/schedules/{sid}/run")
-def api_run(sid: str):
+async def api_run(sid: str):  # async: enqueue() touches the worker's asyncio.Queue
     if not get(sid):
         raise HTTPException(404, "No such task")
     return {"queued": enqueue(sid, "manual")}

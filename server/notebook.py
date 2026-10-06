@@ -95,7 +95,7 @@ def _spawn(coro):
         t.add_done_callback(_TASKS.discard)
     except RuntimeError:
         if _LOOP:
-            asyncio.run_coroutine_threadsafe(coro, _LOOP)
+            _LOOP.call_soon_threadsafe(_spawn, coro)  # re-enter on the loop so the task is kept in _TASKS
         else:
             coro.close()
 

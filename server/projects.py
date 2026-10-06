@@ -315,12 +315,15 @@ def root(pid: str) -> Path:
     return p
 
 
-def safe_path(pid: str, rel: str) -> Path:
+def safe_path(pid: str, rel: str, allow_root=True) -> Path:
+    """`allow_root=False` for deletes and moves: "" or "." would otherwise mean the whole project, .git included."""
     base = root(pid).resolve()
     rel = (rel or "").strip().lstrip("/")
     p = (base / rel).resolve()
     if p != base and not str(p).startswith(str(base) + os.sep):
         raise ValueError(f"Path escapes the project: {rel!r}")
+    if p == base and not allow_root:
+        raise ValueError("That path is the project itself; name a file or folder inside it")
     if ".git" in p.relative_to(base).parts:
         raise ValueError("The .git folder is off limits")
     return p
@@ -746,8 +749,9 @@ async def code_clone(req: Request):
     pid = proj["id"]
     proc = await asyncio.create_subprocess_exec(
         "git", "clone", "-q", "--depth", "200", "--no-recurse-submodules", "-c", "protocol.allow=never",
-        "-c", "protocol.https.allow=always", url, str(PROJECTS / pid),
-        env={**os.environ, "GIT_TERMINAL_PROMPT": "0"}, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        "-c", "protocol.https.allow=always", "-c", "http.followRedirects=false", url, str(PROJECTS / pid),
+        # no LFS smudge: a repo's .lfsconfig could point git-lfs at any host, past the _blocked_host check
+        env={**os.environ, "GIT_TERMINAL_PROMPT": "0", "GIT_LFS_SKIP_SMUDGE": "1"}, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
     try:
         _, err = await asyncio.wait_for(proc.communicate(), timeout=180)
     except asyncio.TimeoutError:
@@ -987,9 +991,12 @@ async def file_put(pid: str, path: str, req: Request):
 async def file_delete(pid: str, path: str):
     if remote.config(pid):
         raise HTTPException(400, "Delete remote files from the terminal or ask the agent.")
-    p = safe_path(pid, path)
+    try:
+        p = safe_path(pid, path, allow_root=False)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
     if p.is_dir():
-        shutil.rmtree(p)
+        await asyncio.to_thread(shutil.rmtree, p)  # node_modules can take seconds
     elif p.exists():
         p.unlink()
     import selfmod
@@ -1002,7 +1009,10 @@ async def file_delete(pid: str, path: str):
 @router.post("/{pid}/move")
 async def file_move(pid: str, req: Request):
     body = await req.json()
-    src, dst = safe_path(pid, body["from"]), safe_path(pid, body["to"])
+    try:
+        src, dst = safe_path(pid, body["from"], allow_root=False), safe_path(pid, body["to"], allow_root=False)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
     if not src.exists():
         raise HTTPException(404, "Source not found")
     dst.parent.mkdir(parents=True, exist_ok=True)
@@ -1095,7 +1105,10 @@ def export(pid: str):
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         for f in list_files(pid):
-            z.write(base / f["path"], f["path"])
+            p = base / f["path"]
+            if p.is_symlink() or not p.resolve().is_relative_to(base.resolve()):
+                continue  # an agent-made symlink would put host files in the zip
+            z.write(p, f["path"])
     slug = re.sub(r"[^a-z0-9]+", "-", (proj or {}).get("name", "project").lower()).strip("-") or "project"
     return Response(buf.getvalue(), media_type="application/zip",
                     headers={"Content-Disposition": f'attachment; filename="{slug}.zip"'})

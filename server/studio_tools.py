@@ -117,10 +117,10 @@ async def edit_file(args, ctx):
 async def delete_file(args, ctx):
     pid = _need_project(ctx)
     rel = str(args.get("path", "")).strip()
-    p = P.safe_path(pid, rel)
+    p = P.safe_path(pid, rel, allow_root=False)
     if not p.exists():
         return ToolResult(f"{rel} does not exist.", error=True)
-    shutil.rmtree(p) if p.is_dir() else p.unlink()
+    await asyncio.to_thread(shutil.rmtree, p) if p.is_dir() else p.unlink()
     await _changed(ctx, rel, "deleted")
     if selfmod.is_self(pid):
         db.audit_log("selfmod:delete_file", {"path": rel, "pid": pid, "conv_id": getattr(ctx, "conv_id", None)})
@@ -130,7 +130,7 @@ async def delete_file(args, ctx):
 async def rename_file(args, ctx):
     pid = _need_project(ctx)
     src, dst = str(args.get("from", "")).strip(), str(args.get("to", "")).strip()
-    ps, pd = P.safe_path(pid, src), P.safe_path(pid, dst)
+    ps, pd = P.safe_path(pid, src, allow_root=False), P.safe_path(pid, dst, allow_root=False)
     if not ps.exists():
         return ToolResult(f"{src} does not exist.", error=True)
     pd.parent.mkdir(parents=True, exist_ok=True)
