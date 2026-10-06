@@ -74,6 +74,8 @@ import secretary
 import backup
 import speech
 import importer
+import watchdog
+import search as everything_search
 from agent import Sink, Turn, build_system, history_messages, make_title, model_info, recall, user_payload
 from defaults import DEFAULT_AGENTS, DEFAULT_SETTINGS
 from tools import COMFY, FILES, OLLAMA, ORPHEUS, SANDBOX_IMAGE, SEARXNG, TOOLS, WORKSPACES
@@ -198,6 +200,8 @@ app.include_router(speech.router)
 importer.init()
 commitments.init()  # tables at import like the others; start() runs it again (idempotent) and starts the brief loop
 app.include_router(importer.router)
+app.include_router(watchdog.router)
+app.include_router(everything_search.router)  # GET /api/search: the command palette's "search everything"
 
 
 
@@ -221,6 +225,8 @@ async def _start_mcp():
     commitments.busy = lambda: bool(ACTIVE)
     commitments.start()
     datasets.start()
+    watchdog.probe = service_status
+    watchdog.start()
     backup.start_scheduler()
     await devserver.serve_proxy()
     await mcp_hub.sync()
@@ -239,6 +245,7 @@ async def _shutdown():
     reflection.stop()
     commitments.stop()
     datasets.stop()
+    watchdog.stop()
     backup.stop_scheduler()
     for t in list(_TASKS):
         if not t.done():

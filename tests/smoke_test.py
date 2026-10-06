@@ -272,6 +272,180 @@ class IncognitoSetting(unittest.TestCase):
         client.put("/api/settings", json={"incognitoHours": 24})
 
 
+class Watchdog(unittest.TestCase):
+    """Health watchdog: services failing N checks, recovery, crash loops from NRestarts, low disk and memory."""
+
+    def setUp(self):
+        import notify
+        import watchdog
+        self.w, self.notify = watchdog, notify
+        self.saved = (notify.event, watchdog.probe, watchdog.units, watchdog.disk, watchdog.memory, watchdog._started)
+        self.pushes = []
+        notify.event = lambda *a, **k: self.pushes.append(a)  # never push to the owner's real devices
+        self.svc = {"nyx": {"ok": True}, "ollama": {"ok": True}}
+        self.unit = {"shellb-nyx": {"active": "active", "sub": "running", "restarts": 0}}
+        self.free, self.avail = 2000e9, 60e9
+
+        async def probe():
+            return {k: dict(v) for k, v in self.svc.items()}
+
+        async def units():
+            return {k: dict(v) for k, v in self.unit.items()}
+
+        watchdog.probe, watchdog.units = probe, units
+        watchdog.disk = lambda: (self.free, 4000e9)
+        watchdog.memory = lambda: (self.avail, 128e9)
+        watchdog._started, watchdog._mem_low = 0, 0
+        watchdog._fails.clear()
+        watchdog.db.kv_set(watchdog.KV, {})
+        with watchdog.db.conn() as c:
+            c.execute("DELETE FROM activity WHERE source='health'")
+        self.t = 1_800_000_000.0
+
+    def tearDown(self):
+        (self.notify.event, self.w.probe, self.w.units, self.w.disk, self.w.memory, self.w._started) = self.saved
+
+    def tick(self, n=1):
+        for _ in range(n):
+            self.t += 60
+            asyncio.run(self.w.run_once(self.t))
+
+    def posts(self):
+        with self.w.db.conn() as c:
+            return [(r["status"], r["title"]) for r in
+                    c.execute("SELECT status, title FROM activity WHERE source='health' ORDER BY rowid")]
+
+    def test_service_down_after_three_checks_then_back_up(self):
+        self.svc["nyx"] = {"ok": False, "error": "ConnectError"}
+        self.tick(2)
+        self.assertEqual(self.posts(), [])
+        self.tick()
+        self.assertEqual(self.posts(), [("failed", "Image generation (ComfyUI) is down")])
+        self.w._fails.clear()  # a server restart forgets the counters but not the open incident
+        self.tick(5)
+        self.assertEqual(len(self.posts()), 1)
+        self.assertEqual([i["title"] for i in client.get("/api/watchdog").json()["incidents"]],
+                         ["Image generation (ComfyUI) is down"])
+        self.svc["nyx"] = {"ok": True}
+        self.tick(2)
+        self.assertEqual(self.posts()[1:], [("recovered", "Image generation (ComfyUI) is back up")])
+        self.assertEqual(client.get("/api/watchdog").json()["incidents"], [])
+        self.assertEqual([p[0] for p in self.pushes], ["health", "health"])
+
+    def test_grace_period_and_deliberate_stop(self):
+        self.w._started = self.t
+        self.svc["nyx"] = {"ok": False}
+        self.tick(3)  # inside the first 4 minutes: HERMES & co. may still be loading
+        self.assertEqual(self.posts(), [])
+        self.unit["shellb-nyx"]["active"] = "inactive"  # `systemctl stop` on purpose
+        self.tick(6)
+        self.assertEqual(self.posts(), [])
+
+    def test_crash_loop_from_restart_counter(self):
+        for n in (0, 1, 2):
+            self.unit["shellb-nyx"]["restarts"] = n
+            self.tick()
+        self.assertEqual(self.posts(), [])
+        self.unit["shellb-nyx"]["restarts"] = 3
+        self.tick()
+        self.assertEqual(self.posts(), [("failed", "Image generation (ComfyUI) keeps crashing")])
+        self.unit["shellb-nyx"]["restarts"] = 5
+        self.tick(3)
+        self.assertEqual(len(self.posts()), 1)
+        self.tick(16)  # a whole window without an automatic restart
+        self.assertEqual(self.posts()[1:], [("recovered", "Image generation (ComfyUI) is stable again")])
+        self.unit["shellb-nyx"]["restarts"] = 0  # a manual restart flushes the counter: not a loop
+        self.tick(3)
+        self.unit["shellb-nyx"]["active"] = "failed"
+        self.tick(2)
+        self.assertEqual(self.posts()[2:], [("failed", "Image generation (ComfyUI) stopped after a failure")])
+
+    def test_low_disk_once_a_day_and_low_memory(self):
+        self.free = 50e9
+        self.tick(5)
+        self.assertEqual(self.posts(), [("warning", "System disk is nearly full")])
+        self.t += 86400
+        self.tick()
+        self.assertEqual(len(self.posts()), 2)
+        self.avail = 3e9
+        self.tick(2)
+        self.assertEqual(len(self.posts()), 2)
+        self.tick(4)
+        self.assertEqual(self.posts()[2:], [("warning", "Memory is almost full")])
+
+
+class SearchEverything(unittest.TestCase):
+    """GET /api/search (server/search.py): the command palette's grouped search over the owner's other content."""
+    WORD = "zephyrquill"
+
+    def setUp(self):
+        import commitments
+        import db
+        import privacy
+        import search
+        self.db, self.search = db, search
+        self.conv = db.create_conversation("shellb", "Search test")["id"]
+        self.hidden = db.create_conversation("shellb", "Search test (incognito)")["id"]
+        privacy.mark_incognito(self.hidden)
+        self.note = db.new_id("cx")
+        with db.conn() as c:
+            c.execute("INSERT INTO codex_entries(id, kind, title, body, tags, pinned, status, meta, created_by, created, updated) "
+                      "VALUES(?,?,?,?,?,?,?,?,?,?,?)", (self.note, "note", f"{self.WORD.title()} garden plan",
+                      f"Plant the {self.WORD} bulbs by the fence.", "[]", 0, "ok", "{}", "you", 1.0, 1.0))
+        self.fu, _ = commitments.add(f"Order {self.WORD} seeds", conv_id=self.conv)
+        self.fu_hidden, _ = commitments.add(f"Secret {self.WORD} errand", conv_id=self.hidden)
+        for cid, name in ((self.conv, f"{self.WORD}_notes.txt"), (self.hidden, f"{self.WORD}_private.txt")):
+            (shellb.WORKSPACES / cid / "sub").mkdir(parents=True, exist_ok=True)
+            (shellb.WORKSPACES / cid / "sub" / name).write_text("x")
+        (shellb.WORKSPACES / self.conv / "node_modules").mkdir(exist_ok=True)
+        (shellb.WORKSPACES / self.conv / "node_modules" / f"{self.WORD}_dep.js").write_text("x")
+        search._files["at"] = 0.0  # rebuild the filename index
+
+    def tearDown(self):
+        import commitments
+        with self.db.conn() as c:
+            c.execute("DELETE FROM codex_entries WHERE id=?", (self.note,))
+        for f in (self.fu, self.fu_hidden):
+            if f:
+                commitments.delete(f)
+        for cid in (self.conv, self.hidden):
+            shutil.rmtree(shellb.WORKSPACES / cid, ignore_errors=True)
+            self.db.delete_conversation(cid)
+
+    def test_grouped_results(self):
+        r = client.get(f"/api/search?q={self.WORD}&limit=5")
+        self.assertEqual(r.status_code, 200, r.text[:300])
+        body = r.json()
+        groups = {g["group"]: g["items"] for g in body["groups"]}
+        for g in ("Codex", "Follow-ups", "Files"):
+            self.assertIn(g, groups, body)
+        note = next(i for i in groups["Codex"] if i["id"] == f"codex:{self.note}")
+        self.assertEqual(note["route"], f"#/codex/notes/{self.note}")
+        self.assertIn(f"[[{self.WORD}]]", note["snippet"].lower())
+        self.assertEqual([i["route"] for i in groups["Follow-ups"]], ["#/activity/follow-ups"])
+        files = [i for i in groups["Files"]]
+        self.assertEqual([(i["title"], i["route"]) for i in files], [(f"{self.WORD}_notes.txt", f"#/c/{self.conv}")])
+        for item in (i for items in groups.values() for i in items):
+            self.assertTrue({"id", "title", "snippet", "route", "kind"} <= set(item), item)
+        self.assertIn("chat files", body["searched"])
+
+    def test_incognito_chats_stay_hidden(self):
+        text = client.get(f"/api/search?q={self.WORD}").text
+        self.assertNotIn(self.hidden, text)
+        self.assertNotIn("_private.txt", text)
+        self.assertNotIn("errand", text)
+        self.assertNotIn("_dep.js", text)  # node_modules is never walked
+
+    def test_short_and_empty_queries(self):
+        for q in ("", " ", "z"):
+            with self.subTest(q=q):
+                body = client.get(f"/api/search?q={q}").json()
+                self.assertEqual(body["groups"], [])
+        none = client.get("/api/search?q=qqqzzzxxxnothing").json()["groups"]
+        self.assertEqual([g for g in none if g["key"] != "wiki"], [])  # the wiki group only offers "search the wiki"
+        self.assertEqual(self.search.snippet("Plant the bulbs", ["bulb"]), "Plant the [[bulb]]s")
+
+
 class Codex(unittest.TestCase):
     def test_spawn_from_worker_thread(self):
         """Sync endpoints run in a worker thread; codex._spawn must hand the task to the loop instead of raising."""

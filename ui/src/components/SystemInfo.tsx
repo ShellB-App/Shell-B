@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { ChevronRight, Cpu, HardDrive, Server, Zap } from 'lucide-react';
 import { req, fmtBytes } from '../api';
+import { HealthCard } from './HealthCard';
 
 /** GET /api/system (server/sysinfo.py). */
 interface SystemInfo {
@@ -63,6 +64,7 @@ export function SystemInfoPanel() {
 
   return (
     <div className="space-y-5">
+      <HealthCard />
       <div>
         <h3 className={clsx(H, 'flex items-center gap-1.5')}><HardDrive className="w-3.5 h-3.5" />Storage</h3>
         <div className="space-y-2">

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import {
   Archive, AudioLines, Bell, BookMarked, Boxes, Brain, EyeOff, Inbox, Sparkles, Cpu, Monitor, Moon, Plus, Search, Settings as SettingsIcon, SlidersHorizontal, SquarePen, Star, Sun, Trash2, BrainCircuit, MessageSquare, KeyRound, Hash, Network, ShieldCheck,
@@ -10,6 +10,7 @@ import { jumpToMessage } from '../jump';
 import { FAV_LABEL, useFavorites } from '../favorites';
 import { FavIcon } from './Favorites';
 import { APPS, shortcutLabel, useRailOrder, type AppId } from './apps';
+import { searchIcon, searchedList, useEverythingSearch } from './SearchResults';
 import { AccountTab } from './Account';
 import { ApiKeysSettings } from './ApiKeysSettings';
 import { BackupsTab } from './BackupsTab';
@@ -372,6 +373,9 @@ export function CommandPalette({ open, onClose, agents, conversations, theme, ac
   const railOrder = useRailOrder();
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => { if (open) { setQ(''); setSel(0); setMsgHits([]); setTimeout(() => input.current?.focus(), 10); } }, [open]);
+  const everything = useEverythingSearch(q, open);  // Codex, follow-ups, Library, /work files, media, wiki (SearchResults.tsx)
+  const list = useRef<HTMLDivElement>(null);
+  useEffect(() => { list.current?.querySelector('[data-sel="true"]')?.scrollIntoView({ block: 'nearest' }); }, [sel]);
 
   useEffect(() => {
     const term = q.trim();
@@ -382,12 +386,12 @@ export function CommandPalette({ open, onClose, agents, conversations, theme, ac
     return () => clearTimeout(t);
   }, [q]);
 
-  type Item = { id: string; label: string; hint?: string; search?: string; snippet?: string; icon: React.ReactNode; run: () => void };
+  type Item = { id: string; label: string; hint?: string; search?: string; snippet?: string; section?: string; icon: React.ReactNode; run: () => void };
   const items = useMemo<Item[]>(() => {
     const ql = q.toLowerCase();
     const cmds = ([
       { id: 'new', label: 'New chat', icon: <SquarePen className="w-4 h-4" />, run: () => actions.newChat() },
-      { id: 'new-incognito', label: 'New incognito chat', hint: 'Not remembered · deleted after 24 h', search: 'private incognito forget',
+      { id: 'new-incognito', label: 'New incognito chat', hint: 'Not remembered · deleted automatically', search: 'private incognito forget',
         icon: <EyeOff className="w-4 h-4 text-slate-500 dark:text-slate-400" />, run: () => actions.newChat(undefined, true) },
       ...agents.map(a => ({ id: `agent-${a.id}`, label: `New chat with ${a.name}`, hint: a.title, icon: <AgentAvatar agent={a} size={16} />, run: () => actions.newChat(a.id) })),
       { id: 'theme', label: `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`, icon: theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />, run: actions.toggleTheme },
@@ -433,8 +437,14 @@ export function CommandPalette({ open, onClose, agents, conversations, theme, ac
       }
     }
 
-    return q ? [...stars, ...convs, ...ftsItems, ...cmds] : [...cmds.slice(0, 1), ...stars, ...convs.slice(0, 6), ...cmds.slice(1)];
-  }, [q, agents, conversations, theme, actions, favs, railOrder, msgHits]);
+    // everything else the owner has (server/search.py), one section per group, under the chats and commands
+    const found: Item[] = q.trim() ? everything.groups.flatMap(g => g.items.map(it => ({
+      id: `s-${it.id}`, label: it.title, hint: it.hint, snippet: it.snippet || undefined, section: g.group,
+      icon: searchIcon(it), run: () => { location.hash = it.route; },
+    }))) : [];
+
+    return q ? [...stars, ...convs, ...ftsItems, ...cmds, ...found] : [...cmds.slice(0, 1), ...stars, ...convs.slice(0, 6), ...cmds.slice(1)];
+  }, [q, agents, conversations, theme, actions, favs, railOrder, msgHits, everything.groups]);
 
   if (!open) return null;
   const run = (i: number) => { items[i]?.run(); onClose(); };
@@ -443,7 +453,7 @@ export function CommandPalette({ open, onClose, agents, conversations, theme, ac
       <div className="w-full max-w-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-2xl shadow-2xl overflow-hidden animate-slide-up" onMouseDown={e => e.stopPropagation()}>
         <div className="flex items-center gap-2 px-3 border-b border-[var(--border-subtle)]">
           <Search className="w-4 h-4 text-[var(--text-muted)]" />
-          <input ref={input} value={q} onChange={e => { setQ(e.target.value); setSel(0); }} placeholder="Search messages, chats, and commands…"
+          <input ref={input} value={q} onChange={e => { setQ(e.target.value); setSel(0); }} placeholder="Search everything: chats, notes, files, commands…"
             className="flex-1 bg-transparent py-3 text-sm focus:outline-none"
             onKeyDown={e => {
               if (e.key === 'ArrowDown') { e.preventDefault(); setSel(s => Math.min(items.length - 1, s + 1)); }
@@ -453,9 +463,13 @@ export function CommandPalette({ open, onClose, agents, conversations, theme, ac
             }} />
           <kbd className="text-[10px] font-mono text-[var(--text-muted)] px-1.5 py-0.5 rounded border border-[var(--border-subtle)]">esc</kbd>
         </div>
-        <div className="max-h-[50vh] overflow-y-auto p-1.5 space-y-0.5">
+        <div ref={list} className="max-h-[50vh] overflow-y-auto p-1.5 space-y-0.5">
           {items.map((it, i) => (
-            <button key={it.id} onMouseEnter={() => setSel(i)} onClick={() => run(i)}
+            <Fragment key={it.id}>
+            {it.section && it.section !== items[i - 1]?.section && (
+              <div className="px-2.5 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">{it.section}</div>
+            )}
+            <button onMouseEnter={() => setSel(i)} onClick={() => run(i)} data-sel={i === sel}
               className={clsx('w-full flex flex-col gap-1 px-2.5 py-2 rounded-lg text-left text-sm transition', i === sel ? 'bg-[var(--bg-hover)]' : '')}>
               <div className="flex items-center gap-2.5 w-full">
                 <span className="text-[var(--text-secondary)] shrink-0">{it.icon}</span>
@@ -468,8 +482,17 @@ export function CommandPalette({ open, onClose, agents, conversations, theme, ac
                 </div>
               )}
             </button>
+            </Fragment>
           ))}
-          {items.length === 0 && <div className="text-xs text-[var(--text-muted)] text-center py-6">No matches</div>}
+          {items.length === 0 && !everything.loading && !(everything.empty && everything.searched.length) && <div className="text-xs text-[var(--text-muted)] text-center py-6">No matches</div>}
+          {q.trim().length >= 2 && everything.loading && (
+            <div className="px-2.5 py-2 text-[11px] text-[var(--text-muted)] animate-pulse">Searching notes, follow-ups, the Library, chat files, media and the wiki…</div>
+          )}
+          {q.trim().length >= 2 && everything.empty && everything.searched.length > 0 && (
+            <div className="px-2.5 py-2 text-[11px] leading-snug text-[var(--text-muted)]">
+              Nothing in your {searchedList(everything.searched)} matches “{everything.query}”.
+            </div>
+          )}
         </div>
       </div>
     </div>

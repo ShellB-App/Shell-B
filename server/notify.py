@@ -51,7 +51,7 @@ RECORD_SIZE = 4096
 PUSH_HOSTS = ("fcm.googleapis.com", "android.googleapis.com", "updates.push.services.mozilla.com",
               ".push.apple.com", ".notify.windows.com")
 LEVELS = ("off", "attention", "all")
-ATTENTION = {"failed", "blocked", "paused", "interrupted", "rolled-back", "restart-pending", "review", "waiting"}
+ATTENTION = {"failed", "blocked", "paused", "interrupted", "rolled-back", "restart-pending", "review", "waiting", "warning"}
 
 # id, label, hint, default level. Activity sources mirror activity.SOURCES; approval/question come from remote.py.
 KINDS = [
@@ -66,14 +66,16 @@ KINDS = [
     ("codex", "Codex drafts", "A contact or calendar draft needs review", "attention"),
     ("memory", "Memory", "Shell:B learned something and wants you to check it", "off"),
     ("data", "Offline data", "A dataset download finished or failed", "attention"),
+    ("health", "System health", "A service went down or came back, a crash loop, low disk or memory", "all"),
 ]
 KIND_IDS = {k[0] for k in KINDS}
 NOUN = {"approval": "Approval", "question": "Question", "schedule": "Scheduled task", "plan": "Mega Plan",
         "todo": "To-do", "deploy": "Self-deploy", "scout": "Asset scout", "notebook": "Notebook", "codex": "Codex draft",
-        "memory": "Memory", "data": "Offline data"}
+        "memory": "Memory", "data": "Offline data", "health": "System health"}
 VERB = {"done": "finished", "complete": "finished", "failed": "failed", "blocked": "is blocked", "paused": "paused",
         "interrupted": "was interrupted", "rolled-back": "rolled back", "restart-pending": "is waiting for a restart",
-        "review": "needs your review", "waiting": "is waiting for you"}
+        "review": "needs your review", "waiting": "is waiting for you", "warning": "needs attention",
+        "recovered": "recovered"}
 APPROVAL_NOUN = {"self": "Self-deploy", "remote": "Remote command", "secret": "Secret access", "question": "Question"}
 
 _ready = False
@@ -182,6 +184,8 @@ def wanted(kind: str, status: str) -> bool:
 
 def _message(kind: str, status: str, title: str, route: str, tag: str, noun: str | None = None) -> dict:
     head = f"{noun or NOUN.get(kind, 'Shell:B')} {VERB.get(status, status)}"
+    if kind == "health" and title:  # watchdog titles hold no private content and are the whole message
+        head, title = title[:90], ""
     msg = {"t": head, "r": route if route.startswith("#/") else "#/activity", "tag": tag,
            "a": status in ATTENTION, "k": kind}
     if prefs()["details"] and title:

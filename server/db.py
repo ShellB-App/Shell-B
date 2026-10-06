@@ -235,6 +235,7 @@ def all_artifacts():
                   FROM artifacts GROUP BY conv_id, id) n
               ON a.conv_id=n.conv_id AND a.id=n.id AND a.version=n.top
             JOIN conversations v ON v.id=a.conv_id
+            WHERE coalesce(v.incognito, 0)=0  -- incognito chats (privacy.py) stay out of the Library
             ORDER BY a.created DESC""").fetchall()
     return [{**_art(r), "convId": r["conv_id"], "convTitle": r["conv_title"], "agentId": r["agent_id"],
              "studioProjectId": r["project_id"], "groupId": r["group_id"], "versions": r["versions"],

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { BookMarked, Brain, CalendarClock, Check, CheckCheck, ChevronDown, HardDrive, Inbox, ListTodo, Loader2, Mail, MessageSquare, Rocket, Shapes, ShieldQuestion,
-  Sunrise, Telescope, Trash2, Workflow, XCircle } from 'lucide-react';
+  Sunrise, Telescope, Trash2, Workflow, XCircle, HeartPulse } from 'lucide-react';
 import { api } from '../api';
 import type { ActivityItem, ActivitySource, ActivitySummary, PendingApproval } from '../types';
 import { btn, relTime } from './common';
@@ -18,6 +18,7 @@ const SOURCES: Record<ActivitySource, { label: string; icon: typeof Inbox; color
   memory: { label: 'Memory', icon: Brain, color: 'text-amber-400' },
   data: { label: 'Offline data', icon: HardDrive, color: 'text-cyan-400' },
   brief: { label: 'Briefs', icon: Sunrise, color: 'text-orange-400' },
+  health: { label: 'Health', icon: HeartPulse, color: 'text-red-400' },
 };
 
 const STATUS: Record<string, [string, string]> = {
@@ -29,6 +30,8 @@ const STATUS: Record<string, [string, string]> = {
   interrupted: ['Interrupted', 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25'],
   'restart-pending': ['Waiting for a restart', 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25'],
   review: ['Ready to review', 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/25'],
+  warning: ['Warning', 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25'],
+  recovered: ['Back up', 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25'],
 };
 
 type Filter = 'all' | 'attention' | 'unread';
