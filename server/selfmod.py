@@ -200,8 +200,8 @@ def pending_diff(pid: str) -> str:
 
 # ── checks ──────────────────────────────────────────────────────────────────
 
-async def _run(cmd: list[str], cwd: Path, timeout: int) -> tuple[int, str]:
-    proc = await asyncio.create_subprocess_exec(*cmd, cwd=cwd, env=_env(), stdout=asyncio.subprocess.PIPE,
+async def _run(cmd: list[str], cwd: Path, timeout: int, env: dict | None = None) -> tuple[int, str]:
+    proc = await asyncio.create_subprocess_exec(*cmd, cwd=cwd, env={**_env(), **(env or {})}, stdout=asyncio.subprocess.PIPE,
                                                 stderr=asyncio.subprocess.STDOUT)
     try:
         out, _ = await asyncio.wait_for(proc.communicate(), timeout)
@@ -241,6 +241,18 @@ async def run_checks(src: Path, changed: list[str]) -> tuple[bool, str]:
             await asyncio.to_thread(_copy_db, scratch / "data" / "shellb.db")
             code, out = await _run([str(PY), "-c", SMOKE], scratch / "server", 180)
             report.append(f"import app + route smoke test: {'ok' if code == 0 else 'FAILED'}\n{out.strip()[-4000:]}")
+            if code:
+                return False, "\n\n".join(report)
+        if any(c.startswith(("server/", "tests/")) for c in changed) and (scratch / "tests").is_dir():
+            # the regression suite (tests/*_test.py): security scoping, deadlines, follow-ups… against a copy of the DB
+            if not (scratch / "data" / "shellb.db").exists():
+                (scratch / "data").mkdir(exist_ok=True)
+                await asyncio.to_thread(_copy_db, scratch / "data" / "shellb.db")
+            (scratch / "tmp").mkdir(exist_ok=True)
+            code, out = await _run([str(PY), "-m", "unittest", "discover", "-s", "tests", "-p", "*_test.py"], scratch, 300,
+                                   {"TMPDIR": str(scratch / "tmp")})
+            summary = out.strip()[-4000:] if code else "\n".join(out.strip().splitlines()[-3:])  # "Ran 18 tests … OK"
+            report.append(f"tests/ (unittest): {'ok' if code == 0 else 'FAILED'}\n{summary}")
             if code:
                 return False, "\n\n".join(report)
         if any(c.startswith("ui/") for c in changed):
