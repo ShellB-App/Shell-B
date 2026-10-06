@@ -2,6 +2,7 @@
 import asyncio
 import base64
 import json
+import logging
 import re
 import time
 import uuid
@@ -163,6 +164,45 @@ def _compact_dropped(dropped: list[dict]) -> str:
             first_line += "..."
         lines.append(f"- **{role}**: {first_line}")
     return "\n".join(lines[:12])
+
+
+log = logging.getLogger("shellb.agent")
+CHARS_PER_TOKEN = 3.0  # measured on code-heavy turns: 131k tokens of Qwen context held ~390k chars
+ELIDED = "[Older tool result removed to free context"
+
+
+def _msg_chars(m: dict) -> int:
+    n = len(m.get("content") or "") + len(m.get("thinking") or "")
+    if m.get("tool_calls"):
+        n += len(json.dumps(m["tool_calls"], ensure_ascii=False))
+    return n + 1500 * len(m.get("images") or [])
+
+
+def fit_turn_context(messages: list[dict], num_ctx: int, schema_chars: int, keep_last=3, force=False) -> int:
+    """Keep a long tool-using turn inside the model's context window. Ollama silently cuts a prompt (and the reply)
+    at num_ctx, so a turn that reads many files used to fill it and end with the answer cut off mid-sentence.
+    Over the high-water mark, the oldest tool results of this turn shrink to a one-line stub until the prompt is back
+    under the low-water mark; elisions are batched because each one makes Ollama re-read the whole prompt.
+    force=True trims to the low-water mark regardless (after a reply was cut off). Returns how many were elided."""
+    limit = num_ctx * CHARS_PER_TOKEN - schema_chars
+    reserve = max(8192, num_ctx * 0.15) * CHARS_PER_TOKEN  # room for thinking and the reply
+    high, low = limit - reserve, (limit - reserve) * 0.7
+    total = sum(map(_msg_chars, messages))
+    if total <= high and not force:
+        return 0
+    tools = [i for i, m in enumerate(messages) if m.get("role") == "tool" and not m["content"].startswith(ELIDED)]
+    elided = 0
+    for i in tools[:-keep_last] if len(tools) > keep_last else []:
+        if total <= low:
+            break
+        m = messages[i]
+        head = m["content"].split("\n", 1)[0][:160]
+        stub = f"{ELIDED} ({len(m['content']):,} chars; it began: {head!r}). Call the tool again if you still need it.]"
+        total -= _msg_chars(m) - len(stub)
+        m["content"] = stub
+        m.pop("images", None)
+        elided += 1
+    return elided
 
 
 def history_messages(history, conv_id, num_ctx):
@@ -391,6 +431,7 @@ class Turn:
         self.agent, self.agents, self.settings = agent, agents, settings
         self.emit, self.abort, self.depth = emit, abort, depth
         self.usage = {"prompt": 0, "completion": 0}
+        self._done_reason = None
         self.model = agent["model"]
         self.mcp_specs: dict = {}
         self.remote = bool(remote.config(project_id))  # a remote (SSH) workspace: file and code tools run there
@@ -482,9 +523,17 @@ class Turn:
         if providers.is_cli(self.model):
             return await self._run_cli(messages, sink, effort, schemas, budget, loop_guard)
 
+        num_ctx = int(options.get("num_ctx") or info.get("numCtx") or 32768)
+        schema_chars = len(json.dumps(schemas, ensure_ascii=False))
+        retried_cutoff = False
         round_ = 0
         while round_ <= budget:
             self._current_round = round_
+            gone = fit_turn_context(messages, num_ctx, schema_chars)
+            if gone and messages[-1].get("role") == "tool":
+                messages[-1]["content"] += (f"\n\n[Your context is filling up: {gone} older tool results were removed. "
+                                            "Read only what you still need, then write your answer.]")
+                log.info("turn %s: elided %d tool results to fit num_ctx=%d", self.message_id, gone, num_ctx)
             payload = {"model": self.model, "messages": messages, "stream": True, "options": options, "keep_alive": "2h"}
             if schemas and round_ < budget:
                 payload["tools"] = schemas
@@ -514,6 +563,22 @@ class Turn:
             if native:
                 asst["_native"] = native
             messages.append(asst)
+            if not tool_calls and not cloud and self._done_reason == "length" and not self.abort.is_set():
+                # the context window filled up and Ollama cut the reply off: free room and ask for the answer once
+                log.warning("turn %s: reply cut off at num_ctx=%d (round %d)", self.message_id, num_ctx, round_)
+                if not retried_cutoff:
+                    retried_cutoff = True
+                    fit_turn_context(messages, num_ctx, schema_chars, keep_last=1, force=True)
+                    messages.append({"role": "user", "content": (
+                        "[Shell:B: your reply was cut off because your context window filled up. Older tool results "
+                        "were removed to make room. Don't call more tools: write your complete final answer now from "
+                        "what you found, and say what you could not cover.]")})
+                    round_ += 1
+                    continue
+                await sink.start({"type": "text", "text": "*(My reply was cut off: the model's context window "
+                                                          f"({num_ctx:,} tokens) filled up. Ask me to continue, or "
+                                                          "narrow the request.)*"})
+                return "complete"
             if not tool_calls:
                 return "complete"
             results = await self._run_tools(tool_calls, sink)
@@ -594,6 +659,7 @@ class Turn:
         content, thinking, tool_calls = "", "", []
         cur_think = cur_text = None
         think_started = 0.0
+        self._done_reason = None
         async with httpx.AsyncClient(timeout=httpx.Timeout(stall + 60, connect=10)) as c:
             async with c.stream("POST", f"{OLLAMA}/api/chat", json=payload) as r:
                 if r.status_code != 200:
@@ -633,6 +699,7 @@ class Turn:
                                 args = {"_raw": args}
                         tool_calls.append({"function": {"name": fn.get("name", ""), "arguments": args}})
                     if chunk.get("done"):
+                        self._done_reason = chunk.get("done_reason")  # "length" = cut off at num_ctx/num_predict
                         self.usage["prompt"] += chunk.get("prompt_eval_count", 0)
                         self.usage["completion"] += chunk.get("eval_count", 0)
         await self._close_thinking(sink, cur_think, think_started)

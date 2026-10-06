@@ -21,6 +21,7 @@ import mcp_router
 import projects
 import providers
 import cli_agents
+import codemap
 import verify
 import skills
 import skills_router
@@ -136,6 +137,7 @@ feedback.init()
 cli_agents.cleanup()
 verify.register()
 verify.init()
+codemap.init()
 codex.register()
 app.include_router(selfmod.router)
 app.include_router(composer.router)

@@ -49,6 +49,8 @@ FRAME_ROUTES = [
 ]
 FRAME_PREFIX = re.compile(r"^/api/k/([A-Za-z0-9_-]{20,64})/(.*)$")
 RAW_PAGE = re.compile(r"^/api/projects/[A-Za-z0-9_-]+/(raw|draft)/")
+# the only writes sandboxed content (Origin: null) may make on localhost trust: saved app state and the screenshot beacon
+SANDBOX_WRITES = re.compile(r"^/api/(appstate|projects/_shotinfo/[A-Za-z0-9]+)$")
 UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
 
 
@@ -204,7 +206,8 @@ ADMIN_KEY_FILE = db.DATA / "admin.key"
 def is_admin(req: Request) -> bool:
     if is_owner(req):
         return True
-    given = req.headers.get("x-shellb-admin") or req.headers.get("x-admin-key") or req.query_params.get("admin_key")
+    # headers only: a key in the query string ends up in access logs, browser history and Referer headers
+    given = req.headers.get("x-shellb-admin") or req.headers.get("x-admin-key")
     if not given or not ADMIN_KEY_FILE.is_file():
         return False
     return hmac.compare_digest(given.strip(), ADMIN_KEY_FILE.read_text().strip())
@@ -232,6 +235,8 @@ class AuthMiddleware:
             sess = _frame_session(key) if any(method in ms and rx.match(rest) for ms, rx in FRAME_ROUTES) else None
             if not sess and not _is_local(scope, h):
                 return await _deny(scope, receive, send, 401, "login-required")
+            if not sess and _local_write_refused(method, "/api/" + rest, h):
+                return await _deny(scope, receive, send, 403, "cross-origin-request")
             scope = {**scope, "path": "/api/" + rest, "raw_path": ("/api/" + rest).encode(),
                      "shellb_auth": "frame", "shellb_session": sess, "shellb_prefix": f"/api/k/{key}"}
             return await self.app(scope, receive, send)
@@ -241,7 +246,9 @@ class AuthMiddleware:
             if method in UNSAFE and not _same_origin(h):
                 return await _deny(scope, receive, send, 403, "cross-origin-request")
             # a Studio page framed with the cookie moves under the frame prefix, where its subresources work too
-            if method == "GET" and RAW_PAGE.match(path) and h.get("sec-fetch-dest") in ("iframe", "frame"):
+            # a project page opened with the cookie, framed or in its own tab, moves under the frame key: it runs
+            # sandboxed (projects.PAGE_SANDBOX), so its relative URLs need a prefix that works without the cookie
+            if method == "GET" and RAW_PAGE.match(path) and h.get("sec-fetch-dest") in ("iframe", "frame", "document"):
                 qs = scope.get("query_string", b"").decode("latin-1")
                 loc = f"/api/k/{sess['frame_key']}/{quote(path[5:])}" + (f"?{qs}" if qs else "")
                 return await _redirect(send, loc)
@@ -249,12 +256,26 @@ class AuthMiddleware:
         elif _is_local(scope, h):
             # localhost trust is for this machine's own tools, not for pages it renders: a write that a browser sends
             # from another origin (e.g. a Studio dev-server preview on :8210, or any website) doesn't get it
-            if method in UNSAFE and h.get("origin") not in (None, "null") and not _same_origin(h):
+            if _local_write_refused(method, path, h):
                 return await _deny(scope, receive, send, 403, "cross-origin-request")
             scope = {**scope, "shellb_auth": "local"}
         elif not PUBLIC.match(path):
             return await _deny(scope, receive, send, 401, "login-required")
         return await self.app(scope, receive, send)
+
+
+def _local_write_refused(method: str, path: str, h: dict) -> bool:
+    """Localhost trust is for this machine's own tools (no Origin) and the app's own page, not for pages it renders.
+    A write from another origin (a dev-server preview on :8210, any website) is refused, and so is one from sandboxed
+    content (Origin: null, e.g. a project page in a headless-Firefox screenshot) except SANDBOX_WRITES."""
+    if method not in UNSAFE:
+        return False
+    origin = h.get("origin")
+    if origin is None:
+        return False
+    if origin == "null":
+        return not SANDBOX_WRITES.match(path)
+    return not _same_origin(h)
 
 
 async def _deny(scope, receive, send, status, detail):

@@ -6,6 +6,7 @@ from pathlib import Path
 import db
 import projects as P
 import selfmod
+from codemap import line_range
 from tools import TOOLS, ToolResult, _fn
 
 TEXT_LIMIT = 80_000
@@ -47,13 +48,22 @@ async def read_file(args, ctx):
         hint = "use view_image to look at it" if kind == "image" else "use run_code to inspect binary files"
         return ToolResult(f"{rel} is a {kind} file ({p.stat().st_size:,} bytes) — {hint}.")
     text = p.read_text(errors="replace")
-    start = max(1, int(args.get("start_line") or 1))
-    end = int(args.get("end_line") or 0)
-    if start > 1 or end:
-        lines = text.splitlines(keepends=True)
-        text = "".join(lines[start - 1:end or None])
-    if len(text) > TEXT_LIMIT:
-        text = text[:TEXT_LIMIT] + f"\n…[truncated at {TEXT_LIMIT} chars; read the rest with start_line/end_line]"
+    start, end = line_range(args)
+    lines = text.splitlines(keepends=True)
+    total = len(lines)
+    if start > total and total:
+        return ToolResult(f"{rel} has only {total} lines; start_line={start} is past the end.", error=True)
+    chunk = lines[start - 1:end or None]
+    text, shown = "", 0
+    for line in chunk:  # cut at a line boundary so the reader knows exactly where to continue
+        if len(text) + len(line) > TEXT_LIMIT and shown:
+            break
+        text += line
+        shown += 1
+    last = start + shown - 1
+    if start > 1 or last < total:  # a partial read says where it is, so the next call can't re-read the same lines
+        more = f"; continue with start_line={last + 1}" if last < total else ""
+        text += f"\n…[{rel}: lines {start}–{last} of {total}{more}]"
     return ToolResult(text)
 
 
@@ -291,7 +301,8 @@ async def project_diff(args, ctx):
 def register():
     specs = {
         "list_files": (list_files, "List every file in the project with type and size (images include pixel dimensions).", {}, []),
-        "read_file": (read_file, "Read a text file from the project. Use start_line/end_line for long files.",
+        "read_file": (read_file, "Read a text file from the project. Use start_line/end_line for long files; a partial "
+                                 "read ends with the line range shown and where to continue.",
                       {"path": {"type": "string"}, "start_line": {"type": "integer"}, "end_line": {"type": "integer"}}, ["path"]),
         "write_file": (write_file, "Create or overwrite a text file (HTML, CSS, JS, SVG, Markdown…) with complete content. "
                                    "Prefer edit_file for small changes to existing files.",

@@ -385,7 +385,14 @@ flowchart TD
 - **Self-awareness and self-modification** (`server/selfmod.py`, tool `shellb_self`, on for Shell:B and Hephaestus):
   Shell:B can look at herself: `about` (agents, server modules, features, version, recent deploys), `status` (units,
   services, memory, what's running), `logs` (journalctl for the shellb-* units) and `source` (read, list or regex-search
-  her live code; `data/`, the venv, node_modules, build output and `.git` are off limits). To change herself she works in
+  her live code; `data/`, the venv, node_modules, build output and `.git` are off limits). For reviews she stays
+  read-only on the live tree (`server/codemap.py`): `outline` maps a folder (each file's size and docstring) or a file
+  (classes, functions, FastAPI routes, TS components, Markdown headings, with line ranges); `source` reads up to 8
+  `paths` per call and searches with `context` lines; `read_log` lists which files and lines the current turn has read,
+  so a review can state its real coverage. The bundled `audit-code` skill is the review procedure (map, read, prove
+  each finding with file:line, search before calling something missing). Every partial `read_file`, here and in
+  Studio/Code, ends with `…[path: lines a–b of n; continue with start_line=…]`, and it accepts `offset`/`start`/`limit`
+  as well as `start_line`/`end_line`, so a read never silently restarts at line 1. To change herself she works in
   the **Shell:B (self)** Code workspace (`action=workspace`; kv `self_project`), a git clone of this tree. Its sandbox
   gets the live `ui/node_modules` read-only, so `tsc` runs there. She never edits the live tree directly. From any
   chat she edits that workspace through `shellb_self` itself: `read_file`, `search_files`, `find_files`, `edit_file`,

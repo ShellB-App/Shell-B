@@ -24,7 +24,7 @@ from PIL import Image, ImageOps
 
 import db
 import groups
-from tools import TOOLS, UA, WORKSPACES, ToolResult, _blocked_host, _fn, _group_files
+from tools import GUARD_HOOKS, TOOLS, UA, WORKSPACES, ToolResult, _blocked_host, _fn, _group_files
 
 CACHE = db.DATA / "doc-cache"
 CACHE.mkdir(exist_ok=True)
@@ -105,7 +105,8 @@ async def download(ctx, url: str) -> Path:
         raise ValueError(f"Only http(s) URLs can be downloaded: {url!r}")
     if _blocked_host(parsed.hostname):
         raise ValueError(f"Refusing to download {url!r}: local addresses are off limits.")
-    async with httpx.AsyncClient(timeout=60, follow_redirects=True, headers={"User-Agent": UA}) as c:
+    async with httpx.AsyncClient(timeout=60, follow_redirects=True, headers={"User-Agent": UA},
+                                 event_hooks=GUARD_HOOKS) as c:
         async with c.stream("GET", url) as r:
             r.raise_for_status()
             data = bytearray()

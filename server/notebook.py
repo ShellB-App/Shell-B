@@ -26,7 +26,7 @@ import db
 import groups
 import providers
 import research
-from tools import OLLAMA, SEARXNG, UA, _blocked_host, embed
+from tools import GUARD_HOOKS, OLLAMA, SEARXNG, UA, _blocked_host, embed
 
 router = APIRouter()
 log = logging.getLogger("shellb.notebook")
@@ -305,7 +305,8 @@ async def _fetch(url) -> tuple[str, str]:
     p = urlparse(url)
     if p.scheme not in ("http", "https") or not p.hostname or _blocked_host(p.hostname):
         raise ValueError("only public http(s) addresses can be added")
-    async with httpx.AsyncClient(timeout=45, follow_redirects=True, headers={"User-Agent": UA}) as c:
+    async with httpx.AsyncClient(timeout=45, follow_redirects=True, headers={"User-Agent": UA},
+                                 event_hooks=GUARD_HOOKS) as c:
         r = await c.get(url)
         r.raise_for_status()
     ctype = r.headers.get("content-type", "")

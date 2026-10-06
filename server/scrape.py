@@ -28,7 +28,7 @@ from urllib.parse import unquote, urljoin, urlparse
 
 import httpx
 
-from tools import UA, ToolResult, _blocked_host, _fn
+from tools import GUARD_HOOKS, UA, ToolResult, _blocked_host, _fn
 
 FIREFOX = "/snap/bin/firefox"
 SNAP_TMP = Path.home() / "snap" / "firefox" / "common" / "tmp"   # snap Firefox can only read profiles under its own dirs
@@ -66,15 +66,9 @@ def _check_url(url: str) -> str:
     return url
 
 
-async def _guard(request: httpx.Request):
-    """Every hop of a redirect chain gets the same local-address check."""
-    if _blocked_host(request.url.host):
-        raise httpx.RequestError(f"refused to follow a redirect to a local address ({request.url.host})", request=request)
-
-
 def client(timeout=60) -> httpx.AsyncClient:
     return httpx.AsyncClient(timeout=httpx.Timeout(timeout, connect=20), follow_redirects=True,
-                             headers={"User-Agent": UA, "Accept": "*/*"}, event_hooks={"request": [_guard]})
+                             headers={"User-Agent": UA, "Accept": "*/*"}, event_hooks=GUARD_HOOKS)
 
 
 # ── headless Firefox over Marionette ────────────────────────────────────────

@@ -467,6 +467,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 SHOT_HOLD = '<img src="/api/_hold?ms={ms}" alt="" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">'
 INSPECTOR = '<script src="/studio-inspector.js"></script>'
 APPSTATE = '<script src="{api}/appstate/boot.js?s=proj:{pid}{ro}"></script>'
+PAGE_SANDBOX = "sandbox allow-scripts allow-forms allow-modals allow-popups allow-downloads allow-pointer-lock"
 
 
 def inject(html: str, head: str = "", body_end: str = "") -> str:
@@ -931,7 +932,11 @@ async def _serve(pid: str, path: str, request: Request, drafts: bool = False):
     overlay = DRAFTS.get(pid, {}).get(p.relative_to(root(pid).resolve()).as_posix()) if drafts else None
     if overlay is None and not p.is_file():
         raise HTTPException(404, f"{path} not found")
-    headers = {"Cache-Control": "no-store", "Access-Control-Allow-Origin": "*"}
+    # Project pages are untrusted code: whether framed, opened in a tab or screenshotted, they run in an opaque origin,
+    # so they never act with the owner's cookie or this origin's privileges. Their own fetches use the frame-key prefix
+    # (auth.py redirects tabs there too); no-referrer keeps that key out of Referer headers on outbound links.
+    headers = {"Cache-Control": "no-store", "Access-Control-Allow-Origin": "*", "Content-Security-Policy": PAGE_SANDBOX,
+               "Referrer-Policy": "no-referrer"}
     q = request.query_params
     # pages opened in a frame or tab only; source reads (?__src, or a fetch(): Sec-Fetch-Dest: empty) get the file untouched
     if p.suffix.lower() in (".html", ".htm") and "__src" not in q \

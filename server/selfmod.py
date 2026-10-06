@@ -29,6 +29,7 @@ from pathlib import Path
 import httpx
 from fastapi import APIRouter, Request
 
+import codemap
 import db
 from tools import TOOLS, ToolResult, _fn
 
@@ -593,9 +594,10 @@ def _live_path(rel: str) -> Path:
     return p
 
 
-def source_text(path: str, query: str, offset: int, limit: int) -> str:
+def source_text(path: str, query: str, offset: int, limit: int, turn: str = "", context: int = 0) -> str:
     if query:
-        r = subprocess.run(["git", "grep", "-n", "-I", "--untracked", "-E", query, "--", path or "."], cwd=LIVE,
+        ctx_args = [f"-C{max(0, min(5, context))}"] if context else []
+        r = subprocess.run(["git", "grep", "-n", "-I", "--untracked", *ctx_args, "-E", query, "--", path or "."], cwd=LIVE,
                            capture_output=True, text=True)
         lines = r.stdout.splitlines()
         return "\n".join(l[:300] for l in lines[:200]) + (f"\n…{len(lines) - 200} more matches" if len(lines) > 200 else "") \
@@ -611,6 +613,7 @@ def source_text(path: str, query: str, offset: int, limit: int) -> str:
     chunk = lines[start:start + max(1, min(limit or 400, 1500))]
     body = "\n".join(f"{start + i + 1:>5}  {l}" for i, l in enumerate(chunk))
     more = len(lines) - start - len(chunk)
+    codemap.READS.add(turn, str(p.relative_to(LIVE)), start + 1, start + len(chunk), len(lines))
     return f"{p.relative_to(LIVE)} ({len(lines)} lines)\n{body}" + (f"\n…{more} more lines (offset={start + len(chunk) + 1})" if more > 0 else "")
 
 
@@ -618,6 +621,9 @@ def source_text(path: str, query: str, offset: int, limit: int) -> str:
 
 GUIDE = """- shellb_self is you: your own source, health and history. Your app is Shell:B Web (FastAPI in server/, React in
   ui/, under ~/shellb/web, git). Use about/status/logs/source to answer questions about yourself from facts, not guesses.
+  To review or audit your code, stay read-only: outline a folder or file first, read with source (offset/limit, or
+  paths for several files), search with source query before saying something is missing, and check read_log before
+  you describe how much you read. The audit-code skill is the full procedure.
   To change yourself: action=workspace creates your editable copy, then edit it with shellb_self read_file /
   search_files / edit_file / write_file, verify with action=run (bash at /work; never claim a change works without
   running it), check action=diff, then action=deploy with a summary. Deploy runs the checks and shows the owner the
@@ -649,8 +655,34 @@ async def shellb_self(args, ctx) -> ToolResult:
         return ToolResult(await asyncio.to_thread(logs_text, str(args.get("unit") or ""), int(args.get("lines") or 120),
                                                   str(args.get("query") or "")))
     if action == "source":
-        return ToolResult(await asyncio.to_thread(source_text, str(args.get("path") or ""), str(args.get("query") or ""),
-                                                  int(args.get("offset") or 1), int(args.get("limit") or 400)))
+        start, end = codemap.line_range(args)
+        paths = args.get("paths") if isinstance(args.get("paths"), list) else [args.get("path") or ""]
+        if len(paths) > 8:
+            return ToolResult("source reads at most 8 paths per call.", error=True)
+        out = []
+        for path in paths:  # several files in one call: fewer rounds for a review
+            try:
+                out.append(await asyncio.to_thread(source_text, str(path or ""), str(args.get("query") or ""), start,
+                                                   (end - start + 1) if end else 400, ctx.message_id,
+                                                   int(args.get("context") or 0)))
+            except ValueError as e:
+                out.append(f"{path}: {e}")
+            if args.get("query"):
+                break  # a search covers every path at once
+        return ToolResult("\n\n".join(out))
+    if action == "outline":
+        try:
+            p = _live_path(str(args.get("path") or ""))
+        except ValueError as e:
+            return ToolResult(str(e), error=True)
+        rel = str(p.relative_to(LIVE)) if p != LIVE else ""
+        if p.is_dir():
+            return ToolResult(await asyncio.to_thread(codemap.outline_dir, p, rel, HIDDEN))
+        if not p.is_file():
+            return ToolResult(f"No such file or folder: {args.get('path')}", error=True)
+        return ToolResult(await asyncio.to_thread(codemap.outline_file, p, rel))
+    if action == "read_log":
+        return ToolResult(codemap.READS.report(ctx.message_id))
     if action == "workspace":
         pid = await asyncio.to_thread(ensure_workspace)
         return ToolResult(f"Your editable copy is the Code workspace `{pid}` ([Shell:B (self)](#/code/{pid}), which the owner can "
@@ -677,7 +709,7 @@ async def shellb_self(args, ctx) -> ToolResult:
             for d in items) or "No deploys yet.")
     if action in GATED:
         return ToolResult("Deploys and rollbacks go through the owner's approval in a chat turn.", error=True)
-    return ToolResult(f"Unknown action {action!r}. Valid actions: about, status, logs, source, workspace, "
+    return ToolResult(f"Unknown action {action!r}. Valid actions: about, status, logs, source, outline, read_log, workspace, "
                       f"{', '.join(WS_TOOLS)}, sync, deploy, rollback, history.", error=True)
 
 
@@ -698,10 +730,7 @@ async def workspace_tool(action: str, args, ctx) -> ToolResult:
         return ToolResult(f"{action} needs path (the file, relative to the workspace root, e.g. ui/src/App.tsx).", error=True)
     if action == "delete_file" and not str(args.get("path") or "").strip(" /."):
         return ToolResult("delete_file needs a file path.", error=True)
-    sub = {k: v for k, v in args.items() if k != "action"}
-    if action == "read_file" and (args.get("offset") or args.get("limit")) and not args.get("start_line"):
-        start = max(1, int(args.get("offset") or 1))  # the schema offers offset/limit; the project tool takes lines
-        sub["start_line"], sub["end_line"] = start, start + max(1, int(args.get("limit") or 400)) - 1
+    sub = {k: v for k, v in args.items() if k != "action"}  # read_file maps offset/limit/start itself (line_range)
     if action == "run":
         sub = {"language": "bash", "code": str(args.get("code") or "")}
         if not sub["code"].strip():
@@ -712,6 +741,8 @@ async def workspace_tool(action: str, args, ctx) -> ToolResult:
             await ctx.emit(ev)
 
     res = await TOOLS[WS_TOOLS[action]]["fn"](sub, dataclasses.replace(ctx, project_id=pid, emit=emit))
+    if action == "read_file" and not res.error:
+        _log_workspace_read(pid, str(args.get("path") or ""), res.text, ctx.message_id)
     if action in WS_WRITES and not res.error:
         try:
             await asyncio.to_thread(P.commit, pid, f"Shell:B: {action} {str(args.get('path') or '')}".strip()[:120])
@@ -726,6 +757,19 @@ async def workspace_tool(action: str, args, ctx) -> ToolResult:
         log.info("Audit: selfmod:%s path=%s pid=%s conv=%s",
                  action, args.get("path") if action != "run" else "(bash code)", pid, getattr(ctx, "conv_id", None))
     return res
+
+
+def _log_workspace_read(pid: str, rel: str, text: str, turn: str):
+    import projects as P
+    m = re.search(r"…\[[^\]]*: lines (\d+)–(\d+) of (\d+)", text[-200:])
+    if m:
+        codemap.READS.add(turn, rel, int(m[1]), int(m[2]), int(m[3]))
+        return
+    try:
+        total = P.safe_path(pid, rel).read_text(errors="replace").count("\n") or 1
+    except (OSError, ValueError):
+        return
+    codemap.READS.add(turn, rel, 1, total, total)
 
 
 async def prepare_gated(args, ctx):
@@ -745,16 +789,22 @@ def register():
         "schema": _fn("shellb_self",
                       "You, Shell:B: inspect and change your own web app. Actions: about (architecture, agents, version, "
                       "recent deploys) · status (services, memory, what's running) · logs (unit, lines, query) · source "
-                      "(path to list a folder or read a file with offset/limit; query = regex search across your code) · "
+                      "(read-only, live code: path to list a folder or read a file with offset/limit, paths for up to 8 "
+                      "files at once; query = regex search across your code, context = lines around each hit) · outline "
+                      "(path: a file's classes/functions/routes/components with line ranges, or a folder's files and "
+                      "what each is for; start a review here) · read_log (which files and lines this turn has read) · "
                       "workspace (create/open your editable copy) · read_file (path, offset/limit), search_files (pattern), find_files (glob), "
                       "edit_file (path, old_string, new_string), write_file (path, content), delete_file, run (code: bash "
                       "in the workspace sandbox at /work), diff: work on that copy from any chat · "
                       "sync (merge the latest live code into it) · deploy (summary; "
                       "checks the workspace, asks the owner, then makes it live) · rollback (deploy_id; asks the owner) · "
                       "history (recent deploys).",
-                      {"action": {"type": "string", "enum": ["about", "status", "logs", "source", "workspace", *WS_TOOLS,
+                      {"action": {"type": "string", "enum": ["about", "status", "logs", "source", "outline", "read_log", "workspace", *WS_TOOLS,
                                                              "sync", "deploy", "rollback", "history"]},
-                       "path": {"type": "string", "description": "source: live file or folder, relative to ~/shellb/web; "
+                       "paths": {"type": "array", "items": {"type": "string"},
+                                 "description": "source: several live files to read in one call (same offset/limit)"},
+                       "context": {"type": "integer", "description": "source with query: lines of context around each match (0–5)"},
+                       "path": {"type": "string", "description": "source, outline: live file or folder, relative to ~/shellb/web; "
                                                                  "workspace actions: file in your editable copy"},
                        "content": {"type": "string", "description": "write_file: the complete file"},
                        "old_string": {"type": "string", "description": "edit_file: exact, unique text to replace"},

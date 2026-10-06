@@ -86,16 +86,34 @@ async def web_search(args, ctx):
 
 
 def _blocked_host(host: str) -> bool:
-    """Keep page fetches off this machine's own services (prompt-injected pages can't poke local APIs)."""
+    """Keep page fetches on the public internet (prompt-injected pages can't poke this machine, the LAN or the tailnet).
+
+    Anything that isn't a global address is refused: loopback, link-local (incl. 169.254.169.254), RFC 1918, the
+    Tailscale/CGNAT range 100.64/10, ULA, reserved. IPv4-mapped IPv6 (::ffff:127.0.0.1) is judged by its IPv4 part.
+    """
+    host = (host or "").strip("[]").rstrip(".").lower()
+    if host in {"localhost", "host.docker.internal"} or host.endswith(".localhost"):
+        return True
     try:
         infos = socket.getaddrinfo(host, None)
     except socket.gaierror:
-        return False
+        return False  # unresolvable: the fetch fails on its own
     for info in infos:
-        ip = ipaddress.ip_address(info[4][0])
-        if ip.is_loopback or ip.is_link_local or ip.is_unspecified:
+        ip = ipaddress.ip_address(info[4][0].split("%", 1)[0])
+        if getattr(ip, "ipv4_mapped", None):
+            ip = ip.ipv4_mapped
+        if not ip.is_global or ip.is_multicast:
             return True
-    return host in {"host.docker.internal"}
+    return False
+
+
+async def _redirect_guard(request: httpx.Request):
+    """httpx request hook: every hop of a redirect chain gets the same local-address check as the first URL."""
+    if _blocked_host(request.url.host):
+        raise httpx.RequestError(f"refused to follow a redirect to a local address ({request.url.host})", request=request)
+
+
+GUARD_HOOKS = {"request": [_redirect_guard]}  # pass as event_hooks= to any client that fetches agent-chosen URLs
 
 
 async def web_fetch(args, ctx):
@@ -107,7 +125,8 @@ async def web_fetch(args, ctx):
         return ToolResult(f"Refusing to fetch {url!r}: only http(s) URLs are supported.", error=True)
     if _blocked_host(parsed.hostname):
         return ToolResult(f"Refusing to fetch {url!r}: local addresses are off limits.", error=True)
-    async with httpx.AsyncClient(timeout=30, follow_redirects=True, headers={"User-Agent": UA}) as c:
+    async with httpx.AsyncClient(timeout=30, follow_redirects=True, headers={"User-Agent": UA},
+                                 event_hooks=GUARD_HOOKS) as c:
         r = await c.get(url)
         r.raise_for_status()
     ctype = r.headers.get("content-type", "")
