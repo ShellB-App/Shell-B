@@ -1,14 +1,19 @@
 // Worlds app (#/worlds, formerly Maps at #/maps): the Sol orrery (SolView), Earth from the offline OSM planet,
-// plus every planet and moon mosaic in ~/shellb/maps/bodies, with live traffic, satellites, planetary landmarks,
-// historic missions, geodesic measurements, turn-by-turn directions, real-time solar terminator, and curated tours.
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+// and every planet and moon mosaic in ~/shellb/maps/bodies, with toggleable overlays (overlays.ts), search,
+// measuring, directions, tours and the Atlas copilot.
+//
+// Map lifecycle: one MapLibre map per (world, theme). The globe/flat switch changes the projection in place.
+// Every overlay registers its teardown with `own()`, and the map's own cleanup runs those before map.remove(),
+// so no overlay ever touches a removed map. Clicks go through one router: overlays register the layer ids
+// they own in `hits`, and only a click that hits nothing drops a pin.
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import clsx from 'clsx';
 import type * as ML from 'maplibre-gl';
+import type { FeatureCollection, Point } from 'geojson';
 import {
-  Activity, Anchor, Bookmark, Check, ChevronDown, Compass, Copy, Crosshair, Download, Eye, Flag, Globe2,
-  Info, Layers, Loader2, LocateFixed, Map as MapIcon, MapPin, Navigation, Orbit,
-  PanelLeftClose, PanelLeftOpen, Radar, Rocket, RotateCcw, Route as RouteIcon,
-  Ruler, Satellite, Search, Ship, Sparkles, Sun, Thermometer, Video, Wind, X
+  Activity, Anchor, Bookmark, Check, Compass, Copy, Crosshair, Download, Eye, Flag, Globe2, Info, Loader2, LocateFixed,
+  Map as MapIcon, MapPin, Navigation, Orbit, PanelLeftClose, PanelLeftOpen, Radar, Rocket, Route as RouteIcon, Ruler,
+  Search, Sparkles, Thermometer, Video, X,
 } from 'lucide-react';
 import { drawOverlays, fetchBodies, fmtCoord, frameSpec, loadMapLib, styleFor, type MapBody, type MapLib, type MapSpec } from './core';
 import { MAPS_HANDOFF, useDarkTheme } from './MapCard';
@@ -17,31 +22,29 @@ import { SOL_BODIES, isMajorMoon, moonsOf } from './sol';
 import { FLIGHT_HANDOFF, FlightPanel } from './FlightCard';
 import { areaFlights, findFlight, pathLayers, planeLayer, viewRadiusNm, type Aircraft, type FindResult } from './flights';
 import { attachOrbiters, type OrbiterInfo, type OrbiterLayer } from './orbiters';
-import type { FeatureCollection } from 'geojson';
-
-// New feature modules
-import { attachLandmarks, getLandmarksForBody, searchLandmarks, type Landmark, type LandmarkLayer } from './landmarks';
+import { getLandmarksForBody, searchLandmarks, type Landmark } from './landmarks';
 import { attachTerminator } from './terminator';
-import { attachMeasureLayer, detachMeasureLayer, computePath, formatDist, type MeasurePoint, type MeasureResult } from './measure';
+import { attachMeasureLayer, detachMeasureLayer, computePath, formatDist, type MeasurePoint } from './measure';
 import { attachGrid } from './grid';
-import { getBookmarks, type Bookmark as BookmarkItem } from './bookmarks';
-import { DirectionsPanel, type RouteData, type RouteStep } from './DirectionsPanel';
+import { DirectionsPanel, type RouteData } from './DirectionsPanel';
 import { DossierDrawer } from './DossierDrawer';
 import { LandmarkModal } from './LandmarkModal';
 import { LiveWeatherWidget } from './LiveWeatherWidget';
 import { BookmarksModal } from './BookmarksModal';
 import { AtlasCopilot } from './AtlasCopilot';
-import { attachTraverseLayer, getTraversesForBody, type Traverse, type TraverseLayer, type TraverseWaypoint } from './traverses';
+import { attachTraverseLayer, getTraversesForBody, type Traverse, type TraverseWaypoint } from './traverses';
 import { TraverseModal } from './TraverseModal';
 import { SkyViewModal } from './SkyViewModal';
-import { FeaturesMenu } from './FeaturesMenu';
-import { NightSky } from './NightSky';
-import { attachShipwrecks, SHIPWRECKS, type Shipwreck, type ShipwreckLayer } from './shipwrecks';
-import { attachWonders, WORLD_WONDERS, type WorldWonder, type WonderLayer } from './wonders';
-import { attachLaunchSites, LAUNCH_SITES, type LaunchSite, type LaunchSiteLayer } from './launchsites';
-import { attachMaritime, VESSELS_AT_SEA, type Vessel, type MaritimeLayer } from './maritime';
-import { attachCCTV, CCTV_CAMERAS, type CCTVCamera, type CCTVLayer } from './cctv';
+import { Starfield } from './Starfield';
+import { hasSky } from './sky';
+import { SHIPWRECKS } from './shipwrecks';
+import { WORLD_WONDERS } from './wonders';
+import { LAUNCH_SITES } from './launchsites';
+import { CCTV_CAMERAS } from './cctv';
 import { MapFeatureModal, type AnyFeature } from './MapFeatureModal';
+import { attachPoints, mapAlive, type PointItem, type PointLayer } from './pointLayer';
+import { OVERLAYS, loadPrefs, savePrefs, type LayerPrefs, type OverlayId } from './overlays';
+import { LayersPanel } from './LayersPanel';
 
 export const WORLD_PALETTE: Record<string, { color: string; label?: string }> = {
   sol: { color: '#f59e0b', label: 'Star' },
@@ -53,6 +56,7 @@ export const WORLD_PALETTE: Record<string, { color: string; label?: string }> = 
   phobos: { color: '#a8a29e', label: 'Moon' },
   deimos: { color: '#a8a29e', label: 'Moon' },
   ceres: { color: '#71717a', label: 'Dwarf Planet' },
+  vesta: { color: '#9ca3af', label: 'Asteroid' },
   jupiter: { color: '#d97706', label: 'Gas Giant' },
   io: { color: '#facc15', label: 'Volcanic Moon' },
   europa: { color: '#38bdf8', label: 'Ocean Moon' },
@@ -75,43 +79,19 @@ export const WORLD_PALETTE: Record<string, { color: string; label?: string }> = 
 const LAST = 'shellb.maps.last';
 const VIEW = (id: string) => `shellb.maps.view.${id}`;
 const GLOBE = 'shellb.maps.globe';
-const TRAFFIC = 'shellb.maps.traffic';
-const ORBITERS = 'shellb.maps.orbiters';
-const LANDMARKS_KEY = 'shellb.maps.landmarks';
-const TERMINATOR_KEY = 'shellb.maps.terminator';
-const GRID_KEY = 'shellb.maps.grid';
 const MEASURE_UNIT = 'shellb.maps.measure.unit';
-const TRAVERSES_KEY = 'shellb.maps.traverses';
-const EARTHQUAKES_KEY = 'shellb.maps.earthquakes';
-const NIGHT_SKY_KEY = 'shellb.maps.nightsky';
-const SHIPWRECKS_KEY = 'shellb.maps.shipwrecks';
-const WONDERS_KEY = 'shellb.maps.wonders';
-const LAUNCHSITES_KEY = 'shellb.maps.launchsites';
-const MARITIME_KEY = 'shellb.maps.maritime';
-const CCTV_KEY = 'shellb.maps.cctv';
-
-/** Worlds with spacecraft data (server/sky.py): TLEs for Earth, JPL Horizons tracks for the rest. */
-const ORBITED = new Set(['earth', 'moon', 'mars', 'mercury']);
 
 const store = {
   get<T>(k: string): T | null { try { return JSON.parse(localStorage.getItem(k) ?? 'null') as T | null; } catch { return null; } },
   set(k: string, v: unknown) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode */ } },
 };
 
-function takeHandoff(): MapSpec | null {
-  try {
-    const raw = sessionStorage.getItem(MAPS_HANDOFF);
-    sessionStorage.removeItem(MAPS_HANDOFF);
-    return raw ? JSON.parse(raw) as MapSpec : null;
-  } catch { return null; }
+function take(key: string): string | null {
+  try { const v = sessionStorage.getItem(key); sessionStorage.removeItem(key); return v; } catch { return null; }
 }
-
-function takeFlight(): string | null {
-  try {
-    const q = sessionStorage.getItem(FLIGHT_HANDOFF);
-    sessionStorage.removeItem(FLIGHT_HANDOFF);
-    return q;
-  } catch { return null; }
+function takeHandoff(): MapSpec | null {
+  const raw = take(MAPS_HANDOFF);
+  try { return raw ? JSON.parse(raw) as MapSpec : null; } catch { return null; }
 }
 
 /** "51.5, -0.12", "51.5 -0.12", "51.5N 0.12W" → lat/lon */
@@ -125,6 +105,19 @@ function parseCoords(s: string): { lat: number; lon: number } | null {
   return Math.abs(lat) <= 90 && Math.abs(lon) <= 180 ? { lat, lon } : null;
 }
 
+function bodyFromHash(): string | null {
+  const m = /^#\/(?:worlds|maps)\/([a-zA-Z0-9_-]+)/.exec(location.hash);
+  return m ? m[1].toLowerCase() : null;
+}
+
+interface Quake { id: string; mag: number; place: string; time: string; depth_km: number; url?: string; lat: number; lon: number }
+
+type Selection =
+  | { kind: 'landmark'; item: Landmark }
+  | AnyFeature
+  | { kind: 'traverse'; traverse: Traverse; waypoint: TraverseWaypoint }
+  | { kind: 'quake'; item: Quake };
+
 interface Suggestion {
   id: string;
   kind: 'coord' | 'flight' | 'landmark' | 'geocode' | 'feature';
@@ -132,127 +125,482 @@ interface Suggestion {
   subtitle?: string;
   lat?: number;
   lon?: number;
+  flight?: string;
   landmark?: Landmark;
   feature?: AnyFeature;
 }
 
-function bodyFromHash(): string | null {
-  const m = /^#\/(?:worlds|maps)\/([a-zA-Z0-9_-]+)/.exec(location.hash);
-  return m ? m[1].toLowerCase() : null;
-}
+type Drawer = 'directions' | 'dossier' | 'bookmarks' | 'atlas' | null;
+type GoTo = { body?: string; lat: number; lon: number; zoom?: number; bearing?: number; pitch?: number; pin?: boolean };
+
+const LANDMARK_COLOR: Record<Landmark['kind'], string> = {
+  mission: '#10b981', spaceport: '#38bdf8', crater: '#a855f7', volcano: '#f97316', mountain: '#f59e0b',
+  canyon: '#f59e0b', plain: '#f59e0b', sea: '#38bdf8',
+};
+
+/** Curated point datasets, each one overlay. `sel` turns a hit back into a Selection. */
+const POINT_SETS: { id: OverlayId; items: (bodyId: string) => PointItem[]; color: string; labelZoom?: number; sel: (id: string, bodyId: string) => Selection | null }[] = [
+  {
+    id: 'landmarks', color: '#10b981', labelZoom: 1.5,
+    items: b => getLandmarksForBody(b).map(l => ({ id: l.id, lat: l.lat, lon: l.lon, name: l.name, color: LANDMARK_COLOR[l.kind] })),
+    sel: (id, b) => { const item = getLandmarksForBody(b).find(l => l.id === id); return item ? { kind: 'landmark', item } : null; },
+  },
+  {
+    id: 'wonders', color: '#f59e0b', items: () => WORLD_WONDERS,
+    sel: id => { const item = WORLD_WONDERS.find(w => w.id === id); return item ? { kind: 'wonder', item } : null; },
+  },
+  {
+    id: 'shipwrecks', color: '#22d3ee', items: () => SHIPWRECKS,
+    sel: id => { const item = SHIPWRECKS.find(w => w.id === id); return item ? { kind: 'shipwreck', item } : null; },
+  },
+  {
+    id: 'launchsites', color: '#fb923c', items: () => LAUNCH_SITES,
+    sel: id => { const item = LAUNCH_SITES.find(w => w.id === id); return item ? { kind: 'launchsite', item } : null; },
+  },
+  {
+    id: 'webcams', color: '#f472b6', items: () => CCTV_CAMERAS.filter(c => c.lat !== 0 || c.lon !== 0),
+    sel: id => { const item = CCTV_CAMERAS.find(w => w.id === id); return item ? { kind: 'cctv', item } : null; },
+  },
+];
+
+const selectionKey = (s: Selection | null): { overlay: OverlayId; id: string } | null => {
+  if (!s) return null;
+  switch (s.kind) {
+    case 'landmark': return { overlay: 'landmarks', id: s.item.id };
+    case 'wonder': return { overlay: 'wonders', id: s.item.id };
+    case 'shipwreck': return { overlay: 'shipwrecks', id: s.item.id };
+    case 'launchsite': return { overlay: 'launchsites', id: s.item.id };
+    case 'cctv': return { overlay: 'webcams', id: s.item.id };
+    default: return null;
+  }
+};
+
+const QUAKE_SRC = 'sb-quakes';
+const PLANE_IDS = { layers: ['sb-flightpath-ahead', 'sb-flightpath-trail', 'sb-planes'], sources: ['sb-flightpath-ahead', 'sb-flightpath-trail', 'sb-planes'] };
 
 export function MapsApp() {
   const dark = useDarkTheme();
   const [bodies, setBodies] = useState<MapBody[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [handoff] = useState(takeHandoff);
-  const [flightHandoff] = useState(takeFlight);
+  const [flightHandoff] = useState(() => take(FLIGHT_HANDOFF));
   const [bodyId, setBodyId] = useState<string>(() => (
     bodyFromHash() ?? (flightHandoff ? 'earth' : handoff?.body ?? store.get<string>(LAST) ?? 'earth')
   ));
   const [globe, setGlobe] = useState<boolean>(() => handoff?.globe ?? store.get<boolean>(GLOBE) ?? true);
   const [panel, setPanel] = useState(() => window.innerWidth >= 900);
-  const [cursor, setCursor] = useState<{ lat: number; lon: number } | null>(null);
-  const [zoom, setZoom] = useState(0);
+  const [prefs, setPrefs] = useState<LayerPrefs>(loadPrefs);
   const [pin, setPin] = useState<{ lat: number; lon: number } | null>(null);
   const [copied, setCopied] = useState(false);
   const [overlay, setOverlay] = useState<MapSpec | null>(handoff);
-
-  // Omnibox search & suggestions
-  const [searchQuery, setSearchQuery] = useState('');
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [searchFocused, setSearchFocused] = useState(false);
-  const [searching, setSearching] = useState(false);
+  const [selection, setSelection] = useState<Selection | null>(null);
+  const [solFocus, setSolFocus] = useState<{ id: string } | null>(null);
+  const [drawer, setDrawer] = useState<Drawer>(() => {
+    const q = location.hash + location.search;
+    return /[?&]directions\b/.test(q) ? 'directions' : /[?&]dossier\b/.test(q) ? 'dossier' : /[?&]bookmarks\b/.test(q) ? 'bookmarks' : null;
+  });
+  const [pinCard, setPinCard] = useState<'weather' | 'sky' | null>(null);
+  const [viewport, setViewport] = useState({ lat: 0, lon: 0, zoom: 2 });
 
   // Live flights (Earth only): the traffic layer, and one followed flight
-  const [traffic, setTraffic] = useState<boolean>(() => store.get<boolean>(TRAFFIC) ?? false);
   const [planes, setPlanes] = useState<Aircraft[]>([]);
   const [trafficErr, setTrafficErr] = useState<string | null>(null);
   const [flightQ, setFlightQ] = useState<string | null>(flightHandoff);
   const [follow, setFollow] = useState(!!flightHandoff);
   const [sel, setSel] = useState<{ res: FindResult | null; error: string | null; updated: number | null }>({ res: null, error: null, updated: null });
-  const [solFocus, setSolFocus] = useState<{ id: string } | null>(null);
 
-  // Spacecraft layer
-  const [orbitersOn, setOrbitersOn] = useState<boolean>(() => store.get<boolean>(ORBITERS) ?? false);
+  // Spacecraft
   const [orbStatus, setOrbStatus] = useState<{ count: number; error?: string; note?: string } | null>(null);
   const [orbSel, setOrbSel] = useState<OrbiterInfo | null>(null);
   const orbLayer = useRef<OrbiterLayer | null>(null);
+  const [quakeCount, setQuakeCount] = useState<number | null>(null);
 
-  // Landmarks & historic missions layer
-  const [landmarksOn, setLandmarksOn] = useState<boolean>(() => store.get<boolean>(LANDMARKS_KEY) ?? true);
-  const [landmarkSel, setLandmarkSel] = useState<Landmark | null>(null);
-  const landmarkLayer = useRef<LandmarkLayer | null>(null);
-
-  // Real-time Solar Terminator layer
-  const [terminatorOn, setTerminatorOn] = useState<boolean>(() => store.get<boolean>(TERMINATOR_KEY) ?? false);
-  const termLayer = useRef<{ detach: () => void; update: () => void } | null>(null);
-
-  // Cosmic Night Sky & Celestial Starfield in Globe mode
-  const [nightSkyOn, setNightSkyOn] = useState<boolean>(() => store.get<boolean>(NIGHT_SKY_KEY) ?? true);
-
-  // Coordinate Graticule Grid layer
-  const [gridOn, setGridOn] = useState<boolean>(() => store.get<boolean>(GRID_KEY) ?? false);
-  const gridLayer = useRef<{ detach: () => void } | null>(null);
-
-  // Rover & Expedition Traverses layer (Mars & Moon)
-  const [traversesOn, setTraversesOn] = useState<boolean>(() => store.get<boolean>(TRAVERSES_KEY) ?? true);
-  const [selectedTraverse, setSelectedTraverse] = useState<{ traverse: Traverse; waypoint: TraverseWaypoint } | null>(null);
-  const traverseLayer = useRef<TraverseLayer | null>(null);
-
-  // Live Earthquakes layer (Earth)
-  const [earthquakesOn, setEarthquakesOn] = useState<boolean>(() => store.get<boolean>(EARTHQUAKES_KEY) ?? false);
-
-  // Earth feature layers (Shipwrecks, Wonders, Launch Sites, Maritime, CCTV)
-  const [shipwrecksOn, setShipwrecksOn] = useState<boolean>(() => store.get<boolean>(SHIPWRECKS_KEY) ?? true);
-  const [wondersOn, setWondersOn] = useState<boolean>(() => store.get<boolean>(WONDERS_KEY) ?? true);
-  const [launchSitesOn, setLaunchSitesOn] = useState<boolean>(() => store.get<boolean>(LAUNCHSITES_KEY) ?? true);
-  const [maritimeOn, setMaritimeOn] = useState<boolean>(() => store.get<boolean>(MARITIME_KEY) ?? true);
-  const [cctvOn, setCctvOn] = useState<boolean>(() => store.get<boolean>(CCTV_KEY) ?? true);
-  const [selectedFeature, setSelectedFeature] = useState<AnyFeature | null>(null);
-
-  const shipwreckLayer = useRef<ShipwreckLayer | null>(null);
-  const wonderLayer = useRef<WonderLayer | null>(null);
-  const launchSiteLayer = useRef<LaunchSiteLayer | null>(null);
-  const maritimeLayer = useRef<MaritimeLayer | null>(null);
-  const cctvLayer = useRef<CCTVLayer | null>(null);
-
-  // Local Sky Horizon modal
-  const [skyViewOpen, setSkyViewOpen] = useState(false);
-
-  // Geodesic Measurement tool
+  // Measuring
   const [measuring, setMeasuring] = useState(false);
   const [measurePoints, setMeasurePoints] = useState<MeasurePoint[]>([]);
-  const [measureUnit, setMeasureUnit] = useState<'metric' | 'imperial' | 'nautical'>(
-    () => store.get<'metric' | 'imperial' | 'nautical'>(MEASURE_UNIT) ?? 'metric'
-  );
+  const [measureUnit, setMeasureUnit] = useState<'metric' | 'imperial' | 'nautical'>(() => store.get(MEASURE_UNIT) ?? 'metric');
 
-  // Drawers and Modals
-  const [directionsOpen, setDirectionsOpen] = useState(() => /[?&]directions\b/.test(location.hash) || /[?&]directions\b/.test(location.search));
   const [activeRoute, setActiveRoute] = useState<RouteData | null>(null);
-  const routeMarkers = useRef<ML.Marker[]>([]);
 
-  const [dossierOpen, setDossierOpen] = useState(() => /[?&]dossier\b/.test(location.hash) || /[?&]dossier\b/.test(location.search));
-  const [bookmarksOpen, setBookmarksOpen] = useState(() => /[?&]bookmarks\b/.test(location.hash) || /[?&]bookmarks\b/.test(location.search));
-  const [weatherOpen, setWeatherOpen] = useState(false);
-  const [atlasOpen, setAtlasOpen] = useState(false);
-  const [viewport, setViewport] = useState({ lat: 0, lon: 0, zoom: 2 });
+  const body = bodies?.find(b => b.id === bodyId) ?? null;
+  const isEarth = bodyId === 'earth';
+  const has = (id: OverlayId) => prefs[id] && !!OVERLAYS.find(o => o.id === id)?.on(bodyId, globe);
 
-  const [mapGen, setMapGen] = useState(0);  // bumps when a (re)built map has loaded
-
+  // ── Map lifecycle ───────────────────────────────────────────────────────
   const box = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<ML.Map | null>(null);
-  const libRef = useRef<MapLib | null>(null);
+  const [mapState, setMapState] = useState<{ map: ML.Map; lib: MapLib; body: string } | null>(null);
+  const map = mapState?.map ?? null;
+  const lib = mapState?.lib ?? null;
+  const pendingView = useRef<GoTo & { body: string } | null>(null);
+  const globeRef = useRef(globe);
+  globeRef.current = globe;
+  const teardowns = useRef(new Set<() => void>());
+  const hits = useRef(new Map<string, (f: ML.MapGeoJSONFeature) => void>());
+  const clickRef = useRef<(e: ML.MapMouseEvent) => void>(() => {});
   const pinMarker = useRef<ML.Marker | null>(null);
 
-  // Trigger immediate map resize whenever side panels or drawers toggle
-  useEffect(() => {
-    mapRef.current?.resize();
-    const raf = requestAnimationFrame(() => mapRef.current?.resize());
-    return () => cancelAnimationFrame(raf);
-  }, [panel, atlasOpen, dossierOpen, bookmarksOpen, directionsOpen, weatherOpen]);
+  /** Register an overlay's teardown; returns an idempotent version for the effect's cleanup. */
+  const own = useCallback((fn: () => void) => {
+    let done = false;
+    const run = () => {
+      if (done) return;
+      done = true;
+      teardowns.current.delete(run);
+      try { fn(); } catch (e) { console.warn('Worlds overlay teardown:', e); }
+    };
+    teardowns.current.add(run);
+    return run;
+  }, []);
 
-  // Poll catalog while Earth downloads
+  useEffect(() => {
+    if (!body?.available || !box.current) return;
+    let gone = false;
+    let m: ML.Map | null = null;
+    (async () => {
+      const lib = await loadMapLib();
+      const style = await styleFor(body, dark, globeRef.current);
+      if (gone || !box.current) return;
+      const pv = pendingView.current?.body === body.id ? pendingView.current : null;
+      pendingView.current = null;
+      const saved = store.get<{ c: [number, number]; z: number; b?: number; p?: number }>(VIEW(body.id));
+      m = new lib.Map({
+        container: box.current, style, attributionControl: { compact: true },
+        center: pv ? [pv.lon, pv.lat] : saved?.c ?? [0, 20],
+        zoom: pv?.zoom ?? saved?.z ?? (globeRef.current ? 1.6 : 1.8),
+        bearing: pv?.bearing ?? saved?.b ?? 0, pitch: pv?.pitch ?? saved?.p ?? 0,
+        maxZoom: body.type === 'vector' ? 19 : body.maxzoom + 3, maxPitch: 75,
+      });
+      const map = m;
+      map.addControl(new lib.NavigationControl({ visualizePitch: true }), 'top-right');
+      if (body.id === 'earth') map.addControl(new lib.ScaleControl({ unit: 'metric' }), 'bottom-right');  // assumes Earth's radius
+      map.on('click', e => clickRef.current(e));
+      map.on('dragstart', () => setFollow(false));
+      map.on('moveend', () => {
+        const c = map.getCenter().wrap();
+        setViewport({ lat: c.lat, lon: c.lng, zoom: map.getZoom() });
+        store.set(VIEW(body.id), { c: [c.lng, c.lat], z: map.getZoom(), b: map.getBearing(), p: map.getPitch() });
+      });
+      map.once('load', () => {
+        if (gone) return;
+        const c = map.getCenter().wrap();
+        setViewport({ lat: c.lat, lon: c.lng, zoom: map.getZoom() });
+        setMapState({ map, lib, body: body.id });
+        if (pv?.pin) setPin({ lat: pv.lat, lon: pv.lon });
+      });
+    })().catch(e => { console.error('Map engine init failed:', e); if (!gone) setError(`Map engine: ${(e as Error)?.message || e}`); });
+
+    return () => {
+      gone = true;
+      [...teardowns.current].forEach(t => t());
+      hits.current.clear();
+      pinMarker.current?.remove(); pinMarker.current = null;
+      m?.remove();
+      setMapState(null);
+    };
+  }, [body?.id, body?.available, dark]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Globe ↔ flat without rebuilding the map
+  useEffect(() => {
+    if (!map) return;
+    map.setProjection({ type: globe ? 'globe' : 'mercator' });
+    if (map.getLayer('space')) map.setPaintProperty('space', 'background-color', globe ? 'rgba(0,0,0,0)' : '#06070c');
+  }, [map, globe]);
+
+  // Panels opening/closing change the map's width
+  useEffect(() => {
+    if (!map) return;
+    const raf = requestAnimationFrame(() => mapAlive(map) && map.resize());
+    return () => cancelAnimationFrame(raf);
+  }, [map, panel, drawer]);
+
+  /** Fly somewhere, switching worlds first if needed (the new map then opens there). */
+  const goTo = useCallback((t: GoTo) => {
+    const target = t.body?.toLowerCase() ?? bodyId;
+    if (target !== bodyId || !map) {
+      pendingView.current = { ...t, body: target };
+      if (target !== bodyId) chooseRef.current(target, true);
+      return;
+    }
+    map.flyTo({ center: [t.lon, t.lat], zoom: t.zoom ?? Math.max(map.getZoom(), isEarth ? 12 : 6), bearing: t.bearing, pitch: t.pitch, duration: 1200 });
+    if (t.pin) setPin({ lat: t.lat, lon: t.lon });
+  }, [bodyId, map, isEarth]);
+
+  // A map spec handed over from a chat card (or applied by Atlas)
+  useEffect(() => {
+    if (!map || !lib || !overlay || (overlay.body ?? 'earth') !== mapState?.body) return;
+    const undraw = own(drawOverlays(lib, map, overlay));
+    frameSpec(lib, map, overlay, true, { top: 96, bottom: 64, left: 64, right: 64 });
+    return undraw;
+  }, [map, lib, overlay, mapState?.body, own]);
+
+  // Dropped pin
+  useEffect(() => {
+    pinMarker.current?.remove(); pinMarker.current = null;
+    if (!pin || !map || !lib) return;
+    pinMarker.current = new lib.Marker({ color: '#ff5a36', scale: 0.85 }).setLngLat([pin.lon, pin.lat]).addTo(map);
+  }, [pin, map, lib]);
+
+  // ── Click router ────────────────────────────────────────────────────────
+  clickRef.current = e => {
+    const m = e.target;
+    const at = { lat: e.lngLat.lat, lon: e.lngLat.wrap().lng };
+    if (measuring) { setMeasurePoints(p => [...p, at]); return; }
+    const ids = [...hits.current.keys()].filter(id => m.getLayer(id));
+    const f = ids.length ? m.queryRenderedFeatures(e.point, { layers: ids })[0] : undefined;
+    if (f) { hits.current.get(f.layer.id)?.(f); return; }
+    setSelection(null);
+    orbLayer.current?.select(null);
+    setPin(at);
+    setPinCard(null);
+  };
+
+  // ── Point datasets ──────────────────────────────────────────────────────
+  const points = useRef<Partial<Record<OverlayId, PointLayer>>>({});
+  const selRef = useRef(selection);
+  selRef.current = selection;
+  const pointKey = POINT_SETS.map(s => (has(s.id) ? '1' : '0')).join('');
+  useEffect(() => {
+    if (!map) return;
+    const cleanups = POINT_SETS.filter(s => has(s.id)).map(s => {
+      const items = s.items(bodyId);
+      if (!items.length) return () => {};
+      const layer = attachPoints(map, s.id, items, { color: s.color, labelZoom: s.labelZoom });
+      points.current[s.id] = layer;
+      const k = selectionKey(selRef.current);
+      if (k?.overlay === s.id) layer.select(k.id);
+      layer.hitLayers.forEach(l => hits.current.set(l, f => {
+        const next = s.sel(String(f.properties?.id), bodyId);
+        if (next) { setSelection(next); setPin(null); }
+      }));
+      return own(() => {
+        layer.hitLayers.forEach(l => hits.current.delete(l));
+        if (points.current[s.id] === layer) delete points.current[s.id];
+        layer.detach();
+      });
+    });
+    return () => cleanups.forEach(c => c());
+  }, [map, bodyId, pointKey, own]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const k = selectionKey(selection);
+    for (const [id, layer] of Object.entries(points.current)) layer?.select(k?.overlay === id ? k.id : null);
+  }, [selection]);
+
+  // ── Traverses (Moon, Mars) ──────────────────────────────────────────────
+  const traversesOn = has('traverses');
+  useEffect(() => {
+    if (!map || !lib || !traversesOn) return;
+    const travs = getTraversesForBody(bodyId);
+    const layer = attachTraverseLayer(lib, map, travs);
+    hits.current.set('sb-waypoints-circle', f => {
+      const t = travs.find(x => x.id === f.properties?.traverseId);
+      const wp = t?.waypoints.find(w => w.id === f.properties?.id);
+      if (t && wp) { setSelection({ kind: 'traverse', traverse: t, waypoint: wp }); setPin(null); }
+    });
+    return own(() => { hits.current.delete('sb-waypoints-circle'); layer.remove(); });
+  }, [map, lib, bodyId, traversesOn, own]);
+
+  // ── Earthquakes (Earth) ─────────────────────────────────────────────────
+  const quakesOn = has('quakes');
+  useEffect(() => {
+    setQuakeCount(null);
+    if (!map || !quakesOn) return;
+    let gone = false;
+    const layerId = `${QUAKE_SRC}-dot`;
+    const load = () => fetch('/api/planetary/earthquakes.geojson?min_mag=2.5')
+      .then(r => (r.ok ? r.json() as Promise<FeatureCollection> : Promise.reject(new Error(String(r.status)))))
+      .then(fc => {
+        if (gone || !mapAlive(map)) return;
+        setQuakeCount(fc.features.length);
+        const src = map.getSource(QUAKE_SRC) as ML.GeoJSONSource | undefined;
+        if (src) { src.setData(fc); return; }
+        map.addSource(QUAKE_SRC, { type: 'geojson', data: fc });
+        map.addLayer({
+          id: layerId, type: 'circle', source: QUAKE_SRC,
+          paint: {
+            'circle-radius': ['interpolate', ['linear'], ['get', 'mag'], 2.5, 3, 5, 7, 7, 14],
+            'circle-color': ['interpolate', ['linear'], ['get', 'mag'], 2.5, '#4ade80', 4.5, '#facc15', 6, '#fb923c', 7.5, '#f43f5e'],
+            'circle-opacity': 0.8, 'circle-stroke-width': 1, 'circle-stroke-color': 'rgba(6,7,12,0.8)',
+          },
+        });
+      }).catch(() => { if (!gone) setQuakeCount(null); });
+    load();
+    const t = setInterval(load, 5 * 60_000);
+    hits.current.set(layerId, f => {
+      const p = f.properties as Omit<Quake, 'lat' | 'lon'>;
+      const [lon, lat] = (f.geometry as Point).coordinates;
+      setSelection({ kind: 'quake', item: { ...p, lat, lon } });
+      setPin(null);
+    });
+    return own(() => {
+      gone = true;
+      clearInterval(t);
+      hits.current.delete(layerId);
+      if (!mapAlive(map)) return;
+      if (map.getLayer(layerId)) map.removeLayer(layerId);
+      if (map.getSource(QUAKE_SRC)) map.removeSource(QUAKE_SRC);
+    });
+  }, [map, quakesOn, own]);
+
+  // ── Day/night, grid ─────────────────────────────────────────────────────
+  const dayNightOn = has('daynight');
+  useEffect(() => {
+    if (!map || !dayNightOn) return;
+    const layer = attachTerminator(map);
+    return own(layer.detach);
+  }, [map, dayNightOn, own]);
+
+  const gridOn = has('grid');
+  useEffect(() => {
+    if (!map || !gridOn) return;
+    const layer = attachGrid(map);
+    return own(layer.detach);
+  }, [map, gridOn, own]);
+
+  // ── Spacecraft ──────────────────────────────────────────────────────────
+  const satsOn = has('satellites');
+  useEffect(() => {
+    setOrbSel(null); setOrbStatus(null);
+    if (!map || !lib || !satsOn) return;
+    const layer = attachOrbiters(lib, map, bodyId, {
+      onSelect: info => { setOrbSel(info); if (info) { setSelection(null); setPin(null); } },
+      onStatus: setOrbStatus,
+    });
+    orbLayer.current = layer;
+    hits.current.set('sb-orb', () => {});  // the layer handles its own clicks; this just stops a pin drop
+    return own(() => { hits.current.delete('sb-orb'); orbLayer.current = null; layer.detach(); });
+  }, [map, lib, bodyId, satsOn, own]);
+
+  // ── Flights ─────────────────────────────────────────────────────────────
+  const trafficOn = has('flights');
+  useEffect(() => {
+    setPlanes([]); setTrafficErr(null);
+    if (!map || !trafficOn) return;
+    let gone = false, t: ReturnType<typeof setTimeout> | undefined;
+    const load = async () => {
+      clearTimeout(t);
+      if (!document.hidden && mapAlive(map)) {
+        const c = map.getCenter().wrap();
+        try {
+          const r = await areaFlights(c.lat, c.lng, viewRadiusNm(map));
+          if (!gone) { setPlanes(r.aircraft); setTrafficErr(null); }
+        } catch (e) { if (!gone) setTrafficErr((e as Error).message); }
+      }
+      if (!gone) t = setTimeout(load, 8000);
+    };
+    const onMove = () => { clearTimeout(t); t = setTimeout(load, 400); };
+    map.on('moveend', onMove);
+    load();
+    return () => { gone = true; clearTimeout(t); map.off('moveend', onMove); };
+  }, [map, trafficOn]);
+
+  useEffect(() => {
+    setSel({ res: null, error: null, updated: null });
+    if (!flightQ || !isEarth) return;
+    let gone = false, t: ReturnType<typeof setTimeout> | undefined;
+    const load = async () => {
+      if (!document.hidden) {
+        try {
+          const r = await findFlight(flightQ);
+          if (!gone) setSel({ res: r, error: null, updated: Date.now() });
+        } catch (e) { if (!gone) setSel(s => ({ ...s, error: (e as Error).message })); }
+      }
+      if (!gone) t = setTimeout(load, 6000);
+    };
+    load();
+    return () => { gone = true; clearTimeout(t); };
+  }, [flightQ, isEarth]);
+
+  const showPlanes = isEarth && (trafficOn || !!flightQ);
+  useEffect(() => {
+    if (!map || !showPlanes) return;
+    pathLayers(map);
+    planeLayer(map, 'sb-planes', { labels: true });
+    hits.current.set('sb-planes', f => { setFlightQ(String(f.properties?.label ?? f.properties?.hex)); setFollow(false); });
+    return own(() => {
+      hits.current.delete('sb-planes');
+      if (!mapAlive(map)) return;
+      PLANE_IDS.layers.forEach(l => map.getLayer(l) && map.removeLayer(l));
+      PLANE_IDS.sources.forEach(s => map.getSource(s) && map.removeSource(s));
+    });
+  }, [map, showPlanes, own]);
+
+  useEffect(() => {
+    if (!map || !showPlanes || !mapAlive(map)) return;
+    const a = sel.res?.aircraft;
+    const shown = trafficOn ? planes : [];
+    planeLayer(map, 'sb-planes', { labels: true })(a ? [...shown.filter(p => p.hex !== a.hex), a] : shown, a?.hex);
+    pathLayers(map)(flightQ ? sel.res : null);
+  }, [map, showPlanes, trafficOn, flightQ, planes, sel.res]);
+
+  const flownTo = useRef<string | null>(null);
+  useEffect(() => {
+    const a = sel.res?.aircraft;
+    if (!map || !a) return;
+    if (flownTo.current !== flightQ) {
+      flownTo.current = flightQ;
+      map.flyTo({ center: [a.lon, a.lat], zoom: Math.max(map.getZoom(), 7) });
+    } else if (follow) {
+      map.easeTo({ center: [a.lon, a.lat], duration: 900 });
+    }
+  }, [sel.res, follow, flightQ, map]);
+
+  // ── Measure ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!map || !lib || !measuring) return;
+    const pts = measurePoints;
+    attachMeasureLayer(lib, map, pts, null);
+    const canvas = map.getCanvas();
+    canvas.style.cursor = 'crosshair';
+    let raf = 0;
+    const onMove = (e: ML.MapMouseEvent) => {
+      if (!pts.length) return;
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => mapAlive(map) && attachMeasureLayer(lib, map, pts, { lat: e.lngLat.lat, lon: e.lngLat.wrap().lng }));
+    };
+    map.on('mousemove', onMove);
+    return own(() => {
+      cancelAnimationFrame(raf);
+      map.off('mousemove', onMove);
+      if (!mapAlive(map)) return;
+      canvas.style.cursor = '';
+      detachMeasureLayer(map);
+    });
+  }, [map, lib, measuring, measurePoints, own]);
+
+  const measurePath = useMemo(
+    () => (measurePoints.length < 2 ? null : computePath(measurePoints, body?.radius_km ?? 6371)),
+    [measurePoints, body?.radius_km],
+  );
+
+  // ── Directions route ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!map || !lib || !isEarth || !activeRoute) return;
+    const SRC = 'sb-app-route';
+    map.addSource(SRC, { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: activeRoute.coords } } });
+    map.addLayer({ id: `${SRC}-casing`, type: 'line', source: SRC, layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#06070c', 'line-width': 7, 'line-opacity': 0.7 } });
+    map.addLayer({ id: SRC, type: 'line', source: SRC, layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#3b82f6', 'line-width': 4 } });
+    const stops = [activeRoute.from, ...(activeRoute.via ?? []), activeRoute.to];
+    const markers = stops.map((s, i, all) =>
+      new lib.Marker({ color: i === 0 ? '#10b981' : i === all.length - 1 ? '#f43f5e' : '#f59e0b', scale: 0.8 })
+        .setLngLat([s.lon, s.lat])
+        .setPopup(new lib.Popup({ offset: 22, closeButton: false, className: 'sb-map-popup' }).setText(s.name))
+        .addTo(map));
+    if (activeRoute.bbox) {
+      map.fitBounds([[activeRoute.bbox[0], activeRoute.bbox[1]], [activeRoute.bbox[2], activeRoute.bbox[3]]],
+        { padding: { top: 96, bottom: 64, left: 64, right: 64 }, maxZoom: 15 });
+    }
+    return own(() => {
+      markers.forEach(m => m.remove());
+      if (!mapAlive(map)) return;
+      [`${SRC}`, `${SRC}-casing`].forEach(l => map.getLayer(l) && map.removeLayer(l));
+      if (map.getSource(SRC)) map.removeSource(SRC);
+    });
+  }, [map, lib, isEarth, activeRoute, own]);
+
+  // ── Worlds list ─────────────────────────────────────────────────────────
   useEffect(() => {
     let alive = true;
     let t: ReturnType<typeof setTimeout>;
@@ -265,10 +613,6 @@ export function MapsApp() {
     return () => { alive = false; clearTimeout(t); };
   }, []);
 
-  const body = bodies?.find(b => b.id === bodyId) ?? null;
-  const isEarth = body?.id === 'earth';
-
-  // Solar system bodies tree
   const tree = useMemo(() => {
     const maps = new Map((bodies ?? []).map(b => [b.id, b]));
     const known = new Set(SOL_BODIES.map(b => b.id));
@@ -289,657 +633,136 @@ export function MapsApp() {
     if (!q) return tree;
     return tree
       .filter(t => t.name.toLowerCase().includes(q) || t.moons.some(m => m.name.toLowerCase().includes(q)))
-      .map(t => {
-        if (t.name.toLowerCase().includes(q)) return t;
-        return { ...t, moons: t.moons.filter(m => m.name.toLowerCase().includes(q)) };
-      });
+      .map(t => (t.name.toLowerCase().includes(q) ? t : { ...t, moons: t.moons.filter(m => m.name.toLowerCase().includes(q)) }));
   }, [tree, worldFilter]);
-
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
-  const openWorld = useCallback((id: string) => {
-    if (id !== 'earth' && !bodies?.find(b => b.id === id)?.available) { setSolFocus({ id }); choose('sol'); }
-    else choose(id);
-  }, [bodies]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const mapIds = useMemo(() => new Set((bodies ?? []).filter(b => b.available).map(b => b.id)), [bodies]);
 
-  // (re)build map when world, theme or projection changes
-  useEffect(() => {
-    if (!body?.available || !box.current) return;
-    let gone = false;
-    let undraw: (() => void) | null = null;
-    (async () => {
-      const lib = libRef.current = await loadMapLib();
-      const style = await styleFor(body, dark, globe);
-      if (gone || !box.current) return;
-      const saved = store.get<{ c: [number, number]; z: number; b?: number; p?: number }>(VIEW(body.id));
-      const map = new lib.Map({
-        container: box.current, style, attributionControl: { compact: true },
-        center: saved?.c ?? [0, 20], zoom: saved?.z ?? (globe ? 1.4 : 1.6), bearing: saved?.b ?? 0, pitch: saved?.p ?? 0,
-        maxZoom: body.type === 'vector' ? 19 : body.maxzoom + 3, maxPitch: 75,
-      });
-      mapRef.current = map;
-      map.addControl(new lib.NavigationControl({ visualizePitch: true }), 'top-right');
-      if (body.id === 'earth') map.addControl(new lib.ScaleControl({ unit: 'metric' }), 'bottom-right');
-      map.on('mousemove', e => setCursor({ lat: e.lngLat.lat, lon: e.lngLat.wrap().lng }));
-      map.on('mouseout', () => setCursor(null));
-      map.on('zoom', () => setZoom(map.getZoom()));
-      map.on('moveend', () => {
-        const c = map.getCenter().wrap();
-        setViewport({ lat: c.lat, lon: c.lng, zoom: map.getZoom() });
-        store.set(VIEW(body.id), { c: [c.lng, c.lat], z: map.getZoom(), b: map.getBearing(), p: map.getPitch() });
-      });
-
-      map.on('click', e => {
-        // If measure mode is active, clicks add waypoints
-        if (measuring) {
-          setMeasurePoints(pts => [...pts, { lat: e.lngLat.lat, lon: e.lngLat.wrap().lng }]);
-          return;
-        }
-        if (map.getLayer('sb-orb') && map.queryRenderedFeatures(e.point, { layers: ['sb-orb'] }).length) return;
-        if (map.getLayer('sb-landmarks-circle') && map.queryRenderedFeatures(e.point, { layers: ['sb-landmarks-circle'] }).length) return;
-        if (map.getLayer('sb-shipwrecks-circle') && map.queryRenderedFeatures(e.point, { layers: ['sb-shipwrecks-circle'] }).length) return;
-        if (map.getLayer('sb-wonders-circle') && map.queryRenderedFeatures(e.point, { layers: ['sb-wonders-circle'] }).length) return;
-        if (map.getLayer('sb-launchsites-circle') && map.queryRenderedFeatures(e.point, { layers: ['sb-launchsites-circle'] }).length) return;
-        if (map.getLayer('sb-maritime-vessel') && map.queryRenderedFeatures(e.point, { layers: ['sb-maritime-vessel'] }).length) return;
-        if (map.getLayer('sb-cctv-circle') && map.queryRenderedFeatures(e.point, { layers: ['sb-cctv-circle'] }).length) return;
-        const hit = map.getLayer('sb-planes') ? map.queryRenderedFeatures(e.point, { layers: ['sb-planes'] })[0] : undefined;
-        if (hit) { setFlightQ(String(hit.properties?.label ?? hit.properties?.hex)); setFollow(false); return; }
-        setPin({ lat: e.lngLat.lat, lon: e.lngLat.wrap().lng });
-        setWeatherOpen(false);
-      });
-
-      map.on('dragstart', () => setFollow(false));
-      map.on('load', () => {
-        const c = map.getCenter().wrap();
-        setViewport({ lat: c.lat, lon: c.lng, zoom: map.getZoom() });
-        setZoom(map.getZoom());
-        setMapGen(g => g + 1);
-        if (overlay && (overlay.body ?? 'earth') === body.id) {
-          undraw = drawOverlays(lib, map, overlay);
-          frameSpec(lib, map, overlay, false, { top: 140, bottom: 64, left: 64, right: 88 });
-        }
-      });
-    })().catch(e => { console.error('Map engine init failed:', e); !gone && setError(`Map engine: ${(e as Error)?.message || e}`); });
-
-    return () => {
-      gone = true;
-      undraw?.();
-      pinMarker.current?.remove(); pinMarker.current = null;
-      mapRef.current?.remove(); mapRef.current = null;
-    };
-  }, [body?.id, body?.available, dark, globe, overlay, measuring]);
-
-  // Dropped pin marker
-  useEffect(() => {
-    const map = mapRef.current, lib = libRef.current;
-    pinMarker.current?.remove(); pinMarker.current = null;
-    if (!pin || !map || !lib) return;
-    pinMarker.current = new lib.Marker({ color: '#ff5a36', scale: 0.85 }).setLngLat([pin.lon, pin.lat]).addTo(map);
-  }, [pin]);
-
-  // Traffic layer (Earth only)
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !isEarth || !traffic) { setPlanes([]); setTrafficErr(null); return; }
-    let gone = false, t: ReturnType<typeof setTimeout> | undefined;
-    const load = async () => {
-      clearTimeout(t);
-      if (!document.hidden) {
-        const c = map.getCenter().wrap();
-        try {
-          const r = await areaFlights(c.lat, c.lng, viewRadiusNm(map));
-          if (!gone) { setPlanes(r.aircraft); setTrafficErr(null); }
-        } catch (e) { if (!gone) setTrafficErr((e as Error).message); }
-      }
-      if (!gone) t = setTimeout(load, 8000);
-    };
-    const onMove = () => { clearTimeout(t); t = setTimeout(load, 400); };
-    map.on('moveend', onMove);
-    load();
-    return () => { gone = true; clearTimeout(t); map.off('moveend', onMove); };
-  }, [mapGen, isEarth, traffic]);
-
-  // Followed flight
-  useEffect(() => {
-    setSel({ res: null, error: null, updated: null });
-    if (!flightQ || !isEarth) return;
-    let gone = false, t: ReturnType<typeof setTimeout> | undefined;
-    const load = async () => {
-      if (!document.hidden) {
-        try {
-          const r = await findFlight(flightQ);
-          if (!gone) setSel({ res: r, error: null, updated: Date.now() });
-        } catch (e) { if (!gone) setSel(s => ({ ...s, error: (e as Error).message })); }
-      }
-      if (!gone) t = setTimeout(load, 6000);
-    };
-    load();
-    return () => { gone = true; clearTimeout(t); };
-  }, [flightQ, isEarth]);
-
-  // Planes layer
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapGen || !isEarth || (!traffic && !flightQ)) return;
-    const drawPath = pathLayers(map);
-    const drawPlanes = planeLayer(map, 'sb-planes', { labels: true });
-    const a = sel.res?.aircraft;
-    drawPlanes(a ? [...planes.filter(p => p.hex !== a.hex), a] : planes, a?.hex);
-    drawPath(flightQ ? sel.res : null);
-  }, [mapGen, isEarth, traffic, flightQ, planes, sel.res]);
-
-  // Centering on followed flight
-  const flownTo = useRef<string | null>(null);
-  useEffect(() => {
-    const map = mapRef.current, a = sel.res?.aircraft;
-    if (!map || !a) return;
-    if (flownTo.current !== flightQ) {
-      flownTo.current = flightQ;
-      map.flyTo({ center: [a.lon, a.lat], zoom: Math.max(map.getZoom(), 7) });
-    } else if (follow) {
-      map.easeTo({ center: [a.lon, a.lat], duration: 900 });
-    }
-  }, [sel.res, follow, flightQ, mapGen]);
-
-  // Spacecraft layer
-  const orbitable = !!body?.available && ORBITED.has(bodyId);
-  useEffect(() => {
-    const map = mapRef.current, lib = libRef.current;
-    setOrbSel(null); setOrbStatus(null);
-    if (!map || !lib || !mapGen || !orbitable || !orbitersOn) return;
-    const layer = attachOrbiters(lib, map, bodyId, { onSelect: setOrbSel, onStatus: setOrbStatus });
-    orbLayer.current = layer;
-    return () => { layer.detach(); orbLayer.current = null; };
-  }, [mapGen, bodyId, orbitable, orbitersOn]);
-
-  // Landmarks & Missions layer
-  const hasLandmarks = !!body?.available && getLandmarksForBody(bodyId).length > 0;
-  useEffect(() => {
-    const map = mapRef.current, lib = libRef.current;
-    setLandmarkSel(null);
-    if (!map || !lib || !mapGen || !hasLandmarks || !landmarksOn) return;
-    const layer = attachLandmarks(lib, map, bodyId, { onSelect: setLandmarkSel });
-    landmarkLayer.current = layer;
-    return () => { layer.detach(); landmarkLayer.current = null; };
-  }, [mapGen, bodyId, hasLandmarks, landmarksOn]);
-
-  // Traverses layer (Mars & Moon)
-  const hasTraverses = !!body?.available && getTraversesForBody(bodyId).length > 0;
-  useEffect(() => {
-    const map = mapRef.current, lib = libRef.current;
-    setSelectedTraverse(null);
-    if (!map || !lib || !mapGen || !hasTraverses || !traversesOn) return;
-    const travs = getTraversesForBody(bodyId);
-    const layer = attachTraverseLayer(lib, map, travs, (wp, t) => {
-      setSelectedTraverse({ traverse: t, waypoint: wp });
-    });
-    traverseLayer.current = layer;
-    return () => { layer.remove(); traverseLayer.current = null; };
-  }, [mapGen, bodyId, hasTraverses, traversesOn]);
-
-  // Live Earthquakes layer (Earth)
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapGen || !isEarth || !earthquakesOn) return;
-    const srcId = 'sb-earthquakes-src';
-    const layerId = 'sb-earthquakes-circle';
-
-    map.addSource(srcId, {
-      type: 'geojson',
-      data: '/api/planetary/earthquakes.geojson?min_mag=2.5',
-    });
-
-    map.addLayer({
-      id: layerId,
-      type: 'circle',
-      source: srcId,
-      paint: {
-        'circle-radius': ['interpolate', ['linear'], ['get', 'mag'], 2.5, 4, 5, 8, 7, 16],
-        'circle-color': [
-          'interpolate', ['linear'], ['get', 'mag'],
-          2.5, '#4ade80',
-          4.5, '#facc15',
-          6.0, '#fb923c',
-          7.5, '#f43f5e'
-        ],
-        'circle-opacity': 0.85,
-        'circle-stroke-width': 1.5,
-        'circle-stroke-color': '#06070c'
-      }
-    });
-
-    const onClickEq = (e: ML.MapLayerMouseEvent) => {
-      const f = e.features?.[0];
-      if (!f) return;
-      const geom = f.geometry as any;
-      if (geom?.coordinates) {
-        setPin({ lat: geom.coordinates[1], lon: geom.coordinates[0] });
-      }
-    };
-
-    map.on('click', layerId, onClickEq);
-    map.on('mouseenter', layerId, () => { map.getCanvas().style.cursor = 'pointer'; });
-    map.on('mouseleave', layerId, () => { map.getCanvas().style.cursor = ''; });
-
-    return () => {
-      map.off('click', layerId, onClickEq);
-      if (map.getLayer(layerId)) map.removeLayer(layerId);
-      if (map.getSource(srcId)) map.removeSource(srcId);
-    };
-  }, [mapGen, isEarth, earthquakesOn]);
-
-  // Shipwrecks layer (Earth)
-  useEffect(() => {
-    const map = mapRef.current, lib = libRef.current;
-    if (!map || !lib || !mapGen || !isEarth || !shipwrecksOn) {
-      shipwreckLayer.current?.detach();
-      shipwreckLayer.current = null;
-      return;
-    }
-    const layer = attachShipwrecks(lib, map, w => {
-      setSelectedFeature(w ? { kind: 'shipwreck', item: w } : null);
-    });
-    shipwreckLayer.current = layer;
-    return () => { layer.detach(); shipwreckLayer.current = null; };
-  }, [mapGen, isEarth, shipwrecksOn]);
-
-  // World Wonders layer (Earth)
-  useEffect(() => {
-    const map = mapRef.current, lib = libRef.current;
-    if (!map || !lib || !mapGen || !isEarth || !wondersOn) {
-      wonderLayer.current?.detach();
-      wonderLayer.current = null;
-      return;
-    }
-    const layer = attachWonders(lib, map, w => {
-      setSelectedFeature(w ? { kind: 'wonder', item: w } : null);
-    });
-    wonderLayer.current = layer;
-    return () => { layer.detach(); wonderLayer.current = null; };
-  }, [mapGen, isEarth, wondersOn]);
-
-  // Launch Sites layer (Earth)
-  useEffect(() => {
-    const map = mapRef.current, lib = libRef.current;
-    if (!map || !lib || !mapGen || !isEarth || !launchSitesOn) {
-      launchSiteLayer.current?.detach();
-      launchSiteLayer.current = null;
-      return;
-    }
-    const layer = attachLaunchSites(lib, map, s => {
-      setSelectedFeature(s ? { kind: 'launchsite', item: s } : null);
-    });
-    launchSiteLayer.current = layer;
-    return () => { layer.detach(); launchSiteLayer.current = null; };
-  }, [mapGen, isEarth, launchSitesOn]);
-
-  // Maritime / Ships at Sea layer (Earth)
-  useEffect(() => {
-    const map = mapRef.current, lib = libRef.current;
-    if (!map || !lib || !mapGen || !isEarth || !maritimeOn) {
-      maritimeLayer.current?.detach();
-      maritimeLayer.current = null;
-      return;
-    }
-    const layer = attachMaritime(lib, map, v => {
-      setSelectedFeature(v ? { kind: 'vessel', item: v } : null);
-    });
-    maritimeLayer.current = layer;
-    return () => { layer.detach(); maritimeLayer.current = null; };
-  }, [mapGen, isEarth, maritimeOn]);
-
-  // Live CCTV layer (Earth)
-  useEffect(() => {
-    const map = mapRef.current, lib = libRef.current;
-    if (!map || !lib || !mapGen || !isEarth || !cctvOn) {
-      cctvLayer.current?.detach();
-      cctvLayer.current = null;
-      return;
-    }
-    const layer = attachCCTV(lib, map, c => {
-      setSelectedFeature(c ? { kind: 'cctv', item: c } : null);
-    });
-    cctvLayer.current = layer;
-    return () => { layer.detach(); cctvLayer.current = null; };
-  }, [mapGen, isEarth, cctvOn]);
-
-  // Solar Terminator layer
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapGen || !body?.available || !terminatorOn) return;
-    const layer = attachTerminator(map);
-    termLayer.current = layer;
-    return () => { layer.detach(); termLayer.current = null; };
-  }, [mapGen, body?.available, terminatorOn]);
-
-  // Coordinate Graticule Grid layer
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapGen || !body?.available || !gridOn) return;
-    const layer = attachGrid(map);
-    gridLayer.current = layer;
-    return () => { layer.detach(); gridLayer.current = null; };
-  }, [mapGen, body?.available, gridOn]);
-
-  // Measure layer
-  useEffect(() => {
-    const map = mapRef.current, lib = libRef.current;
-    if (!map || !lib || !mapGen || !body?.available) return;
-    if (!measuring || measurePoints.length === 0) {
-      detachMeasureLayer(map);
-      return;
-    }
-    attachMeasureLayer(lib, map, measurePoints, cursor);
-  }, [mapGen, body?.available, measuring, measurePoints, cursor]);
-
-  // Directions route drawing on map
-  useEffect(() => {
-    const map = mapRef.current, lib = libRef.current;
-    if (!map || !lib || !mapGen || !isEarth) return;
-    const SRC_ID = 'sb-app-route';
-    routeMarkers.current.forEach(m => m.remove());
-    routeMarkers.current = [];
-
-    if (!activeRoute) {
-      const src = map.getSource(SRC_ID) as ML.GeoJSONSource | undefined;
-      if (src) src.setData({ type: 'FeatureCollection', features: [] });
-      return;
-    }
-
-    const geojson: FeatureCollection = {
-      type: 'FeatureCollection',
-      features: [{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: activeRoute.coords } }],
-    };
-
-    const src = map.getSource(SRC_ID) as ML.GeoJSONSource | undefined;
-    if (src) {
-      src.setData(geojson);
-    } else {
-      map.addSource(SRC_ID, { type: 'geojson', data: geojson });
-      map.addLayer({
-        id: 'sb-app-route-casing', type: 'line', source: SRC_ID,
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': '#06070c', 'line-width': 7, 'line-opacity': 0.7 },
-      });
-      map.addLayer({
-        id: 'sb-app-route', type: 'line', source: SRC_ID,
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': '#3b82f6', 'line-width': 4 },
-      });
-    }
-
-    const stops = [activeRoute.from, ...(activeRoute.via || []), activeRoute.to];
-    routeMarkers.current = stops.map((s, i, all) =>
-      new lib.Marker({ color: i === 0 ? '#10b981' : i === all.length - 1 ? '#f43f5e' : '#f59e0b', scale: 0.8 })
-        .setLngLat([s.lon, s.lat])
-        .setPopup(new lib.Popup({ offset: 22, closeButton: false, className: 'sb-map-popup' }).setText(s.name))
-        .addTo(map)
-    );
-
-    if (activeRoute.bbox) {
-      map.fitBounds([[activeRoute.bbox[0], activeRoute.bbox[1]], [activeRoute.bbox[2], activeRoute.bbox[3]]], {
-        padding: { top: 120, bottom: 80, left: 80, right: 380 }, maxZoom: 15, animate: true,
-      });
-    }
-  }, [mapGen, isEarth, activeRoute]);
-
-  const choose = useCallback((id: string) => {
+  const choose = useCallback((id: string, keepPending = false) => {
+    if (!keepPending) pendingView.current = null;
     if (id === bodyId) return;
     if (id !== 'sol') setSolFocus(null);
-    setBodyId(id); store.set(LAST, id); setPin(null); setCursor(null);
-    setLandmarkSel(null); setMeasurePoints([]); setMeasuring(false);
-    setSelectedFeature(null);
-    setActiveRoute(null); setDirectionsOpen(false); setWeatherOpen(false);
-    setSkyViewOpen(false); setSelectedTraverse(null);
-    try { window.history.replaceState(null, '', `#/worlds/${id}`); } catch {}
+    setBodyId(id); store.set(LAST, id);
+    setPin(null); setSelection(null); setPinCard(null);
+    setMeasurePoints([]); setMeasuring(false);
+    setActiveRoute(null);
+    setDrawer(d => (d === 'directions' && id !== 'earth' ? null : d));
+    try { window.history.replaceState(null, '', `#/worlds/${id}`); } catch { /* sandboxed */ }
     if (overlay && (overlay.body ?? 'earth') !== id) setOverlay(null);
     if (window.innerWidth < 900) setPanel(false);
   }, [bodyId, overlay]);
+  const chooseRef = useRef(choose);
+  chooseRef.current = choose;
+
+  const openWorld = useCallback((id: string) => {
+    if (!mapIds.has(id)) { setSolFocus({ id }); choose('sol'); }
+    else choose(id);
+  }, [mapIds, choose]);
 
   useEffect(() => {
-    const onHash = () => {
-      const b = bodyFromHash();
-      if (b && b !== bodyId) {
-        choose(b);
-      }
-    };
+    const onHash = () => { const b = bodyFromHash(); if (b && b !== bodyId) choose(b); };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, [bodyId, choose]);
 
   const toggleGlobe = () => setGlobe(g => { store.set(GLOBE, !g); return !g; });
+  const toggleLayer = (id: OverlayId, on: boolean) => setPrefs(p => { const n = { ...p, [id]: on }; savePrefs(n); return n; });
+  const toggleDrawer = (d: Exclude<Drawer, null>) => setDrawer(cur => (cur === d ? null : d));
 
-  // Omnibox suggestions debounce
+  // ── Search ──────────────────────────────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [hl, setHl] = useState(0);
+
   useEffect(() => {
     const q = searchQuery.trim();
-    if (!q || q.length < 2) {
-      setSuggestions([]);
-      setSearching(false);
-      return;
-    }
+    setHl(0);
+    if (q.length < 2) { setSuggestions([]); setSearching(false); return; }
     let alive = true;
     setSearching(true);
     const timer = setTimeout(async () => {
       const list: Suggestion[] = [];
-
-      // Check coordinates
       const coord = parseCoords(q);
-      if (coord) {
-        list.push({
-          id: 'coord',
-          kind: 'coord',
-          title: `Go to coordinates: ${coord.lat.toFixed(4)}, ${coord.lon.toFixed(4)}`,
-          subtitle: 'Decimal latitude & longitude',
-          lat: coord.lat,
-          lon: coord.lon,
-        });
+      if (coord) list.push({ id: 'coord', kind: 'coord', title: `${coord.lat.toFixed(4)}, ${coord.lon.toFixed(4)}`, subtitle: 'Go to coordinates', ...coord });
+      for (const l of searchLandmarks(q, bodyId).slice(0, 4)) {
+        list.push({ id: `lm-${l.id}`, kind: 'landmark', title: l.name, subtitle: [l.kind, l.agency, l.country].filter(Boolean).join(' · '), lat: l.lat, lon: l.lon, landmark: l });
       }
-
-      // Check flights (Earth)
-      if (isEarth && /^[a-zA-Z0-9-]{3,8}$/.test(q)) {
-        list.push({
-          id: `flight-${q}`,
-          kind: 'flight',
-          title: `Track flight ${q.toUpperCase()}`,
-          subtitle: 'ADS-B live telemetry',
-        });
-      }
-
-      // Search landmarks on current world
-      const lms = searchLandmarks(q, bodyId);
-      lms.slice(0, 4).forEach(l => {
-        list.push({
-          id: `lm-${l.id}`,
-          kind: 'landmark',
-          title: l.name,
-          subtitle: [l.kind, l.agency, l.country].filter(Boolean).join(' · '),
-          lat: l.lat,
-          lon: l.lon,
-          landmark: l,
-        });
-      });
-
-      // Search offline planetary gazetteer (15,700 IAU features)
+      const ql = q.toLowerCase();
+      const fetchJson = async <T,>(url: string): Promise<T | null> => {
+        try { const r = await fetch(url); return r.ok ? await r.json() as T : null; } catch { return null; }
+      };
       if (!isEarth && bodyId !== 'sol') {
-        try {
-          const r = await fetch(`/api/planetary/search?body=${encodeURIComponent(bodyId)}&q=${encodeURIComponent(q)}&limit=6`);
-          if (r.ok && alive) {
-            const d = await r.json();
-            (d.results || []).forEach((item: { name: string; type: string; lat: number; lon: number; diameter_km: number; origin?: string }) => {
-              if (!list.some(existing => Math.abs((existing.lat ?? 0) - item.lat) < 0.001 && Math.abs((existing.lon ?? 0) - item.lon) < 0.001)) {
-                list.push({
-                  id: `planet-${item.name}-${item.lat}-${item.lon}`,
-                  kind: 'landmark',
-                  title: item.name,
-                  subtitle: [item.type, item.diameter_km > 0 ? `${item.diameter_km} km` : ''].filter(Boolean).join(' · '),
-                  lat: item.lat,
-                  lon: item.lon,
-                  landmark: {
-                    id: `iau-${item.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
-                    bodyId: bodyId,
-                    name: item.name,
-                    kind: item.type.toLowerCase().includes('crater') ? 'crater' : item.type.toLowerCase().includes('mons') ? 'volcano' : 'plain',
-                    lat: item.lat,
-                    lon: item.lon,
-                    diameter: item.diameter_km > 0 ? `${item.diameter_km} km` : undefined,
-                    desc: item.origin || `${item.type} on ${bodyId.toUpperCase()}`,
-                    status: 'IAU Named Feature'
-                  }
-                });
-              }
-            });
-          }
-        } catch {}
+        const d = await fetchJson<{ results?: { name: string; type: string; lat: number; lon: number; diameter_km: number; origin?: string }[] }>(
+          `/api/planetary/search?body=${encodeURIComponent(bodyId)}&q=${encodeURIComponent(q)}&limit=6`);
+        for (const item of d?.results ?? []) {
+          if (list.some(e => Math.abs((e.lat ?? 0) - item.lat) < 0.01 && Math.abs((e.lon ?? 0) - item.lon) < 0.01)) continue;
+          const type = item.type.toLowerCase();
+          list.push({
+            id: `iau-${item.name}-${item.lat}`, kind: 'landmark', title: item.name,
+            subtitle: [item.type, item.diameter_km > 0 ? `${item.diameter_km} km` : ''].filter(Boolean).join(' · '),
+            lat: item.lat, lon: item.lon,
+            landmark: {
+              id: `iau-${item.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`, bodyId, name: item.name,
+              kind: type.includes('crater') ? 'crater' : type.includes('mons') ? 'volcano' : 'plain',
+              lat: item.lat, lon: item.lon, diameter: item.diameter_km > 0 ? `${item.diameter_km} km` : undefined,
+              desc: item.origin ? `Named for ${item.origin}` : item.type, status: 'IAU named feature',
+            },
+          });
+        }
       }
-
-      // Search geocoder on Earth
       if (isEarth) {
-        try {
-          const r = await fetch(`/api/geocode?q=${encodeURIComponent(q)}&limit=4`);
-          if (r.ok && alive) {
-            const d = await r.json();
-            (d.results || []).forEach((item: { name: string; full: string; lat: number; lon: number; type: string }) => {
-              list.push({
-                id: `geo-${item.lat}-${item.lon}`,
-                kind: 'geocode',
-                title: item.name,
-                subtitle: item.full,
-                lat: item.lat,
-                lon: item.lon,
-              });
-            });
-          }
-        } catch {}
-
-        const qLower = q.toLowerCase();
-
-        // Shipwrecks
-        SHIPWRECKS.filter(s => s.name.toLowerCase().includes(qLower) || s.vesselType.toLowerCase().includes(qLower)).slice(0, 2).forEach(s => {
-          list.push({
-            id: `wreck-${s.id}`,
-            kind: 'feature',
-            title: s.name,
-            subtitle: `Historic Shipwreck (${s.yearSunk}) · ${s.vesselType}`,
-            lat: s.lat,
-            lon: s.lon,
-            feature: { kind: 'shipwreck', item: s },
-          });
-        });
-
-        // World Wonders
-        WORLD_WONDERS.filter(w => w.name.toLowerCase().includes(qLower) || w.location.toLowerCase().includes(qLower)).slice(0, 2).forEach(w => {
-          list.push({
-            id: `wonder-${w.id}`,
-            kind: 'feature',
-            title: w.name,
-            subtitle: `${w.category.toUpperCase()} Wonder · ${w.location}`,
-            lat: w.lat,
-            lon: w.lon,
-            feature: { kind: 'wonder', item: w },
-          });
-        });
-
-        // Spaceport Launch Sites
-        LAUNCH_SITES.filter(ls => ls.name.toLowerCase().includes(qLower) || ls.operator.toLowerCase().includes(qLower)).slice(0, 2).forEach(ls => {
-          list.push({
-            id: `launch-${ls.id}`,
-            kind: 'feature',
-            title: ls.name,
-            subtitle: `Spaceport · ${ls.operator} (${ls.country})`,
-            lat: ls.lat,
-            lon: ls.lon,
-            feature: { kind: 'launchsite', item: ls },
-          });
-        });
-
-        // Vessels at Sea
-        VESSELS_AT_SEA.filter(v => v.name.toLowerCase().includes(qLower) || v.destination.toLowerCase().includes(qLower)).slice(0, 2).forEach(v => {
-          list.push({
-            id: `vessel-${v.id}`,
-            kind: 'feature',
-            title: v.name,
-            subtitle: `${v.vesselType} · ${v.speedKnots} kn · ${v.flag}`,
-            lat: v.lat,
-            lon: v.lon,
-            feature: { kind: 'vessel', item: v },
-          });
-        });
-
-        // Live CCTV Webcams
-        CCTV_CAMERAS.filter(c => c.name.toLowerCase().includes(qLower) || c.city.toLowerCase().includes(qLower)).slice(0, 2).forEach(c => {
-          list.push({
-            id: `cctv-${c.id}`,
-            kind: 'feature',
-            title: c.name,
-            subtitle: `Live Cam · ${c.city}, ${c.country}`,
-            lat: c.lat,
-            lon: c.lon,
-            feature: { kind: 'cctv', item: c },
-          });
-        });
+        if (/^[a-z]{2,3}\d{1,4}[a-z]?$|^n\d{1,5}[a-z]{0,2}$|^[a-f0-9]{6}$/i.test(q)) {
+          list.push({ id: `flight-${q}`, kind: 'flight', title: `Track ${q.toUpperCase()}`, subtitle: 'Live ADS-B flight', flight: q.toUpperCase() });
+        }
+        const feat = (f: AnyFeature, subtitle: string) => list.push({ id: `${f.kind}-${f.item.id}`, kind: 'feature', title: f.item.name, subtitle, lat: f.item.lat, lon: f.item.lon, feature: f });
+        WORLD_WONDERS.filter(w => w.name.toLowerCase().includes(ql)).slice(0, 2).forEach(item => feat({ kind: 'wonder', item }, `Wonder · ${item.location}`));
+        SHIPWRECKS.filter(w => w.name.toLowerCase().includes(ql)).slice(0, 2).forEach(item => feat({ kind: 'shipwreck', item }, `Shipwreck · ${item.yearSunk}`));
+        LAUNCH_SITES.filter(w => w.name.toLowerCase().includes(ql) || w.operator.toLowerCase().includes(ql)).slice(0, 2).forEach(item => feat({ kind: 'launchsite', item }, `Spaceport · ${item.operator}`));
+        CCTV_CAMERAS.filter(c => (c.lat !== 0 || c.lon !== 0) && (c.name.toLowerCase().includes(ql) || c.city.toLowerCase().includes(ql))).slice(0, 2).forEach(item => feat({ kind: 'cctv', item }, `Webcam · ${item.city}`));
+        // places after the curated matches, so 'Titanic' finds the wreck before a village of that name
+        const d = await fetchJson<{ results?: { name: string; full: string; lat: number; lon: number }[] }>(`/api/geocode?q=${encodeURIComponent(q)}&limit=5`);
+        for (const item of d?.results ?? []) {
+          if (list.some(e => e.kind === 'geocode' && e.title === item.name && Math.abs(e.lat! - item.lat) < 0.2 && Math.abs(e.lon! - item.lon) < 0.2)) continue;
+          list.push({ id: `geo-${item.lat}-${item.lon}`, kind: 'geocode', title: item.name, subtitle: item.full, lat: item.lat, lon: item.lon });
+        }
       }
-
-      if (alive) {
-        setSuggestions(list);
-        setSearching(false);
-      }
+      if (alive) { setSuggestions(list); setSearching(false); }
     }, 220);
-
     return () => { alive = false; clearTimeout(timer); };
   }, [searchQuery, isEarth, bodyId]);
 
   const selectSuggestion = (s: Suggestion) => {
-    setSearchFocused(false);
+    setSearchOpen(false);
     setSearchQuery('');
-    const map = mapRef.current;
-    if (s.kind === 'flight') {
-      const q = s.title.replace('Track flight ', '').trim().toUpperCase();
-      setFlightQ(q); setFollow(true); flownTo.current = null;
-      return;
-    }
-    if (s.kind === 'feature' && s.feature && s.lat != null && s.lon != null) {
-      setSelectedFeature(s.feature);
-      if (s.feature.kind === 'shipwreck') shipwreckLayer.current?.select(s.feature.item.id);
-      else if (s.feature.kind === 'wonder') wonderLayer.current?.select(s.feature.item.id);
-      else if (s.feature.kind === 'launchsite') launchSiteLayer.current?.select(s.feature.item.id);
-      else if (s.feature.kind === 'vessel') maritimeLayer.current?.select(s.feature.item.id);
-      else if (s.feature.kind === 'cctv') cctvLayer.current?.select(s.feature.item.id);
-      map?.flyTo({
-        center: [s.lon, s.lat],
-        zoom: Math.max(map.getZoom(), 12),
-        duration: 1200,
-      });
-      return;
-    }
-    if (s.lat != null && s.lon != null) {
-      if (s.kind === 'landmark' && s.landmark) {
-        setLandmarkSel(s.landmark);
-        landmarkLayer.current?.select(s.landmark.id);
-      } else {
-        setPin({ lat: s.lat, lon: s.lon });
-      }
-      map?.flyTo({
-        center: [s.lon, s.lat],
-        zoom: Math.max(map.getZoom(), s.kind === 'landmark' ? 7 : isEarth ? 13 : 6),
-        duration: 1200,
-      });
+    if (s.kind === 'flight' && s.flight) { setFlightQ(s.flight); setFollow(true); flownTo.current = null; return; }
+    if (s.lat == null || s.lon == null) return;
+    if (s.kind === 'feature' && s.feature) {
+      const ov = selectionKey(s.feature)?.overlay;
+      if (ov && !prefs[ov]) toggleLayer(ov, true);
+      setSelection(s.feature); setPin(null);
+      goTo({ lat: s.lat, lon: s.lon, zoom: Math.max(map?.getZoom() ?? 0, 8) });
+    } else if (s.kind === 'landmark' && s.landmark) {
+      setSelection({ kind: 'landmark', item: s.landmark }); setPin(null);
+      goTo({ lat: s.lat, lon: s.lon, zoom: Math.max(map?.getZoom() ?? 0, isEarth ? 10 : 5) });
+    } else {
+      setSelection(null);
+      goTo({ lat: s.lat, lon: s.lon, pin: true });
     }
   };
 
   const submitSearch = (e: FormEvent) => {
     e.preventDefault();
-    if (suggestions.length > 0) {
-      selectSuggestion(suggestions[0]);
-      return;
-    }
+    if (suggestions.length) { selectSuggestion(suggestions[Math.min(hl, suggestions.length - 1)]); return; }
     const c = parseCoords(searchQuery);
-    if (c) {
-      setPin(c);
-      mapRef.current?.flyTo({ center: [c.lon, c.lat], zoom: Math.max(mapRef.current.getZoom(), isEarth ? 12 : 6) });
-      setSearchQuery('');
-      setSearchFocused(false);
-    }
+    if (c) { setSearchQuery(''); setSearchOpen(false); goTo({ ...c, pin: true }); }
+  };
+
+  const searchKeys = (e: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); setSearchOpen(true); setHl(h => Math.min(h + 1, suggestions.length - 1)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setHl(h => Math.max(h - 1, 0)); }
+    else if (e.key === 'Escape') { setSearchOpen(false); (e.target as HTMLInputElement).blur(); }
   };
 
   const copyPin = () => {
@@ -949,65 +772,65 @@ export function MapsApp() {
     }).catch(() => {});
   };
 
-  // Measuring calculations
-  const measurePath = useMemo(() => {
-    if (measurePoints.length < 2) return null;
-    return computePath(measurePoints, body?.radius_km ?? 6371);
-  }, [measurePoints, body?.radius_km]);
+  const clearSelection = () => setSelection(null);
+  const flyNear = (lat: number, lon: number, zoom?: number) => goTo({ lat, lon, zoom: zoom ?? Math.max(map?.getZoom() ?? 0, isEarth ? 12 : 6) });
+
+  const counts: Partial<Record<OverlayId, number | string>> = {
+    flights: trafficOn ? planes.length : undefined,
+    satellites: orbStatus?.count,
+    quakes: quakeCount ?? undefined,
+  };
+  const status = (has('satellites') && (orbStatus?.error ? `Spacecraft: ${orbStatus.error}` : orbStatus?.note))
+    || (trafficOn && trafficErr ? `Flights: ${trafficErr}` : null);
+
+  const hasMap = bodyId !== 'sol' && !!body?.available;
 
   return (
     <div className="h-full flex min-h-0 bg-[var(--bg-primary)]">
-      {/* Left sidebar: Solar System & Worlds catalog */}
       {panel && (
         <aside className="w-60 shrink-0 border-r border-[var(--border-subtle)] flex flex-col min-h-0 bg-[var(--bg-secondary)]">
           <div className="px-3 pt-3 pb-2 border-b border-[var(--border-subtle)] space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <Orbit className="w-3.5 h-3.5 text-sky-400" />
-                <h2 className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Solar System</h2>
+                <Orbit className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Solar System</h2>
               </div>
-              <button
-                className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] transition"
-                onClick={() => setPanel(false)}
-                title="Hide worlds list"
-              >
+              <button className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] transition" onClick={() => setPanel(false)} title="Hide worlds list">
                 <PanelLeftClose className="w-4 h-4" />
               </button>
             </div>
             <div className="relative">
               <Search className="w-3 h-3 absolute left-2 top-2 text-[var(--text-muted)] pointer-events-none" />
               <input
-                value={worldFilter}
-                onChange={e => setWorldFilter(e.target.value)}
-                placeholder="Filter worlds & moons…"
-                className="w-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] rounded-lg pl-7 pr-6 py-1 text-[11px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-sky-500/50 transition"
+                value={worldFilter} onChange={e => setWorldFilter(e.target.value)} placeholder="Filter worlds and moons"
+                className="w-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] rounded-lg pl-7 pr-6 py-1 text-[11px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] transition"
               />
               {worldFilter && (
-                <button onClick={() => setWorldFilter('')} className="absolute right-2 top-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+                <button onClick={() => setWorldFilter('')} className="absolute right-2 top-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)]" title="Clear filter">
                   <X className="w-3 h-3" />
                 </button>
               )}
             </div>
           </div>
           <nav className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5">
-            {!bodies && !error && Array.from({ length: 6 }, (_, i) => <div key={i} className="h-8 mx-2 my-1 rounded bg-[var(--bg-tertiary)] animate-pulse" />)}
-            {(bodies || error) && (!worldFilter || 'sol (orrery)'.includes(worldFilter.toLowerCase())) && (
-              <WorldRow body={{ id: 'sol', name: 'Sol (Orrery)', available: true }} active={bodyId === 'sol'}
+            {!bodies && !error && Array.from({ length: 6 }, (_, i) => <div key={i} className="h-7 mx-2 my-1 rounded bg-[var(--bg-tertiary)] animate-pulse" />)}
+            {(bodies || error) && (!worldFilter || 'sol orrery sun'.includes(worldFilter.toLowerCase())) && (
+              <WorldRow body={{ id: 'sol', name: 'Sol (Orrery)', available: true }} active={bodyId === 'sol' && (!solFocus || solFocus.id === 'sol')}
                 onPick={() => { setSolFocus({ id: 'sol' }); choose('sol'); }} depth={0} star />
             )}
             {filteredTree.map(t => {
-              const shown = expanded.has(t.id) ? t.moons : t.moons.filter(m => m.major || m.map);
+              const shown = expanded.has(t.id) || worldFilter ? t.moons : t.moons.filter(m => m.major || m.map);
               const hidden = t.moons.filter(m => !m.major && !m.map).length;
               const row = (w: { id: string; name: string; map: MapBody | null }, depth: 1 | 2) => (
                 <WorldRow key={w.id} body={w.map ?? { id: w.id, name: w.name, available: false }} depth={depth} hollow={!w.map}
                   active={w.map ? w.id === bodyId : bodyId === 'sol' && solFocus?.id === w.id}
-                  title={w.map ? undefined : `No ${w.name} map installed; view in Sol`} onPick={openWorld} />
+                  title={w.map ? undefined : `No ${w.name} map installed; shows it in the orrery`} onPick={openWorld} />
               );
               return (
                 <div key={t.id} className="mb-1">
                   {row(t, 1)}
                   {shown.map(m => row(m, 2))}
-                  {t.moons.some(m => !m.major && !m.map) && (
+                  {!worldFilter && hidden > 0 && (
                     <button className="w-full pl-10 pr-2 py-1 text-left text-[11px] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition"
                       onClick={() => setExpanded(e => { const n = new Set(e); if (n.has(t.id)) n.delete(t.id); else n.add(t.id); return n; })}>
                       {expanded.has(t.id) ? 'Fewer moons' : `+${hidden} smaller moon${hidden === 1 ? '' : 's'}`}
@@ -1020,379 +843,141 @@ export function MapsApp() {
         </aside>
       )}
 
-      {/* Main View Area */}
       <section className="relative flex-1 min-w-0 flex min-h-0">
-        <div className="relative flex-1 min-w-0 flex flex-col">
+        <div className="relative flex-1 min-w-0 flex flex-col overflow-hidden">
           {bodyId === 'sol' ? (
             <SolView mapIds={mapIds} onOpenMap={choose} focus={solFocus} onShowPanel={panel ? undefined : () => setPanel(true)} />
           ) : (
             <>
-              {/* Map container with Astronomical Night Sky */}
-              <div className="absolute inset-0 bg-[#020308] overflow-hidden">
-                {globe && (
-                  <NightSky
-                    globe={globe}
-                    map={mapRef.current}
-                    bodyId={bodyId}
-                    enabled={nightSkyOn}
-                  />
-                )}
+              <div className="absolute inset-0 bg-[#04050a] overflow-hidden">
+                {globe && hasMap && prefs.stars && <Starfield />}
                 <div ref={box} className="w-full h-full relative z-10" />
               </div>
 
-              {/* TOP TOOLBAR */}
-              <div className="absolute top-3 left-3 right-14 flex items-center gap-2 pointer-events-none z-20">
+              {/* Toolbar */}
+              <div className="absolute top-3 left-3 right-14 flex flex-wrap items-center gap-2 pointer-events-none z-20">
                 {!panel && (
-                  <button
-                    className="pointer-events-auto h-9 w-9 grid place-items-center rounded-xl border border-[var(--border-subtle)] sb-map-glass text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition shadow-sm"
-                    onClick={() => setPanel(true)}
-                    title="Show solar system worlds"
-                  >
+                  <button className="pointer-events-auto h-9 w-9 grid place-items-center rounded-xl border border-[var(--border-subtle)] sb-map-glass text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition"
+                    onClick={() => setPanel(true)} title="Show worlds list">
                     <PanelLeftOpen className="w-4 h-4" />
                   </button>
                 )}
+                <button
+                  className={clsx('pointer-events-auto h-9 flex items-center gap-2 rounded-xl border sb-map-glass pl-3 pr-2.5 transition',
+                    drawer === 'dossier' ? 'border-[var(--accent)]' : 'border-[var(--border-subtle)] hover:border-[var(--text-muted)]')}
+                  onClick={() => toggleDrawer('dossier')} title="About this world"
+                >
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: WORLD_PALETTE[bodyId]?.color ?? '#94a3b8' }} />
+                  <span className="text-[13px] font-semibold tracking-tight text-[var(--text-primary)]">{body?.name ?? bodyId}</span>
+                  <Info className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                </button>
 
-                {/* World Badge & Dossier Trigger */}
-                <div className="pointer-events-auto flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] sb-map-glass pl-3 pr-2 py-1.5 shadow-sm">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm"
-                      style={{ backgroundColor: WORLD_PALETTE[bodyId.toLowerCase()]?.color ?? '#38bdf8' }}
-                    />
-                    <div>
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="text-[13px] font-bold tracking-tight text-[var(--text-primary)] leading-none">
-                          {body?.name ?? 'Worlds'}
-                        </span>
-                        {body && (
-                          <span className="text-[9px] uppercase tracking-wider font-semibold text-[var(--text-muted)]">
-                            {body.parent ? `Moon` : body.kind}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {body && (
-                    <button
-                      onClick={() => setDossierOpen(d => !d)}
-                      className={clsx(
-                        'p-1 rounded-lg text-[11px] transition ml-1',
-                        dossierOpen
-                          ? 'bg-sky-500 text-white shadow-sm'
-                          : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
+                {hasMap && (
+                  <div className="relative pointer-events-auto flex-1 min-w-[160px] max-w-[340px]">
+                    <form onSubmit={submitSearch} className="flex items-center h-9 rounded-xl border border-[var(--border-subtle)] sb-map-glass focus-within:border-[var(--accent)] transition">
+                      <Search className="w-3.5 h-3.5 ml-2.5 text-[var(--text-muted)] shrink-0" />
+                      <input
+                        value={searchQuery}
+                        onChange={e => { setSearchQuery(e.target.value); setSearchOpen(true); }}
+                        onFocus={() => setSearchOpen(true)}
+                        onBlur={() => setSearchOpen(false)}
+                        onKeyDown={searchKeys}
+                        placeholder={isEarth ? 'Places, flights, coordinates' : `Search ${body?.name ?? ''} features`}
+                        className="min-w-0 flex-1 bg-transparent px-2 text-[12px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
+                        aria-label="Search the map"
+                      />
+                      {searching && <Loader2 className="w-3 h-3 animate-spin mr-2 text-[var(--text-muted)]" />}
+                      {searchQuery && (
+                        <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => { setSearchQuery(''); setSuggestions([]); }}
+                          className="mr-2 text-[var(--text-muted)] hover:text-[var(--text-primary)]" title="Clear">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
                       )}
-                      title="Open scientific dossier and physical parameters"
-                    >
-                      <Info className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
+                    </form>
+                    {searchOpen && searchQuery.trim().length >= 2 && (suggestions.length > 0 || !searching) && (
+                      <div className="absolute left-0 right-0 top-10 rounded-xl border border-[var(--border-subtle)] sb-map-glass py-1 shadow-2xl z-40 max-h-80 overflow-y-auto">
+                        {suggestions.length === 0 && <div className="px-3 py-2 text-[12px] text-[var(--text-muted)]">No matches</div>}
+                        {suggestions.map((s, i) => (
+                          <button key={s.id} type="button" onMouseDown={e => { e.preventDefault(); selectSuggestion(s); }} onMouseEnter={() => setHl(i)}
+                            className={clsx('w-full px-3 py-1.5 text-left flex items-start gap-2 transition', i === hl && 'bg-[var(--bg-tertiary)]')}>
+                            <SuggestionIcon s={s} />
+                            <div className="min-w-0 flex-1">
+                              <div className="text-[12px] font-medium text-[var(--text-primary)] truncate">{s.title}</div>
+                              {s.subtitle && <div className="text-[10.5px] text-[var(--text-muted)] truncate">{s.subtitle}</div>}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="flex-1" />
 
-                {/* OMNIBOX SEARCH */}
-                <div className="relative pointer-events-auto">
-                  <form onSubmit={submitSearch} className="flex items-center h-9 rounded-xl border border-[var(--border-subtle)] sb-map-glass focus-within:border-sky-500/50 shadow-sm transition">
-                    <Search className="w-3.5 h-3.5 ml-2.5 text-[var(--text-muted)] shrink-0" />
-                    <input
-                      value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                      onFocus={() => setSearchFocused(true)}
-                      placeholder={isEarth ? 'Search cities, flights, coordinates…' : `Search ${body?.name ?? ''} landmarks, craters…`}
-                      className="w-48 sm:w-60 bg-transparent px-2 text-[12px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
-                    />
-                    {searching && <Loader2 className="w-3 h-3 animate-spin mr-2 text-[var(--text-muted)]" />}
-                    {searchQuery && (
-                      <button type="button" onClick={() => { setSearchQuery(''); setSuggestions([]); }} className="mr-2 text-[var(--text-muted)] hover:text-[var(--text-primary)]">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </form>
-
-                  {/* Suggestions dropdown */}
-                  {searchFocused && suggestions.length > 0 && (
-                    <div className="absolute left-0 right-0 top-10 rounded-xl border border-[var(--border-subtle)] sb-map-glass py-1.5 shadow-2xl backdrop-blur-xl z-30 max-h-72 overflow-y-auto">
-                      {suggestions.map(s => (
-                        <button
-                          key={s.id}
-                          type="button"
-                          onMouseDown={() => selectSuggestion(s)}
-                          className="w-full px-3 py-2 text-left hover:bg-[var(--bg-tertiary)] flex items-start gap-2 transition"
-                        >
-                          {s.kind === 'landmark' ? <Flag className="w-3.5 h-3.5 text-emerald-400 mt-0.5 shrink-0" /> :
-                           s.kind === 'flight' ? <Radar className="w-3.5 h-3.5 text-sky-400 mt-0.5 shrink-0" /> :
-                           s.kind === 'coord' ? <Crosshair className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" /> :
-                           s.kind === 'feature' ? (
-                             s.feature?.kind === 'shipwreck' ? <Anchor className="w-3.5 h-3.5 text-cyan-400 mt-0.5 shrink-0" /> :
-                             s.feature?.kind === 'wonder' ? <Sparkles className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" /> :
-                             s.feature?.kind === 'launchsite' ? <Rocket className="w-3.5 h-3.5 text-orange-400 mt-0.5 shrink-0" /> :
-                             s.feature?.kind === 'vessel' ? <Ship className="w-3.5 h-3.5 text-emerald-400 mt-0.5 shrink-0" /> :
-                             <Video className="w-3.5 h-3.5 text-rose-400 mt-0.5 shrink-0" />
-                           ) :
-                           <Navigation className="w-3.5 h-3.5 text-[var(--accent)] mt-0.5 shrink-0" />}
-                          <div className="min-w-0 flex-1">
-                            <div className="text-[12px] font-semibold text-[var(--text-primary)] truncate">{s.title}</div>
-                            {s.subtitle && <div className="text-[10px] text-[var(--text-muted)] truncate">{s.subtitle}</div>}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* View & Navigation Tools Cluster */}
-                <div className="pointer-events-auto flex items-center rounded-xl border border-[var(--border-subtle)] sb-map-glass p-0.5 shadow-sm">
-                  {/* Globe / Flat Toggle */}
-                  <button
-                    className={clsx(
-                      'h-8 px-2.5 flex items-center gap-1.5 rounded-lg text-[12px] font-medium transition',
-                      globe ? 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] shadow-sm' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                    )}
-                    onClick={toggleGlobe} aria-pressed={globe} title="Switch between 3D Globe and 2D Mercator map"
-                  >
-                    <Globe2 className="w-3.5 h-3.5 text-sky-400" />
-                    <span className="hidden sm:inline">Globe</span>
-                  </button>
-
-                  <div className="w-px h-4 bg-[var(--border-subtle)] my-auto" />
-
-                  {/* Geodesic Ruler / Measure Tool */}
-                  <button
-                    className={clsx(
-                      'h-8 px-2.5 flex items-center gap-1.5 rounded-lg text-[12px] font-medium transition',
-                      measuring ? 'bg-teal-500/20 text-teal-300 font-semibold shadow-sm' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                    )}
-                    onClick={() => {
-                      setMeasuring(m => !m);
-                      if (measuring) setMeasurePoints([]);
-                    }}
-                    aria-pressed={measuring} title="Measure great-circle geodesic distances"
-                  >
-                    <Ruler className="w-3.5 h-3.5 text-teal-400" />
-                    <span className="hidden md:inline">Measure</span>
-                  </button>
-
-                  {/* Directions Button (Earth) */}
-                  {isEarth && (
-                    <>
-                      <div className="w-px h-4 bg-[var(--border-subtle)] my-auto" />
-                      <button
-                        className={clsx(
-                          'h-8 px-2.5 flex items-center gap-1.5 rounded-lg text-[12px] font-medium transition',
-                          directionsOpen ? 'bg-sky-500/20 text-sky-300 font-semibold shadow-sm' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                        )}
-                        onClick={() => {
-                          setDirectionsOpen(o => !o);
-                          if (bookmarksOpen) setBookmarksOpen(false);
-                          if (dossierOpen) setDossierOpen(false);
-                        }}
-                        aria-pressed={directionsOpen} title="Offline turn-by-turn routing (Valhalla)"
-                      >
-                        <RouteIcon className="w-3.5 h-3.5 text-[var(--accent)]" />
-                        <span className="hidden md:inline">Routes</span>
-                      </button>
-                    </>
-                  )}
-
-                  <div className="w-px h-4 bg-[var(--border-subtle)] my-auto" />
-
-                  {/* Bookmarks */}
-                  <button
-                    className={clsx(
-                      'h-8 px-2.5 flex items-center rounded-lg text-[12px] transition',
-                      bookmarksOpen ? 'bg-amber-500/20 text-amber-300 shadow-sm' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                    )}
-                    onClick={() => {
-                      setBookmarksOpen(o => !o);
-                      if (directionsOpen) setDirectionsOpen(false);
-                      if (dossierOpen) setDossierOpen(false);
-                    }}
-                    aria-pressed={bookmarksOpen} title="Curated tours and saved locations"
-                  >
-                    <Bookmark className="w-3.5 h-3.5 text-amber-400" />
-                  </button>
-                </div>
-
-                {/* Interactive Map Features & Telemetry Menu */}
-                <FeaturesMenu
-                  isEarth={isEarth}
-                  hasLandmarks={hasLandmarks}
-                  hasTraverses={hasTraverses}
-                  orbitable={orbitable}
-                  bodyName={body?.name ?? bodyId}
-                  globe={globe}
-                  orbitersOn={orbitersOn}
-                  setOrbitersOn={v => { store.set(ORBITERS, v); setOrbitersOn(v); }}
-                  traffic={traffic}
-                  setTraffic={v => { store.set(TRAFFIC, v); setTraffic(v); }}
-                  shipwrecksOn={shipwrecksOn}
-                  setShipwrecksOn={v => { store.set(SHIPWRECKS_KEY, v); setShipwrecksOn(v); }}
-                  wondersOn={wondersOn}
-                  setWondersOn={v => { store.set(WONDERS_KEY, v); setWondersOn(v); }}
-                  launchSitesOn={launchSitesOn}
-                  setLaunchSitesOn={v => { store.set(LAUNCHSITES_KEY, v); setLaunchSitesOn(v); }}
-                  maritimeOn={maritimeOn}
-                  setMaritimeOn={v => { store.set(MARITIME_KEY, v); setMaritimeOn(v); }}
-                  cctvOn={cctvOn}
-                  setCctvOn={v => { store.set(CCTV_KEY, v); setCctvOn(v); }}
-                  earthquakesOn={earthquakesOn}
-                  setEarthquakesOn={v => { store.set(EARTHQUAKES_KEY, v); setEarthquakesOn(v); }}
-                  terminatorOn={terminatorOn}
-                  setTerminatorOn={v => { store.set(TERMINATOR_KEY, v); setTerminatorOn(v); }}
-                  gridOn={gridOn}
-                  setGridOn={v => { store.set(GRID_KEY, v); setGridOn(v); }}
-                  nightSkyOn={nightSkyOn}
-                  setNightSkyOn={v => { store.set(NIGHT_SKY_KEY, v); setNightSkyOn(v); }}
-                  landmarksOn={landmarksOn}
-                  setLandmarksOn={v => { store.set(LANDMARKS_KEY, v); setLandmarksOn(v); }}
-                  traversesOn={traversesOn}
-                  setTraversesOn={v => { store.set(TRAVERSES_KEY, v); setTraversesOn(v); }}
-                  orbiterCount={orbStatus?.count}
-                  planeCount={planes.length}
-                />
-
-                {/* Atlas Copilot Trigger Pill */}
+                {hasMap && (
+                  <div className="pointer-events-auto flex items-center rounded-xl border border-[var(--border-subtle)] sb-map-glass p-0.5">
+                    <ToolButton on={globe} onClick={toggleGlobe} icon={globe ? Globe2 : MapIcon} label={globe ? 'Globe' : 'Flat'} title="Switch between globe and flat map" />
+                    <ToolButton on={measuring} onClick={() => { setMeasuring(m => !m); setMeasurePoints([]); }} icon={Ruler} label="Measure" title="Measure great-circle distance" />
+                    {isEarth && <ToolButton on={drawer === 'directions'} onClick={() => toggleDrawer('directions')} icon={RouteIcon} label="Directions" title="Offline turn-by-turn directions" />}
+                    <ToolButton on={drawer === 'bookmarks'} onClick={() => toggleDrawer('bookmarks')} icon={Bookmark} title="Tours and saved places" />
+                  </div>
+                )}
+                {hasMap && <LayersPanel bodyId={bodyId} bodyName={body?.name ?? bodyId} globe={globe} prefs={prefs} onToggle={toggleLayer} counts={counts} />}
                 <button
-                  className={clsx(
-                    'pointer-events-auto h-9 px-3.5 flex items-center gap-2 rounded-xl border text-[12px] transition sb-map-glass font-semibold shadow-md',
-                    atlasOpen
-                      ? 'border-sky-400 bg-sky-500/20 text-sky-200 shadow-sky-500/20 ring-1 ring-sky-400/40'
-                      : 'border-sky-500/40 text-sky-400 hover:text-sky-300 hover:border-sky-400 hover:shadow-sky-500/10'
-                  )}
-                  onClick={() => {
-                    setAtlasOpen(o => !o);
-                    if (dossierOpen) setDossierOpen(false);
-                    if (directionsOpen) setDirectionsOpen(false);
-                    if (bookmarksOpen) setBookmarksOpen(false);
-                  }}
-                  aria-pressed={atlasOpen} title="Open Atlas AI Planetary Copilot"
+                  className={clsx('pointer-events-auto h-9 px-3 flex items-center gap-1.5 rounded-xl border sb-map-glass text-[12px] font-medium transition',
+                    drawer === 'atlas' ? 'border-[var(--accent)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]')}
+                  onClick={() => toggleDrawer('atlas')} aria-pressed={drawer === 'atlas'} title="Ask Atlas about this world"
                 >
-                  <Compass className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Atlas</span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
+                  <Compass className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Atlas</span>
                 </button>
               </div>
 
-              {/* MEASURING HUD RIBBON */}
               {measuring && (
-                <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 px-4 py-2 rounded-xl border border-teal-500/40 sb-map-glass shadow-2xl backdrop-blur-md text-[12px]">
-                  <div className="flex items-center gap-2">
-                    <Ruler className="w-4 h-4 text-teal-400 shrink-0" />
-                    <div>
-                      <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block">Total Distance</span>
-                      <span className="text-[16px] font-bold text-teal-300 font-mono tabular-nums">
-                        {measurePath ? formatDist(measurePath.totalKm, measureUnit) : '0 km'}
-                      </span>
+                <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 px-3.5 py-2 rounded-xl border border-[var(--border-subtle)] sb-map-glass text-[12px] max-w-[calc(100%-1.5rem)]">
+                  <Ruler className="w-4 h-4 text-teal-400 shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-[15px] font-semibold text-[var(--text-primary)] font-mono tabular-nums">
+                      {measurePath ? formatDist(measurePath.totalKm, measureUnit) : measurePoints.length ? 'Click the next point' : 'Click to start'}
                     </div>
-                  </div>
-
-                  {measurePath && measurePath.segments.length > 0 && (
-                    <div className="border-l border-[var(--border-subtle)] pl-3 text-[11px] text-[var(--text-secondary)]">
-                      <div>{measurePoints.length} points ({measurePath.segments.length} legs)</div>
-                      <div className="text-[10px] text-[var(--text-muted)]">
-                        Bearing: {measurePath.segments[measurePath.segments.length - 1].bearingCompass} ({Math.round(measurePath.segments[measurePath.segments.length - 1].bearingDeg)}°)
+                    {measurePath && (
+                      <div className="text-[10.5px] text-[var(--text-muted)]">
+                        {measurePath.segments.length} leg{measurePath.segments.length === 1 ? '' : 's'} · last bearing {Math.round(measurePath.segments[measurePath.segments.length - 1].bearingDeg)}° {measurePath.segments[measurePath.segments.length - 1].bearingCompass}
                       </div>
-                    </div>
-                  )}
-
+                    )}
+                  </div>
                   <div className="flex items-center gap-1.5 border-l border-[var(--border-subtle)] pl-3">
-                    <button
-                      onClick={() => setMeasureUnit(u => u === 'metric' ? 'imperial' : u === 'imperial' ? 'nautical' : 'metric')}
-                      className="px-2 py-1 rounded bg-[var(--bg-tertiary)] font-mono text-[10px] uppercase text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                      title="Switch unit"
-                    >
-                      {measureUnit}
+                    <button onClick={() => setMeasureUnit(u => { const n = u === 'metric' ? 'imperial' : u === 'imperial' ? 'nautical' : 'metric'; store.set(MEASURE_UNIT, n); return n; })}
+                      className="px-2 py-1 rounded-md bg-[var(--bg-tertiary)] text-[10.5px] text-[var(--text-secondary)] hover:text-[var(--text-primary)]" title="Change units">
+                      {measureUnit === 'metric' ? 'km' : measureUnit === 'imperial' ? 'mi' : 'nmi'}
                     </button>
                     {measurePoints.length > 0 && (
-                      <button
-                        onClick={() => setMeasurePoints(pts => pts.slice(0, -1))}
-                        className="px-2 py-1 rounded bg-[var(--bg-tertiary)] text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                        title="Undo point"
-                      >
-                        Undo
-                      </button>
+                      <button onClick={() => setMeasurePoints(p => p.slice(0, -1))} className="px-2 py-1 rounded-md bg-[var(--bg-tertiary)] text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)]">Undo</button>
                     )}
-                    <button
-                      onClick={() => { setMeasuring(false); setMeasurePoints([]); }}
-                      className="px-2.5 py-1 rounded bg-teal-500 text-slate-950 font-semibold text-[11px] hover:bg-teal-400 transition"
-                    >
-                      Done
-                    </button>
+                    <button onClick={() => { setMeasuring(false); setMeasurePoints([]); }} className="px-2.5 py-1 rounded-md bg-[var(--accent)] text-white font-medium text-[11px]">Done</button>
                   </div>
                 </div>
               )}
 
-              {/* Selected interactive map feature modal (Shipwrecks, Wonders, Launch Sites, Vessels, CCTV) */}
-              {selectedFeature && (
-                <div className="absolute top-16 left-3 z-30">
-                  <MapFeatureModal
-                    feature={selectedFeature}
-                    onClose={() => {
-                      setSelectedFeature(null);
-                      shipwreckLayer.current?.select(null);
-                      wonderLayer.current?.select(null);
-                      launchSiteLayer.current?.select(null);
-                      maritimeLayer.current?.select(null);
-                      cctvLayer.current?.select(null);
-                    }}
-                    onFlyTo={(la, lo) => {
-                      mapRef.current?.flyTo({ center: [lo, la], zoom: Math.max(mapRef.current.getZoom(), 12), duration: 1200 });
-                    }}
-                  />
+              {/* One detail card at a time, top left under the toolbar */}
+              {selection && (
+                <div className="absolute top-16 left-3 z-30 max-h-[calc(100%-8rem)] overflow-y-auto rounded-xl max-w-[calc(100%-1.5rem)]">
+                  {selection.kind === 'landmark' ? (
+                    <LandmarkModal landmark={selection.item} onClose={clearSelection} onFlyTo={(la, lo) => flyNear(la, lo, isEarth ? 12 : 7)} />
+                  ) : selection.kind === 'traverse' ? (
+                    <TraverseModal traverse={selection.traverse} waypoint={selection.waypoint}
+                      onSelectWaypoint={wp => setSelection({ kind: 'traverse', traverse: selection.traverse, waypoint: wp })}
+                      onFlyTo={(la, lo, zm) => flyNear(la, lo, zm ?? 12)} onClose={clearSelection} />
+                  ) : selection.kind === 'quake' ? (
+                    <QuakeCard q={selection.item} onClose={clearSelection} />
+                  ) : (
+                    <MapFeatureModal feature={selection} onClose={clearSelection} onFlyTo={(la, lo) => flyNear(la, lo, 12)} />
+                  )}
                 </div>
               )}
 
-              {/* Landmark / Mission details modal card */}
-              {landmarkSel && (
-                <div className="absolute top-16 left-3 z-30">
-                  <LandmarkModal
-                    landmark={landmarkSel}
-                    onClose={() => { setLandmarkSel(null); landmarkLayer.current?.select(null); }}
-                    onFlyTo={(la, lo) => {
-                      mapRef.current?.flyTo({ center: [lo, la], zoom: Math.max(mapRef.current.getZoom(), isEarth ? 14 : 7), duration: 1200 });
-                    }}
-                  />
-                </div>
-              )}
-
-              {/* Weather popup on dropped pin */}
-              {weatherOpen && pin && isEarth && (
-                <div className="absolute bottom-14 left-3 z-30">
-                  <LiveWeatherWidget lat={pin.lat} lon={pin.lon} onClose={() => setWeatherOpen(false)} />
-                </div>
-              )}
-
-              {/* Rover & Expedition Traverse Waypoint Modal */}
-              {selectedTraverse && (
-                <TraverseModal
-                  traverse={selectedTraverse.traverse}
-                  waypoint={selectedTraverse.waypoint}
-                  onSelectWaypoint={wp => setSelectedTraverse({ traverse: selectedTraverse.traverse, waypoint: wp })}
-                  onFlyTo={(la, lo, zm) => {
-                    mapRef.current?.flyTo({ center: [lo, la], zoom: zm ?? Math.max(mapRef.current.getZoom(), 14), duration: 1000 });
-                  }}
-                  onClose={() => setSelectedTraverse(null)}
-                />
-              )}
-
-              {/* Local Sky View Horizon Modal */}
-              {skyViewOpen && pin && (
-                <SkyViewModal
-                  bodyId={bodyId}
-                  bodyName={body?.name ?? bodyId}
-                  lat={pin.lat}
-                  lon={pin.lon}
-                  onClose={() => setSkyViewOpen(false)}
-                  onAskAtlas={() => {
-                    setAtlasOpen(true);
-                  }}
-                />
-              )}
-
-              {/* Followed flight panel */}
               {isEarth && flightQ && (
-                <div className="absolute top-16 right-14 w-80 max-w-[calc(100%-5rem)] max-h-[calc(100%-6rem)] overflow-y-auto rounded-lg border border-[var(--border-subtle)] sb-map-glass z-20">
+                <div className="absolute top-16 right-14 w-80 max-w-[calc(100%-5rem)] max-h-[calc(100%-6rem)] overflow-y-auto rounded-xl border border-[var(--border-subtle)] sb-map-glass z-20">
                   <FlightPanel res={sel.res} error={sel.error} updated={sel.updated} loadingLabel={`Looking for ${flightQ}…`}
                     onClose={() => { setFlightQ(null); setFollow(false); }} />
                   {sel.res?.aircraft && (
@@ -1407,12 +992,11 @@ export function MapsApp() {
                 </div>
               )}
 
-              {/* Selected spacecraft */}
-              {orbitable && orbitersOn && orbSel && (
-                <div className="absolute bottom-12 right-3 w-64 rounded-lg border border-[var(--border-subtle)] sb-map-glass p-3 text-[12px] z-20">
+              {satsOn && orbSel && (
+                <div className="absolute bottom-14 right-3 w-64 rounded-xl border border-[var(--border-subtle)] sb-map-glass p-3 text-[12px] z-20">
                   <div className="flex items-start gap-2">
                     <div className="min-w-0 flex-1">
-                      <div className="text-[15px] leading-tight font-semibold tracking-tight truncate">{orbSel.name}</div>
+                      <div className="text-[14px] leading-tight font-semibold tracking-tight truncate">{orbSel.name}</div>
                       {orbSel.mission && <div className="text-[11px] text-[var(--text-muted)] truncate">{orbSel.mission}</div>}
                     </div>
                     <button className="text-[var(--text-muted)] hover:text-[var(--text-primary)]" onClick={() => orbLayer.current?.select(null)} title="Close"><X className="w-3.5 h-3.5" /></button>
@@ -1431,209 +1015,178 @@ export function MapsApp() {
                 </div>
               )}
 
-              {/* Status messages */}
-              {orbitable && orbitersOn && orbStatus && (orbStatus.error || orbStatus.note) && (
-                <div className={clsx('absolute top-16 left-3 rounded-md border sb-map-glass px-2 py-1 text-[11px] z-10', orbStatus.error ? 'border-amber-500/40 text-amber-300' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]')}>
-                  {orbStatus.error ? `Satellites: ${orbStatus.error}` : orbStatus.note}
-                </div>
-              )}
-              {isEarth && traffic && trafficErr && (
-                <div className="absolute top-16 left-3 rounded-md border border-amber-500/40 sb-map-glass px-2 py-1 text-[11px] text-amber-300 z-10">{trafficErr}</div>
+              {status && (
+                <div className="absolute top-16 right-14 rounded-lg border border-amber-500/40 sb-map-glass px-2.5 py-1 text-[11px] text-amber-500 z-10 max-w-[60%] truncate">{status}</div>
               )}
 
-              {/* BOTTOM READOUT & PIN ACTIONS */}
-              {body?.available && (
-                <div className="absolute bottom-3 left-3 flex items-center gap-2 pointer-events-none z-20">
-                  <div className="rounded-xl border border-[var(--border-subtle)] sb-map-glass px-3 py-1.5 font-mono text-[11px] tabular-nums text-[var(--text-secondary)] shadow-lg flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400/80 animate-pulse" />
-                    <span>{cursor ? fmtCoord(cursor.lat, cursor.lon) : 'Point cursor'}</span>
-                    <span className="text-[var(--border-subtle)]">|</span>
-                    <span className="text-[var(--text-muted)] font-sans text-[10px] uppercase tracking-wider font-semibold">
-                      z{zoom.toFixed(1)}
-                    </span>
-                  </div>
-
+              {hasMap && (
+                <div className="absolute bottom-3 left-3 right-28 flex flex-wrap items-end gap-2 pointer-events-none z-20">
+                  {map && <Readout map={map} />}
                   {pin && (
-                    <div className="pointer-events-auto flex items-center gap-2 rounded-xl border border-sky-500/40 sb-map-glass pl-3 pr-1.5 py-1.5 text-[11px] shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-150">
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                        <span className="font-mono tabular-nums text-[var(--text-primary)] font-semibold">
-                          {pin.lat.toFixed(4)}°, {pin.lon.toFixed(4)}°
-                        </span>
-                      </div>
-
-                      <div className="w-px h-4 bg-[var(--border-subtle)] my-auto" />
-
-                      <button
-                        className="p-1 rounded-md hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition"
-                        onClick={copyPin}
-                        title="Copy coordinates"
-                      >
-                        {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                      </button>
-
-                      <button
-                        className={clsx(
-                          'px-2 py-1 rounded-md text-[11px] font-medium flex items-center gap-1 transition',
-                          skyViewOpen
-                            ? 'bg-sky-500 text-white shadow-sm'
-                            : 'bg-sky-500/15 text-sky-300 hover:bg-sky-500/25 border border-sky-500/30'
-                        )}
-                        onClick={() => setSkyViewOpen(s => !s)}
-                        title="Simulate local celestial sky dome from here"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>Sky View</span>
-                      </button>
-
-                      {isEarth && (
-                        <button
-                          className={clsx(
-                            'p-1.5 rounded-md transition',
-                            weatherOpen ? 'bg-amber-500/20 text-amber-300' : 'hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)]'
-                          )}
-                          onClick={() => setWeatherOpen(w => !w)}
-                          title="View weather at pin"
-                        >
-                          <Thermometer className="w-3.5 h-3.5 text-amber-400" />
-                        </button>
-                      )}
-
-                      {isEarth && (
-                        <button
-                          className="p-1.5 rounded-md hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] transition"
-                          onClick={() => { setDirectionsOpen(true); }}
-                          title="Directions to/from here"
-                        >
-                          <RouteIcon className="w-3.5 h-3.5 text-[var(--accent)]" />
-                        </button>
-                      )}
-
-                      <button
-                        className="p-1.5 rounded-md hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition"
-                        onClick={() => { setPin(null); setWeatherOpen(false); setSkyViewOpen(false); }}
-                        title="Remove pin"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
+                    <div className="pointer-events-auto flex items-center gap-1 rounded-xl border border-[var(--border-subtle)] sb-map-glass pl-2.5 pr-1 py-1 text-[11px]">
+                      <MapPin className="w-3.5 h-3.5 text-[#ff5a36] shrink-0" />
+                      <span className="font-mono tabular-nums text-[var(--text-primary)] mx-1">{fmtCoord(pin.lat, pin.lon)}</span>
+                      <PinButton onClick={copyPin} title="Copy coordinates">{copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}</PinButton>
+                      {hasSky(bodyId) && <PinButton on={pinCard === 'sky'} onClick={() => setPinCard(c => (c === 'sky' ? null : 'sky'))} title="The sky from here"><Eye className="w-3.5 h-3.5" /></PinButton>}
+                      {isEarth && <PinButton on={pinCard === 'weather'} onClick={() => setPinCard(c => (c === 'weather' ? null : 'weather'))} title="Weather here"><Thermometer className="w-3.5 h-3.5" /></PinButton>}
+                      {isEarth && <PinButton onClick={() => setDrawer('directions')} title="Directions to or from here"><RouteIcon className="w-3.5 h-3.5" /></PinButton>}
+                      <PinButton onClick={() => { setPin(null); setPinCard(null); }} title="Remove pin"><X className="w-3.5 h-3.5" /></PinButton>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Empty / Error state */}
-              {(error || (body && !body.available) || (bodies && !body)) && (
-                <div className="absolute inset-0 grid place-items-center p-6 z-10 bg-[#06070c]">
-                  <div className="max-w-sm text-center">
+              {pinCard === 'weather' && pin && isEarth && (
+                <div className="absolute bottom-14 left-3 z-30">
+                  <LiveWeatherWidget lat={pin.lat} lon={pin.lon} onClose={() => setPinCard(null)} />
+                </div>
+              )}
+              {pinCard === 'sky' && pin && (
+                <SkyViewModal bodyId={bodyId} bodyName={body?.name ?? bodyId} lat={pin.lat} lon={pin.lon}
+                  onClose={() => setPinCard(null)} onAskAtlas={() => { setPinCard(null); setDrawer('atlas'); }} />
+              )}
+
+              {(error || (bodies && (!body || !body.available))) && (
+                <div className="absolute inset-0 grid place-items-center p-6 z-30 bg-[#06070c]">
+                  <div className="max-w-sm text-center text-slate-200">
                     {body?.downloading != null ? (
                       <>
-                        <Download className="w-6 h-6 mx-auto text-[var(--text-muted)]" />
+                        <Download className="w-6 h-6 mx-auto text-slate-400" />
                         <h3 className="mt-3 text-[15px] font-semibold tracking-tight">The {body.name} map is downloading</h3>
-                        <p className="mt-1 text-[12px] leading-relaxed text-[var(--text-muted)]">The full OpenStreetMap planet is about 139 GB. It appears here as soon as it finishes; other worlds work meanwhile.</p>
-                        <div className="mt-4 h-1.5 rounded-full bg-[var(--bg-tertiary)] overflow-hidden">
+                        <p className="mt-1 text-[12px] leading-relaxed text-slate-400">The full OpenStreetMap planet is about 139 GB. It appears here as soon as it finishes; other worlds work meanwhile.</p>
+                        <div className="mt-4 h-1.5 rounded-full bg-slate-800 overflow-hidden">
                           <div className="h-full bg-[var(--accent)] transition-[width] duration-700" style={{ width: `${Math.round(body.downloading * 100)}%` }} />
                         </div>
-                        <div className="mt-1.5 text-[11px] tabular-nums text-[var(--text-muted)]">{(body.downloading * 100).toFixed(1)}%</div>
+                        <div className="mt-1.5 text-[11px] tabular-nums text-slate-400">{(body.downloading * 100).toFixed(1)}%</div>
                       </>
                     ) : (
                       <>
-                        <Orbit className="w-6 h-6 mx-auto text-[var(--text-muted)]" />
-                        <h3 className="mt-3 text-[15px] font-semibold tracking-tight">{error ?? (body ? `No ${body.name} tiles installed` : 'That world isn’t in the catalogue')}</h3>
-                        <p className="mt-1 text-[12px] leading-relaxed text-[var(--text-muted)]">Map data lives in ~/shellb/maps on the Spark.</p>
+                        <Orbit className="w-6 h-6 mx-auto text-slate-400" />
+                        <h3 className="mt-3 text-[15px] font-semibold tracking-tight">{error ?? (body ? `No ${body.name} map installed` : 'That world isn’t in the catalogue')}</h3>
+                        <p className="mt-1 text-[12px] leading-relaxed text-slate-400">Map data lives in ~/shellb/maps on the Spark.</p>
+                        <button className="mt-4 h-8 px-3 rounded-lg border border-slate-700 text-[12px] text-slate-200 hover:bg-slate-800" onClick={() => { setSolFocus({ id: bodyId }); choose('sol'); }}>
+                          Show it in the orrery
+                        </button>
                       </>
                     )}
                   </div>
                 </div>
               )}
-              {!bodies && !error && <div className="absolute inset-0 grid place-items-center z-10 bg-[#06070c]"><Loader2 className="w-5 h-5 animate-spin text-[var(--text-muted)]" /></div>}
+              {((!bodies && !error) || (hasMap && !map)) && (
+                <div className="absolute inset-0 grid place-items-center z-[15] pointer-events-none">
+                  <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+                </div>
+              )}
             </>
           )}
         </div>
 
-        {/* RIGHT DRAWERS (Directions / Dossier / Bookmarks) */}
-        {directionsOpen && isEarth && (
-          <aside className="shrink-0 h-full z-30">
-            <DirectionsPanel
-              pinCoord={pin}
-              onRouteReady={setActiveRoute}
-              onStepClick={st => {
-                if (st.at && mapRef.current) {
-                  mapRef.current.flyTo({ center: st.at, zoom: Math.max(mapRef.current.getZoom(), 15), duration: 700 });
-                }
-              }}
-              onClose={() => { setDirectionsOpen(false); setActiveRoute(null); }}
-            />
-          </aside>
-        )}
-
-        {dossierOpen && (
-          <aside className="shrink-0 h-full z-30">
-            <DossierDrawer
-              bodyId={bodyId}
-              onClose={() => setDossierOpen(false)}
-              onOpenSol={id => {
-                setSolFocus({ id });
-                choose('sol');
-                setDossierOpen(false);
-              }}
-            />
-          </aside>
-        )}
-
-        {bookmarksOpen && (
-          <aside className="shrink-0 h-full z-30">
-            <BookmarksModal
-              currentBodyId={bodyId}
-              pinCoord={pin}
-              onSelect={bm => {
-                if (bm.bodyId.toLowerCase() !== bodyId.toLowerCase()) {
-                  choose(bm.bodyId.toLowerCase());
-                }
-                setTimeout(() => {
-                  mapRef.current?.flyTo({
-                    center: [bm.lon, bm.lat],
-                    zoom: bm.zoom,
-                    bearing: bm.bearing ?? 0,
-                    pitch: bm.pitch ?? 0,
-                    duration: 1500,
-                  });
-                  setPin({ lat: bm.lat, lon: bm.lon });
-                }, 100);
-              }}
-              onClose={() => setBookmarksOpen(false)}
-            />
-          </aside>
-        )}
-
-        {atlasOpen && (
-          <aside className="shrink-0 h-full z-30">
-            <AtlasCopilot
-              isOpen={atlasOpen}
-              onClose={() => setAtlasOpen(false)}
-              bodyId={bodyId}
-              bodyName={body?.name ?? bodyId}
-              viewport={viewport}
-              selectedLandmark={landmarkSel}
-              onFlyTo={target => {
-                if (target.body && target.body.toLowerCase() !== bodyId.toLowerCase()) {
-                  choose(target.body.toLowerCase());
-                }
-                setTimeout(() => {
-                  mapRef.current?.flyTo({
-                    center: [target.lon, target.lat],
-                    zoom: target.zoom ?? 7,
-                    duration: 1500,
-                  });
-                  setPin({ lat: target.lat, lon: target.lon });
-                }, 100);
-              }}
-              onApplyOverlay={spec => {
-                setOverlay(spec);
-              }}
-            />
+        {drawer && bodyId !== 'sol' && (
+          <aside className="shrink-0 h-full z-30 max-w-[100vw] absolute right-0 top-0 md:static">
+            {drawer === 'directions' && isEarth && (
+              <DirectionsPanel pinCoord={pin} onRouteReady={setActiveRoute}
+                onStepClick={st => { if (st.at && map) map.flyTo({ center: st.at, zoom: Math.max(map.getZoom(), 15), duration: 700 }); }}
+                onClose={() => { setDrawer(null); setActiveRoute(null); }} />
+            )}
+            {drawer === 'dossier' && (
+              <DossierDrawer bodyId={bodyId} onClose={() => setDrawer(null)}
+                onOpenSol={id => { setDrawer(null); setSolFocus({ id }); choose('sol'); }} />
+            )}
+            {drawer === 'bookmarks' && (
+              <BookmarksModal currentBodyId={bodyId} pinCoord={pin} onClose={() => setDrawer(null)}
+                onSelect={bm => goTo({ body: bm.bodyId, lat: bm.lat, lon: bm.lon, zoom: bm.zoom, bearing: bm.bearing ?? 0, pitch: bm.pitch ?? 0, pin: true })} />
+            )}
+            {drawer === 'atlas' && (
+              <AtlasCopilot isOpen onClose={() => setDrawer(null)} bodyId={bodyId} bodyName={body?.name ?? bodyId} viewport={viewport}
+                selectedLandmark={selection?.kind === 'landmark' ? selection.item : null}
+                onFlyTo={t => goTo({ body: t.body, lat: t.lat, lon: t.lon, zoom: t.zoom ?? 7, pin: true })}
+                onApplyOverlay={spec => {
+                  const b = (spec.body ?? bodyId).toLowerCase();
+                  setOverlay({ ...spec, body: b });
+                  if (b !== bodyId) chooseRef.current(b);
+                }} />
+            )}
           </aside>
         )}
       </section>
+    </div>
+  );
+}
+
+/** Cursor position and zoom, updated straight from the map so the app doesn't re-render on every mouse move. */
+function Readout({ map }: { map: ML.Map }) {
+  const [text, setText] = useState<{ at: string | null; z: number }>({ at: null, z: map.getZoom() });
+  useEffect(() => {
+    let raf = 0, last: { lat: number; lon: number } | null = null;
+    const flush = () => { raf = 0; setText({ at: last ? fmtCoord(last.lat, last.lon) : null, z: map.getZoom() }); };
+    const queue = () => { if (!raf) raf = requestAnimationFrame(flush); };
+    const move = (e: ML.MapMouseEvent) => { last = { lat: e.lngLat.lat, lon: e.lngLat.wrap().lng }; queue(); };
+    const out = () => { last = null; queue(); };
+    map.on('mousemove', move);
+    map.on('mouseout', out);
+    map.on('zoom', queue);
+    return () => { cancelAnimationFrame(raf); map.off('mousemove', move); map.off('mouseout', out); map.off('zoom', queue); };
+  }, [map]);
+  return (
+    <div className="rounded-xl border border-[var(--border-subtle)] sb-map-glass px-2.5 py-1.5 font-mono text-[11px] tabular-nums text-[var(--text-secondary)] flex items-center gap-2 whitespace-nowrap">
+      <span className="min-w-[17ch]">{text.at ?? '—'}</span>
+      <span className="text-[var(--text-muted)]">z{text.z.toFixed(1)}</span>
+    </div>
+  );
+}
+
+function ToolButton({ on, onClick, icon: Icon, label, title }: { on: boolean; onClick: () => void; icon: typeof Globe2; label?: string; title: string }) {
+  return (
+    <button onClick={onClick} aria-pressed={on} title={title}
+      className={clsx('h-8 px-2.5 flex items-center gap-1.5 rounded-lg text-[12px] font-medium transition',
+        on ? 'bg-[var(--bg-tertiary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]')}>
+      <Icon className="w-3.5 h-3.5" />
+      {label && <span className="hidden lg:inline">{label}</span>}
+    </button>
+  );
+}
+
+function PinButton({ on, onClick, title, children }: { on?: boolean; onClick: () => void; title: string; children: ReactNode }) {
+  return (
+    <button onClick={onClick} title={title} aria-pressed={on}
+      className={clsx('p-1.5 rounded-lg transition', on ? 'bg-[var(--bg-tertiary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]')}>
+      {children}
+    </button>
+  );
+}
+
+function SuggestionIcon({ s }: { s: Suggestion }) {
+  const c = 'w-3.5 h-3.5 mt-0.5 shrink-0';
+  if (s.kind === 'landmark') return <Flag className={clsx(c, 'text-emerald-400')} />;
+  if (s.kind === 'flight') return <Radar className={clsx(c, 'text-sky-400')} />;
+  if (s.kind === 'coord') return <Crosshair className={clsx(c, 'text-amber-400')} />;
+  if (s.kind === 'feature') {
+    const k = s.feature?.kind;
+    return k === 'shipwreck' ? <Anchor className={clsx(c, 'text-cyan-400')} /> : k === 'wonder' ? <Sparkles className={clsx(c, 'text-amber-400')} />
+      : k === 'launchsite' ? <Rocket className={clsx(c, 'text-orange-400')} /> : <Video className={clsx(c, 'text-pink-400')} />;
+  }
+  return <Navigation className={clsx(c, 'text-[var(--text-muted)]')} />;
+}
+
+function QuakeCard({ q, onClose }: { q: Quake; onClose: () => void }) {
+  const when = new Date(q.time);
+  const ago = Math.max(0, Math.round((Date.now() - when.getTime()) / 60000));
+  return (
+    <div className="w-80 max-w-full rounded-xl border border-[var(--border-subtle)] sb-map-glass p-3.5 text-[12px]">
+      <div className="flex items-start gap-2">
+        <Activity className="w-4 h-4 mt-0.5 text-amber-400 shrink-0" />
+        <div className="min-w-0 flex-1">
+          <div className="text-[14px] font-semibold tracking-tight text-[var(--text-primary)]">M {q.mag.toFixed(1)} earthquake</div>
+          <div className="text-[11.5px] text-[var(--text-secondary)]">{q.place}</div>
+        </div>
+        <button className="text-[var(--text-muted)] hover:text-[var(--text-primary)]" onClick={onClose} title="Close"><X className="w-3.5 h-3.5" /></button>
+      </div>
+      <dl className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1.5">
+        <div><dt className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">When</dt><dd className="tabular-nums">{ago < 120 ? `${ago} min ago` : `${Math.round(ago / 60)} h ago`}</dd></div>
+        <div><dt className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Depth</dt><dd className="tabular-nums">{Math.round(q.depth_km)} km</dd></div>
+        <div className="col-span-2"><dt className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Location</dt><dd className="font-mono tabular-nums">{fmtCoord(q.lat, q.lon)}</dd></div>
+      </dl>
+      {q.url && <a href={q.url} target="_blank" rel="noreferrer" className="mt-2.5 inline-block text-[11.5px] text-[var(--accent)] hover:underline">USGS event page</a>}
     </div>
   );
 }
@@ -1645,50 +1198,23 @@ function WorldRow({ body, active, onPick, depth, star, hollow, title }: {
   depth: 0 | 1 | 2; star?: boolean; hollow?: boolean; title?: string;
 }) {
   const moon = depth === 2;
-  const palette = WORLD_PALETTE[body.id.toLowerCase()] ?? { color: '#94a3b8' };
-  const hasMap = Boolean(body.available && body.id !== 'sol');
-
+  const color = WORLD_PALETTE[body.id.toLowerCase()]?.color ?? '#94a3b8';
   return (
     <button
-      onClick={() => onPick(body.id)}
-      aria-current={active ? 'page' : undefined}
-      title={title}
+      onClick={() => onPick(body.id)} aria-current={active ? 'page' : undefined} title={title}
       className={clsx(
         'group w-full flex items-center gap-2 rounded-lg py-1.5 pr-2.5 text-left text-[12.5px] transition focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--accent)]',
         INDENT[depth],
-        active
-          ? 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] font-medium shadow-xs'
-          : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]/60 hover:text-[var(--text-primary)]',
-        !body.available && !hollow && 'opacity-60',
-        hollow && !active && 'text-[var(--text-muted)]'
+        active ? 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]',
+        hollow && !active && 'text-[var(--text-muted)]',
       )}
     >
       <span
-        className={clsx(
-          'shrink-0 rounded-full transition-all duration-150',
-          moon ? 'w-2 h-2' : star ? 'w-3 h-3' : 'w-2.5 h-2.5',
-          hollow && 'border border-dashed'
-        )}
-        style={{
-          backgroundColor: hollow ? 'transparent' : palette.color,
-          borderColor: hollow ? palette.color : undefined,
-          boxShadow: active ? `0 0 8px ${palette.color}aa` : undefined,
-          opacity: hollow && !active ? 0.45 : !body.available && !hollow ? 0.6 : 1,
-        }}
+        className={clsx('shrink-0 rounded-full', moon ? 'w-2 h-2' : star ? 'w-3 h-3' : 'w-2.5 h-2.5', hollow && 'border border-dashed')}
+        style={{ backgroundColor: hollow ? 'transparent' : color, borderColor: hollow ? color : undefined, opacity: hollow && !active ? 0.5 : 1 }}
       />
-      <span className={clsx('flex-1 truncate', (!moon || active) && 'font-medium')}>
-        {body.name}
-      </span>
-      {hasMap && (
-        <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-sky-500/10 text-sky-400 border border-sky-500/20 group-hover:bg-sky-500/20 transition">
-          Map
-        </span>
-      )}
-      {body.downloading != null && (
-        <span className="shrink-0 text-[10px] tabular-nums font-mono text-amber-400 font-medium">
-          {Math.round(body.downloading * 100)}%
-        </span>
-      )}
+      <span className={clsx('flex-1 truncate', !moon && 'font-medium')}>{body.name}</span>
+      {body.downloading != null && <span className="shrink-0 text-[10px] tabular-nums font-mono text-amber-400">{Math.round(body.downloading * 100)}%</span>}
     </button>
   );
 }

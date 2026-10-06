@@ -609,8 +609,10 @@ export function attachTraverseLayer(
   };
 
   map.on('click', wpCircleLayerId, onClickWp);
-  map.on('mouseenter', wpCircleLayerId, () => { map.getCanvas().style.cursor = 'pointer'; });
-  map.on('mouseleave', wpCircleLayerId, () => { map.getCanvas().style.cursor = ''; });
+  const onEnter = () => { map.getCanvas().style.cursor = 'pointer'; };
+  const onLeave = () => { map.getCanvas().style.cursor = ''; };
+  map.on('mouseenter', wpCircleLayerId, onEnter);
+  map.on('mouseleave', wpCircleLayerId, onLeave);
 
   return {
     selectTraverse: (id: string | null) => {
@@ -633,6 +635,9 @@ export function attachTraverseLayer(
     },
     remove: () => {
       map.off('click', wpCircleLayerId, onClickWp);
+      map.off('mouseenter', wpCircleLayerId, onEnter);
+      map.off('mouseleave', wpCircleLayerId, onLeave);
+      if (!map.style) return;
       if (map.getLayer(wpCircleLayerId)) map.removeLayer(wpCircleLayerId);
       if (map.getLayer(lineLayerId)) map.removeLayer(lineLayerId);
       if (map.getLayer(glowLayerId)) map.removeLayer(glowLayerId);

@@ -1,22 +1,20 @@
-// Unified inspection modal for interactive map features: Shipwrecks, Wonders, Launch Sites, Ships at Sea, CCTV.
+// Unified inspection modal for interactive map features: Shipwrecks, Wonders, Launch Sites, Webcams.
 import { useState } from 'react';
 import clsx from 'clsx';
 import {
   Anchor, Check, Compass, Copy, ExternalLink, Globe2, Navigation,
-  Radio, Rocket, Shield, Ship, Sparkles, Video, Waves, X
+  Radio, Rocket, Shield, Sparkles, Video, Waves, X
 } from 'lucide-react';
 import { fmtCoord } from './core';
 import type { Shipwreck } from './shipwrecks';
 import type { WorldWonder } from './wonders';
 import type { LaunchSite } from './launchsites';
-import type { Vessel } from './maritime';
 import type { CCTVCamera } from './cctv';
 
 export type AnyFeature =
   | { kind: 'shipwreck'; item: Shipwreck }
   | { kind: 'wonder'; item: WorldWonder }
   | { kind: 'launchsite'; item: LaunchSite }
-  | { kind: 'vessel'; item: Vessel }
   | { kind: 'cctv'; item: CCTVCamera };
 
 interface MapFeatureModalProps {
@@ -81,22 +79,6 @@ export function MapFeatureModal({ feature, onClose, onFlyTo }: MapFeatureModalPr
       if (s.firstOrbitalLaunch) meta.push({ label: 'First Launch', value: s.firstOrbitalLaunch });
       break;
     }
-    case 'vessel': {
-      const v = feature.item;
-      lat = v.lat; lon = v.lon;
-      title = v.name;
-      subtitle = `${v.vesselType.toUpperCase()} · Flag: ${v.flag}`;
-      desc = v.desc;
-      highlight = v.highlight;
-      badgeLabel = `VESSEL AT SEA · ${v.speedKnots} KNOTS`;
-      badgeColor = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
-      Icon = Ship;
-      meta.push({ label: 'Speed', value: `${v.speedKnots} kn (${Math.round(v.speedKnots * 1.852)} km/h)` });
-      meta.push({ label: 'Heading', value: `${v.headingDeg}°` });
-      meta.push({ label: 'Destination', value: v.destination });
-      meta.push({ label: 'Dimensions', value: `${v.lengthMeters}m × ${v.beamMeters}m` });
-      break;
-    }
     case 'cctv': {
       const c = feature.item;
       lat = c.lat; lon = c.lon;
@@ -124,7 +106,7 @@ export function MapFeatureModal({ feature, onClose, onFlyTo }: MapFeatureModalPr
   };
 
   return (
-    <div className="w-84 max-w-[calc(100vw-2rem)] rounded-xl border border-[var(--border-subtle)] sb-map-glass p-3.5 text-[12px] shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150">
+    <div className="w-[21rem] max-w-[calc(100vw-2rem)] rounded-xl border border-[var(--border-subtle)] sb-map-glass p-3.5 text-[12px] shadow-2xl backdrop-blur-xl">
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">

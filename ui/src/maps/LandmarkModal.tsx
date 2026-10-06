@@ -15,10 +15,10 @@ export function LandmarkModal({ landmark, onClose, onFlyTo }: LandmarkModalProps
   const [copied, setCopied] = useState(false);
 
   const copyCoords = () => {
-    navigator.clipboard.writeText(`${landmark.lat.toFixed(5)}, ${landmark.lon.toFixed(5)}`).then(() => {
+    navigator.clipboard?.writeText(`${landmark.lat.toFixed(5)}, ${landmark.lon.toFixed(5)}`).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1400);
-    });
+    }).catch(() => {});
   };
 
   const isMission = landmark.kind === 'mission';

@@ -1,23 +1,9 @@
 // Planetary science dossier drawer for celestial bodies.
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
+import { earthLink, fmtKm, fmtLight } from './sky';
 import clsx from 'clsx';
 import { Compass, ExternalLink, Globe2, Orbit, Radio, Thermometer, Wind, X } from 'lucide-react';
 import { getDossier, type WorldDossier } from './dossier';
-
-interface EphemerisData {
-  target: string;
-  distance_au: number;
-  distance_km: number;
-  light_time_one_way: string;
-  light_time_seconds: number;
-  hohmann_transfer: {
-    duration_days: number;
-    departure_delta_v_kms: number;
-    arrival_delta_v_kms: number;
-    total_delta_v_kms: number;
-    synodic_window_days: number;
-  };
-}
 
 interface DossierDrawerProps {
   bodyId: string;
@@ -29,24 +15,8 @@ const cToF = (c: number) => Math.round((c * 9) / 5 + 32);
 
 export function DossierDrawer({ bodyId, onClose, onOpenSol }: DossierDrawerProps) {
   const d = getDossier(bodyId);
-  const [ephem, setEphem] = useState<EphemerisData | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    if (bodyId === 'earth' || bodyId === 'sol') {
-      setEphem(null);
-      return;
-    }
-    fetch(`/api/planetary/ephemeris?target=${encodeURIComponent(bodyId)}`)
-      .then(r => (r.ok ? r.json() : null))
-      .then(data => {
-        if (alive && data) setEphem(data);
-      })
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, [bodyId]);
+  // Computed from sol.ts (JPL elements); the server's /api/planetary/ephemeris figures were invented.
+  const link = useMemo(() => (bodyId === 'earth' || bodyId === 'sol' ? null : earthLink(bodyId)), [bodyId]);
 
   if (!d) {
     return (
@@ -67,7 +37,7 @@ export function DossierDrawer({ bodyId, onClose, onOpenSol }: DossierDrawerProps
   const gPercent = Math.min(100, Math.max(5, (d.surfaceGravityG / 2.5) * 100));
 
   return (
-    <div className="w-84 max-w-[calc(100vw-3rem)] h-full bg-[var(--bg-secondary)] border-l border-[var(--border-subtle)] flex flex-col min-h-0 text-[12px] shadow-2xl">
+    <div className="w-[21rem] max-w-[calc(100vw-3rem)] h-full bg-[var(--bg-secondary)] border-l border-[var(--border-subtle)] flex flex-col min-h-0 text-[12px] shadow-2xl">
       {/* Header */}
       <div className="p-4 border-b border-[var(--border-subtle)] bg-[var(--bg-primary)]/40 flex items-start justify-between gap-3">
         <div>
@@ -107,10 +77,10 @@ export function DossierDrawer({ bodyId, onClose, onOpenSol }: DossierDrawerProps
               style={{ width: `${gPercent}%` }}
             />
           </div>
-          <div className="mt-1.5 flex justify-between text-[10px] text-[var(--text-muted)] tabular-nums">
-            <span>0 g (weightless)</span>
-            <span>1.0 g (Earth)</span>
-            <span>2.5 g</span>
+          <div className="relative mt-1.5 h-3.5 text-[10px] text-[var(--text-muted)] tabular-nums">
+            <span className="absolute left-0">0 g</span>
+            <span className="absolute left-[40%] -translate-x-1/2">1 g (Earth)</span>
+            <span className="absolute right-0">2.5 g</span>
           </div>
         </div>
 
@@ -173,51 +143,51 @@ export function DossierDrawer({ bodyId, onClose, onOpenSol }: DossierDrawerProps
         </div>
 
         {/* Earth Interplanetary Link & Comms */}
-        {bodyId !== 'earth' && bodyId !== 'sol' && ephem && (
+        {link && (
           <div>
             <h4 className="text-[10px] uppercase font-semibold tracking-wider text-[var(--text-muted)] mb-2 flex items-center justify-between">
               <span>Earth Interplanetary Link</span>
               <span className="text-[9px] text-sky-400 font-mono flex items-center gap-1 font-normal">
-                <Radio className="w-3 h-3 text-sky-400 animate-pulse" /> Live Telemetry
+                <Radio className="w-3 h-3" /> Computed now
               </span>
             </h4>
-            <div className="p-3 rounded-lg border border-sky-500/25 bg-sky-950/15 space-y-2.5 text-[11px]">
+            <div className="p-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] space-y-2.5 text-[11px]">
               <div className="flex items-center justify-between">
                 <span className="text-[var(--text-muted)]">Distance from Earth:</span>
                 <span className="font-mono font-semibold text-[var(--text-primary)]">
-                  {ephem.distance_au.toFixed(3)} AU <span className="text-[var(--text-muted)] font-normal font-sans">({(ephem.distance_km / 1e6).toFixed(1)}M km)</span>
+                  {link.au < 0.01 ? fmtKm(link.km) : <>{link.au.toFixed(3)} AU <span className="text-[var(--text-muted)] font-normal font-sans">({fmtKm(link.km)})</span></>}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[var(--text-muted)]">Radio Light Delay:</span>
-                <span className="font-mono text-amber-300 font-medium">{ephem.light_time_one_way}</span>
+                <span className="font-mono text-[var(--text-primary)] font-medium">{fmtLight(link.lightSeconds)}</span>
               </div>
 
-              <div className="pt-2 border-t border-[var(--border-subtle)] space-y-1.5">
+              {link.transfer && <div className="pt-2 border-t border-[var(--border-subtle)] space-y-1.5">
                 <div className="text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1">
                   <Orbit className="w-3 h-3 text-emerald-400" /> Hohmann Transfer Trajectory
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-[10px] pt-1">
                   <div className="p-2 rounded bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
                     <div className="text-[var(--text-muted)]">Transit Duration</div>
-                    <div className="font-mono font-medium text-emerald-300 text-[11px] mt-0.5">
-                      {Math.round(ephem.hohmann_transfer.duration_days)} days
+                    <div className="font-mono font-medium text-[var(--text-primary)] text-[11px] mt-0.5">
+                      {Math.round(link.transfer.days)} days
                     </div>
                   </div>
                   <div className="p-2 rounded bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
-                    <div className="text-[var(--text-muted)]">Total Transfer Δv</div>
-                    <div className="font-mono font-medium text-sky-300 text-[11px] mt-0.5">
-                      {ephem.hohmann_transfer.total_delta_v_kms.toFixed(2)} km/s
+                    <div className="text-[var(--text-muted)]">Δv between orbits</div>
+                    <div className="font-mono font-medium text-[var(--text-primary)] text-[11px] mt-0.5">
+                      {link.transfer.dvKms.toFixed(2)} km/s
                     </div>
                   </div>
                 </div>
                 <div className="text-[10px] text-[var(--text-muted)] pt-0.5 flex justify-between">
                   <span>Synodic Launch Window:</span>
                   <span className="font-mono text-[var(--text-secondary)]">
-                    Every {Math.round(ephem.hohmann_transfer.synodic_window_days)} days
+                    Every {Math.round(link.transfer.synodicDays)} days
                   </span>
                 </div>
-              </div>
+              </div>}
             </div>
           </div>
         )}

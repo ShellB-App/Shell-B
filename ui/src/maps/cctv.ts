@@ -1,7 +1,4 @@
-// Live public CCTV webcams and streaming city cameras worldwide.
-import type * as ML from 'maplibre-gl';
-import type { FeatureCollection } from 'geojson';
-import type { MapLib } from './core';
+// Links to public webcam streams worldwide (checked 2026-10-06; the pages are third-party and can go dark).
 
 export interface CCTVCamera {
   id: string;
@@ -84,22 +81,6 @@ export const CCTV_CAMERAS: CCTVCamera[] = [
     timezone: 'Europe/Paris (CET/CEST)',
     desc: 'The iron spire that defines the Parisian skyline, designed by Gustave Eiffel for the 1889 Exposition Universelle.',
     highlight: 'Features its sparkling golden beacon sweep and five-minute light show every hour on the hour after sunset.',
-  },
-  {
-    id: 'venice-grand-canal',
-    name: 'Venice Grand Canal & Rialto Bridge',
-    location: 'Rialto Bridge (Ponte di Rialto)',
-    city: 'Venice',
-    country: 'Italy',
-    lat: 45.4380,
-    lon: 12.3358,
-    status: 'live',
-    resolution: '1080p HD',
-    streamUrl: 'https://www.skylinewebcams.com/en/webcam/italia/veneto/venezia/ponte-di-rialto.html',
-    viewAngle: 'Facing south along the S-curve waterway of the Grand Canal',
-    timezone: 'Europe/Rome (CET/CEST)',
-    desc: 'The primary water artery of Venice, filled with passing vaporetti (water buses), gondolas, and ornate Venetian Gothic palazzi.',
-    highlight: 'Captures the oldest of the four bridges spanning the Grand Canal, completed in stone in 1591.',
   },
   {
     id: 'abbey-road',
@@ -198,22 +179,6 @@ export const CCTV_CAMERAS: CCTVCamera[] = [
     highlight: 'Shoots water plumes up to 140 meters high synchronized to opera, Broadway, and classic pop music.',
   },
   {
-    id: 'mount-fuji-lake',
-    name: 'Mount Fuji (Lake Kawaguchiko Overlook)',
-    location: 'Fujikawaguchiko, Yamanashi Prefecture',
-    city: 'Mount Fuji',
-    country: 'Japan',
-    lat: 35.5170,
-    lon: 138.7518,
-    status: 'live',
-    resolution: '1080p HD',
-    streamUrl: 'https://www.youtube.com/watch?v=8q-pT6Gz00U',
-    viewAngle: 'Southward view across the calm waters of Lake Kawaguchi toward the volcanic cone',
-    timezone: 'Asia/Tokyo (JST)',
-    desc: 'Japan’s sacred composite stratovolcano, rising symmetrically to 3,776 meters with its iconic snow-capped summit.',
-    highlight: 'Famous for creating the "Double Fuji" (Upside-down Fuji) reflection on the tranquil lake surface at dawn.',
-  },
-  {
     id: 'trevi-fountain',
     name: 'Trevi Fountain (Fontana di Trevi)',
     location: 'Piazza di Trevi',
@@ -261,159 +226,4 @@ export const CCTV_CAMERAS: CCTVCamera[] = [
     desc: 'Historic double-jointed wooden pier marking the official western terminus of legendary US Route 66 at the edge of the Pacific Ocean.',
     highlight: 'Features Pacific Park’s solar-powered Ferris wheel glowing above the Pacific surf at golden hour.',
   },
-  {
-    id: 'santorini-caldera',
-    name: 'Santorini Caldera & Oia Village',
-    location: 'Oia Cliffside',
-    city: 'Santorini, Cyclades',
-    country: 'Greece',
-    lat: 36.4618,
-    lon: 25.3753,
-    status: 'live',
-    resolution: '4K Ultra HD',
-    streamUrl: 'https://www.skylinewebcams.com/en/webcam/ellada/cyclades/santorini/oia-santorini.html',
-    viewAngle: 'Southward view over whitewashed cave houses and blue-domed churches',
-    timezone: 'Europe/Athens (EET/EEST)',
-    desc: 'The dramatic volcanic amphitheater created by the catastrophic Minoan eruption 3,600 years ago, renowned for glowing Aegean sunsets.',
-    highlight: 'Classic Greek island architecture of whitewashed caldera dwellings cascading down 300-meter volcanic cliff faces.',
-  },
 ];
-
-const SRC = 'sb-cctv';
-const LAYER_PULSE = 'sb-cctv-pulse';
-const LAYER_CIRCLE = 'sb-cctv-circle';
-const LAYER_LABEL = 'sb-cctv-label';
-
-export interface CCTVLayer {
-  detach: () => void;
-  select: (id: string | null) => void;
-}
-
-export function attachCCTV(
-  lib: MapLib,
-  map: ML.Map,
-  onSelect: (cam: CCTVCamera | null) => void
-): CCTVLayer {
-  void lib;
-  let selectedId: string | null = null;
-  let gone = false;
-
-  const toGeoJSON = (): FeatureCollection => ({
-    type: 'FeatureCollection',
-    features: CCTV_CAMERAS.map(c => ({
-      type: 'Feature',
-      properties: {
-        id: c.id,
-        name: c.name,
-        city: c.city,
-        country: c.country,
-        status: c.status,
-        resolution: c.resolution,
-        sel: c.id === selectedId,
-      },
-      geometry: {
-        type: 'Point',
-        coordinates: [c.lon, c.lat],
-      },
-    })),
-  });
-
-  if (!map.getSource(SRC)) {
-    map.addSource(SRC, {
-      type: 'geojson',
-      data: toGeoJSON(),
-    });
-  }
-
-  // Pulsing red live recording indicator aura
-  if (!map.getLayer(LAYER_PULSE)) {
-    map.addLayer({
-      id: LAYER_PULSE,
-      type: 'circle',
-      source: SRC,
-      paint: {
-        'circle-radius': ['case', ['get', 'sel'], 16, 10],
-        'circle-color': '#ef4444',
-        'circle-opacity': 0.4,
-        'circle-blur': 0.7,
-      },
-    });
-  }
-
-  // Core camera lens pin
-  if (!map.getLayer(LAYER_CIRCLE)) {
-    map.addLayer({
-      id: LAYER_CIRCLE,
-      type: 'circle',
-      source: SRC,
-      paint: {
-        'circle-radius': ['case', ['get', 'sel'], 6.5, 4.5],
-        'circle-color': ['case', ['get', 'sel'], '#f87171', '#dc2626'],
-        'circle-stroke-color': '#450a0a',
-        'circle-stroke-width': 1.5,
-      },
-    });
-  }
-
-  // CCTV camera label
-  if (!map.getLayer(LAYER_LABEL)) {
-    map.addLayer({
-      id: LAYER_LABEL,
-      type: 'symbol',
-      source: SRC,
-      layout: {
-        'text-field': ['concat', '📹 ', ['get', 'name']],
-        'text-font': ['Noto Sans Medium'],
-        'text-size': 9.5,
-        'text-offset': [0, 1.2],
-        'text-anchor': 'top',
-        'text-optional': true,
-      },
-      paint: {
-        'text-color': '#fee2e2',
-        'text-halo-color': '#280505',
-        'text-halo-width': 1.4,
-      },
-    });
-  }
-
-  const onClick = (e: ML.MapLayerMouseEvent) => {
-    if (gone) return;
-    const feat = e.features?.[0];
-    const id = feat?.properties?.id;
-    if (id) {
-      select(String(id));
-      const cam = CCTV_CAMERAS.find(x => x.id === id);
-      onSelect(cam ?? null);
-    }
-  };
-
-  const onEnter = () => { map.getCanvas().style.cursor = 'pointer'; };
-  const onLeave = () => { map.getCanvas().style.cursor = ''; };
-
-  map.on('click', LAYER_CIRCLE, onClick);
-  map.on('mouseenter', LAYER_CIRCLE, onEnter);
-  map.on('mouseleave', LAYER_CIRCLE, onLeave);
-
-  function select(id: string | null) {
-    selectedId = id;
-    const src = map.getSource(SRC) as ML.GeoJSONSource | undefined;
-    if (src) src.setData(toGeoJSON());
-  }
-
-  return {
-    select,
-    detach: () => {
-      gone = true;
-      map.off('click', LAYER_CIRCLE, onClick);
-      map.off('mouseenter', LAYER_CIRCLE, onEnter);
-      map.off('mouseleave', LAYER_CIRCLE, onLeave);
-      try {
-        if (map.getLayer(LAYER_LABEL)) map.removeLayer(LAYER_LABEL);
-        if (map.getLayer(LAYER_CIRCLE)) map.removeLayer(LAYER_CIRCLE);
-        if (map.getLayer(LAYER_PULSE)) map.removeLayer(LAYER_PULSE);
-        if (map.getSource(SRC)) map.removeSource(SRC);
-      } catch {}
-    },
-  };
-}

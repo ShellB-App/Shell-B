@@ -24,6 +24,7 @@ import {
   X
 } from 'lucide-react';
 import { api, streamChat } from '../api';
+import { earthLink, fmtKm, fmtLight } from './sky';
 import { fmtCoord, parseSpec, type MapSpec } from './core';
 import { Markdown } from '../components/Markdown';
 import type { Landmark } from './landmarks';
@@ -63,13 +64,8 @@ export function AtlasCopilot({
   const [messages, setMessages] = useState<CopilotMessage[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
-  const [convId, setConvId] = useState<string | null>(() => {
-    try {
-      return sessionStorage.getItem(STORAGE_KEY);
-    } catch {
-      return null;
-    }
-  });
+  // The conversation lives as long as the panel's messages do, so the model never carries context the panel doesn't show.
+  const [convId, setConvId] = useState<string | null>(null);
 
   // Orbital / Space Weather Telemetry Pill
   const [telemetry, setTelemetry] = useState<{ label: string; value: string; detail?: string } | null>(null);
@@ -93,17 +89,8 @@ export function AtlasCopilot({
         })
         .catch(() => {});
     } else if (bodyId !== 'sol') {
-      fetch(`/api/planetary/ephemeris?target=${encodeURIComponent(bodyId)}`)
-        .then(r => (r.ok ? r.json() : null))
-        .then(d => {
-          if (!alive || !d) return;
-          setTelemetry({
-            label: 'Earth Distance',
-            value: `${d.distance_au} AU`,
-            detail: `Light delay: ${d.light_time_one_way}`
-          });
-        })
-        .catch(() => {});
+      const l = earthLink(bodyId);
+      setTelemetry(l ? { label: 'From Earth', value: fmtKm(l.km), detail: `Light delay ${fmtLight(l.lightSeconds)}` } : null);
     } else {
       setTelemetry(null);
     }
@@ -152,9 +139,6 @@ export function AtlasCopilot({
         const c = await api.createConversation('atlas');
         activeConv = c.id;
         setConvId(activeConv);
-        try {
-          sessionStorage.setItem(STORAGE_KEY, activeConv);
-        } catch {}
       }
 
       // Build context brief for Atlas
@@ -167,14 +151,26 @@ export function AtlasCopilot({
 
       let fullContent = '';
       const toolsUsed: string[] = [];
+      const kinds = new Map<number, string>();  // block index → type; only text blocks belong in the answer
+      const texts = new Map<number, string>();
+      const answer = () => [...texts.entries()].sort((a, b) => a[0] - b[0]).map(([, t]) => t.trim()).filter(Boolean).join('\n\n');
 
       for await (const ev of streamChat(activeConv, { content: enrichedPrompt, agentId: 'atlas' }, ctrl.signal)) {
         if (ev.type === 'block_delta') {
-          fullContent += ev.text;
+          if (kinds.get(ev.index) !== 'text') continue;
+          texts.set(ev.index, (texts.get(ev.index) ?? '') + ev.text);
+          fullContent = answer();
           setMessages(prev =>
             prev.map(m => (m.id === assistantId ? { ...m, content: fullContent } : m))
           );
+        } else if (ev.type === 'block_start' && ev.block.type !== 'tool') {
+          kinds.set(ev.index, ev.block.type);
+          if (ev.block.type === 'text' && ev.block.text) { texts.set(ev.index, ev.block.text); fullContent = answer(); }
+        } else if (ev.type === 'error') {
+          fullContent = `${fullContent}\n\n*(Atlas hit an error: ${ev.error})*`.trim();
+          setMessages(prev => prev.map(m => (m.id === assistantId ? { ...m, content: fullContent } : m)));
         } else if (ev.type === 'block_start' && ev.block.type === 'tool') {
+          kinds.set(ev.index, 'tool');
           const tname = ev.block.name;
           if (tname && !toolsUsed.includes(tname)) {
             toolsUsed.push(tname);
@@ -183,6 +179,8 @@ export function AtlasCopilot({
             );
           }
         } else if (ev.type === 'done') {
+          const final = (ev.message.blocks ?? []).filter(b => b.type === 'text').map(b => (b as { text: string }).text.trim()).filter(Boolean).join('\n\n');
+          if (final) fullContent = final;
           const specMatch = /```(?:map|route)\n([\s\S]*?)\n```/.exec(fullContent);
           const parsed = specMatch ? parseSpec(specMatch[1]) : null;
 
@@ -207,6 +205,7 @@ export function AtlasCopilot({
         );
       }
     } finally {
+      setMessages(prev => prev.map(m => (m.id === assistantId && m.streaming ? { ...m, streaming: false } : m)));
       setBusy(false);
       abortRef.current = null;
     }
@@ -237,7 +236,7 @@ export function AtlasCopilot({
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <h2 className="text-[13px] font-semibold text-[var(--text-primary)]">Atlas Copilot</h2>
-              <span className="px-1.5 py-0.2 rounded text-[9px] font-medium bg-sky-500/10 text-sky-400 border border-sky-500/20">
+              <span className="px-1.5 py-px rounded text-[9px] font-medium bg-sky-500/10 text-sky-400 border border-sky-500/20">
                 Cartographer
               </span>
             </div>

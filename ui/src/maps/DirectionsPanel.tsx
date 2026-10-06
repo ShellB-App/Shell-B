@@ -1,5 +1,5 @@
 // Integrated turn-by-turn directions drawer for the Worlds app.
-import { useState, useEffect, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import clsx from 'clsx';
 import { ArrowLeftRight, Bike, Car, Footprints, Loader2, Navigation, Route as RouteIcon, X } from 'lucide-react';
 
@@ -70,25 +70,29 @@ export function DirectionsPanel({
   const [route, setRoute] = useState<RouteData | null>(null);
   const [activeStep, setActiveStep] = useState<number | null>(null);
 
+  const seq = useRef(0);
   const calculateRoute = async (fStr = from, tStr = to, m = mode) => {
     if (!fStr.trim() || !tStr.trim()) return;
+    const mine = ++seq.current;
     setLoading(true);
     setError(null);
     try {
       const qs = new URLSearchParams({ from: fStr.trim(), to: tStr.trim(), mode: m });
       const r = await fetch(`/api/route?${qs}`);
       const d = await r.json();
+      if (mine !== seq.current) return;
       if (!r.ok) throw new Error(typeof d.detail === 'string' ? d.detail : `HTTP ${r.status}`);
       setRoute(d);
       setActiveStep(null);
       onRouteReady(d);
     } catch (e) {
+      if (mine !== seq.current) return;
       const msg = (e as Error).message;
       setError(msg);
       setRoute(null);
       onRouteReady(null);
     } finally {
-      setLoading(false);
+      if (mine === seq.current) setLoading(false);
     }
   };
 

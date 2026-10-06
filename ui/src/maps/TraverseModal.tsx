@@ -1,5 +1,5 @@
 // Waypoint detail popup and stepper for rover and lunar traverses.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import {
   ChevronLeft,
@@ -38,23 +38,25 @@ export function TraverseModal({
   const prevWp = currentIndex > 0 ? traverse.waypoints[currentIndex - 1] : null;
   const nextWp = currentIndex < traverse.waypoints.length - 1 ? traverse.waypoints[currentIndex + 1] : null;
 
+  const cb = useRef({ onSelectWaypoint, onFlyTo });
+  cb.current = { onSelectWaypoint, onFlyTo };
   useEffect(() => {
     if (!touring) return;
     const interval = setInterval(() => {
       const idx = traverse.waypoints.findIndex(w => w.id === waypoint.id);
       const nextIdx = (idx + 1) % traverse.waypoints.length;
       const targetWp = traverse.waypoints[nextIdx];
-      onSelectWaypoint(targetWp);
-      onFlyTo(targetWp.lat, targetWp.lon, 14);
+      cb.current.onSelectWaypoint(targetWp);
+      cb.current.onFlyTo(targetWp.lat, targetWp.lon);
       if (nextIdx === traverse.waypoints.length - 1) {
         setTouring(false);
       }
     }, 3500);
     return () => clearInterval(interval);
-  }, [touring, waypoint.id, traverse.waypoints, onSelectWaypoint, onFlyTo]);
+  }, [touring, waypoint.id, traverse.waypoints]);
 
   return (
-    <div className="fixed bottom-14 left-1/2 -translate-x-1/2 z-30 w-96 max-w-[calc(100vw-2rem)] rounded-2xl border border-[var(--border-subtle)] sb-map-glass shadow-2xl backdrop-blur-xl p-4 text-[12px] animate-in fade-in zoom-in-95 duration-200">
+    <div className="w-96 max-w-full rounded-2xl border border-[var(--border-subtle)] sb-map-glass shadow-2xl backdrop-blur-xl p-4 text-[12px]">
       {/* Header */}
       <div className="flex items-start justify-between gap-3 pb-2.5 border-b border-[var(--border-subtle)]">
         <div className="min-w-0">

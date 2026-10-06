@@ -241,3 +241,9 @@ export function orbitPath(id: string, ms: number, n = 256): Vec3[] {
 
 export const AU = AU_KM;
 export const dist = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+
+/** Mean heliocentric semi-major axis (AU) of a planet, dwarf or asteroid; a moon gives its planet's. */
+export function semiMajorAU(id: string): number | null {
+  const host = MOON_ORBITS[id]?.planet ?? (id === 'moon' ? 'earth' : id);
+  return orbitAt(host, J2000)?.a ?? null;
+}

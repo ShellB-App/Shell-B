@@ -244,9 +244,10 @@ export function attachOrbiters(
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const w = overlayCanvas.clientWidth;
     const h = overlayCanvas.clientHeight;
-    if (overlayCanvas.width !== w * dpr || overlayCanvas.height !== h * dpr) {
-      overlayCanvas.width = w * dpr;
-      overlayCanvas.height = h * dpr;
+    const pw = Math.round(w * dpr), ph = Math.round(h * dpr);
+    if (overlayCanvas.width !== pw || overlayCanvas.height !== ph) {
+      overlayCanvas.width = pw;
+      overlayCanvas.height = ph;
       ctx3d?.scale(dpr, dpr);
     }
   };
@@ -647,7 +648,6 @@ export function attachOrbiters(
 
   // Synchronize 3D rendering with MapLibre frame loop
   map.on('render', render3D);
-  map.on('move', render3D);
 
   // Interactive mouse click and hover detection on elevated satellites
   const onMouseMove = (e: ML.MapMouseEvent) => {
@@ -830,7 +830,6 @@ export function attachOrbiters(
       gone = true;
       timers.forEach(clearInterval);
       map.off('render', render3D);
-      map.off('move', render3D);
       map.off('resize', resizeOverlay);
       map.off('mousemove', onMouseMove);
       map.off('click', onMapClick);

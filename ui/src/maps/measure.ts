@@ -2,6 +2,7 @@
 import type * as ML from 'maplibre-gl';
 import type { Feature, FeatureCollection } from 'geojson';
 import type { MapLib } from './core';
+import { unwrap } from './flights';
 
 const RAD = Math.PI / 180;
 const DEG = 180 / Math.PI;
@@ -133,12 +134,9 @@ export function attachMeasureLayer(
   previewPoint: MeasurePoint | null
 ) {
   const allPts = previewPoint ? [...points, previewPoint] : points;
-  const lineCoords: [number, number][] = [];
-
-  for (let i = 0; i < allPts.length - 1; i++) {
-    const seg = interpolateGreatCircle(allPts[i], allPts[i + 1], 16);
-    lineCoords.push(...seg);
-  }
+  const raw: [number, number][] = [];
+  for (let i = 0; i < allPts.length - 1; i++) raw.push(...interpolateGreatCircle(allPts[i], allPts[i + 1], 16));
+  const lineCoords = unwrap(raw);  // continuous across ±180 so the line doesn't streak across the map
 
   const pointFeatures: Feature[] = points.map((p, idx) => ({
     type: 'Feature',

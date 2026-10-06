@@ -18,6 +18,8 @@ from fastapi import APIRouter, HTTPException, Query
 from tools import TOOLS, ToolResult, _fn
 from weather import DATA, UA
 
+import solsys
+
 router = APIRouter(prefix="/api/planetary")
 
 PLANETARY_DB = Path.home() / "shellb" / "maps" / "planetary.db"
@@ -137,373 +139,22 @@ def inspect_body(body_id: str) -> dict:
 
 
 def compute_ephemeris(target: str, date: datetime | None = None) -> dict:
-    """Compute orbital distances, light-time delay, and Hohmann transfer window."""
-    t_id = target.lower().strip()
-    if t_id not in ORBITAL_DATA:
-        raise HTTPException(404, f"Unknown body '{target}'.")
-    
-    dt = date or datetime.now(timezone.utc)
-    t_data = ORBITAL_DATA[t_id]
-    r1 = ORBITAL_DATA["earth"]["a"] * AU_KM
-    r2 = t_data["a"] * AU_KM
-
-    # Approximate Keplerian orbital phase from epoch J2000
-    j2000 = datetime(2000, 1, 1, 12, 0, tzinfo=timezone.utc)
-    days_since_j2000 = (dt - j2000).total_seconds() / 86400.0
-
-    theta1 = (2.0 * math.pi * (days_since_j2000 % 365.256) / 365.256)
-    theta2 = (2.0 * math.pi * (days_since_j2000 % t_data["T"]) / t_data["T"])
-
-    x1, y1 = r1 * math.cos(theta1), r1 * math.sin(theta1)
-    x2, y2 = r2 * math.cos(theta2), r2 * math.sin(theta2)
-
-    dist_km = math.hypot(x2 - x1, y2 - y1)
-    dist_au = dist_km / AU_KM
-    light_time_s = dist_km / SPEED_OF_LIGHT_KMS
-    mins, secs = divmod(int(light_time_s), 60)
-
-    # Hohmann Transfer Orbit calculations
-    a_trans = (r1 + r2) / 2.0
-    transfer_time_s = math.pi * math.sqrt((a_trans ** 3) / MU_SUN)
-    transfer_days = transfer_time_s / 86400.0
-
-    v1_earth = math.sqrt(MU_SUN / r1)
-    v2_target = math.sqrt(MU_SUN / r2)
-    v_trans_dep = math.sqrt(MU_SUN * (2.0 / r1 - 1.0 / a_trans))
-    v_trans_arr = math.sqrt(MU_SUN * (2.0 / r2 - 1.0 / a_trans))
-
-    delta_v1 = abs(v_trans_dep - v1_earth)
-    delta_v2 = abs(v2_target - v_trans_arr)
-    total_delta_v = delta_v1 + delta_v2
-
-    # Synodic period for launch windows
-    if t_data["T"] != 365.256:
-        synodic_days = abs(1.0 / (1.0 / 365.256 - 1.0 / t_data["T"]))
-    else:
-        synodic_days = 29.53  # Moon
-
-    return {
-        "target": t_id.capitalize(),
-        "timestamp": dt.isoformat(),
-        "distance_au": round(dist_au, 4),
-        "distance_km": round(dist_km, 1),
-        "light_time_one_way": f"{mins}m {secs}s" if mins > 0 else f"{secs}s",
-        "light_time_seconds": round(light_time_s, 1),
-        "hohmann_transfer": {
-            "duration_days": round(transfer_days, 1),
-            "departure_delta_v_kms": round(delta_v1, 3),
-            "arrival_delta_v_kms": round(delta_v2, 3),
-            "total_delta_v_kms": round(total_delta_v, 3),
-            "synodic_window_days": round(synodic_days, 1),
-        }
-    }
-
-
-async def fetch_space_weather() -> dict:
-    """Fetch live planetary space weather from NOAA SWPC."""
-    DATA.mkdir(parents=True, exist_ok=True)
-    cache_file = DATA / "space_weather.json"
-    if cache_file.exists() and time.time() - cache_file.stat().st_mtime < 1800:
-        try:
-            return json.loads(cache_file.read_text())
-        except Exception:
-            pass
-
-    url = "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json"
-    try:
-        async with httpx.AsyncClient(timeout=10, headers=UA) as client:
-            resp = await client.get(url)
-            resp.raise_for_status()
-            rows = resp.json()
-            latest = rows[-1] if rows else {}
-            # Row format: {"time_tag": "...", "Kp": 5.67, "a_running": 67, "station_count": 8}
-            kp_raw = latest.get("Kp") if isinstance(latest, dict) else (latest[1] if len(latest) > 1 else 2.0)
-            try:
-                kp = round(float(kp_raw), 2)
-            except (ValueError, TypeError):
-                kp = 2.0
-            
-            # Storm classification
-            if kp >= 9:
-                storm = "G5 - Extreme Geomagnetic Storm"
-            elif kp >= 8:
-                storm = "G4 - Severe Geomagnetic Storm"
-            elif kp >= 7:
-                storm = "G3 - Strong Geomagnetic Storm"
-            elif kp >= 6:
-                storm = "G2 - Moderate Geomagnetic Storm"
-            elif kp >= 5:
-                storm = "G1 - Minor Geomagnetic Storm"
-            elif kp >= 4:
-                storm = "Unsettled"
-            else:
-                storm = "Quiet to Normal"
-
-            result = {
-                "timestamp": latest.get("time_tag") if isinstance(latest, dict) else datetime.now(timezone.utc).isoformat(),
-                "kp_index": kp,
-                "geomagnetic_condition": storm,
-                "aurora_visibility": "High latitudes (Kp 0-3)" if kp < 4 else "Mid-latitudes visible" if kp < 7 else "Low latitudes visible",
-                "fetched": time.time()
-            }
-            cache_file.write_text(json.dumps(result))
-            return result
-    except Exception as e:
-        if cache_file.exists():
-            return {**json.loads(cache_file.read_text()), "stale": True}
-        return {"kp_index": 2.3, "geomagnetic_condition": "Quiet (Offline default)", "error": str(e)}
-
-
-async def fetch_near_earth_objects() -> list[dict]:
-    """Fetch upcoming close-approach Near-Earth Asteroids (NEOs)."""
-    DATA.mkdir(parents=True, exist_ok=True)
-    cache_file = DATA / "neo.json"
-    if cache_file.exists() and time.time() - cache_file.stat().st_mtime < 21600:
-        try:
-            return json.loads(cache_file.read_text())
-        except Exception:
-            pass
-
-    # JPL CAD (Close Approach Data) API
-    url = "https://ssd-api.jpl.nasa.gov/cad.api"
-    params = {"dist-max": "10LD", "date-min": "now", "limit": "10", "sort": "dist"}
-    try:
-        async with httpx.AsyncClient(timeout=10, headers=UA) as client:
-            resp = await client.get(url, params=params)
-            resp.raise_for_status()
-            data = resp.json()
-            fields = data.get("fields", [])
-            rows = data.get("data", [])
-            out = []
-            for r in rows:
-                item = dict(zip(fields, r))
-                des = item.get("des", "Unknown")
-                cd = item.get("cd", "")
-                dist_ld = float(item.get("dist", 0)) * 389.17  # AU to Lunar Distances (~384,400 km)
-                v_rel = float(item.get("v_rel", 0))
-                h_mag = float(item.get("h", 25))
-                # Approx diameter from absolute magnitude H (assuming albedo 0.14)
-                diam_m = round(1329 / math.sqrt(0.14) * (10 ** (-0.2 * h_mag)) * 1000, 1)
-
-                out.append({
-                    "designation": des,
-                    "close_approach_date": cd,
-                    "miss_distance_lunar_distances": round(dist_ld, 2),
-                    "miss_distance_km": round(float(item.get("dist", 0)) * AU_KM, 0),
-                    "relative_velocity_kms": round(v_rel, 2),
-                    "approx_diameter_meters": diam_m,
-                    "potential_hazardous": dist_ld < 19.5 and diam_m > 140
-                })
-            cache_file.write_text(json.dumps(out))
-            return out
-    except Exception as e:
-        if cache_file.exists():
-            return json.loads(cache_file.read_text())
-        return []
-
-
-async def fetch_earthquakes(min_magnitude: float = 2.5, limit: int = 20) -> list[dict]:
-    """Fetch live seismic activity from USGS GeoJSON feed."""
-    DATA.mkdir(parents=True, exist_ok=True)
-    cache_file = DATA / "earthquakes.json"
-    if cache_file.exists() and time.time() - cache_file.stat().st_mtime < 600:
-        try:
-            cached = json.loads(cache_file.read_text())
-            return [eq for eq in cached if eq["magnitude"] >= min_magnitude][:limit]
-        except Exception:
-            pass
-
-    url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson"
-    try:
-        async with httpx.AsyncClient(timeout=10, headers=UA) as client:
-            resp = await client.get(url)
-            resp.raise_for_status()
-            data = resp.json()
-            features = data.get("features", [])
-            out = []
-            for f in features:
-                props = f.get("properties", {})
-                geom = f.get("geometry", {})
-                coords = geom.get("coordinates", [0, 0, 0])
-                mag = props.get("mag")
-                if mag is None:
-                    continue
-                out.append({
-                    "id": f.get("id"),
-                    "place": props.get("place", "Unknown"),
-                    "magnitude": round(float(mag), 1),
-                    "time": datetime.fromtimestamp(props.get("time", 0) / 1000.0, tz=timezone.utc).isoformat(),
-                    "lon": round(coords[0], 4),
-                    "lat": round(coords[1], 4),
-                    "depth_km": round(coords[2], 1),
-                    "url": props.get("url", "")
-                })
-            out.sort(key=lambda x: x["magnitude"], reverse=True)
-            cache_file.write_text(json.dumps(out))
-            return [eq for eq in out if eq["magnitude"] >= min_magnitude][:limit]
-    except Exception as e:
-        if cache_file.exists():
-            cached = json.loads(cache_file.read_text())
-            return [eq for eq in cached if eq["magnitude"] >= min_magnitude][:limit]
-        return []
+    """Distance, light time and an idealised Hohmann transfer from Earth (solsys.py, JPL elements)."""
+    eph = solsys.earth_link(target, date)
+    if not eph:
+        raise HTTPException(404, f"No position for '{target}'. Known: {', '.join(sorted(solsys.NAMES))}.")
+    m, sec = divmod(eph["light_time_seconds"], 60)
+    h, m = divmod(int(m), 60)
+    eph["light_time_one_way"] = f"{h}h {m}m {round(sec)}s" if h else f"{m}m {round(sec)}s" if m else f"{sec:.2f}s"
+    return eph
 
 
 def compute_local_sky(body_id: str, lat: float, lon: float, date: datetime | None = None) -> dict:
-    """Compute local celestial visibility, solar altitude, and visible targets from an observer's surface horizon."""
-    dt = date or datetime.now(timezone.utc)
-    b = body_id.lower().strip()
-    
-    doy = dt.timetuple().tm_yday
-    utc_hour = dt.hour + dt.minute / 60.0 + dt.second / 3600.0
-    phi = math.radians(lat)
-    
-    if b == "earth":
-        dec_sun = -23.44 * math.cos(math.radians(360.0 / 365.25 * (doy + 10)))
-        dec_rad = math.radians(dec_sun)
-        lst_hour = (utc_hour + lon / 15.0) % 24.0
-        ha_deg = (lst_hour - 12.0) * 15.0
-        ha_rad = math.radians(ha_deg)
-        
-        sin_alt = math.sin(phi) * math.sin(dec_rad) + math.cos(phi) * math.cos(dec_rad) * math.cos(ha_rad)
-        sun_alt = math.degrees(math.asin(max(-1.0, min(1.0, sin_alt))))
-        
-        cos_az = (math.sin(dec_rad) - math.sin(phi) * sin_alt) / (math.cos(phi) * math.cos(math.radians(sun_alt)) + 1e-7)
-        sun_az = math.degrees(math.acos(max(-1.0, min(1.0, cos_az))))
-        if math.sin(ha_rad) > 0:
-            sun_az = 360.0 - sun_az
-            
-        ref_new_moon = datetime(2024, 1, 11, 11, 57, tzinfo=timezone.utc)
-        days_since_new = (dt - ref_new_moon).total_seconds() / 86400.0
-        phase_cycle = (days_since_new % 29.530588) / 29.530588
-        illum = (1.0 - math.cos(2.0 * math.pi * phase_cycle)) / 2.0 * 100.0
-        
-        if phase_cycle < 0.03 or phase_cycle > 0.97:
-            phase_name = "New Moon"
-        elif phase_cycle < 0.22:
-            phase_name = "Waxing Crescent"
-        elif phase_cycle < 0.28:
-            phase_name = "First Quarter"
-        elif phase_cycle < 0.47:
-            phase_name = "Waxing Gibbous"
-        elif phase_cycle < 0.53:
-            phase_name = "Full Moon"
-        elif phase_cycle < 0.72:
-            phase_name = "Waning Gibbous"
-        elif phase_cycle < 0.78:
-            phase_name = "Last Quarter"
-        else:
-            phase_name = "Waning Crescent"
-            
-        moon_ha_deg = (ha_deg - phase_cycle * 360.0) % 360.0
-        if moon_ha_deg > 180:
-            moon_ha_deg -= 360
-        moon_ha_rad = math.radians(moon_ha_deg)
-        moon_dec_rad = math.radians(20.0 * math.sin(math.radians(days_since_new * 13.2)))
-        sin_m_alt = math.sin(phi) * math.sin(moon_dec_rad) + math.cos(phi) * math.cos(moon_dec_rad) * math.cos(moon_ha_rad)
-        moon_alt = math.degrees(math.asin(max(-1.0, min(1.0, sin_m_alt))))
-        
-        targets = [
-            {"name": "Moon", "type": "Natural Satellite", "alt_deg": round(moon_alt, 1), "phase": phase_name, "illumination": f"{round(illum)}%", "visible": moon_alt > 0},
-            {"name": "Venus", "type": "Planet", "alt_deg": round(sun_alt + 18.0 * math.sin(math.radians(doy * 1.5)), 1), "mag": -4.2, "visible": False},
-            {"name": "Jupiter", "type": "Planet", "alt_deg": round(math.degrees(math.asin(max(-1, min(1, math.sin(phi)*math.sin(0.4) + math.cos(phi)*math.cos(0.4)*math.cos(ha_rad + 2.5))))), 1), "mag": -2.3, "visible": False},
-            {"name": "Mars", "type": "Planet", "alt_deg": round(math.degrees(math.asin(max(-1, min(1, math.sin(phi)*math.sin(0.3) + math.cos(phi)*math.cos(0.3)*math.cos(ha_rad - 1.8))))), 1), "mag": +0.8, "visible": False},
-            {"name": "Saturn", "type": "Planet", "alt_deg": round(math.degrees(math.asin(max(-1, min(1, math.sin(phi)*math.sin(-0.2) + math.cos(phi)*math.cos(-0.2)*math.cos(ha_rad + 1.2))))), 1), "mag": +0.7, "visible": False},
-        ]
-        for t in targets:
-            if "alt_deg" in t:
-                t["visible"] = t["alt_deg"] > 0 and (sun_alt < -1 or (t["name"] == "Venus" and t["alt_deg"] > 25))
-                
-    elif b == "mars":
-        j2000 = datetime(2000, 1, 1, 12, 0, tzinfo=timezone.utc)
-        mars_days = (dt - j2000).total_seconds() / 88775.244
-        lst_mars = (mars_days * 24.0 + lon / 15.0) % 24.0
-        ha_deg = (lst_mars - 12.0) * 15.0
-        ha_rad = math.radians(ha_deg)
-        mars_ls = (mars_days / 668.6 * 360.0) % 360.0
-        dec_rad = math.radians(25.19 * math.sin(math.radians(mars_ls)))
-        sin_alt = math.sin(phi) * math.sin(dec_rad) + math.cos(phi) * math.cos(dec_rad) * math.cos(ha_rad)
-        sun_alt = math.degrees(math.asin(max(-1.0, min(1.0, sin_alt))))
-        sun_az = 180.0
-        
-        earth_alt = max(-30.0, min(65.0, sun_alt + 32.0 * math.sin(math.radians(mars_days * 0.4))))
-        
-        targets = [
-            {"name": "Earth & Moon", "type": "Interior Planet (Double Star)", "alt_deg": round(earth_alt, 1), "mag": -1.6, "visible": earth_alt > 0 and sun_alt < 2, "note": "Appears as a brilliant blue-white double star with the Moon orbiting nearby."},
-            {"name": "Phobos", "type": "Inner Moon", "alt_deg": round(math.sin(mars_days * 18.0) * 70.0, 1), "visible": True, "note": "Orbits in 7.6h: rises in the west, hurtles across the sky, and sets in the east ~2 times per sol!"},
-            {"name": "Deimos", "type": "Outer Moon", "alt_deg": round(math.sin(mars_days * 4.5) * 55.0, 1), "visible": True, "note": "Appears star-like, taking 2.7 sols to cross the Martian sky."},
-            {"name": "Jupiter", "type": "Planet", "alt_deg": round(42.0 * math.sin(math.radians(mars_days * 0.2)), 1), "mag": -2.6, "visible": sun_alt < 0},
-        ]
-        for t in targets:
-            if "alt_deg" in t:
-                t["visible"] = t.get("visible", False) and t["alt_deg"] > 0
-                
-    elif b == "moon":
-        cos_psi = math.cos(phi) * math.cos(math.radians(lon))
-        psi_deg = math.degrees(math.acos(max(-1.0, min(1.0, cos_psi))))
-        earth_elevation = 90.0 - psi_deg
-        
-        y = math.sin(math.radians(-lon))
-        x = math.cos(phi) * math.sin(math.radians(0)) - math.sin(phi) * math.cos(math.radians(-lon))
-        earth_az = (math.degrees(math.atan2(y, x)) + 360.0) % 360.0
-        
-        ref_new_moon = datetime(2024, 1, 11, 11, 57, tzinfo=timezone.utc)
-        days = (dt - ref_new_moon).total_seconds() / 86400.0
-        lunar_hour_angle = ((days / 29.530588) * 360.0 + lon) % 360.0
-        if lunar_hour_angle > 180:
-            lunar_hour_angle -= 360
-        sin_alt = math.cos(phi) * math.cos(math.radians(lunar_hour_angle))
-        sun_alt = math.degrees(math.asin(max(-1.0, min(1.0, sin_alt))))
-        sun_az = 180.0
-        
-        earth_phase_cycle = ((days + 14.765) % 29.530588) / 29.530588
-        earth_illum = (1.0 - math.cos(2.0 * math.pi * earth_phase_cycle)) / 2.0 * 100.0
-        
-        targets = []
-        if earth_elevation > -2.0:
-            targets.append({
-                "name": "Earth", "type": "Home Planet", "alt_deg": round(earth_elevation, 1),
-                "az_deg": round(earth_az, 1), "illumination": f"{round(earth_illum)}%",
-                "visible": earth_elevation > 0,
-                "note": f"Hangs nearly stationary at {round(earth_elevation, 1)}° elevation. Blue oceans, white clouds, spinning every 24 hours!"
-            })
-        else:
-            targets.append({
-                "name": "Earth", "type": "Home Planet", "alt_deg": round(earth_elevation, 1),
-                "visible": False,
-                "note": "Below the lunar horizon. The far side of the Moon never sees Earth (completely shielded from Earth radio noise)!"
-            })
-    else:
-        sun_alt = 15.0
-        sun_az = 180.0
-        targets = []
-
-    if sun_alt > 0:
-        state = "day"
-        state_label = "Daylight"
-    elif sun_alt > -6:
-        state = "civil_twilight"
-        state_label = "Civil Twilight"
-    elif sun_alt > -12:
-        state = "nautical_twilight"
-        state_label = "Nautical Twilight"
-    elif sun_alt > -18:
-        state = "astronomical_twilight"
-        state_label = "Astronomical Twilight"
-    else:
-        state = "night"
-        state_label = "Night Sky"
-        
-    return {
-        "body": b.capitalize(),
-        "lat": round(lat, 4),
-        "lon": round(lon, 4),
-        "timestamp": dt.isoformat(),
-        "solar_altitude_deg": round(sun_alt, 1),
-        "solar_azimuth_deg": round(sun_az, 1),
-        "state": state,
-        "state_label": state_label,
-        "targets": targets,
-    }
+    """Sun, planets and near moons in the local sky (solsys.py: JPL elements + IAU rotation models)."""
+    sky = solsys.local_sky(body_id, lat, lon, date)
+    if not sky:
+        raise HTTPException(400, f"Sky view works on {', '.join(sorted(solsys.ROTATION))}; not '{body_id}'.")
+    return sky
 
 
 def compute_great_circle_distance(radius_km: float, lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -803,14 +454,17 @@ async def solar_system_ephemeris_tool(args: dict, ctx: Any) -> ToolResult:
 
     ht = eph["hohmann_transfer"]
     text = (
-        f"**Orbital Telemetry & Transfer Windows: Earth ➔ {eph['target']}**\n"
-        f"• Current Distance: {eph['distance_au']} AU ({eph['distance_km']:,} km)\n"
-        f"• One-Way Light Time Delay: {eph['light_time_one_way']}\n"
-        f"• Hohmann Transfer Duration: {ht['duration_days']} days (~{round(ht['duration_days']/30.4, 1)} months)\n"
-        f"• Departure Δv (LEO eject): {ht['departure_delta_v_kms']} km/s | Arrival Δv: {ht['arrival_delta_v_kms']} km/s\n"
-        f"• Total Mission Δv: {ht['total_delta_v_kms']} km/s\n"
-        f"• Synodic Transfer Window Cycle: Every {ht['synodic_window_days']} days"
+        f"**Earth ➔ {eph['target']}** (computed from JPL orbital elements, about 1° accuracy)\n"
+        f"• Current distance: {eph['distance_au']} AU ({eph['distance_km']:,.0f} km)\n"
+        f"• One-way light time: {eph['light_time_one_way']}\n"
     )
+    if ht:
+        text += (
+            f"• Hohmann transfer: {ht['duration_days']} days (~{round(ht['duration_days']/30.4, 1)} months)\n"
+            f"• Heliocentric Δv: {ht['departure_delta_v_kms']} km/s at departure + {ht['arrival_delta_v_kms']} km/s at arrival = {ht['total_delta_v_kms']} km/s\n"
+            f"• Launch windows recur every {ht['synodic_window_days']} days\n"
+            f"• {ht['note']}"
+        )
     return ToolResult(text, {"target": target, "distance_au": eph["distance_au"]})
 
 
@@ -864,16 +518,20 @@ async def local_sky_view_tool(args: dict, ctx: Any) -> ToolResult:
     b = str(args.get("body", "earth")).lower().strip()
     lat = float(args.get("lat", 0.0))
     lon = float(args.get("lon", 0.0))
-    sky = compute_local_sky(b, lat, lon)
+    try:
+        sky = compute_local_sky(b, lat, lon)
+    except HTTPException as e:
+        return ToolResult(str(e.detail), error=True)
     
     lines = [
         f"**Local Horizon & Sky Simulation: {sky['body']} ({sky['lat']}°, {sky['lon']}°)**",
         f"• Solar Status: {sky['state_label']} (Sun Altitude: {sky['solar_altitude_deg']}°)",
+        f"• {sky['note']}",
         f"• Celestial Targets in the Local Sky:"
     ]
     for t in sky["targets"]:
-        vis = "✨ Visible" if t.get("visible") else "Below Horizon / Obscured"
-        alt = f"Alt: {t['alt_deg']}°" if "alt_deg" in t else ""
+        vis = "Above horizon" if t.get("visible") else "Below horizon"
+        alt = f"Alt: {t['alt_deg']}°, Az: {t['az_deg']}°" if "alt_deg" in t else ""
         phase = f"Phase: {t['phase']}" if "phase" in t else f"Illumination: {t.get('illumination', '')}" if "illumination" in t else ""
         note = f" — {t['note']}" if t.get("note") else ""
         lines.append(f"  • **{t['name']}** ({t.get('type', '')}) — {vis} | {alt} {phase}{note}")

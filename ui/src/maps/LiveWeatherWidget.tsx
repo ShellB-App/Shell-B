@@ -83,7 +83,7 @@ export function LiveWeatherWidget({ lat, lon, onClose }: LiveWeatherWidgetProps)
   const Icon = w?.icon ?? Sun;
 
   return (
-    <div className="w-68 rounded-lg border border-[var(--border-subtle)] sb-map-glass p-3 text-[12px] shadow-xl backdrop-blur-md">
+    <div className="w-[17rem] rounded-lg border border-[var(--border-subtle)] sb-map-glass p-3 text-[12px] shadow-xl backdrop-blur-md">
       <div className="flex items-center justify-between pb-2 border-b border-[var(--border-subtle)]">
         <div className="flex items-center gap-1.5 font-semibold text-[12px] text-[var(--text-primary)]">
           <Thermometer className="w-3.5 h-3.5 text-amber-500" />
