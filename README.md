@@ -8,6 +8,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-blue.svg?style=for-the-badge&logo=gnu" alt="License: AGPL v3" /></a>
+  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-Welcome-brightgreen.svg?style=for-the-badge" alt="PRs Welcome" /></a>
   <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.12" /></a>
   <a href="https://react.dev"><img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React 19" /></a>
   <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" /></a>
@@ -30,7 +31,8 @@
   <b><a href="#-interface-showcase">Showcase</a></b> •
   <b><a href="#what-it-does">Features</a></b> •
   <b><a href="#%EF%B8%8F-architecture">Architecture</a></b> •
-  <b><a href="#-access--networking">Networking</a></b>
+  <b><a href="#-access--networking">Networking</a></b> •
+  <b><a href="CONTRIBUTING.md">Contributing</a></b>
 </p>
 
 </div>
@@ -576,3 +578,9 @@ switches theme, `&peek=N` opens the Nth rich-link popover, and `&modal=agents|to
 - An artifact that hard-codes `/api/workspace/<conv>/…` (rather than going through the frame-key prefix) can't load
   that file inside its sandboxed preview, because no cookie is sent from there.
 - The microphone needs HTTPS (browser rule), so dictation works only through a Tailscale `https://` URL.
+
+## 🤝 Contributing
+
+Shell:B is an open, evolving scaffold dedicated to Shelby and crafted in collaboration with AI. We welcome bug fixes, documentation improvements, agent personas, voice models, ComfyUI pipelines, and UI enhancements.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for local development setup, engineering guidelines, and the pull request process.
