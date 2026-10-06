@@ -1,3 +1,4 @@
+import { scopedPrefix } from './frameKey';
 import type {
   Agent, Attachment, Commit, Conversation, ConversationSummary, KindInfo, Memory, ModelInfo, Project, ProjectFile, ProjectKind,
   ProjectSummary, Settings, WorkspaceFile, Status, StreamEvent, ToolInfo, Connector, McpServer, Provider, Skill, SkillDetail, ClaudeSkill, ChatProject, ChatProjectDetail, Library,
@@ -19,8 +20,9 @@ export interface AuthInfo { authenticated: boolean; via: 'session' | 'local' | n
 export interface AuthSession { created: number; lastSeen: number; ip: string; userAgent: string; current: boolean }
 let frameKey: string | null = null;
 export const setFrameKey = (k: string | null) => { frameKey = k; };
-/** Base for /api URLs that a sandboxed frame loads (boot.js, project pages): `/api/k/<key>` when logged in, else `/api`. */
-export const frameApi = () => (frameKey ? `/api/k/${frameKey}` : '/api');
+/** Base for /api URLs that a sandboxed frame loads (boot.js, project pages, /work files). The key reaches `scope` only
+ *  (`p-<pid>` a project, `w-<conv>` one chat's /work, `x` neither) plus shared asset/media files (server/auth.py). */
+export const frameApi = (scope = 'x') => (frameKey ? scopedPrefix(frameKey, scope) : '/api');
 /** Fired when the server says the session is gone; AuthGate shows the login screen. */
 export const AUTH_LOST = 'shellb-auth-lost';
 
@@ -510,7 +512,7 @@ export const fmtBytes = (n: number) =>
 export const encPath = (p: string) => p.split('/').map(encodeURIComponent).join('/');
 export const rawUrl = (projectId: string, path: string) => `/api/projects/${projectId}/raw/${encPath(path)}`;
 /** rawUrl for a page shown in a sandboxed frame: under the frame key, so its relative fetches work without the cookie. */
-export const frameRawUrl = (projectId: string, path: string) => `${frameApi()}/projects/${projectId}/raw/${encPath(path)}`;
+export const frameRawUrl = (projectId: string, path: string) => `${frameApi(`p-${projectId}`)}/projects/${projectId}/raw/${encPath(path)}`;
 
 /** Streams a grounded notebook answer: citations first, then text deltas, then done. */
 export type NotebookEvent =

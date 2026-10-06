@@ -7,9 +7,15 @@ Who gets in:
 - **The owner.** POST /api/auth/login with the password sets an HttpOnly `shellb_session` cookie. Sessions last
   30 days from last use. A logged-in owner also counts as admin (see `is_owner`). Localhost is not admin.
 - **Sandboxed frames.** Artifacts and Studio pages run in iframes with an opaque origin, and browsers don't send
-  SameSite cookies from those. Each session therefore has a `frame_key`, and `/api/k/<frame_key>/<rest>` acts as
-  `/api/<rest>` for a short allowlist of read-only content routes plus app state (FRAME_ROUTES). It never grants admin.
-  A Studio page loaded into an iframe with the cookie is redirected under that prefix, so its relative URLs keep working.
+  SameSite cookies from those. They load through `/api/k/<scope>.<mac>/<rest>`, a key that reaches one thing only:
+  `p-<pid>` a project's pages, `w-<conv>` one chat's /work files, `x` neither. Every scope also reaches the shared
+  asset-library and media files and its own saved state (`_frame_allowed`). The mac is HMAC(scope) under the session's
+  `frame_key` (the UI computes it, ui/src/frameKey.ts) or, for pages shown on the machine itself, a local secret.
+  A page opened with the cookie, or from localhost, is redirected under its project's key, so relative URLs keep working.
+  Never admin. A page can't read another project's or chat's files: it never learns another scope's key.
+- **Sandboxed content on localhost gets no localhost trust.** A loopback request with `Origin: null` or a cross-site /
+  same-site `Sec-Fetch-Site` comes from a page (a sandboxed frame, a dev-server preview, any website), not from this
+  machine's tools, so it is treated as anonymous (SANDBOX_WRITES aside).
 - **Public:** the UI shell and static assets (non-/api paths), /api/auth/*, /api/_hold, and /api/files/* (generated
   media with random names that only authenticated APIs hand out).
 
@@ -25,7 +31,7 @@ import re
 import secrets
 import time
 from http.cookies import SimpleCookie
-from urllib.parse import quote
+from urllib.parse import parse_qs, quote
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -38,17 +44,17 @@ COOKIE = "shellb_session"
 SESSION_TTL = 30 * 86400
 MIN_PASSWORD = 8
 PUBLIC = re.compile(r"^/api/(auth(/|$)|_hold$|files/[^/]+$)")
-# what a frame key may reach: (methods, path under /api/)
-FRAME_ROUTES = [
-    ({"GET", "HEAD"}, re.compile(r"^appstate/boot\.js$")),
-    ({"GET", "HEAD", "POST"}, re.compile(r"^appstate$")),
-    ({"GET", "HEAD"}, re.compile(r"^projects/[A-Za-z0-9_-]+/(raw|draft)/.*")),
-    ({"GET", "HEAD"}, re.compile(r"^workspace/[A-Za-z0-9_-]+/.+")),
+# what every frame key may reach, whatever its scope: (methods, path under /api/)
+FRAME_SHARED = [
     ({"GET", "HEAD"}, re.compile(r"^assets/file/[A-Za-z0-9_-]+/.+")),
     ({"GET", "HEAD"}, re.compile(r"^files/[^/]+$")),
 ]
-FRAME_PREFIX = re.compile(r"^/api/k/([A-Za-z0-9_-]{20,64})/(.*)$")
-RAW_PAGE = re.compile(r"^/api/projects/[A-Za-z0-9_-]+/(raw|draft)/")
+FRAME_PREFIX = re.compile(r"^/api/k/([A-Za-z0-9_.-]{1,160})/(.*)$")
+SCOPED_KEY = re.compile(r"^(p-[A-Za-z0-9_-]{1,64}|w-[A-Za-z0-9_-]{1,64}|x)\.([0-9a-f]{32})$")
+RAW_PAGE = re.compile(r"^/api/projects/([A-Za-z0-9_-]+)/(raw|draft)/")
+WORK_PAGE = re.compile(r"^/api/workspace/([A-Za-z0-9_-]+)/.")
+PAGE_DESTS = ("iframe", "frame", "document")
+SANDBOX_SITES = {"cross-site", "same-site"}  # Sec-Fetch-Site of a request a page made, not this machine's own tools
 # the only writes sandboxed content (Origin: null) may make on localhost trust: saved app state and the screenshot beacon
 SANDBOX_WRITES = re.compile(r"^/api/(appstate|projects/_shotinfo/[A-Za-z0-9]+)$")
 UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
@@ -122,10 +128,73 @@ def _session(token: str | None) -> dict | None:
     return dict(row) if row else None
 
 
-def _frame_session(key: str) -> dict | None:
+def frame_mac(secret: str, scope: str) -> str:
+    return hmac.new(secret.encode(), scope.encode(), hashlib.sha256).hexdigest()[:32]
+
+
+def local_frame_secret() -> str:
+    """The frame secret of pages shown on this machine without a login (kiosk, cover screenshots)."""
+    s = db.kv_get("frame_local_secret")
+    if not s:
+        s = secrets.token_hex(24)
+        db.kv_set("frame_local_secret", s)
+    return s
+
+
+def frame_prefix(secret: str, scope: str) -> str:
+    return f"/api/k/{scope}.{frame_mac(secret, scope)}"
+
+
+_grants: dict[str, tuple[float, str, str | None]] = {}  # key -> (checked at, scope, session id or None for local)
+
+
+def _frame_grant(key: str, local: bool) -> tuple[str, dict | None] | None:
+    """(scope, session) for a valid scoped key, else None. A local-secret key is only good on loopback."""
+    m = SCOPED_KEY.match(key)
+    if not m:
+        return None
+    scope, mac = m.groups()
+    now = time.time()
+    hit = _grants.get(key)
     with db.conn() as c:
-        row = c.execute("SELECT * FROM auth_sessions WHERE frame_key=? AND expires>?", (key, time.time())).fetchone()
-    return dict(row) if row else None
+        if hit and now - hit[0] < 60:
+            if hit[2] is None:
+                return (scope, None) if local else None
+            row = c.execute("SELECT * FROM auth_sessions WHERE id=? AND expires>?", (hit[2], now)).fetchone()
+            return (scope, dict(row)) if row else None
+        rows = c.execute("SELECT * FROM auth_sessions WHERE expires>?", (now,)).fetchall()
+    if len(_grants) > 2000:
+        _grants.clear()
+    for r in rows:
+        if hmac.compare_digest(frame_mac(r["frame_key"], scope), mac):
+            _grants[key] = (now, scope, r["id"])
+            return scope, dict(r)
+    if hmac.compare_digest(frame_mac(local_frame_secret(), scope), mac):
+        _grants[key] = (now, scope, None)
+        return (scope, None) if local else None
+    return None
+
+
+def _frame_allowed(scope: str, method: str, rest: str, query: str) -> bool:
+    """A scoped key reaches its own project or chat, the shared files, and its own saved state."""
+    if any(method in ms and rx.match(rest) for ms, rx in FRAME_SHARED):
+        return True
+    kind, _, ident = scope.partition("-")
+    if rest in ("appstate/boot.js", "appstate") and method in ({"GET", "HEAD"} if rest.endswith(".js") else {"GET", "HEAD", "POST"}):
+        s = (parse_qs(query).get("s") or [""])[0]
+        return not s or (kind == "p" and s == f"proj:{ident}") or (kind == "w" and s.startswith(f"art:{ident}:"))
+    if method not in ("GET", "HEAD"):
+        return False
+    if kind == "p":
+        return re.match(rf"^projects/{re.escape(ident)}/(raw|draft)/", rest) is not None
+    if kind == "w":
+        return rest.startswith(f"workspace/{ident}/") and len(rest) > len(f"workspace/{ident}/")
+    return False
+
+
+def _from_page(h: dict) -> bool:
+    """A request some page made (sandboxed frame, preview, website) rather than this machine's own tools."""
+    return h.get("origin") == "null" or h.get("sec-fetch-site") in SANDBOX_SITES
 
 
 def drop_sessions(keep_id: str | None = None):
@@ -232,13 +301,13 @@ class AuthMiddleware:
         m = FRAME_PREFIX.match(path)
         if m:
             key, rest = m.groups()
-            sess = _frame_session(key) if any(method in ms and rx.match(rest) for ms, rx in FRAME_ROUTES) else None
-            if not sess and not _is_local(scope, h):
+            grant = _frame_grant(key, _is_local(scope, h))
+            if not grant:
                 return await _deny(scope, receive, send, 401, "login-required")
-            if not sess and _local_write_refused(method, "/api/" + rest, h):
-                return await _deny(scope, receive, send, 403, "cross-origin-request")
+            if not _frame_allowed(grant[0], method, rest, scope.get("query_string", b"").decode("latin-1")):
+                return await _deny(scope, receive, send, 403, "outside-frame-scope")
             scope = {**scope, "path": "/api/" + rest, "raw_path": ("/api/" + rest).encode(),
-                     "shellb_auth": "frame", "shellb_session": sess, "shellb_prefix": f"/api/k/{key}"}
+                     "shellb_auth": "frame", "shellb_session": grant[1], "shellb_prefix": f"/api/k/{key}"}
             return await self.app(scope, receive, send)
 
         sess = _session(_cookie(h))
@@ -248,12 +317,20 @@ class AuthMiddleware:
             # a Studio page framed with the cookie moves under the frame prefix, where its subresources work too
             # a project page opened with the cookie, framed or in its own tab, moves under the frame key: it runs
             # sandboxed (projects.PAGE_SANDBOX), so its relative URLs need a prefix that works without the cookie
-            if method == "GET" and RAW_PAGE.match(path) and h.get("sec-fetch-dest") in ("iframe", "frame", "document"):
-                qs = scope.get("query_string", b"").decode("latin-1")
-                loc = f"/api/k/{sess['frame_key']}/{quote(path[5:])}" + (f"?{qs}" if qs else "")
+            loc = _page_location(sess["frame_key"], method, path, h, scope)
+            if loc:
                 return await _redirect(send, loc)
             scope = {**scope, "shellb_auth": "session", "shellb_session": sess}
+        elif _is_local(scope, h) and _from_page(h):
+            # loopback, but sent by a page (a sandboxed frame, a preview, a website open on this machine): no local trust
+            if method in UNSAFE and SANDBOX_WRITES.match(path):
+                scope = {**scope, "shellb_auth": "local"}
+            elif not PUBLIC.match(path):
+                return await _deny(scope, receive, send, 401, "login-required")
         elif _is_local(scope, h):
+            loc = _page_location(local_frame_secret(), method, path, h, scope)  # kiosk, cover screenshots
+            if loc:
+                return await _redirect(send, loc)
             # localhost trust is for this machine's own tools, not for pages it renders: a write that a browser sends
             # from another origin (e.g. a Studio dev-server preview on :8210, or any website) doesn't get it
             if _local_write_refused(method, path, h):
@@ -262,6 +339,19 @@ class AuthMiddleware:
         elif not PUBLIC.match(path):
             return await _deny(scope, receive, send, 401, "login-required")
         return await self.app(scope, receive, send)
+
+
+def _page_location(secret: str, method: str, path: str, h: dict, scope) -> str | None:
+    """A project page or a chat's /work file opened as a page (framed or in its own tab) runs sandboxed, so its relative
+    URLs need a prefix that works without the cookie: redirect it under its own scoped key."""
+    if method != "GET" or h.get("sec-fetch-dest") not in PAGE_DESTS:
+        return None
+    m = RAW_PAGE.match(path)
+    w = None if m else WORK_PAGE.match(path)
+    if not (m or w):
+        return None
+    qs = scope.get("query_string", b"").decode("latin-1")
+    return f"{frame_prefix(secret, ('p-' if m else 'w-') + (m or w).group(1))}/{quote(path[5:])}" + (f"?{qs}" if qs else "")
 
 
 def _local_write_refused(method: str, path: str, h: dict) -> bool:
@@ -408,7 +498,8 @@ def _me(req: Request, sess: dict | None = None) -> dict:
     sess = sess if sess is not None else session_of(req)
     how = req.scope.get("shellb_auth")
     return {"authenticated": bool(sess) or how == "local", "via": "session" if sess else how,
-            "passwordSet": has_password(), "frameKey": sess["frame_key"] if sess else None}
+            "passwordSet": has_password(),
+            "frameKey": sess["frame_key"] if sess else local_frame_secret() if how == "local" else None}
 
 
 # ── routes ──────────────────────────────────────────────────────────────────

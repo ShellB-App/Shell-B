@@ -16,19 +16,21 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 /** Saved-state scope of a chat artifact (server/appstate.py); shared by all its versions. */
 export const artifactScope = (convId: string, artId: string) => `art:${convId}:${artId}`;
 
-/** A sandboxed frame gets no cookie, so /api file URLs in its content go through the frame key (server/auth.py). */
-const viaFrameKey = (content: string) => frameApi() === '/api' ? content
-  : content.replace(/(["'(=\s])\/api\/(workspace|assets\/file)\//g, `$1${frameApi()}/$2/`);
+/** A sandboxed frame gets no cookie, so /api file URLs in its content go through its frame key (server/auth.py), which
+ *  reaches this chat's /work and the asset libraries only. */
+const viaFrameKey = (content: string, api: string) => api === '/api' ? content
+  : content.replace(/(["'(=\s])\/api\/(workspace|assets\/file)\//g, `$1${api}/$2/`);
 
 /** `scope` gives the page a localStorage saved on the server (read-only with `ro`); without it, one that forgets.
  *  With `convId`, relative URLs (fonts, images, data) resolve against that chat's /work folder. */
 export function srcDoc(type: string, content: string, dark: boolean, scope?: string, ro?: boolean, convId?: string) {
-  const base = `<base href="${location.origin}${convId ? `${frameApi()}/workspace/${encodeURIComponent(convId)}/` : '/'}">`;
-  if (type === 'html' || type === 'svg') content = viaFrameKey(localizeCdn(content));
+  const api = frameApi(convId ? `w-${convId}` : 'x');
+  const base = `<base href="${location.origin}${convId ? `${api}/workspace/${encodeURIComponent(convId)}/` : '/'}">`;
+  if (type === 'html' || type === 'svg') content = viaFrameKey(localizeCdn(content), api);
   if (type === 'html') {
     // first in <head>, a blocking script, so localStorage is ready before the page's own scripts run
     const q = scope ? `?s=${encodeURIComponent(scope)}${ro ? '&ro=1' : ''}` : '';
-    const head = `${base}<script src="${frameApi()}/appstate/boot.js${q}"></script>`;
+    const head = `${base}<script src="${api}/appstate/boot.js${q}"></script>`;
     if (/<head[^>]*>/i.test(content)) return content.replace(/<head([^>]*)>/i, `<head$1>${head}`);
     if (/<html[^>]*>/i.test(content)) return content.replace(/<html([^>]*)>/i, `<html$1><head>${head}</head>`);
     return `<!doctype html><html><head>${head}<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>${content}</body></html>`;
