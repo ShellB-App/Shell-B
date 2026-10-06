@@ -17,6 +17,7 @@ READ_ONLY = {
 READ_ACTIONS = {
     "library": {"list", "search", "browse", "read", "view"},
     "codex": {"search", "read", "list", "collections"},
+    "follow_ups": {"list"},
     "asset_library": {"libraries", "search", "list", "info", "view", "jobs"},
     "research_board": {"view", "list", "open", "search"},
     "project_todos": {"list"},

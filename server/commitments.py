@@ -37,6 +37,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 import db
 import memory
+import providers
 
 router = APIRouter()
 
@@ -308,14 +309,18 @@ def after_turn(conv_id: str, msg_id: str, user_text: str, reply: str, agent: dic
     try:
         touch_owner()
         settings = _settings()
+        by_tool = _by_tool.pop(msg_id, [])
+        if by_tool:  # the agent used follow_ups this turn: show those under the reply (the message exists only now)
+            _save_noted(msg_id, by_tool)
+            _noted[msg_id] = {"state": "done", "items": by_tool}
         text = (user_text or "").split("\n\n[Selected element in ")[0].strip()
         if not settings.get("followUps", True) or not agent or len(text) < 8 or _incognito(conv_id):
             return
         has_open = bool(rows(limit=1))
         if not (_USER_HINT.search(text) or _AGENT_HINT.search(reply or "") or (has_open and _DONE_HINT.search(text))):
             return
-        _noted[msg_id] = {"state": "running", "items": []}
-        t = asyncio.create_task(_learn_turn(conv_id, msg_id, text, reply, settings))
+        _noted[msg_id] = {"state": "running", "items": by_tool}
+        t = asyncio.create_task(_learn_turn(conv_id, msg_id, text, reply, settings, by_tool))
         _tasks.add(t)
         t.add_done_callback(_tasks.discard)
     except Exception as e:  # noqa: BLE001
@@ -325,7 +330,6 @@ def after_turn(conv_id: str, msg_id: str, user_text: str, reply: str, agent: dic
 async def _ask_json(prompt: str, settings: dict, n=500) -> tuple[dict, str]:
     """(parsed, raw). Local utility model only; {} when it's a cloud model or the call fails to parse."""
     from agent import OLLAMA, model_info
-    import providers
     model = settings.get("utilityModel") or ""
     if not model or providers.is_cloud(model):  # chat text never goes to a cloud model for this
         return {}, ""
@@ -376,8 +380,8 @@ async def propose(exchange: str, settings: dict) -> tuple[list[dict], list[str],
     return out[:4], done[:4], raw
 
 
-async def _learn_turn(conv_id, msg_id, text, reply, settings):
-    items = []
+async def _learn_turn(conv_id, msg_id, text, reply, settings, prior=()):
+    items = list(prior)  # what the agent noted itself with follow_ups; add() skips the learner's repeats of it
     try:
         async with memory._lock:  # one utility-model call at a time on the shared GPU
             exchange = (f"Latest exchange:\n<user>\n{memory._clip(text, 3000)}\n</user>\n<assistant>\n"
@@ -389,7 +393,8 @@ async def _learn_turn(conv_id, msg_id, text, reply, settings):
                 items.append({"op": "add", "id": cid, "text": f["text"], "due": _due(f["due"]), "who": f["who"]})
         for cid in done:
             c0 = get(cid)
-            if c0 and c0["status"] == "open":
+            # never close what this same turn created: "add a follow-up… tell me what you added" read as "done"
+            if c0 and c0["status"] == "open" and c0.get("msgId") != msg_id:
                 update(cid, status="done")
                 items.append({"op": "done", "id": cid, "text": c0["text"], "due": c0["due"], "who": c0["who"]})
         if items:
@@ -422,6 +427,122 @@ def _drop_noted(msg_id, cid):
             c.execute("UPDATE messages SET data=? WHERE id=?", (json.dumps(data), msg_id))
     if msg_id in _noted:
         _noted[msg_id]["items"] = [i for i in _noted[msg_id]["items"] if i.get("id") != cid]
+
+
+# ── agent tool ──────────────────────────────────────────────────────────────
+
+_by_tool: dict[str, list[dict]] = {}  # assistant message id -> follow-ups the agent added/closed during that turn
+
+
+def tool_allowed(agent: dict, settings: dict) -> bool:
+    """Every chat agent gets follow_ups while follow-ups are on; cloud agents only with cloud memory (they're personal)."""
+    if not settings.get("followUps", True):
+        return False
+    return not providers.is_cloud(agent.get("model", "")) or bool(settings.get("cloudMemory", False))
+
+
+def _noted_by_tool(ctx, item: dict):
+    lst = _by_tool.setdefault(ctx.message_id, [])
+    lst.append(item)
+    if len(_by_tool) > 200:
+        for k in list(_by_tool)[:100]:
+            _by_tool.pop(k, None)
+
+
+def _line(c: dict, today: date, status=False) -> str:
+    out = f"[{c['id']}] {c['text']}"
+    if c["due"]:
+        out += f" — due {c['due']} ({_fmt_due(c['due'], today)})"
+    if (c["who"] or "me") != "me":
+        out += f" · owed by {c['who']}"
+    if status:
+        out += f" · {c['status']}"
+    return out
+
+
+def _tool_due(raw, today: date) -> tuple[str | None, str | None]:
+    """(due, error): ISO dates pass through, spoken ones ("Friday", "end of month") are counted from today."""
+    if raw in (None, ""):
+        return None, None
+    due = _due(raw) or relative_due(raw, today)
+    return (due, None) if due else (None, f"Couldn't read the due date {str(raw)!r}: give YYYY-MM-DD (optionally THH:MM).")
+
+
+async def follow_ups_tool(args, ctx):
+    from tools import ToolResult
+    a = str(args.get("action") or "list")
+    today = _today(ctx.settings)
+    if a == "list":
+        status = str(args.get("status") or "open")
+        statuses = STATUSES if status == "all" else (status,) if status in STATUSES else ("open",)
+        items = rows(statuses, limit=max(1, min(100, int(args.get("limit") or 40))))
+        if not items:
+            return ToolResult("No open follow-ups." if statuses == ("open",) else "No follow-ups.")
+        return ToolResult(f"Today is {today.isoformat()} ({today.strftime('%A')}).\n"
+                          + "\n".join(_line(c, today, status == "all") for c in items))
+    if a == "add":
+        due, err = _tool_due(args.get("due"), today)
+        if err:
+            return ToolResult(err, error=True)
+        who = "agent" if str(args.get("who") or "").lower() in ("agent", "assistant", "you") else "me"
+        try:
+            cid, dup = add(args.get("text"), due=due, who=who, origin="chat", conv_id=ctx.conv_id, msg_id=ctx.message_id)
+        except ValueError:
+            return ToolResult("add needs text: one short imperative phrase, e.g. \"Send the Q3 deck to Mark\".", error=True)
+        if dup:
+            return ToolResult(f"Already tracked, so nothing was added: {_line(dup, today)}")
+        c = get(cid)
+        _noted_by_tool(ctx, {"op": "add", "id": cid, "text": c["text"], "due": c["due"], "who": c["who"]})
+        return ToolResult(f"Added: {_line(c, today)}. The owner sees it under your reply (with Undo) and in Activity → Follow-ups.")
+    cid = str(args.get("id") or "").strip()
+    c0 = get(cid) if cid else None
+    if a in ("done", "dismiss", "update", "reopen") and not c0:
+        return ToolResult(f"No follow-up {cid!r}. Use action=list to see the ids.", error=True)
+    if a in ("done", "dismiss", "reopen"):
+        c = update(cid, status={"done": "done", "dismiss": "dismissed", "reopen": "open"}[a])
+        if a == "done":
+            _noted_by_tool(ctx, {"op": "done", "id": cid, "text": c["text"], "due": c["due"], "who": c["who"]})
+        return ToolResult(f"{ {'done': 'Marked done', 'dismiss': 'Dismissed', 'reopen': 'Reopened'}[a] }: {_line(c, today)}")
+    if a == "update":
+        kw = {}
+        if args.get("text"):
+            kw["text"] = args["text"]
+        if "due" in args:
+            due, err = _tool_due(args.get("due"), today)
+            if err:
+                return ToolResult(err, error=True)
+            kw["due"] = due
+        if args.get("who"):
+            kw["who"] = "agent" if str(args["who"]).lower() in ("agent", "assistant", "you") else "me"
+        if not kw:
+            return ToolResult("update needs text, due (null clears it) or who.", error=True)
+        return ToolResult(f"Updated: {_line(update(cid, **kw), today)}")
+    return ToolResult(f"Unknown action {a!r}.", error=True)
+
+
+def register():
+    from tools import TOOLS, _fn
+    TOOLS["follow_ups"] = {
+        "fn": follow_ups_tool, "service": None, "scope": "global",
+        "ui": {"displayName": "Follow-ups", "icon": "ListTodo", "category": "memory",
+               "description": "The owner's follow-ups: things she said she'd do or asked to be reminded of, and things an agent "
+                              "promised. They show in Activity and in the morning brief."},
+        "schema": _fn("follow_ups",
+                      "The owner's follow-ups (personal to-dos and reminders, shown in Activity and the morning brief). Use it when "
+                      "she asks to be reminded of something, says she'll do something by a date, asks what's on her plate, or "
+                      "says she finished something. list (status open|done|dismissed|all) → items with ids and due dates; add "
+                      "(text, due, who) → one short imperative phrase (\"Call the vet about Luna's shots\"), due as YYYY-MM-DD"
+                      "[THH:MM] or words like \"Friday\" / \"end of month\", who=me (the owner, default) or agent (you "
+                      "promised it); done / dismiss / reopen (id); update (id, text, due, who). Chats are also scanned for "
+                      "follow-ups automatically after each reply, so don't add one just because she mentioned a plan.",
+                      {"action": {"type": "string", "enum": ["list", "add", "done", "dismiss", "reopen", "update"]},
+                       "id": {"type": "string", "description": "Follow-up id (fu-…)"},
+                       "text": {"type": "string"},
+                       "due": {"type": ["string", "null"], "description": "YYYY-MM-DD[THH:MM] or a spoken day; null clears it"},
+                       "who": {"type": "string", "enum": ["me", "agent"]},
+                       "status": {"type": "string", "enum": ["open", "done", "dismissed", "all"]},
+                       "limit": {"type": "integer"}}, ["action"]),
+    }
 
 
 # ── meetings (secretary.py action items) ────────────────────────────────────

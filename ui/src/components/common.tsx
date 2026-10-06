@@ -2,7 +2,7 @@ import { useEffect, type ReactNode } from 'react';
 import clsx from 'clsx';
 import {
   BookMarked, BookOpen,
-  Boxes, Brain, BrainCircuit, CalendarClock, History, Camera, FileSearch, FolderSearch, GitCompare, TextSearch, ScanEye, ScanText, Sparkles, WandSparkles, Eye, FilePen, FilePlus, FileSymlink, FileText, FolderTree, GitFork, Globe, Image, Library, ListChecks, MessageCircleQuestion, Music,
+  Boxes, Brain, BrainCircuit, CalendarClock, History, Camera, FileSearch, FolderSearch, GitCompare, TextSearch, ScanEye, ScanText, Sparkles, WandSparkles, Eye, FilePen, FilePlus, FileSymlink, FileText, FolderTree, GitFork, Globe, Image, Library, ListChecks, ListTodo, MessageCircleQuestion, Music,
   ScanFace, Search, Shapes, Download, Telescope, Terminal, Trash2, Workflow, Wrench, X, type LucideIcon,
 } from 'lucide-react';
 import type { Agent } from '../types';
@@ -15,7 +15,7 @@ export const TOOL_ICONS: Record<string, LucideIcon> = {
   search_files: TextSearch, find_files: FolderSearch, project_diff: GitCompare,
   read_document: FileSearch, view_document: ScanEye, ocr: ScanText,
   use_skill: Sparkles, read_skill_file: FileText, save_skill: WandSparkles, schedule_task: CalendarClock, project_todos: ListChecks,
-  research_board: Telescope, mega_plan: Workflow, library: Library, codex: BookMarked, asset_library: Shapes, scrape: Download,
+  research_board: Telescope, mega_plan: Workflow, library: Library, codex: BookMarked, follow_ups: ListTodo, asset_library: Shapes, scrape: Download,
   shellb_self: ScanFace, ask_user: MessageCircleQuestion, wiki: BookOpen,
 };
 export const toolIcon = (name: string) => TOOL_ICONS[name] ?? Wrench;
@@ -40,6 +40,7 @@ export const TOOL_LABELS: Record<string, [string, string]> = {
   mega_plan: ['Updating the mega plan', 'Updated the mega plan'],
   library: ['Checking the library', 'Checked the library'],
   codex: ['Checking the Codex', 'Checked the Codex'],
+  follow_ups: ['Checking follow-ups', 'Checked follow-ups'],
   wiki: ['Looking it up in the wiki', 'Looked it up in the wiki'],
   asset_library: ['Working in the asset libraries', 'Used the asset libraries'],
   scrape: ['Scouting the web', 'Scouted the web'],

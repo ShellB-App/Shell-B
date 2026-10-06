@@ -767,7 +767,7 @@ export function App() {
             )}
           </div>
         ) : (<>
-        {incognito && <IncognitoStrip updatedAt={conv ? (messages[messages.length - 1]?.timestamp ?? conv.updatedAt) : undefined} />}
+        {incognito && <IncognitoStrip hours={settings?.incognitoHours} updatedAt={conv ? (messages[messages.length - 1]?.timestamp ?? conv.updatedAt) : undefined} />}
         <div className="flex-1 min-h-0 relative">
           <div ref={scroller} className="h-full overflow-y-auto"
             onScroll={e => { const el = e.currentTarget; setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 80); }}>
@@ -838,7 +838,7 @@ export function App() {
               ensureConversation={ensureConversation} voiceOk={voiceOk} focusKey={`${conv?.id ?? 'new'}:${focusTick}`}
               onVoiceMode={voiceMode ? undefined : () => setVoiceMode(true)}
             />
-            {incognito && <IncognitoNote />}
+            {incognito && <IncognitoNote hours={settings?.incognitoHours} />}
             <div className="text-center text-[10px] text-[var(--text-muted)] mt-1.5">
               {activeModel}{agent.cloud ? '' : ' · local'} · Shell:B can make mistakes; check anything important.
             </div>

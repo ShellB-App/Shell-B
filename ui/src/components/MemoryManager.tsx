@@ -8,6 +8,7 @@ import { api, req } from '../api';
 import type { LearnedItem, Message, RecalledMemory } from '../types';
 import { btn, relTime } from './common';
 import { BriefSettingsRow } from './FollowUps';
+import { IncognitoSettingsRow } from './Incognito';
 import { HistoryImport } from './HistoryImport';
 
 // Long-term memory v2 (server/memory.py): the Settings → Memory tab and the "learned" note under chat replies.
@@ -143,6 +144,7 @@ export function MemoryManager() {
       </div>
       <ReflectionRow onDone={load} />
       <BriefSettingsRow compact />
+      <IncognitoSettingsRow />
 
       <div className="relative">
         <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />

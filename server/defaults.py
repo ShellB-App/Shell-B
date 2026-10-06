@@ -399,6 +399,7 @@ DEFAULT_SETTINGS = {
     "morningBrief": True,      # daily brief in Activity: follow-ups due, calendar, overnight work, waiting approvals
     "morningBriefTime": "07:30",  # local HH:MM; only if the owner was around in the last few days
     "briefWeatherPlace": "",   # town for the brief's weather line (Open-Meteo); "" = no weather
+    "incognitoHours": 24,      # incognito chats are deleted this long after their last message (privacy.py sweep)
     "promptSuggestions": True,  # predict the next message as ghost text in the composer (utility model; composer.py)
     "maxToolRounds": 16,
     "runawayLoopChecker": True, # check progress every loopCheckInterval turns: extends budget if productive, pauses if stuck

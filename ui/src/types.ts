@@ -388,6 +388,8 @@ export interface Settings {
   /** nightly memory tidy-up and weekly digest (server/reflection.py), at this local hour */
   memoryReflection?: boolean;
   memoryReflectionHour?: number;
+  /** incognito chats are deleted this long after their last message (server/privacy.py) */
+  incognitoHours?: number;
   promptSuggestions: boolean;
   maxToolRounds: number;
   runawayLoopChecker?: boolean;

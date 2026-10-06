@@ -22,6 +22,7 @@ import research
 import megaplan
 import library
 import codex
+import commitments
 import media
 import assets as asset_libs
 import scrape
@@ -284,7 +285,7 @@ WRITE_TOOLS = {
     "write_file", "edit_file", "delete_file", "rename_file",
     "create_artifact", "memory_save", "memory_forget",
     "save_skill", "schedule_task", "dev_server",
-    "project_save_file", "library", "codex",
+    "project_save_file", "library", "codex", "follow_ups",
 }
 
 
@@ -452,6 +453,8 @@ class Turn:
             names.append("library")  # every agent, wherever it works, can reach everything Shell:B has made
         if switches.get("codex", True) and codex.allowed(self.agent, self.settings):
             names.append("codex")  # the owner's long-term reference shelf (codex.py), searched on demand
+        if switches.get("follow_ups", True) and "follow_ups" in TOOLS and commitments.tool_allowed(self.agent, self.settings):
+            names.append("follow_ups")  # the owner's to-dos and reminders (commitments.py)
         if switches.get("asset_library", True) and library.allowed(self.agent, self.settings):
             names.append("asset_library")  # reusable asset libraries (assets.py), shared by every chat and project
         if switches.get("wiki", True) and "wiki" in TOOLS and wiki.available():

@@ -195,6 +195,83 @@ class Deadlines(unittest.TestCase):
                 self.assertEqual(relative_due(text, anchor), want)
 
 
+class FollowUpsTool(unittest.TestCase):
+    def setUp(self):
+        import commitments
+        import db
+        from tools import ToolContext
+        self.c, self.db = commitments, db
+        self.conv = db.create_conversation("shellb", "Follow-ups test")["id"]
+        self.msg = "msg-futest"
+
+        async def emit(_):
+            pass
+        self.ctx = ToolContext(conv_id=self.conv, message_id=self.msg, agent={"id": "a", "model": "local"},
+                               settings={}, emit=emit)
+
+    def run_tool(self, **args):
+        return asyncio.run(self.c.follow_ups_tool(args, self.ctx))
+
+    def test_add_list_done_and_note_under_reply(self):
+        import datetime as dt
+        r = self.run_tool(action="add", text="Renew the Spark support contract", due="Friday")
+        self.assertFalse(r.error, r.text)
+        cid = r.text.split("[")[1].split("]")[0]
+        due = self.c.get(cid)["due"]
+        self.assertEqual(dt.date.fromisoformat(due).strftime("%A"), "Friday")
+        self.assertIn("Already tracked", self.run_tool(action="add", text="Renew the Spark support contract").text)
+        self.assertTrue(self.run_tool(action="add", text="x", due="whenever").error)
+        self.assertIn(cid, self.run_tool(action="list").text)
+        self.assertFalse(self.run_tool(action="done", id=cid).error)
+        self.assertEqual(self.c.get(cid)["status"], "done")
+        self.assertTrue(self.run_tool(action="done", id="fu-nope").error)
+        # the turn ends: the message is saved, then after_turn puts the tool's items under it
+        self.db.add_message(self.conv, "assistant", "ok", {}, msg_id=self.msg)
+        self.c.after_turn(self.conv, self.msg, "thanks", "ok", None)
+        data = self.db.list_messages(self.conv)[-1]
+        self.assertEqual([i["op"] for i in data.get("followUps", [])], ["add", "done"])
+        self.c.delete(cid)
+
+    def test_learner_never_closes_a_follow_up_from_the_same_turn(self):
+        """Live bug 2026-10-06: "add a follow-up… tell me what you added" made the learner mark it done at once."""
+        r = self.run_tool(action="add", text="Check the backup drive", due="tomorrow")
+        cid = r.text.split("[")[1].split("]")[0]
+        older, _ = self.c.add("Water the ficus", conv_id=self.conv, msg_id="msg-earlier")
+        real = self.c.propose
+
+        async def fake_propose(exchange, settings):
+            return [], [cid, older], "{}"
+        self.c.propose = fake_propose
+        try:
+            self.db.add_message(self.conv, "assistant", "Added it.", {}, msg_id=self.msg)
+            asyncio.run(self.c._learn_turn(self.conv, self.msg, "add a follow-up", "Added it.", {}, self.c._by_tool.pop(self.msg, [])))
+        finally:
+            self.c.propose = real
+        self.assertEqual(self.c.get(cid)["status"], "open")
+        self.assertEqual(self.c.get(older)["status"], "done")  # an earlier one still closes
+        self.c.delete(cid); self.c.delete(older)
+
+    def test_gating(self):
+        import privacy
+        self.assertIn("follow_ups", privacy.MEMORY_TOOLS)  # hidden in incognito chats
+        self.assertTrue(self.c.tool_allowed({"model": "ShellB-Swift"}, {}))
+        self.assertFalse(self.c.tool_allowed({"model": "ShellB-Swift"}, {"followUps": False}))
+        import providers
+        cloud = next((m for m in ("claude-cli/opus", "anthropic/claude-x", "openai/gpt-x") if providers.is_cloud(m)), None)
+        if cloud:
+            self.assertFalse(self.c.tool_allowed({"model": cloud}, {}))
+            self.assertTrue(self.c.tool_allowed({"model": cloud}, {"cloudMemory": True}))
+
+
+class IncognitoSetting(unittest.TestCase):
+    def test_hours_saved_and_used(self):
+        import privacy
+        r = client.put("/api/settings", json={"incognitoHours": 6})
+        self.assertEqual(r.json().get("incognitoHours"), 6)
+        self.assertEqual(privacy.hours(), 6)
+        client.put("/api/settings", json={"incognitoHours": 24})
+
+
 class Codex(unittest.TestCase):
     def test_spawn_from_worker_thread(self):
         """Sync endpoints run in a worker thread; codex._spawn must hand the task to the loop instead of raising."""
