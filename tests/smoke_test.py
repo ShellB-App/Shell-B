@@ -176,6 +176,25 @@ class FrameScope(unittest.TestCase):
         self.assertEqual(noredir.get("/api/workspace/conv-fa/data.txt").status_code, 200)  # tools (no fetch metadata) as before
 
 
+class Deadlines(unittest.TestCase):
+    """commitments.relative_due: spoken deadlines from meetings and chats become dates, counted from the day said."""
+    def test_relative_due(self):
+        import datetime as dt
+        from commitments import relative_due
+        tue, fri = dt.date(2026, 10, 6), dt.date(2026, 10, 9)
+        cases = [("Friday", tue, "2026-10-09"), ("by Friday", fri, "2026-10-16"), ("next Friday", tue, "2026-10-16"),
+                 ("this Friday", tue, "2026-10-09"), ("Monday", tue, "2026-10-12"), ("Wed", tue, "2026-10-07"),
+                 ("tomorrow 3pm", tue, "2026-10-07T15:00"), ("Friday 9:30am", tue, "2026-10-09T09:30"), ("EOD", tue, "2026-10-06"),
+                 ("end of week", tue, "2026-10-09"), ("end of month", tue, "2026-10-31"), ("in 2 weeks", tue, "2026-10-20"),
+                 ("Oct 9", tue, "2026-10-09"), ("9th of November", tue, "2026-11-09"), ("Sept 3", tue, "2027-09-03"),
+                 ("Jan 5", tue, "2027-01-05"), ("10/20", tue, "2026-10-20"), ("TBD", tue, None), ("Q4", tue, None),
+                 ("ASAP", tue, None), ("next month", tue, None), ("after the wedding", tue, None), ("a friendly sunset", tue, None),
+                 ("we may finish soon", tue, None), ("Feb 30", tue, None), ("", tue, None), (None, tue, None)]
+        for text, anchor, want in cases:
+            with self.subTest(text=text):
+                self.assertEqual(relative_due(text, anchor), want)
+
+
 class Codex(unittest.TestCase):
     def test_spawn_from_worker_thread(self):
         """Sync endpoints run in a worker thread; codex._spawn must hand the task to the loop instead of raising."""

@@ -228,6 +228,11 @@ async def _run(j: dict):
         _trim()
 
 
+def running_now() -> list[dict]:
+    """Queued or running generations, for /api/status: a restart would drop them (the queue lives in memory)."""
+    return [{"id": j["id"], "kind": j["kind"], "status": j["status"]} for j in _jobs.values() if j["status"] in ("queued", "running")]
+
+
 def _trim():
     done = sorted((o for o in _jobs.values() if o["status"] not in ("queued", "running")), key=lambda o: o["created"])
     for o in done[:max(0, len(done) - MAX_JOBS)]:

@@ -431,7 +431,7 @@ def status():
 
 def idle(s):
     return s is not None and not s.get("active") and not s.get("notebook") and not s.get("todo") \
-        and s.get("megaPlan") is None and s.get("assetJob") is None
+        and s.get("megaPlan") is None and s.get("assetJob") is None and not s.get("generate")
 
 def update(**kw):
     with open(STATE / ".lock", "w") as lk:

@@ -107,6 +107,67 @@ def _due(value) -> str | None:
     return m.group(1)
 
 
+_WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+_MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
+# whole words only: a prefix match would read "month" as Monday and "wedding" as Wednesday
+_WD_RE = r"(monday|mon|tuesday|tues|tue|wednesday|wed|thursday|thurs|thur|thu|friday|fri|saturday|sat|sunday|sun)"
+_MON_RE = (r"(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|"
+           r"october|oct|november|nov|december|dec)")
+
+
+def relative_due(text, anchor: date) -> str | None:
+    """A spoken deadline ("Friday", "by next Tuesday 3pm", "end of month", "Oct 9", "in 2 weeks") as YYYY-MM-DD[THH:MM],
+    counted from `anchor` (the day it was said: a meeting's date, or today for a chat). None when there's no clear day."""
+    s = re.sub(r"[.,]", " ", str(text or "").lower()).strip()
+    if not s or s in ("tbd", "n/a", "none", "asap", "ongoing"):
+        return None
+    t = re.search(r"\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b", s)
+    hhmm = ""
+    if t:
+        h = int(t.group(1)) % 12 + (12 if t.group(3) == "pm" else 0)
+        if 0 <= h < 24 and int(t.group(2) or 0) < 60:
+            hhmm = f"T{h:02d}:{int(t.group(2) or 0):02d}"
+        s = s[:t.start()] + s[t.end():]
+    d = None
+    if re.search(r"\b(today|tonight|eod|end of (the )?day)\b", s):
+        d = anchor
+    elif re.search(r"\btomorrow\b", s):
+        d = anchor + timedelta(days=1)
+    elif re.search(r"\b(eow|end of (the )?week)\b", s):
+        d = anchor + timedelta(days=(4 - anchor.weekday()) % 7)
+    elif re.search(r"\b(eom|end of (the )?month)\b", s):
+        nxt = (anchor.replace(day=28) + timedelta(days=4)).replace(day=1)
+        d = nxt - timedelta(days=1)
+    elif m := re.search(r"\bin (\d{1,3}|a|one|two|three) (day|week)s?\b", s):
+        n = {"a": 1, "one": 1, "two": 2, "three": 3}.get(m.group(1)) or int(m.group(1))
+        d = anchor + timedelta(days=n * (7 if m.group(2) == "week" else 1))
+    elif m := re.search(r"\b(next |this )?" + _WD_RE + r"\b", s):
+        wd = [w[:3] for w in _WEEKDAYS].index(m.group(2)[:3])
+        ahead = (wd - anchor.weekday()) % 7 or 7  # "Friday" said on a Friday means next week's
+        if m.group(1) == "next " and anchor.weekday() < wd:
+            ahead += 7  # "next Friday" said on a Tuesday: the week after
+        elif m.group(1) == "this " and wd >= anchor.weekday():
+            ahead = wd - anchor.weekday()
+        d = anchor + timedelta(days=ahead)
+    elif m := (re.search(r"\b" + _MON_RE + r"\s+(\d{1,2})(?:st|nd|rd|th)?\b", s)
+               or re.search(r"\b(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?" + _MON_RE + r"\b", s)):
+        a, b = m.groups()
+        mon, day = (_MONTHS.index(a[:3]) + 1, int(b)) if not a.isdigit() else (_MONTHS.index(b[:3]) + 1, int(a))
+        d = _next_date(anchor, mon, day)
+    elif m := re.search(r"\b(\d{1,2})/(\d{1,2})\b", s):  # US month/day
+        d = _next_date(anchor, int(m.group(1)), int(m.group(2)))
+    return f"{d.isoformat()}{hhmm}" if d else None
+
+
+def _next_date(anchor: date, month: int, day: int) -> date | None:
+    """That month/day on or after `anchor` (a deadline isn't in the past), else None if it isn't a real date."""
+    try:
+        d = date(anchor.year, month, day)
+        return d if d >= anchor - timedelta(days=7) else date(anchor.year + 1, month, day)
+    except ValueError:
+        return None
+
+
 def _similar(a: str, b: str) -> bool:
     a, b = a.lower(), b.lower()
     return a == b or difflib.SequenceMatcher(None, a, b).ratio() >= 0.82
@@ -308,7 +369,8 @@ async def propose(exchange: str, settings: dict) -> tuple[list[dict], list[str],
         text = _clean(i.get("text") or i.get("task"))
         who = str(i.get("who") or "me").lower()
         if text:
-            out.append({"text": text, "due": _due(i.get("due")), "who": "agent" if who in ("agent", "assistant") else "me"})
+            due = _due(i.get("due")) or relative_due(i.get("due"), date.today())  # the model sometimes says "Friday"
+            out.append({"text": text, "due": due, "who": "agent" if who in ("agent", "assistant") else "me"})
     ids = {c["id"] for c in known}
     done = [str(d) for d in (data.get("done") or []) if str(d) in ids] if isinstance(data.get("done"), list) else []
     return out[:4], done[:4], raw
@@ -399,7 +461,9 @@ def sync_meetings() -> int:
                 note = f"From meeting “{m['title'] or 'Meeting'}”" + (f" · timeline: {when}" if when and not _due(when)
                                                                       and when.upper() != "TBD" else "")
                 ref = f"meeting:{m['id']}:{hashlib.sha1(task.lower().encode()).hexdigest()[:10]}"
-                cid, _ = add(task, due=_due(when), who=who, origin="meeting", meeting_id=m["id"], ref=ref, note=note)
+                said = date.fromtimestamp(m["created"] or stamp or time.time())  # "Friday" counts from the meeting day
+                cid, _ = add(task, due=_due(when) or relative_due(when, said), who=who, origin="meeting",
+                             meeting_id=m["id"], ref=ref, note=note)
                 added += bool(cid)
         db.kv_set("commitments_meetings", seen)
         if added:

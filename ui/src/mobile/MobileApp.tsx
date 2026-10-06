@@ -30,6 +30,7 @@ import { Activity } from '../components/Activity';
 import { Codex } from '../components/Codex';
 import { Notes } from '../components/Notes';
 import { Models } from '../components/Models';
+import { Generate } from '../components/Generate';
 import { Wiki } from '../components/Wiki';
 import { OfflineData } from '../components/OfflineData';
 import { VoiceMode } from '../components/VoiceMode';
@@ -112,6 +113,7 @@ const readLibrary = () => { const m = /^#\/library(\/favorites|\/media)?\b/.exec
 const readScheduled = () => /^#\/scheduled\b/.test(location.hash);
 const readActivity = () => /^#\/activity\b/.test(location.hash);
 const readModels = () => /^#\/models\b/.test(location.hash);
+const readGenerate = () => /^#\/generate\b/.test(location.hash);
 const readSecretary = () => /^#\/secretary\b/.test(location.hash);
 const readGibberlink = () => /^#\/gibberlink\b/.test(location.hash);
 const readMaps = () => /^#\/(worlds|maps)\b/.test(location.hash);
@@ -147,6 +149,7 @@ export function MobileApp() {
   const [activity, setActivity] = useState(readActivity);
   const [codexRoute, setCodexRoute] = useState(readCodex);
   const [modelsRoute, setModelsRoute] = useState(readModels);
+  const [generateRoute, setGenerateRoute] = useState(readGenerate);
   const [secretaryRoute, setSecretaryRoute] = useState(readSecretary);
   const [gibberlinkRoute, setGibberlinkRoute] = useState(readGibberlink);
   const [radioRoute, setRadioRoute] = useState(readRadio);
@@ -260,6 +263,7 @@ export function MobileApp() {
       setActivity(false);
       setCodexRoute(null);
       setModelsRoute(false);
+      setGenerateRoute(false);
       setRadioRoute(false);
       setResearch(null);
       setPlans(null);
@@ -290,6 +294,7 @@ export function MobileApp() {
       setActivity(readActivity());
       setCodexRoute(readCodex());
       setModelsRoute(readModels());
+      setGenerateRoute(readGenerate());
       setSecretaryRoute(readSecretary());
       setGibberlinkRoute(readGibberlink());
       setRadioRoute(readRadio());
@@ -316,6 +321,7 @@ export function MobileApp() {
     setActivity(false);
     setCodexRoute(null);
     setModelsRoute(false);
+    setGenerateRoute(false);
     setSecretaryRoute(false);
     setResearch(null);
     setPlans(null);
@@ -505,6 +511,7 @@ export function MobileApp() {
     plans ||
     research ||
     modelsRoute ||
+    generateRoute ||
     codexRoute !== null ||
     activity ||
     scheduled ||
@@ -522,6 +529,7 @@ export function MobileApp() {
   else if (plans) currentAppTitle = 'Mega Plans';
   else if (research) currentAppTitle = 'Research';
   else if (modelsRoute) currentAppTitle = 'Models';
+  else if (generateRoute) currentAppTitle = 'Generate';
   else if (codexRoute !== null) currentAppTitle = /^notes\b/.test(codexRoute) ? 'Notes' : 'Codex';
   else if (activity) currentAppTitle = 'Activity';
   else if (scheduled) currentAppTitle = 'Scheduled';
@@ -698,6 +706,10 @@ export function MobileApp() {
         ) : modelsRoute ? (
           <div className="flex-1 min-h-0 overflow-y-auto">
             <Models busyTurns={status?.active.length ?? 0} />
+          </div>
+        ) : generateRoute ? (
+          <div className="flex-1 min-h-0">
+            <Generate />
           </div>
         ) : codexRoute !== null ? (
           <div className="flex-1 min-h-0 overflow-y-auto">

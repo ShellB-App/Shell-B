@@ -31,6 +31,7 @@ import { Activity } from '../components/Activity';
 import { Codex } from '../components/Codex';
 import { Notes } from '../components/Notes';
 import { Models } from '../components/Models';
+import { Generate } from '../components/Generate';
 import { Wiki } from '../components/Wiki';
 import { OfflineData } from '../components/OfflineData';
 import { VoiceMode } from '../components/VoiceMode';
@@ -923,6 +924,10 @@ export function KioskApp() {
                   ) : win.appId === 'models' ? (
                     <div className="h-full overflow-y-auto">
                       <Models busyTurns={status?.active.length ?? 0} />
+                    </div>
+                  ) : win.appId === 'generate' ? (
+                    <div className="h-full min-h-0">
+                      <Generate />
                     </div>
                   ) : win.appId === 'data' ? (
                     <div className="h-full overflow-y-auto">

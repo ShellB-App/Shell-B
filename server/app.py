@@ -1224,7 +1224,7 @@ async def status():
                         "context": m.get("context_length")} for m in loaded],
             "active": list(ACTIVE), "scheduledRunAt": schedules.last_finished(), "megaPlan": megaplan.running_now(), "todo": todos.running_now(), "assetJob": asset_libs.running_now(),
             "notebook": notebook.running_now(), "activity": activity.summary(), "memoryPending": memory.pending_count(),
-            "dataJob": datasets.running_now(), "downloads": datasets.downloads()}
+            "dataJob": datasets.running_now(), "downloads": datasets.downloads(), "generate": generate.running_now()}
 
 
 @app.get("/api/_hold")

@@ -422,6 +422,8 @@ export interface Status {
   dataJob?: { id: string; phase: 'download' | 'verify' | 'install'; done: number; bytes: number } | null;
   /** every large download in flight or queued: offline data and Ollama model pulls (datasets.downloads) */
   downloads?: DownloadItem[];
+  /** Generate-playground jobs queued or running (server/generate.py); they don't survive a restart */
+  generate?: { id: string; kind: 'image' | 'music' | 'sfx'; status: 'queued' | 'running' }[];
 }
 
 export interface DownloadItem {
