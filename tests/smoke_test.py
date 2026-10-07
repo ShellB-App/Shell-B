@@ -446,6 +446,31 @@ class SearchEverything(unittest.TestCase):
         self.assertEqual(self.search.snippet("Plant the bulbs", ["bulb"]), "Plant the [[bulb]]s")
 
 
+class PushAck(unittest.TestCase):
+    """A device's service worker reports whether it showed a push (notify.py /ack); unknown endpoints change nothing."""
+    def test_ack_records_what_the_device_did(self):
+        import db
+        import notify
+        notify.init()
+        ep = "https://fcm.googleapis.com/fcm/send/test-ack-device"
+        with db.conn() as c:
+            c.execute("INSERT INTO push_subs(id, endpoint, p256dh, auth, label, ua, created) VALUES(?,?,?,?,?,?,?)",
+                      ("push-acktest", ep, "x", "y", "test", "", 0))
+        try:
+            r = client.post("/api/notify/ack", json={"endpoint": ep, "shown": False, "reason": "permission is denied"})
+            self.assertTrue(r.json()["ok"])
+            dev = notify._device(notify._subs("push-acktest")[0])
+            self.assertEqual((dev["lastShown"], dev["shownError"]), (0, "permission is denied"))
+            client.post("/api/notify/ack", json={"endpoint": ep, "shown": True})
+            dev = notify._device(notify._subs("push-acktest")[0])
+            self.assertGreater(dev["lastShown"], 0)
+            self.assertEqual(dev["shownError"], "")
+            self.assertFalse(client.post("/api/notify/ack", json={"endpoint": ep + "x", "shown": True}).json()["ok"])
+        finally:
+            with db.conn() as c:
+                c.execute("DELETE FROM push_subs WHERE id='push-acktest'")
+
+
 class Codex(unittest.TestCase):
     def test_spawn_from_worker_thread(self):
         """Sync endpoints run in a worker thread; codex._spawn must hand the task to the loop instead of raising."""

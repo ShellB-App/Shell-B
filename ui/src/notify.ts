@@ -6,7 +6,13 @@ import { req } from './api';
 export type NotifyLevel = 'off' | 'attention' | 'all';
 export interface NotifyKind { id: string; label: string; hint: string; default: NotifyLevel }
 export interface NotifyPrefs { levels: Record<string, NotifyLevel>; details: boolean; kinds: NotifyKind[] }
-export interface PushDevice { id: string; label: string; service: string; hash: string; created: number; lastOk: number; lastError: string }
+export interface PushDevice {
+  id: string; label: string; service: string; hash: string; created: number;
+  /** the push service (Google, Mozilla, Apple) accepted a message for this device */
+  lastOk: number; lastError: string;
+  /** the device's own service worker confirmed it showed one, or said why it couldn't (server/notify.py /ack) */
+  lastShown: number; shownError: string;
+}
 export interface PushResult { id: string; ok: boolean; status: number; error: string; removed: boolean }
 
 export const notifyApi = {

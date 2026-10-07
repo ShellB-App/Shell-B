@@ -99,6 +99,10 @@ def init():
         c.execute("""CREATE TABLE IF NOT EXISTS push_subs(
   id TEXT PRIMARY KEY, endpoint TEXT UNIQUE, p256dh TEXT, auth TEXT, label TEXT, ua TEXT, created REAL,
   last_ok REAL, last_error TEXT)""")
+        cols = {r[1] for r in c.execute("PRAGMA table_info(push_subs)")}
+        for col, typ in (("last_shown", "REAL"), ("shown_error", "TEXT")):  # what the device itself reported (POST /ack)
+            if col not in cols:
+                c.execute(f"ALTER TABLE push_subs ADD COLUMN {col} {typ}")
     _ready = True
 
 
@@ -248,7 +252,9 @@ def send_one(client: httpx.Client, sub, msg: dict) -> dict:
     """POST one encrypted message. Drops the subscription when the push service says it's gone (404/410)."""
     body = encrypt(json.dumps(msg, separators=(",", ":")).encode(), sub["p256dh"], sub["auth"])
     headers = {"Authorization": vapid_header(sub["endpoint"]), "TTL": str(TTL), "Content-Encoding": "aes128gcm",
-               "Content-Type": "application/octet-stream", "Urgency": "high" if msg.get("a") else "normal"}
+               "Content-Type": "application/octet-stream",
+               # every push becomes a visible notification: "normal" lets Android (FCM) hold it while the phone dozes
+               "Urgency": "high"}
     try:
         r = client.post(sub["endpoint"], content=body, headers=headers)
         code, err = r.status_code, "" if r.status_code < 300 else f"{r.status_code} {r.text[:160].strip()}"
@@ -313,7 +319,8 @@ def _ehash(endpoint: str) -> str:
 def _device(r) -> dict:
     return {"id": r["id"], "label": r["label"] or "", "service": urlsplit(r["endpoint"]).hostname,
             "hash": _ehash(r["endpoint"]), "created": r["created"] * 1000,
-            "lastOk": (r["last_ok"] or 0) * 1000, "lastError": r["last_error"] or ""}
+            "lastOk": (r["last_ok"] or 0) * 1000, "lastError": r["last_error"] or "",
+            "lastShown": (r["last_shown"] or 0) * 1000, "shownError": r["shown_error"] or ""}
 
 
 @router.get("/key")
@@ -371,7 +378,7 @@ async def api_subscribe(req: Request):
             sid = row["id"]
         else:
             sid = db.new_id("push")
-            c.execute("INSERT INTO push_subs VALUES(?,?,?,?,?,?,?,NULL,NULL)",
+            c.execute("INSERT INTO push_subs(id, endpoint, p256dh, auth, label, ua, created) VALUES(?,?,?,?,?,?,?)",
                       (sid, endpoint, p256dh, auth, label, ua, time.time()))
     return _device(_subs(sid)[0])
 
@@ -384,6 +391,26 @@ async def api_unsubscribe(req: Request):
     with db.conn() as c:
         n = c.execute("DELETE FROM push_subs WHERE endpoint=?", (endpoint,)).rowcount
     return {"ok": True, "removed": n}
+
+
+@router.post("/ack")
+async def api_ack(req: Request):
+    """The service worker on a device reports what happened to a push: shown, or why not (permission denied, the OS
+    refused, skipped because Shell:B was open and focused). Until now the server only knew the push service accepted it.
+    Keyed by the subscription endpoint, which only that device knows; behind the normal login like any /api route."""
+    try:
+        b = await req.json()
+    except ValueError:
+        raise HTTPException(400, "JSON body expected")
+    endpoint = str(b.get("endpoint") or "")
+    shown, reason = bool(b.get("shown")), str(b.get("reason") or "")[:200]
+    _db()
+    with db.conn() as c:
+        if shown:
+            n = c.execute("UPDATE push_subs SET last_shown=?, shown_error=NULL WHERE endpoint=?", (time.time(), endpoint)).rowcount
+        else:
+            n = c.execute("UPDATE push_subs SET shown_error=? WHERE endpoint=?", (reason or "not shown", endpoint)).rowcount
+    return {"ok": bool(n)}
 
 
 @router.delete("/devices/{sid}")

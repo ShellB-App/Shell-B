@@ -270,9 +270,17 @@ export function NotificationsTab() {
                       </div>
                       <div className="text-[11px] text-[var(--text-muted)] truncate">
                         {serviceName(d.service)} · added {relTime(d.created)}
-                        {d.lastOk > 0 && ` · last delivered ${relTime(d.lastOk)}`}
+                        {d.lastShown > 0 && ` · last shown ${relTime(d.lastShown)}`}
                       </div>
-                      {d.lastError && <div className="text-[11px] text-amber-400 truncate" title={d.lastError}>Last attempt failed: {d.lastError}</div>}
+                      {d.lastError && <div className="text-[11px] text-amber-400 truncate" title={d.lastError}>The push service refused the last one: {d.lastError}</div>}
+                      {!d.lastError && d.shownError && (
+                        <div className="text-[11px] text-amber-400 truncate" title={d.shownError}>The device didn’t show the last one: {d.shownError}</div>
+                      )}
+                      {!d.lastError && !d.shownError && d.lastOk > d.lastShown + 60_000 && (
+                        <div className="text-[11px] text-amber-400" title="The push service accepted it, but this device never reported back. Common causes: notifications blocked for the browser in the OS settings, the browser fully closed (desktop), or battery saving.">
+                          Sent {relTime(d.lastOk)}, but the device hasn’t confirmed showing it
+                        </div>
+                      )}
                     </div>
                     <button className={btn.ghost} onClick={() => test(d.id)} disabled={!!busy} aria-label={`Send a test to ${d.label}`}>
                       {busy === `test-${d.id}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}Test

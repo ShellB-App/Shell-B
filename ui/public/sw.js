@@ -77,14 +77,33 @@ self.addEventListener('fetch', (event) => {
 // ── Notifications (server/notify.py, src/notify.ts) ─────────────────────────
 // Push payloads are tiny JSON: { t: title, b?: body, r: hash route, tag, a: needs attention, k: kind }.
 
+// tell the server what happened on this device (server/notify.py /ack): it otherwise only knows the push service took it
+const reportPush = async (shown, reason) => {
+  try {
+    const sub = await self.registration.pushManager.getSubscription();
+    if (!sub) return;
+    await fetch('/api/notify/ack', {
+      method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint: sub.endpoint, shown, reason: reason || '' }),
+    });
+  } catch (e) { /* offline or signed out: nothing to report to */ }
+};
+
 self.addEventListener('push', (event) => {
   let m = {};
   try { m = event.data ? event.data.json() : {}; } catch (e) { m = {}; }
   event.waitUntil((async () => {
     const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     // she's looking at Shell:B on this device right now: the Activity badge is enough (a test always shows)
-    if (m.k !== 'test' && wins.some((c) => c.focused && c.visibilityState === 'visible')) return;
-    await self.registration.showNotification(m.t || 'Shell:B', {
+    if (m.k !== 'test' && wins.some((c) => c.focused && c.visibilityState === 'visible')) {
+      await reportPush(false, 'skipped: Shell:B was open and focused on this device');
+      return;
+    }
+    if (self.Notification && self.Notification.permission !== 'granted') {
+      await reportPush(false, `notification permission is "${self.Notification.permission}" for this site`);
+    }
+    try {
+      await self.registration.showNotification(m.t || 'Shell:B', {
       body: m.b || '',
       tag: m.tag || undefined,
       data: { route: typeof m.r === 'string' && m.r.startsWith('#/') ? m.r : '#/activity' },
@@ -93,6 +112,11 @@ self.addEventListener('push', (event) => {
       requireInteraction: m.k === 'approval' || m.k === 'question',
       timestamp: Date.now(),
     });
+    } catch (e) {
+      await reportPush(false, `the browser couldn't show it: ${e && e.message ? e.message : e}`);
+      return;
+    }
+    await reportPush(true);
   })());
 });
 
