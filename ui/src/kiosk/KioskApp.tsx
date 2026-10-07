@@ -15,6 +15,7 @@ import type {
   Status,
   ToolInfo,
 } from '../types';
+import { useSuggestions } from '../suggestions';
 import { useChat } from '../useChat';
 import { appById, appForHash, type AppId } from '../components/apps';
 import { MessageView } from '../components/MessageView';
@@ -30,6 +31,7 @@ import { Scheduled, browserTz } from '../components/Scheduled';
 import { Activity } from '../components/Activity';
 import { Codex } from '../components/Codex';
 import { Notes } from '../components/Notes';
+import { Me } from '../components/Me';
 import { Models } from '../components/Models';
 import { Generate } from '../components/Generate';
 import { Wiki } from '../components/Wiki';
@@ -272,6 +274,7 @@ export function KioskApp() {
   const chatAgents = useMemo(() => agents.filter(a => !a.studio), [agents]);
   const verifiers = useMemo(() => agents.filter(a => a.cloud), [agents]);
   const agent = agents.find(a => a.id === agentId) ?? chatAgents[0] ?? agents[0];
+  const quick = useSuggestions(agent?.id ?? 'shellb', QUICK[agent?.id ?? 'shellb'] ?? QUICK.shellb);
 
   const [modelPicks, setModelPicks] = useState<Record<string, string>>({});
   const providerOf = (name?: string) => /^([\w-]+)\//.exec(name ?? '')?.[1];
@@ -739,7 +742,7 @@ export function KioskApp() {
                             </p>
 
                             <div className="mt-6 grid grid-cols-2 gap-2.5 w-full text-left">
-                              {(QUICK[agent.id] ?? QUICK.shellb).map(q => (
+                              {quick.map(q => (
                                 <button
                                   key={q.title}
                                   onClick={() => send(q.prompt, [])}
@@ -854,6 +857,10 @@ export function KioskApp() {
                   ) : win.appId === 'maps' ? (
                     <div className="h-full overflow-hidden">
                       <MapsApp />
+                    </div>
+                  ) : win.appId === 'me' ? (
+                    <div className="h-full overflow-hidden">
+                      <Me />
                     </div>
                   ) : win.appId === 'notes' ? (
                     <div className="h-full overflow-y-auto">

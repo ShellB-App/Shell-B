@@ -1,6 +1,7 @@
 // Planetary science dossier drawer for celestial bodies.
 import { useMemo } from 'react';
 import { earthLink, fmtKm, fmtLight } from './sky';
+import { useClockTime } from './clock';
 import clsx from 'clsx';
 import { Compass, ExternalLink, Globe2, Orbit, Radio, Thermometer, Wind, X } from 'lucide-react';
 import { getDossier, type WorldDossier } from './dossier';
@@ -16,7 +17,8 @@ const cToF = (c: number) => Math.round((c * 9) / 5 + 32);
 export function DossierDrawer({ bodyId, onClose, onOpenSol }: DossierDrawerProps) {
   const d = getDossier(bodyId);
   // Computed from sol.ts (JPL elements); the server's /api/planetary/ephemeris figures were invented.
-  const link = useMemo(() => (bodyId === 'earth' || bodyId === 'sol' ? null : earthLink(bodyId)), [bodyId]);
+  const t = useClockTime(60_000);
+  const link = useMemo(() => (bodyId === 'earth' || bodyId === 'sol' ? null : earthLink(bodyId, t)), [bodyId, t]);
 
   if (!d) {
     return (
@@ -148,7 +150,7 @@ export function DossierDrawer({ bodyId, onClose, onOpenSol }: DossierDrawerProps
             <h4 className="text-[10px] uppercase font-semibold tracking-wider text-[var(--text-muted)] mb-2 flex items-center justify-between">
               <span>Earth Interplanetary Link</span>
               <span className="text-[9px] text-sky-400 font-mono flex items-center gap-1 font-normal">
-                <Radio className="w-3 h-3" /> Computed now
+                <Radio className="w-3 h-3" /> At the clock's time
               </span>
             </h4>
             <div className="p-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] space-y-2.5 text-[11px]">

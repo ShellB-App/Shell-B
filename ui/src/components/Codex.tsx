@@ -15,6 +15,7 @@ import {
   Upload,
   User,
   X,
+  UserRound,
 } from 'lucide-react';
 import { api } from '../api';
 import type { CodexEntry, CodexIndex, CodexKind } from '../types';
@@ -163,6 +164,7 @@ export function Codex({ sub, agentNames }: { sub: string; agentNames: Record<str
   return (
     <div className="h-full flex min-h-0">
       <aside className={clsx('hidden w-56 shrink-0 flex-col border-r border-[var(--border-subtle)] overflow-y-auto px-2 py-4 gap-0.5', open ? '2xl:flex' : 'md:flex')}>
+        {nav(false, 'Me', () => go('#/codex/me'), <UserRound className="w-4 h-4 text-rose-400" />)}
         {nav(route.view === 'all' && !route.entry, 'Everything', () => go('#/codex'), <BookMarked className="w-4 h-4 text-indigo-400" />, index?.counts.all)}
         {nav(route.view === 'secrets', 'API Keys & Secrets', () => go('#/codex/secrets'), <KeyRound className="w-4 h-4 text-rose-400" />, index?.counts.secrets)}
         {nav(route.view === 'contacts', 'Contacts', () => go('#/codex/contacts'), <User className="w-4 h-4 text-teal-400" />, index?.counts.contacts)}
@@ -210,6 +212,7 @@ export function Codex({ sub, agentNames }: { sub: string; agentNames: Record<str
               onChange={e => go(e.target.value)}>
               <option value="#/codex">Everything ({index?.counts.all ?? 0})</option>
               <option value="#/codex/secrets">API Keys & Secrets ({index?.counts.secrets ?? 0})</option>
+              <option value="#/codex/me">Me</option>
               <option value="#/codex/contacts">Contacts ({index?.counts.contacts ?? 0})</option>
               <option value="#/codex/calendar">Calendar ({index?.counts.events ?? 0})</option>
               <option value="#/codex/pinned">Pinned ({index?.counts.pinned ?? 0})</option>

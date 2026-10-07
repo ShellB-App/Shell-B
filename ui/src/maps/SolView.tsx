@@ -1,8 +1,10 @@
 // The Sol view in the Worlds app: an orrery of the solar system with every body at its real position for a chosen moment
 // (now, by default). Canvas 2D with an orthographic camera: drag pans, right/shift-drag turns and tilts, wheel zooms.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { goLive, setClock, useClockState, useClockTime } from './clock';
+import { TimeBar } from './TimeBar';
 import clsx from 'clsx';
-import { Crosshair, Map as MapIcon, Pause, PanelLeftOpen, Play, RotateCcw, Rewind, FastForward, Ruler, Sparkles, X } from 'lucide-react';
+import { Crosshair, Map as MapIcon, PanelLeftOpen, RotateCcw, Ruler, Sparkles, X } from 'lucide-react';
 import { AU, SOL_BODIES, dist, isMajorMoon, moonOrbitPath, moonsOf, orbitPath, positions, type SolBody, type Vec3 } from './sol';
 
 interface HistoricEvent {
@@ -23,8 +25,6 @@ const HISTORIC_EVENTS: HistoricEvent[] = [
 
 const VIEW = 'shellb.maps.view.sol';
 const DAY = 86_400_000;
-const RATES = [3_600_000, DAY, 7 * DAY, 30 * DAY, 365.25 * DAY];  // sim ms per real second
-const RATE_LABEL = ['1 hour', '1 day', '1 week', '1 month', '1 year'];
 const RINGS = [0.1, 0.25, 0.5, 1, 2, 5, 10, 20, 30, 40, 50, 100];
 
 interface Cam { yaw: number; pitch: number; scale: number; panX: number; panY: number; compressed: boolean; follow?: string | null }
@@ -60,7 +60,6 @@ const squash = (v: Vec3, on: boolean): Vec3 => {
   return [v[0] * k, v[1] * k, v[2] * k];
 };
 
-const fmtDate = (ms: number) => new Date(ms).toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
 const fmtAU = (au: number) => `${au < 0.1 ? au.toFixed(4) : au.toFixed(3)} AU`;
 const fmtKm = (km: number) => km >= 1e9 ? `${(km / 1e9).toFixed(2)} billion km` : km >= 1e6 ? `${(km / 1e6).toFixed(1)} million km` : `${Math.round(km).toLocaleString()} km`;
 const fmtLight = (au: number) => { const s = au * AU / 299_792.458; return s < 120 ? `${s.toFixed(1)} light-seconds` : s < 7200 ? `${(s / 60).toFixed(1)} light-minutes` : `${(s / 3600).toFixed(2)} light-hours`; };
@@ -77,9 +76,8 @@ export function SolView({ mapIds, onOpenMap, focus, onShowPanel }: {
   const canvas = useRef<HTMLCanvasElement>(null);
   const cam = useRef<Cam>({ ...DEFAULT_CAM, ...store.get() });
   const [compressed, setCompressed] = useState(cam.current.compressed);
-  const [time, setTime] = useState(() => Date.now());
-  const [live, setLive] = useState(true);
-  const [rate, setRate] = useState(0);  // index into RATES, signed and 1-based; 0 = paused
+  const time = useClockTime(30_000);  // the shared Worlds clock (clock.ts)
+  const { live } = useClockState();
   const [selected, setSelected] = useState<string | null>(focus?.id ?? null);
   // remembered with the camera: a zoom that only makes sense around Saturn must come back centred on Saturn
   const [follow, setFollow] = useState<string | null>(() => focus?.id ?? cam.current.follow ?? null);
@@ -92,10 +90,7 @@ export function SolView({ mapIds, onOpenMap, focus, onShowPanel }: {
 
   const pickEvent = (ev: HistoricEvent) => {
     if (ev.date) {
-      const t = new Date(ev.date).getTime();
-      setTime(t);
-      setLive(false);
-      setRate(0);
+      setClock(new Date(ev.date).getTime());
       if (ev.body && BY_ID[ev.body]) {
         setSelected(ev.body);
         setFollow(ev.body);
@@ -129,28 +124,6 @@ export function SolView({ mapIds, onOpenMap, focus, onShowPanel }: {
     if (reach && el) { cam.current.scale = Math.min(el.clientWidth, el.clientHeight) * 0.4 / (reach / AU); save(); }
     redraw();
   }, [focus]);  // eslint-disable-line react-hooks/exhaustive-deps
-
-  // live: tick with the clock
-  useEffect(() => {
-    if (!live) return;
-    setTime(Date.now());
-    const t = setInterval(() => setTime(Date.now()), 30_000);
-    return () => clearInterval(t);
-  }, [live]);
-
-  // playing: advance simulated time each frame
-  useEffect(() => {
-    if (!rate) return;
-    let raf = 0, last = performance.now();
-    const step = (now: number) => {
-      const dt = Math.min(0.1, (now - last) / 1000);
-      last = now;
-      setTime(t => t + Math.sign(rate) * RATES[Math.abs(rate) - 1] * dt);
-      raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [rate]);
 
   const redraw = useCallback(() => setFrame(f => f + 1), []);
   const save = useCallback(() => store.set(cam.current), []);
@@ -403,21 +376,6 @@ export function SolView({ mapIds, onOpenMap, focus, onShowPanel }: {
     cam.current = { ...DEFAULT_CAM, compressed: cam.current.compressed };
     setFollow(null); save(); redraw();
   };
-  const goLive = () => { setLive(true); setRate(0); };
-  const nudgeRate = (dir: 1 | -1) => {
-    setLive(false);
-    setRate(r => {
-      if (r === 0) return dir;
-      if (Math.sign(r) === dir) return Math.sign(r) * Math.min(RATES.length, Math.abs(r) + 1);
-      return Math.abs(r) === 1 ? 0 : Math.sign(r) * (Math.abs(r) - 1);
-    });
-  };
-  const togglePlay = () => { setLive(false); setRate(r => (r ? 0 : 2)); };
-  const setDate = (v: string) => {
-    const ms = Date.parse(`${v}T12:00:00Z`);
-    if (Number.isFinite(ms)) { setLive(false); setRate(0); setTime(ms); }
-  };
-
   const sel = selected ? BY_ID[selected] : null;
   const fromSun = sel && sel.id !== 'sol' ? dist(pos[sel.id], [0, 0, 0]) : null;
   const fromEarth = sel && sel.id !== 'earth' ? dist(pos[sel.id], pos.earth) : null;
@@ -523,22 +481,8 @@ export function SolView({ mapIds, onOpenMap, focus, onShowPanel }: {
         </button>
       </div>
 
-      {/* time */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-lg border border-[var(--border-subtle)] sb-map-glass px-1.5 py-1 max-w-[calc(100%-1.5rem)]">
-        <button className={iconBtn} onClick={() => nudgeRate(-1)} title="Slower / backwards"><Rewind className="w-3.5 h-3.5" /></button>
-        <button className={iconBtn} onClick={togglePlay} title={rate ? 'Pause' : 'Play'}>{rate ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}</button>
-        <button className={iconBtn} onClick={() => nudgeRate(1)} title="Faster / forwards"><FastForward className="w-3.5 h-3.5" /></button>
-        <div className="px-2 min-w-0 text-center">
-          <div className="font-mono text-[12px] tabular-nums whitespace-nowrap">{fmtDate(time)}</div>
-          <div className="text-[10px] text-[var(--text-muted)] whitespace-nowrap">
-            {rate ? `${rate < 0 ? '−' : ''}${RATE_LABEL[Math.abs(rate) - 1]} per second` : live ? 'live' : 'paused'}
-          </div>
-        </div>
-        <input type="date" aria-label="Show the solar system on a date" value={new Date(time).toISOString().slice(0, 10)} onChange={e => setDate(e.target.value)}
-          className="h-7 rounded-md bg-transparent border border-[var(--border-subtle)] px-1.5 text-[11px] text-[var(--text-secondary)] [color-scheme:dark]" />
-        <button className={clsx('h-7 px-2 rounded-md text-[11px] transition', live ? 'text-[var(--accent)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]/60')}
-          onClick={goLive} title="Back to now">Now</button>
-      </div>
+      {/* time: the shared Worlds clock; Play starts at a day a second */}
+      <TimeBar playRate={5} className="absolute bottom-3 left-1/2 -translate-x-1/2 max-w-[calc(100%-1.5rem)]" />
 
       {/* scale + accuracy */}
       <div className="absolute bottom-3 left-3 flex flex-col items-start gap-1 pointer-events-none">

@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import clsx from 'clsx';
+import { Play, Pin, PinOff } from 'lucide-react';
 import {
   Search,
   Settings,
@@ -45,7 +46,29 @@ export function StartMenu({
   onToggleTheme,
   status,
 }: Props) {
+  
   const [q, setQ] = useState('');
+  const [contextMenu, setContextMenu] = useState<{ appId: AppId; x: number; y: number } | null>(null);
+  const [pinned, setPinned] = useState<AppId[]>(() => {
+    try {
+      const stored = localStorage.getItem('shellb.kiosk.desktop');
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return ['chat', 'studio', 'code', 'radio', 'maps', 'library', 'notes', 'codex', 'research', 'plans', 'activity', 'secretary', 'models', 'settings'];
+  });
+
+  useEffect(() => {
+    const onPinned = (e: Event) => setPinned((e as CustomEvent).detail);
+    window.addEventListener('shellb-desktop-pinned', onPinned);
+    return () => window.removeEventListener('shellb-desktop-pinned', onPinned);
+  }, []);
+
+  useEffect(() => {
+    const onClick = () => setContextMenu(null);
+    window.addEventListener('click', onClick);
+    return () => window.removeEventListener('click', onClick);
+  }, []);
+
 
   useEffect(() => {
     if (!open) setQ('');
@@ -142,10 +165,17 @@ export function StartMenu({
                   return (
                     <button
                       key={app.id}
+
                       onClick={() => {
                         onOpenApp(app.id);
                         onClose();
                       }}
+                      onContextMenu={e => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setContextMenu({ appId: app.id, x: e.clientX, y: e.clientY });
+                      }}
+
                       className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-[var(--bg-hover)] text-left transition group"
                     >
                       <div
@@ -239,8 +269,50 @@ export function StartMenu({
             <Lock className="w-3.5 h-3.5" />
             <span className="text-[11px] font-medium">Standby</span>
           </button>
+
         </footer>
       </div>
+
+      {contextMenu && (
+        <div
+          className="fixed z-[60] w-48 bg-[var(--bg-secondary)]/95 backdrop-blur-md border border-[var(--border-strong)] shadow-2xl rounded-xl overflow-hidden py-1.5 animate-scale-in"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          onClick={e => e.stopPropagation()}
+          onContextMenu={e => e.preventDefault()}
+        >
+          <button
+            className="w-full text-left px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-hover)] flex items-center gap-2"
+            onClick={() => {
+              onOpenApp(contextMenu.appId);
+              setContextMenu(null);
+              onClose();
+            }}
+          >
+            <Play className="w-3.5 h-3.5" />
+            Open App
+          </button>
+          <button
+            className="w-full text-left px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-hover)] flex items-center gap-2"
+            onClick={() => {
+              setPinned(prev => {
+                const isPinned = prev.includes(contextMenu.appId);
+                const next = isPinned ? prev.filter(id => id !== contextMenu.appId) : [...prev, contextMenu.appId];
+                localStorage.setItem('shellb.kiosk.desktop', JSON.stringify(next));
+                window.dispatchEvent(new CustomEvent('shellb-desktop-pinned', { detail: next }));
+                return next;
+              });
+              setContextMenu(null);
+            }}
+          >
+            {pinned.includes(contextMenu.appId) ? (
+              <><PinOff className="w-3.5 h-3.5" /> Unpin from Desktop</>
+            ) : (
+              <><Pin className="w-3.5 h-3.5" /> Pin to Desktop</>
+            )}
+          </button>
+        </div>
+      )}
+
     </>
   );
 }

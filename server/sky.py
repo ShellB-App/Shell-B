@@ -99,7 +99,7 @@ async def orbiters_route(body: str):
     return await orbiters(body.lower())
 
 
-GROUPS = {"stations": "Space stations", "visual": "Brightest satellites", "gps-ops": "GPS", "weather": "Weather satellites",
+GROUPS = {"stations": "Space stations", "visual": "Brightest satellites", "gps-ops": "GPS", "geo": "Geostationary", "active": "All active satellites", "weather": "Weather satellites",
           "science": "Science satellites"}
 
 

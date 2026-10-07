@@ -185,7 +185,7 @@ async def run_code(args, ctx):
     name = f"shellb-cell-{uuid.uuid4().hex[:10]}"
     cmd = ["docker", "run", "--rm", "--name", name, "--network", "none",
            "--memory", "4g", "--cpus", "4", "--pids-limit", "512", "--read-only",
-           "--tmpfs", "/tmp:rw,size=512m", "--user", f"{os.getuid()}:{os.getgid()}",
+           "--tmpfs", "/tmp:rw,exec,size=512m", "--user", f"{os.getuid()}:{os.getgid()}",
            "-e", "HOME=/tmp", "-e", "MPLBACKEND=Agg", "-e", "PYTHONUNBUFFERED=1",
            "-v", f"{ws}:/work", *(["-v", f"{ws}/.git:/work/.git:ro"] if (ws / ".git").is_dir() else []),
            "-v", f"{cell}:/cell/main:ro", "-v", f"{db.DATA / 'skills'}:/skills:ro",
@@ -807,8 +807,12 @@ TOOLS: dict[str, dict[str, Any]] = {
         "ui": {"displayName": "Code Sandbox", "icon": "Terminal", "category": "code",
                "description": "Runs Python or Bash in an isolated, network-less container with a per-conversation /work folder."},
         "schema": _fn("run_code", "Execute code in an isolated sandbox (no network). Python 3.12 with numpy, pandas, scipy, "
-                      "sympy, scikit-learn, matplotlib, pillow, opencv, openpyxl, python-docx/pptx, pymupdf, pdfplumber, pytesseract "
-                      "(tesseract eng/spa/jpn) and poppler-utils. The working directory /work persists for this "
+                      "sympy, scikit-learn, polars, duckdb, xgboost, lightgbm, cvxpy, ortools, pulp, geopandas, astropy, "
+                      "skyfield, matplotlib, plotly, pillow, opencv, openpyxl, python-docx/pptx, pymupdf, pdfplumber, weasyprint, "
+                      "pytesseract and playwright. CLI: pandoc, libreoffice (soffice --headless --convert-to pdf), xelatex/pdflatex, "
+                      "ImageMagick, `chromium --headless --screenshot`, poppler-utils, ffmpeg, tesseract (eng spa jpn fra deu ita "
+                      "por rus ara hin kor chi_sim chi_tra), Noto fonts incl. CJK and emoji, node, go, rustc/cargo, java, R. "
+                      "No GPU, and nothing can be installed. The working directory /work persists for this "
                       "conversation and holds any files the user uploaded. Save plots as PNG files in /work to show them. "
                       "Print results you want to see.",
                       {"language": {"type": "string", "enum": ["python", "bash"]},

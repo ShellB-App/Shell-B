@@ -3,6 +3,7 @@
 Everything lives outside the repo in ~/shellb/maps (it's ~140 GB):
   planet.pmtiles            Protomaps planet build (vector, OSM), symlink to <date>.pmtiles; <date>.pmtiles.part while downloading
   bodies/catalog.json       other planets and moons: raster mosaics reprojected to Web Mercator, one <id>.pmtiles each
+  terrain/catalog.json      elevation (terrarium raster-dem) per world, one <id>.pmtiles each, built by planets/build_dem.py
   assets/fonts, assets/sprites   from protomaps/basemaps-assets
 MapLibre reads the .pmtiles files with HTTP range requests, which FileResponse serves.
 """
@@ -17,6 +18,7 @@ router = APIRouter(prefix="/api/maps")
 
 ROOT = Path.home() / "shellb" / "maps"
 BODIES = ROOT / "bodies"
+TERRAIN = ROOT / "terrain"
 ASSETS = ROOT / "assets"
 PLANET_BYTES = 138_547_794_382  # 20261003 build; only used for the download progress bar
 
@@ -40,6 +42,22 @@ def _bodies() -> list[dict]:
     return out
 
 
+def _terrain() -> dict[str, dict]:
+    """Elevation tiles per world: {id: {tileSize, maxzoom, encoding, format, version, attribution}}. `version` (the
+    file's mtime) goes into the URL so a rebuilt file is never read through stale cached byte ranges."""
+    try:
+        cat = json.loads((TERRAIN / "catalog.json").read_text())
+    except (OSError, ValueError):
+        return {}
+    out = {}
+    for t in cat if isinstance(cat, list) else []:
+        if isinstance(t, dict) and _ID.match(str(t.get("id", ""))):
+            f = TERRAIN / f"{t['id']}.pmtiles"
+            if f.is_file():
+                out[t["id"]] = {k: t.get(k) for k in ("tileSize", "maxzoom", "encoding", "format", "attribution")} | {"version": int(f.stat().st_mtime)}
+    return out
+
+
 def _earth() -> dict:
     planet = ROOT / "planet.pmtiles"
     if planet.exists():
@@ -57,7 +75,17 @@ def prompt_note(base: str) -> str:
 
 @router.get("/catalog")
 def catalog():
-    return {"bodies": [_earth(), *({k: v for k, v in b.items() if k != "_path"} for b in _bodies())]}
+    terrain = _terrain()
+    bodies = [_earth(), *({k: v for k, v in b.items() if k != "_path"} for b in _bodies())]
+    return {"bodies": [{**b, "terrain": terrain.get(b["id"])} for b in bodies]}
+
+
+@router.get("/terrain/{body}.pmtiles")
+def terrain(body: str):
+    f = TERRAIN / f"{body}.pmtiles"
+    if not _ID.match(body) or not f.is_file():
+        raise HTTPException(404, "no terrain for that body yet")
+    return FileResponse(f.resolve(), media_type="application/octet-stream", headers={"Cache-Control": "public, max-age=31536000, immutable"})
 
 
 @router.get("/tiles/{body}.pmtiles")

@@ -45,6 +45,7 @@ NODE_BIN = Path.home() / ".local" / "bin"
 SELF_URL = "http://127.0.0.1:8200"
 UNITS = ("shellb-web", "shellb-orpheus", "shellb-hermes", "shellb-gaia", "shellb-nyx", "shellb-stableaudio")
 HIDDEN = {"data", "venv", "node_modules", "dist", ".git", "vendor", "__pycache__"}
+CORE_FILES = {"server/selfmod.py", "server/db.py", "AGENTS.md", "server/projects.py"}
 GIT_ID = ("-c", "user.name=Shell:B", "-c", "user.email=self@shellb.local", "-c", "core.quotepath=off")
 GATED = {"deploy", "rollback"}
 # workspace actions: the project tools, pointed at the self workspace, so any chat can edit it (not just one opened in Code)
@@ -527,7 +528,8 @@ def _module_map() -> str:
 
 
 def _features() -> str:
-    readme = (LIVE / "README.md").read_text(errors="replace") if (LIVE / "README.md").exists() else ""
+    manual = LIVE / "docs" / "MANUAL.md"
+    readme = manual.read_text(errors="replace") if manual.exists() else ""
     section = readme.split("## What it does", 1)[-1].split("\n## ", 1)[0]
     names = re.findall(r"^- \*\*([^*]+)\*\*", section, re.M)
     return ", ".join(dict.fromkeys(n.strip() for n in names))
@@ -543,7 +545,7 @@ def about() -> str:
     git_log = _git(LIVE, "log", "-n10", "--format=  %h %cs %s", check=False).rstrip()
     return f"""# Shell:B: about myself
 I am Shell:B Web, a FastAPI server plus a React UI, running as the systemd user unit shellb-web on :8200 of a DGX Spark.
-My source is {LIVE} (git). Version: {version()}. README.md there is my full manual.
+My source is {LIVE} (git). Version: {version()}. docs/MANUAL.md there is my full manual.
 
 Features: {_features()}
 
@@ -653,7 +655,7 @@ This is Shell:B's own source: a clone of the live app at ~/shellb/web. Edits her
 - Other sessions (the owner's Claude Code) edit the live code too. shellb_self action=sync pulls their changes in; deploy
   syncs first.
 - Edit shared files (app.py, agent.py, tools.py, App.tsx, Sidebar.tsx, types.ts, api.ts, common.tsx) with small, exact
-  edits. README.md is your manual, so update it when you add or change a feature.
+  edits. docs/MANUAL.md is your manual, so update it when you add or change a feature.
 - When it's ready, call shellb_self action=deploy with a one-paragraph summary of what changed and why."""
 
 

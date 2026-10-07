@@ -20,6 +20,13 @@ export const WALLPAPER_DIM_KEY = 'shellb.kiosk.wallpaper.dim';
 // SVG Tactical Blueprint Data URI
 const SVG_BLUEPRINT = `data:image/svg+xml;utf8,${encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <style>
+    @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.9; } }
+    @keyframes dash { to { stroke-dashoffset: -24; } }
+    .trace { animation: pulse 4s infinite ease-in-out; }
+    .dashed { animation: dash 3s linear infinite; }
+    .scan { animation: pulse 2s infinite ease-in-out; }
+  </style>
   <defs>
     <pattern id="grid-sm" width="20" height="20" patternUnits="userSpaceOnUse">
       <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(56, 189, 248, 0.05)" stroke-width="0.75"/>
@@ -46,11 +53,11 @@ const SVG_BLUEPRINT = `data:image/svg+xml;utf8,${encodeURIComponent(`
     <rect x="550" y="200" width="70" height="200" rx="4" stroke="rgba(245, 158, 11, 0.25)"/>
     
     <!-- Circuit traces & Micro-vias -->
-    <path d="M 250 240 L 280 240 M 250 280 L 280 280 M 250 320 L 280 320 M 250 360 L 280 360" stroke="rgba(245, 158, 11, 0.35)"/>
-    <path d="M 520 240 L 550 240 M 520 280 L 550 280 M 520 320 L 550 320 M 520 360 L 550 360" stroke="rgba(245, 158, 11, 0.35)"/>
+    <path d="M 250 240 L 280 240 M 250 280 L 280 280 M 250 320 L 280 320 M 250 360 L 280 360" stroke="rgba(245, 158, 11, 0.35)" class="trace"/>
+    <path d="M 520 240 L 550 240 M 520 280 L 550 280 M 520 320 L 550 320 M 520 360 L 550 360" stroke="rgba(245, 158, 11, 0.35)" class="trace" style="animation-delay: 1s"/>
     
     <!-- Crosshairs & Alignments -->
-    <circle cx="400" cy="300" r="14" stroke="rgba(56, 189, 248, 0.4)" stroke-dasharray="2 2"/>
+    <circle cx="400" cy="300" r="14" stroke="rgba(56, 189, 248, 0.4)" stroke-dasharray="2 2" class="dashed"/>
     <path d="M 370 300 L 430 300 M 400 270 L 400 330" stroke="rgba(56, 189, 248, 0.4)"/>
     <circle cx="100" cy="100" r="6" stroke="rgba(56, 189, 248, 0.25)"/>
     <circle cx="700" cy="100" r="6" stroke="rgba(56, 189, 248, 0.25)"/>
@@ -94,8 +101,8 @@ const SVG_CYBERHEX = `data:image/svg+xml;utf8,${encodeURIComponent(`
   <rect width="60" height="104" fill="#090b12"/>
   <path d="M 30 0 L 60 17.32 L 60 51.96 L 30 69.28 L 0 51.96 L 0 17.32 Z" fill="none" stroke="rgba(99, 102, 241, 0.12)" stroke-width="1"/>
   <path d="M 30 52 L 60 69.32 L 60 103.96 L 30 121.28 L 0 103.96 L 0 69.32 Z" fill="none" stroke="rgba(99, 102, 241, 0.12)" stroke-width="1"/>
-  <circle cx="30" cy="17.32" r="1.5" fill="rgba(56, 189, 248, 0.25)"/>
-  <circle cx="30" cy="69.28" r="1.5" fill="rgba(56, 189, 248, 0.25)"/>
+  <circle cx="30" cy="17.32" r="1.5" fill="rgba(56, 189, 248, 0.25)"><animate attributeName="r" values="1.5;2.5;1.5" dur="4s" repeatCount="indefinite" /><animate attributeName="opacity" values="0.25;0.8;0.25" dur="4s" repeatCount="indefinite" /></circle>
+  <circle cx="30" cy="69.28" r="1.5" fill="rgba(56, 189, 248, 0.25)"><animate attributeName="r" values="1.5;3;1.5" dur="3s" repeatCount="indefinite" /><animate attributeName="opacity" values="0.25;0.9;0.25" dur="3s" repeatCount="indefinite" /></circle>
 </svg>
 `)}`;
 
@@ -126,7 +133,6 @@ const SVG_SYNTHFIELD = `data:image/svg+xml;utf8,${encodeURIComponent(`
       <stop offset="100%" stop-color="#080318"/>
     </radialGradient>
 
-    <!-- Sliced mask for synthwave sun horizontal blinds -->
     <mask id="sun-mask">
       <rect width="1280" height="800" fill="white"/>
       <rect x="0" y="380" width="1280" height="4" fill="black"/>
@@ -135,6 +141,29 @@ const SVG_SYNTHFIELD = `data:image/svg+xml;utf8,${encodeURIComponent(`
       <rect x="0" y="432" width="1280" height="16" fill="black"/>
       <rect x="0" y="456" width="1280" height="24" fill="black"/>
     </mask>
+
+    <g id="palm-tree">
+      <!-- Neon Palm Tree Silhouette -->
+      <!-- Trunk -->
+      <path d="M 0 0 Q -5 -40 10 -80 Q 20 -120 15 -160 Q 13 -120 -2 -80 Q -15 -40 0 0 Z" fill="#05010b" stroke="#00f3ff" stroke-width="1.5"/>
+      <!-- Fronds -->
+      <path d="M 15 -160 Q 35 -180 55 -150 Q 35 -160 15 -160" fill="#05010b" stroke="#00f3ff" stroke-width="1.5"/>
+      <path d="M 15 -160 Q 40 -190 30 -110 Q 25 -140 15 -160" fill="#05010b" stroke="#00f3ff" stroke-width="1.5"/>
+      <path d="M 15 -160 Q 5 -200 -20 -180 Q 0 -170 15 -160" fill="#05010b" stroke="#00f3ff" stroke-width="1.5"/>
+      <path d="M 15 -160 Q -25 -190 -45 -140 Q -20 -150 15 -160" fill="#05010b" stroke="#00f3ff" stroke-width="1.5"/>
+      <path d="M 15 -160 Q -35 -140 -20 -100 Q -15 -130 15 -160" fill="#05010b" stroke="#00f3ff" stroke-width="1.5"/>
+      <!-- Pink highlight glow on trunk -->
+      <path d="M 5 -20 Q 5 -60 15 -100" fill="none" stroke="#ff2e97" stroke-width="1" opacity="0.8"/>
+    </g>
+
+    <g id="h-line">
+      <line x1="-1000" x2="2280" stroke="#ff2e97">
+        <animate attributeName="y1" values="480; 482; 486; 494; 510; 542; 606; 734; 990; 1502; 2526" keyTimes="0; 0.1; 0.2; 0.3; 0.4; 0.5; 0.6; 0.7; 0.8; 0.9; 1" dur="3s" repeatCount="indefinite" />
+        <animate attributeName="y2" values="480; 482; 486; 494; 510; 542; 606; 734; 990; 1502; 2526" keyTimes="0; 0.1; 0.2; 0.3; 0.4; 0.5; 0.6; 0.7; 0.8; 0.9; 1" dur="3s" repeatCount="indefinite" />
+        <animate attributeName="stroke-width" values="0.5; 0.6; 0.8; 1; 1.2; 1.5; 2; 2.5; 3.5; 5; 7" keyTimes="0; 0.1; 0.2; 0.3; 0.4; 0.5; 0.6; 0.7; 0.8; 0.9; 1" dur="3s" repeatCount="indefinite" />
+        <animate attributeName="opacity" values="0; 0.5; 0.8; 0.9; 1; 1; 1; 1; 1; 1; 0" keyTimes="0; 0.05; 0.1; 0.2; 0.3; 0.4; 0.5; 0.6; 0.7; 0.9; 1" dur="3s" repeatCount="indefinite" />
+      </line>
+    </g>
   </defs>
 
   <!-- Deep Space Sky Background -->
@@ -142,27 +171,21 @@ const SVG_SYNTHFIELD = `data:image/svg+xml;utf8,${encodeURIComponent(`
 
   <!-- Starfield Stars -->
   <g fill="#ffffff">
-    <circle cx="65" cy="45" r="1.5" opacity="0.95"/>
+    <circle cx="65" cy="45" r="1.5"><animate attributeName="opacity" values="0.95;0.2;0.95" dur="3.5s" repeatCount="indefinite"/></circle>
     <circle cx="140" cy="170" r="1.1" opacity="0.7"/>
-    <circle cx="210" cy="70" r="2.2" opacity="0.9" fill="#cfe9ff"/>
-    <circle cx="290" cy="210" r="1.2" opacity="0.65"/>
+    <circle cx="210" cy="70" r="2.2" fill="#cfe9ff"><animate attributeName="opacity" values="0.9;0.4;0.9" dur="4.2s" repeatCount="indefinite"/></circle>
+    <circle cx="290" cy="210" r="1.2"><animate attributeName="opacity" values="0.65;0.1;0.65" dur="2.8s" repeatCount="indefinite"/></circle>
     <circle cx="370" cy="95" r="1.4" opacity="0.8"/>
-    <circle cx="450" cy="60" r="2.4" opacity="0.9" fill="#ffd1ea"/>
+    <circle cx="450" cy="60" r="2.4" fill="#ffd1ea"><animate attributeName="opacity" values="0.9;0.3;0.9" dur="5.1s" repeatCount="indefinite"/></circle>
     <circle cx="530" cy="165" r="1.1" opacity="0.6"/>
     <circle cx="610" cy="85" r="1.8" opacity="0.85"/>
     <circle cx="690" cy="230" r="1" opacity="0.55"/>
-    <circle cx="770" cy="115" r="2.1" opacity="0.9" fill="#ffeaa7"/>
+    <circle cx="770" cy="115" r="2.1" fill="#ffeaa7"><animate attributeName="opacity" values="0.9;0.2;0.9" dur="3.9s" repeatCount="indefinite"/></circle>
     <circle cx="870" cy="65" r="1.5" opacity="0.75"/>
     <circle cx="950" cy="180" r="1.2" opacity="0.7"/>
-    <circle cx="1060" cy="95" r="2.2" opacity="0.85" fill="#cfe9ff"/>
+    <circle cx="1060" cy="95" r="2.2" fill="#cfe9ff"><animate attributeName="opacity" values="0.85;0.2;0.85" dur="4.5s" repeatCount="indefinite"/></circle>
     <circle cx="1160" cy="155" r="1" opacity="0.5"/>
-    <circle cx="1230" cy="65" r="1.6" opacity="0.8"/>
-    <!-- Lower sky subtle stars -->
-    <circle cx="110" cy="285" r="1" opacity="0.6"/>
-    <circle cx="190" cy="335" r="1.3" opacity="0.75"/>
-    <circle cx="840" cy="295" r="1.1" opacity="0.65"/>
-    <circle cx="1010" cy="325" r="1.4" opacity="0.85"/>
-    <circle cx="1130" cy="275" r="0.9" opacity="0.55"/>
+    <circle cx="1230" cy="65" r="1.6"><animate attributeName="opacity" values="0.8;0.3;0.8" dur="3.2s" repeatCount="indefinite"/></circle>
   </g>
 
   <!-- Distant Ringed Gas Giant Planet Limb -->
@@ -186,28 +209,48 @@ const SVG_SYNTHFIELD = `data:image/svg+xml;utf8,${encodeURIComponent(`
   <!-- 3D Perspective Wireframe Neon Grid Floor -->
   <g stroke="rgba(255, 46, 151, 0.6)" stroke-width="1.4">
     <!-- Converging Perspective Vanishing Lines -->
+    <line x1="640" y1="480" x2="-620" y2="800"/>
     <line x1="640" y1="480" x2="-220" y2="800"/>
-    <line x1="640" y1="480" x2="-20" y2="800"/>
-    <line x1="640" y1="480" x2="140" y2="800"/>
-    <line x1="640" y1="480" x2="300" y2="800"/>
-    <line x1="640" y1="480" x2="460" y2="800"/>
+    <line x1="640" y1="480" x2="180" y2="800"/>
+    <line x1="640" y1="480" x2="410" y2="800"/>
+    <line x1="640" y1="480" x2="525" y2="800"/>
     <line x1="640" y1="480" x2="640" y2="800"/>
-    <line x1="640" y1="480" x2="820" y2="800"/>
-    <line x1="640" y1="480" x2="980" y2="800"/>
-    <line x1="640" y1="480" x2="1140" y2="800"/>
-    <line x1="640" y1="480" x2="1300" y2="800"/>
+    <line x1="640" y1="480" x2="755" y2="800"/>
+    <line x1="640" y1="480" x2="870" y2="800"/>
+    <line x1="640" y1="480" x2="1100" y2="800"/>
     <line x1="640" y1="480" x2="1500" y2="800"/>
+    <line x1="640" y1="480" x2="1900" y2="800"/>
 
-    <!-- Perspective Horizontal Rungs -->
-    <line x1="0" y1="484" x2="1280" y2="484" stroke="rgba(56, 189, 248, 0.85)" stroke-width="1.2"/>
-    <line x1="0" y1="492" x2="1280" y2="492" stroke="rgba(255, 46, 151, 0.4)" stroke-width="1"/>
-    <line x1="0" y1="504" x2="1280" y2="504" stroke="rgba(255, 46, 151, 0.45)" stroke-width="1.2"/>
-    <line x1="0" y1="522" x2="1280" y2="522" stroke="rgba(255, 46, 151, 0.52)" stroke-width="1.2"/>
-    <line x1="0" y1="548" x2="1280" y2="548" stroke="rgba(255, 46, 151, 0.6)" stroke-width="1.4"/>
-    <line x1="0" y1="584" x2="1280" y2="584" stroke="rgba(255, 46, 151, 0.68)" stroke-width="1.5"/>
-    <line x1="0" y1="634" x2="1280" y2="634" stroke="rgba(255, 46, 151, 0.78)" stroke-width="1.6"/>
-    <line x1="0" y1="702" x2="1280" y2="702" stroke="rgba(255, 46, 151, 0.88)" stroke-width="1.8"/>
-    <line x1="0" y1="790" x2="1280" y2="790" stroke="rgba(255, 46, 151, 0.95)" stroke-width="2"/>
+    <!-- Perfect Animated Perspective Horizontal Rungs -->
+    <use href="#h-line" />
+    <use href="#h-line">
+      <animate attributeName="begin" values="0" />
+      <set attributeName="begin" to="-0.3s" />
+    </use>
+    <use href="#h-line">
+      <set attributeName="begin" to="-0.6s" />
+    </use>
+    <use href="#h-line">
+      <set attributeName="begin" to="-0.9s" />
+    </use>
+    <use href="#h-line">
+      <set attributeName="begin" to="-1.2s" />
+    </use>
+    <use href="#h-line">
+      <set attributeName="begin" to="-1.5s" />
+    </use>
+    <use href="#h-line">
+      <set attributeName="begin" to="-1.8s" />
+    </use>
+    <use href="#h-line">
+      <set attributeName="begin" to="-2.1s" />
+    </use>
+    <use href="#h-line">
+      <set attributeName="begin" to="-2.4s" />
+    </use>
+    <use href="#h-line">
+      <set attributeName="begin" to="-2.7s" />
+    </use>
   </g>
 
   <!-- The Iconic 4-Colour Starfield / Synthfield Constellation Stripe along Horizon -->
@@ -217,6 +260,13 @@ const SVG_SYNTHFIELD = `data:image/svg+xml;utf8,${encodeURIComponent(`
     <rect x="0" y="480" width="1280" height="2.5" fill="#ff7a2f"/>
     <rect x="0" y="482.5" width="1280" height="2.5" fill="#ffc23d"/>
   </g>
+
+  <!-- Neon Palm Trees at the Horizon -->
+  <use href="#palm-tree" x="120" y="490" transform="scale(0.8) translate(30, 120)" opacity="0.8"/>
+  <use href="#palm-tree" x="280" y="485" transform="scale(0.5) translate(280, 485)" opacity="0.6"/>
+  
+  <use href="#palm-tree" x="1100" y="495" transform="scale(0.9) translate(120, 55)" opacity="0.9"/>
+  <use href="#palm-tree" x="1350" y="485" transform="scale(0.4) translate(1750, 720)" opacity="0.5"/>
 
   <!-- NASA-Punk Telemetry Markings -->
   <g font-family="monospace, sans-serif" font-weight="600" letter-spacing="1.5">
@@ -229,7 +279,7 @@ const SVG_SYNTHFIELD = `data:image/svg+xml;utf8,${encodeURIComponent(`
     <circle cx="640" cy="480" r="18" fill="none" stroke="rgba(255, 194, 61, 0.65)" stroke-width="1.2" stroke-dasharray="3 3"/>
   </g>
 </svg>
-`)}`;
+`)}`
 
 export const WALLPAPERS: WallpaperDef[] = [
   {

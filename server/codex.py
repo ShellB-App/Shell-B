@@ -339,6 +339,8 @@ def _index_text(e: dict) -> str:
     elif e["kind"] == "contact":
         head[0] = f"Contact: {e['title']}"
         details = []
+        if m.get("aka"):
+            details.append("Also known as: " + ", ".join(str(x) for x in m["aka"] if x))
         if m.get("role") or m.get("company"):
             role_parts = [p for p in (m.get("role"), m.get("company")) if p]
             details.append("Role: " + " at ".join(role_parts))
@@ -669,6 +671,7 @@ def relevant_contacts_prompt(text: str, settings: dict | None = None) -> str:
         comp = str(meta.get("company") or "").strip()
 
         tokens = [t.lower() for t in re.split(r"[\s,\.\-_]+", title) if len(t) >= 3]
+        tokens += [str(a).strip().lower() for a in meta.get("aka") or [] if len(str(a).strip()) >= 3]
         if role and len(role) >= 4:
             tokens.append(role.lower())
         if comp and len(comp) >= 3:
@@ -736,6 +739,11 @@ def auto_save_contact(c: dict, mode: str = "auto", source: str | None = None) ->
     with db.conn() as conn:
         existing = conn.execute("SELECT id, title, meta, body FROM codex_entries WHERE kind='contact' AND lower(trim(title))=?",
                                 (name.lower(),)).fetchone()
+        if not existing:  # a nickname kept on another contact ("Maika" on Dunja) is that person, not someone new
+            for r in conn.execute("SELECT id, title, meta, body FROM codex_entries WHERE kind='contact' AND meta LIKE '%\"aka\"%'"):
+                if name.lower() in (str(a).strip().lower() for a in json.loads(r["meta"] or "{}").get("aka") or []):
+                    existing = r
+                    break
 
     if existing:
         old_meta = json.loads(existing["meta"] or "{}")

@@ -466,6 +466,8 @@ export interface ContactMeta {
   pronouns?: string;
   urls?: string[];
   avatar?: string;
+  /** nicknames ("Maika"): chats, the learner and the Me page treat them as this person */
+  aka?: string[];
 }
 
 export interface EventMeta {

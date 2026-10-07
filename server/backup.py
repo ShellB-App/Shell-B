@@ -42,7 +42,7 @@ INDEX_FILE = BACKUP_DIR / "manifests.json"
 # Directories under db.DATA to include
 CORE_DIRS = [
     "projects", "project-meta", "codex", "skills", "groups",
-    "research", "sky", "files", "selfmod", "cells", "cli-home", "ssh"
+    "research", "sky", "files", "selfmod", "cells", "cli-home", "ssh", "worlds", "notify"
 ]
 MEDIA_DIRS = ["workspaces", "assets", "asset-thumbs"]
 ALL_DATA_DIRS = CORE_DIRS + MEDIA_DIRS

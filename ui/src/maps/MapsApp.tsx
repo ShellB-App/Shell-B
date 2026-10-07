@@ -13,7 +13,7 @@ import type { FeatureCollection, Point } from 'geojson';
 import {
   Activity, Anchor, Bookmark, Check, Compass, Copy, Crosshair, Download, Eye, Flag, Globe2, Info, Loader2, LocateFixed,
   Map as MapIcon, MapPin, Navigation, Orbit, PanelLeftClose, PanelLeftOpen, Radar, Rocket, Route as RouteIcon, Ruler,
-  Search, Sparkles, Thermometer, Video, X,
+  Satellite, Search, Sparkles, Thermometer, Video, X,
 } from 'lucide-react';
 import { drawOverlays, fetchBodies, fmtCoord, frameSpec, loadMapLib, styleFor, type MapBody, type MapLib, type MapSpec } from './core';
 import { MAPS_HANDOFF, useDarkTheme } from './MapCard';
@@ -21,7 +21,8 @@ import { SolView } from './SolView';
 import { SOL_BODIES, isMajorMoon, moonsOf } from './sol';
 import { FLIGHT_HANDOFF, FlightPanel } from './FlightCard';
 import { areaFlights, findFlight, pathLayers, planeLayer, viewRadiusNm, type Aircraft, type FindResult } from './flights';
-import { attachOrbiters, type OrbiterInfo, type OrbiterLayer } from './orbiters';
+import { REGIME_COLOR, attachOrbiters, type OrbiterInfo, type OrbiterLayer } from './orbiters';
+import { compass, type Pass } from './passes';
 import { getLandmarksForBody, searchLandmarks, type Landmark } from './landmarks';
 import { attachTerminator } from './terminator';
 import { attachMeasureLayer, detachMeasureLayer, computePath, formatDist, type MeasurePoint } from './measure';
@@ -45,6 +46,10 @@ import { MapFeatureModal, type AnyFeature } from './MapFeatureModal';
 import { attachPoints, mapAlive, type PointItem, type PointLayer } from './pointLayer';
 import { OVERLAYS, loadPrefs, savePrefs, type LayerPrefs, type OverlayId } from './overlays';
 import { LayersPanel } from './LayersPanel';
+import { TimeBar } from './TimeBar';
+import { attachRelief } from './relief';
+import { useClockState, useClockTime } from './clock';
+import { ASK_ATLAS, OPEN_MEDIA, mediaSrc, type NoteMedia } from './notes';
 
 export const WORLD_PALETTE: Record<string, { color: string; label?: string }> = {
   sol: { color: '#f59e0b', label: 'Star' },
@@ -120,7 +125,8 @@ type Selection =
 
 interface Suggestion {
   id: string;
-  kind: 'coord' | 'flight' | 'landmark' | 'geocode' | 'feature';
+  kind: 'coord' | 'flight' | 'landmark' | 'geocode' | 'feature' | 'satellite';
+  satId?: string;
   title: string;
   subtitle?: string;
   lat?: number;
@@ -201,6 +207,18 @@ export function MapsApp() {
   });
   const [pinCard, setPinCard] = useState<'weather' | 'sky' | null>(null);
   const [viewport, setViewport] = useState({ lat: 0, lon: 0, zoom: 2 });
+  const [atlasRequest, setAtlasRequest] = useState<{ text: string; n: number } | null>(null);
+  const [lightbox, setLightbox] = useState<NoteMedia | null>(null);
+
+  useEffect(() => { if (drawer !== 'atlas') setAtlasRequest(null); }, [drawer]);  // a reopened Atlas shouldn't resend it
+  // Cards ask Atlas and open pictures through window events (they sit a few components down)
+  useEffect(() => {
+    const ask = (e: Event) => { setDrawer('atlas'); setAtlasRequest(r => ({ text: String((e as CustomEvent).detail), n: (r?.n ?? 0) + 1 })); };
+    const show = (e: Event) => setLightbox((e as CustomEvent<NoteMedia>).detail);
+    window.addEventListener(ASK_ATLAS, ask);
+    window.addEventListener(OPEN_MEDIA, show);
+    return () => { window.removeEventListener(ASK_ATLAS, ask); window.removeEventListener(OPEN_MEDIA, show); };
+  }, []);
 
   // Live flights (Earth only): the traffic layer, and one followed flight
   const [planes, setPlanes] = useState<Aircraft[]>([]);
@@ -224,7 +242,8 @@ export function MapsApp() {
 
   const body = bodies?.find(b => b.id === bodyId) ?? null;
   const isEarth = bodyId === 'earth';
-  const has = (id: OverlayId) => prefs[id] && !!OVERLAYS.find(o => o.id === id)?.on(bodyId, globe);
+  const worldCtx = { terrain: !!body?.terrain };
+  const has = (id: OverlayId) => prefs[id] && !!OVERLAYS.find(o => o.id === id)?.on(bodyId, globe, worldCtx);
 
   // ── Map lifecycle ───────────────────────────────────────────────────────
   const box = useRef<HTMLDivElement>(null);
@@ -348,6 +367,7 @@ export function MapsApp() {
     const ids = [...hits.current.keys()].filter(id => m.getLayer(id));
     const f = ids.length ? m.queryRenderedFeatures(e.point, { layers: ids })[0] : undefined;
     if (f) { hits.current.get(f.layer.id)?.(f); return; }
+    if (orbLayer.current?.hitTest(e.point.x, e.point.y)) return;  // the spacecraft layer selects it itself
     setSelection(null);
     orbLayer.current?.select(null);
     setPin(at);
@@ -442,6 +462,13 @@ export function MapsApp() {
     });
   }, [map, quakesOn, own]);
 
+  // ── Relief and 3D terrain ───────────────────────────────────────────────
+  const reliefOn = has('relief'), terrain3dOn = has('terrain3d');
+  useEffect(() => {
+    if (!map || !body?.terrain || (!reliefOn && !terrain3dOn) || mapState?.body !== body.id) return;
+    return own(attachRelief(map, body, { dark, shade: reliefOn, threeD: terrain3dOn }));
+  }, [map, body, dark, reliefOn, terrain3dOn, own]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Day/night, grid ─────────────────────────────────────────────────────
   const dayNightOn = has('daynight');
   useEffect(() => {
@@ -467,12 +494,12 @@ export function MapsApp() {
       onStatus: setOrbStatus,
     });
     orbLayer.current = layer;
-    hits.current.set('sb-orb', () => {});  // the layer handles its own clicks; this just stops a pin drop
-    return own(() => { hits.current.delete('sb-orb'); orbLayer.current = null; layer.detach(); });
+    return own(() => { orbLayer.current = null; layer.detach(); });
   }, [map, lib, bodyId, satsOn, own]);
 
   // ── Flights ─────────────────────────────────────────────────────────────
-  const trafficOn = has('flights');
+  const clock = useClockState();
+  const trafficOn = has('flights') && clock.live;  // ADS-B is live only; the layer pauses when the clock leaves "now"
   useEffect(() => {
     setPlanes([]); setTrafficErr(null);
     if (!map || !trafficOn) return;
@@ -496,7 +523,7 @@ export function MapsApp() {
 
   useEffect(() => {
     setSel({ res: null, error: null, updated: null });
-    if (!flightQ || !isEarth) return;
+    if (!flightQ || !isEarth || !clock.live) return;
     let gone = false, t: ReturnType<typeof setTimeout> | undefined;
     const load = async () => {
       if (!document.hidden) {
@@ -509,9 +536,9 @@ export function MapsApp() {
     };
     load();
     return () => { gone = true; clearTimeout(t); };
-  }, [flightQ, isEarth]);
+  }, [flightQ, isEarth, clock.live]);
 
-  const showPlanes = isEarth && (trafficOn || !!flightQ);
+  const showPlanes = isEarth && clock.live && (trafficOn || !!flightQ);
   useEffect(() => {
     if (!map || !showPlanes) return;
     pathLayers(map);
@@ -686,14 +713,19 @@ export function MapsApp() {
       const list: Suggestion[] = [];
       const coord = parseCoords(q);
       if (coord) list.push({ id: 'coord', kind: 'coord', title: `${coord.lat.toFixed(4)}, ${coord.lon.toFixed(4)}`, subtitle: 'Go to coordinates', ...coord });
+      for (const s of orbLayer.current?.search(q, 5) ?? []) {
+        list.push({ id: `sat-${s.id}`, kind: 'satellite', title: s.name, subtitle: `Spacecraft${s.regime ? ` · ${s.regime}` : ''} · ${isEarth ? `NORAD ${s.id}` : 'JPL Horizons'}`, satId: s.id });
+      }
       for (const l of searchLandmarks(q, bodyId).slice(0, 4)) {
         list.push({ id: `lm-${l.id}`, kind: 'landmark', title: l.name, subtitle: [l.kind, l.agency, l.country].filter(Boolean).join(' · '), lat: l.lat, lon: l.lon, landmark: l });
       }
       const ql = q.toLowerCase();
+      const show = () => { if (alive) setSuggestions([...list]); };  // local matches first; network ones join as they arrive
       const fetchJson = async <T,>(url: string): Promise<T | null> => {
         try { const r = await fetch(url); return r.ok ? await r.json() as T : null; } catch { return null; }
       };
       if (!isEarth && bodyId !== 'sol') {
+        show();
         const d = await fetchJson<{ results?: { name: string; type: string; lat: number; lon: number; diameter_km: number; origin?: string }[] }>(
           `/api/planetary/search?body=${encodeURIComponent(bodyId)}&q=${encodeURIComponent(q)}&limit=6`);
         for (const item of d?.results ?? []) {
@@ -722,6 +754,7 @@ export function MapsApp() {
         LAUNCH_SITES.filter(w => w.name.toLowerCase().includes(ql) || w.operator.toLowerCase().includes(ql)).slice(0, 2).forEach(item => feat({ kind: 'launchsite', item }, `Spaceport · ${item.operator}`));
         CCTV_CAMERAS.filter(c => (c.lat !== 0 || c.lon !== 0) && (c.name.toLowerCase().includes(ql) || c.city.toLowerCase().includes(ql))).slice(0, 2).forEach(item => feat({ kind: 'cctv', item }, `Webcam · ${item.city}`));
         // places after the curated matches, so 'Titanic' finds the wreck before a village of that name
+        show();
         const d = await fetchJson<{ results?: { name: string; full: string; lat: number; lon: number }[] }>(`/api/geocode?q=${encodeURIComponent(q)}&limit=5`);
         for (const item of d?.results ?? []) {
           if (list.some(e => e.kind === 'geocode' && e.title === item.name && Math.abs(e.lat! - item.lat) < 0.2 && Math.abs(e.lon! - item.lon) < 0.2)) continue;
@@ -731,12 +764,18 @@ export function MapsApp() {
       if (alive) { setSuggestions(list); setSearching(false); }
     }, 220);
     return () => { alive = false; clearTimeout(timer); };
-  }, [searchQuery, isEarth, bodyId]);
+  }, [searchQuery, isEarth, bodyId, satsOn]);
 
   const selectSuggestion = (s: Suggestion) => {
     setSearchOpen(false);
     setSearchQuery('');
     if (s.kind === 'flight' && s.flight) { setFlightQ(s.flight); setFollow(true); flownTo.current = null; return; }
+    if (s.kind === 'satellite' && s.satId) {
+      orbLayer.current?.select(s.satId);
+      const w = orbLayer.current?.where(s.satId);
+      if (w && map) map.flyTo({ center: [w.lon, w.lat], duration: 1200 });
+      return;
+    }
     if (s.lat == null || s.lon == null) return;
     if (s.kind === 'feature' && s.feature) {
       const ov = selectionKey(s.feature)?.overlay;
@@ -922,7 +961,7 @@ export function MapsApp() {
                     <ToolButton on={drawer === 'bookmarks'} onClick={() => toggleDrawer('bookmarks')} icon={Bookmark} title="Tours and saved places" />
                   </div>
                 )}
-                {hasMap && <LayersPanel bodyId={bodyId} bodyName={body?.name ?? bodyId} globe={globe} prefs={prefs} onToggle={toggleLayer} counts={counts} />}
+                {hasMap && <LayersPanel bodyId={bodyId} bodyName={body?.name ?? bodyId} globe={globe} ctx={worldCtx} prefs={prefs} onToggle={toggleLayer} counts={counts} />}
                 <button
                   className={clsx('pointer-events-auto h-9 px-3 flex items-center gap-1.5 rounded-xl border sb-map-glass text-[12px] font-medium transition',
                     drawer === 'atlas' ? 'border-[var(--accent)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]')}
@@ -993,26 +1032,8 @@ export function MapsApp() {
               )}
 
               {satsOn && orbSel && (
-                <div className="absolute bottom-14 right-3 w-64 rounded-xl border border-[var(--border-subtle)] sb-map-glass p-3 text-[12px] z-20">
-                  <div className="flex items-start gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[14px] leading-tight font-semibold tracking-tight truncate">{orbSel.name}</div>
-                      {orbSel.mission && <div className="text-[11px] text-[var(--text-muted)] truncate">{orbSel.mission}</div>}
-                    </div>
-                    <button className="text-[var(--text-muted)] hover:text-[var(--text-primary)]" onClick={() => orbLayer.current?.select(null)} title="Close"><X className="w-3.5 h-3.5" /></button>
-                  </div>
-                  <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
-                    {([['Latitude', `${Math.abs(orbSel.lat).toFixed(2)}° ${orbSel.lat >= 0 ? 'N' : 'S'}`], ['Longitude', `${Math.abs(orbSel.lon).toFixed(2)}° ${orbSel.lon >= 0 ? 'E' : 'W'}`],
-                      ['Altitude', `${Math.round(orbSel.alt).toLocaleString()} km`], [isEarth ? 'Speed' : 'Ground speed', `${orbSel.speed.toFixed(2)} km/s`]] as [string, string][]).map(([k, v]) => (
-                      <div key={k}><dt className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">{k}</dt><dd className="font-mono tabular-nums">{v}</dd></div>
-                    ))}
-                  </dl>
-                  <div className="mt-2 flex items-center gap-3 text-[10px] text-[var(--text-muted)]">
-                    <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-[#d95926]" />last 45 min</span>
-                    <span className="flex items-center gap-1"><span className="w-3 border-t border-dashed border-[var(--text-secondary)]" />next 90 min</span>
-                  </div>
-                  <div className="mt-1 text-[10px] text-[var(--text-muted)]">{isEarth ? 'Computed here from Celestrak elements' : 'Ground track from JPL Horizons'}</div>
-                </div>
+                <SpacecraftCard info={orbSel} earth={isEarth} from={pin ?? (map ? { lat: map.getCenter().lat, lon: map.getCenter().wrap().lng } : null)} fromPin={!!pin}
+                  layer={orbLayer.current} onClose={() => orbLayer.current?.select(null)} />
               )}
 
               {status && (
@@ -1022,6 +1043,14 @@ export function MapsApp() {
               {hasMap && (
                 <div className="absolute bottom-3 left-3 right-28 flex flex-wrap items-end gap-2 pointer-events-none z-20">
                   {map && <Readout map={map} />}
+                  {satsOn && isEarth && (
+                    <div className="rounded-xl border border-[var(--border-subtle)] sb-map-glass px-2.5 py-1.5 text-[10.5px] text-[var(--text-secondary)] flex items-center gap-2.5 whitespace-nowrap"
+                      title="Orbit bands: low Earth orbit (under 2,000 km), medium (GPS, ~20,200 km), geostationary (35,786 km), and high/elliptical">
+                      {(['LEO', 'MEO', 'GEO', 'HEO'] as const).map(k => (
+                        <span key={k} className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: REGIME_COLOR[k] }} />{k}</span>
+                      ))}
+                    </div>
+                  )}
                   {pin && (
                     <div className="pointer-events-auto flex items-center gap-1 rounded-xl border border-[var(--border-subtle)] sb-map-glass pl-2.5 pr-1 py-1 text-[11px]">
                       <MapPin className="w-3.5 h-3.5 text-[#ff5a36] shrink-0" />
@@ -1034,6 +1063,23 @@ export function MapsApp() {
                     </div>
                   )}
                 </div>
+              )}
+
+              {lightbox && (
+                <div className="absolute inset-0 z-50 bg-black/85 flex flex-col items-center justify-center p-6 gap-3" onClick={() => setLightbox(null)}
+                  role="dialog" aria-label={lightbox.caption} onKeyDown={e => e.key === 'Escape' && setLightbox(null)} tabIndex={-1} ref={el => el?.focus()}>
+                  <img src={mediaSrc(lightbox)} alt={lightbox.caption} className="max-w-full max-h-[calc(100%-4rem)] object-contain rounded" onClick={e => e.stopPropagation()} />
+                  <div className="max-w-3xl text-center text-[12px] text-slate-200">
+                    {lightbox.caption}
+                    {(lightbox.credit || lightbox.license) && <span className="text-slate-400"> · {[lightbox.credit, lightbox.license].filter(Boolean).join(' · ')}</span>}
+                  </div>
+                  <button className="absolute top-3 right-3 p-1.5 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Close" onClick={() => setLightbox(null)}><X className="w-4 h-4" /></button>
+                </div>
+              )}
+
+              {hasMap && (
+                <MapClock className="absolute z-20 left-1/2 -translate-x-1/2 bottom-16 2xl:bottom-3 max-w-[calc(100%-1.5rem)]"
+                  flights={has('flights')} sats={satsOn ? (isEarth ? 'tle' : 'track') : null} />
               )}
 
               {pinCard === 'weather' && pin && isEarth && (
@@ -1097,7 +1143,7 @@ export function MapsApp() {
                 onSelect={bm => goTo({ body: bm.bodyId, lat: bm.lat, lon: bm.lon, zoom: bm.zoom, bearing: bm.bearing ?? 0, pitch: bm.pitch ?? 0, pin: true })} />
             )}
             {drawer === 'atlas' && (
-              <AtlasCopilot isOpen onClose={() => setDrawer(null)} bodyId={bodyId} bodyName={body?.name ?? bodyId} viewport={viewport}
+              <AtlasCopilot isOpen request={atlasRequest} onClose={() => setDrawer(null)} bodyId={bodyId} bodyName={body?.name ?? bodyId} viewport={viewport}
                 selectedLandmark={selection?.kind === 'landmark' ? selection.item : null}
                 onFlyTo={t => goTo({ body: t.body, lat: t.lat, lon: t.lon, zoom: t.zoom ?? 7, pin: true })}
                 onApplyOverlay={spec => {
@@ -1135,6 +1181,76 @@ function Readout({ map }: { map: ML.Map }) {
   );
 }
 
+/** The selected spacecraft: where it is, its orbit band, and (Earth) when it's visible from the pin or map centre. */
+function SpacecraftCard({ info, earth, from, fromPin, layer, onClose }: {
+  info: OrbiterInfo; earth: boolean; from: { lat: number; lon: number } | null; fromPin: boolean; layer: OrbiterLayer | null; onClose: () => void;
+}) {
+  const [list, setList] = useState<Pass[] | null>(null);
+  useEffect(() => setList(null), [info.id]);
+  const when = (ms: number) => new Date(ms).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return (
+    <div className="absolute bottom-14 right-3 w-72 max-h-[calc(100%-8rem)] overflow-y-auto rounded-xl border border-[var(--border-subtle)] sb-map-glass p-3 text-[12px] z-20">
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="text-[14px] leading-tight font-semibold tracking-tight truncate">{info.name}</div>
+          {info.mission && <div className="text-[11px] text-[var(--text-muted)] truncate">{info.mission}</div>}
+        </div>
+        <button className="text-[var(--text-muted)] hover:text-[var(--text-primary)]" onClick={onClose} title="Close"><X className="w-3.5 h-3.5" /></button>
+      </div>
+      <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
+        {([['Latitude', `${Math.abs(info.lat).toFixed(2)}° ${info.lat >= 0 ? 'N' : 'S'}`], ['Longitude', `${Math.abs(info.lon).toFixed(2)}° ${info.lon >= 0 ? 'E' : 'W'}`],
+          ['Altitude', `${Math.round(info.alt).toLocaleString()} km${info.regime ? ` · ${info.regime}` : ''}`],
+          [earth ? 'Speed' : 'Ground speed', Number.isFinite(info.speed) ? `${info.speed.toFixed(2)} km/s` : '—']] as [string, string][]).map(([k, v]) => (
+          <div key={k}><dt className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">{k}</dt><dd className="font-mono tabular-nums">{v}</dd></div>
+        ))}
+      </dl>
+      <div className="mt-2 flex items-center gap-3 text-[10px] text-[var(--text-muted)]">
+        <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-[#d95926]" />last 45 min</span>
+        <span className="flex items-center gap-1"><span className="w-3 border-t border-dashed border-[var(--text-secondary)]" />next 90 min</span>
+        <span className="flex items-center gap-1"><span className="w-3 border-t border-dotted border-[#f97316]" />in view</span>
+      </div>
+      {earth && from && layer && (
+        <div className="mt-3 pt-2.5 border-t border-[var(--border-subtle)]">
+          {!list ? (
+            <button className="w-full h-8 rounded-md border border-[var(--border-subtle)] text-[11.5px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]"
+              onClick={() => setList(layer.passes(info.id, from.lat, from.lon) ?? [])}>
+              Passes over {fromPin ? 'the pin' : 'the map centre'}, next 3 days
+            </button>
+          ) : (
+            <>
+              <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1.5">Passes over {fromPin ? 'the pin' : 'the map centre'} (10° up or more)</div>
+              {list.length === 0 && <div className="text-[11.5px] text-[var(--text-muted)]">None in the next 3 days.</div>}
+              <ul className="space-y-1">
+                {list.map(p => (
+                  <li key={p.start} className="flex items-baseline gap-2 text-[11.5px]">
+                    <span className="tabular-nums text-[var(--text-primary)]">{when(p.start)}</span>
+                    <span className="text-[var(--text-muted)] tabular-nums">{Math.round(p.maxEl)}° · {compass(p.startAz)}→{compass(p.endAz)} · {Math.max(1, Math.round((p.end - p.start) / 60000))} min</span>
+                    {p.visible && <span className="ml-auto text-[10px] font-medium text-emerald-500" title="Sunlit while your sky is dark">visible</span>}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-1.5 text-[10px] text-[var(--text-muted)]">“Visible” means the satellite is sunlit while your sky is dark. Times are local.</div>
+            </>
+          )}
+        </div>
+      )}
+      <div className="mt-2 text-[10px] text-[var(--text-muted)]">{earth ? 'Computed here from Celestrak elements' : 'Ground track from JPL Horizons'}</div>
+    </div>
+  );
+}
+
+/** The shared clock's controls on the map, with a note when a layer can't follow the chosen time. */
+function MapClock({ className, flights, sats }: { className: string; flights: boolean; sats: 'tle' | 'track' | null }) {
+  const live = useClockState().live;
+  const t = useClockTime(5000);
+  const off = t - Date.now();
+  const note = flights && !live ? 'Flights are live only; press Now to see them.'
+    : sats === 'tle' && Math.abs(off) > 30 * 86_400_000 ? 'Satellite orbits drift more than a few weeks from today, so their positions here are rough.'
+    : sats === 'track' && (off < -2 * 3_600_000 || off > 4 * 3_600_000) ? 'Spacecraft tracks only cover 2 hours back to 4 hours ahead of now.'
+    : null;
+  return <TimeBar playRate={2} className={className} note={note} />;
+}
+
 function ToolButton({ on, onClick, icon: Icon, label, title }: { on: boolean; onClick: () => void; icon: typeof Globe2; label?: string; title: string }) {
   return (
     <button onClick={onClick} aria-pressed={on} title={title}
@@ -1160,6 +1276,7 @@ function SuggestionIcon({ s }: { s: Suggestion }) {
   if (s.kind === 'landmark') return <Flag className={clsx(c, 'text-emerald-400')} />;
   if (s.kind === 'flight') return <Radar className={clsx(c, 'text-sky-400')} />;
   if (s.kind === 'coord') return <Crosshair className={clsx(c, 'text-amber-400')} />;
+  if (s.kind === 'satellite') return <Satellite className={clsx(c, 'text-sky-400')} />;
   if (s.kind === 'feature') {
     const k = s.feature?.kind;
     return k === 'shipwreck' ? <Anchor className={clsx(c, 'text-cyan-400')} /> : k === 'wonder' ? <Sparkles className={clsx(c, 'text-amber-400')} />

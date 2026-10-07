@@ -3,6 +3,7 @@ import { useState } from 'react';
 import clsx from 'clsx';
 import { Check, Compass, Copy, ExternalLink, Flag, MapPin, Navigation, Rocket, X } from 'lucide-react';
 import type { Landmark } from './landmarks';
+import { FeatureNotes } from './FeatureNotes';
 import { fmtCoord } from './core';
 
 interface LandmarkModalProps {
@@ -25,7 +26,7 @@ export function LandmarkModal({ landmark, onClose, onFlyTo }: LandmarkModalProps
   const isSpaceport = landmark.kind === 'spaceport';
 
   return (
-    <div className="w-80 rounded-lg border border-[var(--border-subtle)] sb-map-glass p-3.5 text-[12px] shadow-2xl backdrop-blur-md">
+    <div className="w-[22rem] max-w-full rounded-lg border border-[var(--border-subtle)] sb-map-glass p-3.5 text-[12px] shadow-2xl backdrop-blur-md">
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
@@ -134,6 +135,8 @@ export function LandmarkModal({ landmark, onClose, onFlyTo }: LandmarkModalProps
           <span>{copied ? 'Copied' : 'Coords'}</span>
         </button>
       </div>
+
+      <FeatureNotes body={landmark.bodyId} feature={landmark.name} />
     </div>
   );
 }

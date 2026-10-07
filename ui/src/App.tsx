@@ -1,11 +1,12 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { Archive, ArrowDown, GitFork, Moon, PanelLeft, PanelRight, Radio, Search, Shapes, Smartphone, Sun, Telescope, Workflow } from 'lucide-react';
+import { Archive, ArrowDown, Download, GitFork, Moon, PanelLeft, PanelRight, Printer, Radio, Search, Shapes, Smartphone, Sun, Telescope, Workflow } from 'lucide-react';
 import { FormFactorSwitcher } from './mobile/FormFactorSwitcher';
 import { api } from './api';
 import type {
   Agent, Attachment, ChatProject, Conversation, ConversationSummary, Effort, ModelInfo, Settings, SettingsTabId, Status, ToolInfo,
 } from './types';
+import { useSuggestions } from './suggestions';
 import { useChat } from './useChat';
 import { Sidebar } from './components/Sidebar';
 import { AppRail } from './components/AppRail';
@@ -25,6 +26,7 @@ import { ArtifactViewer, Library } from './components/Library';
 import { FavoriteStar, FavoritesPage } from './components/Favorites';
 import { Scheduled, browserTz } from './components/Scheduled';
 import { Activity } from './components/Activity';
+import { Me } from './components/Me';
 import { Codex } from './components/Codex';
 import { Notes } from './components/Notes';
 import { Models } from './components/Models';
@@ -184,6 +186,7 @@ export function App() {
   // agents that can audit a chat (verify.py): the cloud ones, Claude and Gemini by default
   const verifiers = useMemo(() => agents.filter(a => a.cloud), [agents]);
   const agent = agents.find(a => a.id === agentId) ?? chatAgents[0] ?? agents[0];
+  const quick = useSuggestions(agent?.id ?? 'shellb', QUICK[agent?.id ?? 'shellb'] ?? QUICK.shellb);
   // the composer's model picker (cloud agents): per agent, for this browser session, like efforts
   const [modelPicks, setModelPicks] = useState<Record<string, string>>({});
   const providerOf = (name?: string) => /^([\w-]+)\//.exec(name ?? '')?.[1];
@@ -626,7 +629,7 @@ export function App() {
                 <Telescope className="w-4 h-4 text-teal-500" />Research
               </button>
             ) : library || scheduled || activity || codexRoute !== null || modelsRoute ? (
-              <span className="text-sm font-medium">{library === 'favorites' ? 'Favorites' : library ? 'Library' : scheduled ? 'Scheduled' : activity ? 'Activity' : codexRoute !== null ? (/^notes\b/.test(codexRoute) ? 'Notes' : /^contacts\b/.test(codexRoute) ? 'Contacts' : /^(events|calendar)\b/.test(codexRoute) ? 'Calendar' : 'Codex') : 'Models'}</span>
+              <span className="text-sm font-medium">{library === 'favorites' ? 'Favorites' : library ? 'Library' : scheduled ? 'Scheduled' : activity ? 'Activity' : codexRoute !== null ? (/^me\b/.test(codexRoute) ? 'Me' : /^notes\b/.test(codexRoute) ? 'Notes' : /^contacts\b/.test(codexRoute) ? 'Contacts' : /^(events|calendar)\b/.test(codexRoute) ? 'Calendar' : 'Codex') : 'Models'}</span>
             ) : groupRoute ? (
               <>
                 <button className="text-sm font-medium hover:text-[var(--accent)]" onClick={() => openGroup()}>Projects</button>
@@ -685,6 +688,25 @@ export function App() {
               <span className="font-mono text-[10px]">{artifacts.length}</span>
             </button>
           )}
+          {conv && messages.length > 0 && !plans && !research && !library && !scheduled && !activity && codexRoute === null && !modelsRoute && !assetRoute && !groupRoute && !radioRoute && (
+            <div className="flex items-center gap-1 border-l border-[var(--border-subtle)] pl-2 ml-1">
+              <button className={btn.icon} onClick={() => {
+                const lines = [`# ${conv.title || 'Conversation'}\n`];
+                messages.forEach(m => {
+                  const role = m.role === 'user' ? 'User' : (m.agentId ? agents.find(a => a.id === m.agentId)?.name || 'Assistant' : 'Assistant');
+                  lines.push(`## ${role}\n\n${m.content}\n`);
+                });
+                const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${(conv.title || 'Conversation').replace(/[^a-z0-9_-]/gi, '_')}.md`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }} title="Export as Markdown"><Download className="w-4 h-4" /></button>
+              <button className={btn.icon} onClick={() => window.print()} title="Print / Export to PDF"><Printer className="w-4 h-4" /></button>
+            </div>
+          )}
           <button className={btn.icon} onClick={() => setFormFactorOpen(true)} title="Display Form Factor (Desktop / Mobile / Kiosk)"><Smartphone className="w-4 h-4" /></button>
           <button className={btn.icon} onClick={toggleTheme} title="Toggle theme">{theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}</button>
         </header>
@@ -738,7 +760,8 @@ export function App() {
           </div>
         ) : codexRoute !== null && !library && !scheduled && !activity ? (
           <div className="flex-1 min-h-0">
-            {/^notes\b/.test(codexRoute) ? <Notes sub={codexRoute} onDiscuss={startNoteChat} />
+            {/^me\b/.test(codexRoute) ? <Me />
+              : /^notes\b/.test(codexRoute) ? <Notes sub={codexRoute} onDiscuss={startNoteChat} />
               : <Codex sub={codexRoute} agentNames={Object.fromEntries(agents.map(a => [a.id, a.name]))} />}
           </div>
         ) : activity && !library && !scheduled ? (
@@ -779,7 +802,7 @@ export function App() {
                   <span className="font-medium text-[var(--text-primary)]">{agent.name}</span> · {agent.description}
                 </p>
                 <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full text-left">
-                  {(QUICK[agent.id] ?? QUICK.shellb).map(q => (
+                  {quick.map(q => (
                     <button key={q.title} onClick={() => send(q.prompt, [])}
                       className="sf-card p-3.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-hover)] hover:border-[var(--border-strong)] transition group text-left">
                       <div className="text-xs font-semibold group-hover:text-[var(--accent-soft)] transition">{q.title}</div>

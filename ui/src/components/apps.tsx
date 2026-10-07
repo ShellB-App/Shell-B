@@ -1,9 +1,9 @@
-import { AudioLines, BookMarked, BookOpen, Brain, BrainCircuit, Boxes, CalendarClock, CodeXml, Cpu, HardDrive, ImagePlus, Inbox, LibraryBig, Map as MapIcon, MessageSquare, NotebookPen, Palette, Radio, RadioTower, Settings, Shapes, Telescope, Workflow, type LucideIcon } from 'lucide-react';
+import { AudioLines, BookMarked, BookOpen, Brain, BrainCircuit, Boxes, CalendarClock, CodeXml, Cpu, HardDrive, ImagePlus, Inbox, LibraryBig, Map as MapIcon, MessageSquare, NotebookPen, Palette, Radio, RadioTower, Settings, Shapes, Telescope, UserRound, Workflow, type LucideIcon } from 'lucide-react';
 import { useSyncExternalStore } from 'react';
 import type { Status } from '../types';
 import { dj } from '../dj/engine';
 
-export type AppId = 'chat' | 'studio' | 'code' | 'library' | 'maps' | 'wiki' | 'notes' | 'codex' | 'memory' | 'research' | 'plans' | 'assets' | 'scheduled' | 'activity'
+export type AppId = 'chat' | 'studio' | 'code' | 'library' | 'maps' | 'wiki' | 'me' | 'notes' | 'codex' | 'memory' | 'research' | 'plans' | 'assets' | 'scheduled' | 'activity'
   | 'secretary' | 'gibberlink' | 'radio' | 'generate' | 'models' | 'data' | 'agents' | 'tools' | 'settings';
 
 export type AppGroup = 'chat' | 'make' | 'know' | 'run' | 'system';
@@ -60,7 +60,9 @@ export const APPS: AppDef[] = [
     hash: '#/worlds', route: /^#\/(worlds|maps)\b/, keywords: 'map maps globe earth moon mars planets world atlas solar system sol orrery' },
   { id: 'wiki', label: 'Wiki', hint: 'Offline Wikipedia, Wiktionary and Wikivoyage', icon: BookOpen, tint: '#7dd3fc', group: 'know',
     hash: '#/wiki', route: /^#\/wiki\b/, keywords: 'wikipedia encyclopedia kiwix offline dictionary wiktionary wikivoyage travel' },
-  // before Codex: both routes start with #/codex, and the first match wins
+  // before Codex: these routes start with #/codex, and the first match wins
+  { id: 'me', label: 'Me', hint: 'Everything Shell:B knows about you: a portrait, your facts, your people and what’s coming up', icon: UserRound, tint: '#fb7185', group: 'know',
+    hash: '#/codex/me', route: /^#\/codex\/me\b/, keywords: 'profile about me myself portrait people family friends birthdays memory' },
   { id: 'notes', label: 'Notes', hint: 'Write and brainstorm in Markdown; notes are saved to your Codex', icon: NotebookPen, tint: '#fcd34d', group: 'know',
     hash: '#/codex/notes', route: /^#\/codex\/notes\b/, keywords: 'markdown brainstorm ideas write documents' },
   { id: 'codex', label: 'Codex', hint: 'Your long-term reference shelf: notes, links, snippets, files, contacts and calendar', icon: BookMarked, tint: '#818cf8', group: 'know',

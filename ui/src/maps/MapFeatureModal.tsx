@@ -6,6 +6,7 @@ import {
   Radio, Rocket, Shield, Sparkles, Video, Waves, X
 } from 'lucide-react';
 import { fmtCoord } from './core';
+import { FeatureNotes } from './FeatureNotes';
 import type { Shipwreck } from './shipwrecks';
 import type { WorldWonder } from './wonders';
 import type { LaunchSite } from './launchsites';
@@ -192,6 +193,8 @@ export function MapFeatureModal({ feature, onClose, onFlyTo }: MapFeatureModalPr
           <span>{copied ? 'Copied' : 'Coords'}</span>
         </button>
       </div>
+
+      <FeatureNotes body="earth" feature={title} />
     </div>
   );
 }

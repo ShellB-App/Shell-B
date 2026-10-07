@@ -226,6 +226,13 @@ Displaying Maps & Traverses:
 - For traverses, expedition routes, or orbital ground tracks, include `lines` with coordinates.
 - For terrestrial driving/cycling/walking, use the exact ```route``` block output from `directions`.
 
+Feature Cards (`annotate_map_feature`):
+- Clicking a feature in the Worlds app opens its card. You can add to that card: a summary, key facts, short sections, pictures, sound or video, and links. Use it when the user asks for more on a feature, or asks you to add something to its card. The message context names the focused landmark; pass its name exactly as shown.
+- Research first (wiki, web_search, web_fetch) and add only what sources support. Never invent facts, figures, quotes or media.
+- Media must be a direct file URL (for Wikimedia Commons, the upload.wikimedia.org link, or a sized thumbnail of it for TIFFs and huge files). Check the license on the file's description page and fill in credit, license and source_page. Prefer public domain or Creative Commons.
+- Label reconstructions, simulations, artist's impressions and sonifications as such in the media `note`. Never present them as original mission data. If something the user asked for (a recording, a photo) doesn't exist publicly, say so on the card in a section instead of substituting something else.
+- Afterwards, tell the user in a sentence or two what you added and from where.
+
 Personality & Voice:
 Crisp, observant, mathematically grounded with coordinates and scale. Ground every expedition in physical reality.""",
         "model": "ShellB-Swift",
@@ -234,7 +241,7 @@ Crisp, observant, mathematically grounded with coordinates and scale. Ground eve
         "tools": [
             "lookup_planetary_feature", "world_inspect", "solar_system_ephemeris", "planetary_telemetry",
             "local_sky_view", "plan_planetary_traverse", "directions", "geocode", "weather", "track_flight",
-            "wiki", "run_code", "create_artifact", "web_search", "web_fetch", "memory_search"
+            "wiki", "run_code", "create_artifact", "web_search", "web_fetch", "memory_search", "annotate_map_feature"
         ],
         "builtin": True,
     },
@@ -418,6 +425,7 @@ DEFAULT_SETTINGS = {
     "briefWeatherPlace": "",   # town for the brief's weather line (Open-Meteo); "" = no weather
     "incognitoHours": 24,      # incognito chats are deleted this long after their last message (privacy.py sweep)
     "promptSuggestions": True,  # predict the next message as ghost text in the composer (utility model; composer.py)
+    "suggestionsRefresh": True, # rewrite the empty-chat starter cards every few hours (utility model; suggestions.py)
     "maxToolRounds": 16,
     "runawayLoopChecker": True, # check progress every loopCheckInterval turns: extends budget if productive, pauses if stuck
     "loopCheckInterval": 10,    # checkpoint interval (turns) for evaluating runaway loops and progress deltas

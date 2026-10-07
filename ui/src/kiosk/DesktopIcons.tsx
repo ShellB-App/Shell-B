@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import clsx from 'clsx';
 import { APPS, type AppId } from '../components/apps';
+import { Play, PinOff, Info } from 'lucide-react';
+import { useEffect } from 'react';
 import type { Status } from '../types';
 
 interface Props {
@@ -27,9 +29,26 @@ const DESKTOP_APPS: AppId[] = [
 ];
 
 export function DesktopIcons({ onOpenApp, status }: Props) {
+  
   const [selected, setSelected] = useState<AppId | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ appId: AppId; x: number; y: number } | null>(null);
 
-  const apps = DESKTOP_APPS.map(id => APPS.find(a => a.id === id)!).filter(Boolean);
+  const [pinned, setPinned] = useState<AppId[]>(() => {
+    try {
+      const stored = localStorage.getItem('shellb.kiosk.desktop');
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return DESKTOP_APPS;
+  });
+
+  useEffect(() => {
+    const onClick = () => setContextMenu(null);
+    window.addEventListener('click', onClick);
+    return () => window.removeEventListener('click', onClick);
+  }, []);
+
+  const apps = pinned.map(id => APPS.find(a => a.id === id)!).filter(Boolean);
+
 
   return (
     <div
@@ -44,6 +63,12 @@ export function DesktopIcons({ onOpenApp, status }: Props) {
         return (
           <div
             key={app.id}
+            onContextMenu={e => {
+              e.preventDefault();
+              e.stopPropagation();
+              setContextMenu({ appId: app.id, x: e.clientX, y: e.clientY });
+              setSelected(app.id);
+            }}
             onClick={e => {
               e.stopPropagation();
               setSelected(app.id);
@@ -110,6 +135,51 @@ export function DesktopIcons({ onOpenApp, status }: Props) {
           </div>
         );
       })}
+    
+      {contextMenu && (
+        <div
+          className="fixed z-50 w-52 bg-[var(--bg-secondary)]/90 backdrop-blur-md border border-[var(--border-strong)] shadow-2xl rounded-xl overflow-hidden py-1.5 animate-scale-in"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          onClick={e => e.stopPropagation()}
+          onContextMenu={e => e.preventDefault()}
+        >
+          <button
+            className="w-full text-left px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-hover)] flex items-center gap-2"
+            onClick={() => {
+              onOpenApp(contextMenu.appId);
+              setContextMenu(null);
+            }}
+          >
+            <Play className="w-3.5 h-3.5" />
+            Open Application
+          </button>
+          <button
+            className="w-full text-left px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-hover)] flex items-center gap-2"
+            onClick={() => {
+              setPinned(prev => {
+                const next = prev.filter(id => id !== contextMenu.appId);
+                localStorage.setItem('shellb.kiosk.desktop', JSON.stringify(next));
+                // Dispatch event so Start Menu knows
+                window.dispatchEvent(new CustomEvent('shellb-desktop-pinned', { detail: next }));
+                return next;
+              });
+              setContextMenu(null);
+            }}
+          >
+            <PinOff className="w-3.5 h-3.5" />
+            Unpin from Desktop
+          </button>
+          <div className="h-px bg-[var(--border-subtle)] my-1" />
+          <button
+            className="w-full text-left px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] flex items-center gap-2"
+            onClick={() => setContextMenu(null)}
+          >
+            <Info className="w-3.5 h-3.5" />
+            Properties
+          </button>
+        </div>
+      )}
     </div>
+
   );
 }

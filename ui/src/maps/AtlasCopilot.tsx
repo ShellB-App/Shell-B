@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 import { api, streamChat } from '../api';
 import { earthLink, fmtKm, fmtLight } from './sky';
+import { NOTES_CHANGED } from './notes';
+import { clockNow, clockState, fmtClock } from './clock';
 import { fmtCoord, parseSpec, type MapSpec } from './core';
 import { Markdown } from '../components/Markdown';
 import type { Landmark } from './landmarks';
@@ -47,6 +49,8 @@ interface AtlasCopilotProps {
   selectedLandmark: Landmark | null;
   onFlyTo: (target: { lat: number; lon: number; zoom?: number; body?: string }) => void;
   onApplyOverlay: (spec: MapSpec) => void;
+  /** A question handed over from elsewhere (e.g. a card's "Ask Atlas"); sent once per new `n`. */
+  request?: { text: string; n: number } | null;
 }
 
 const STORAGE_KEY = 'shellb.atlas.conv';
@@ -60,6 +64,7 @@ export function AtlasCopilot({
   selectedLandmark,
   onFlyTo,
   onApplyOverlay,
+  request,
 }: AtlasCopilotProps) {
   const [messages, setMessages] = useState<CopilotMessage[]>([]);
   const [input, setInput] = useState('');
@@ -144,7 +149,8 @@ export function AtlasCopilot({
       // Build context brief for Atlas
       const contextBrief =
         `[World: ${bodyName} (${bodyId}), Viewport: ${fmtCoord(viewport.lat, viewport.lon)} at zoom ${viewport.zoom.toFixed(1)}` +
-        (selectedLandmark ? `, Focused on landmark: ${selectedLandmark.name} (${selectedLandmark.kind})` : '') +
+        (selectedLandmark ? `, Open card: "${selectedLandmark.name}" (a ${selectedLandmark.kind})` : '') +
+        (clockState().live ? '' : `, Map clock set to ${fmtClock(clockNow())} (not now)`) +
         ']';
 
       const enrichedPrompt = `${contextBrief}\n\n${q}`;
@@ -169,6 +175,8 @@ export function AtlasCopilot({
         } else if (ev.type === 'error') {
           fullContent = `${fullContent}\n\n*(Atlas hit an error: ${ev.error})*`.trim();
           setMessages(prev => prev.map(m => (m.id === assistantId ? { ...m, content: fullContent } : m)));
+        } else if (ev.type === 'block_update' && ev.block.type === 'tool' && ev.block.name === 'annotate_map_feature' && ev.block.status !== 'running') {
+          window.dispatchEvent(new Event(NOTES_CHANGED));  // the open card shows what was just added
         } else if (ev.type === 'block_start' && ev.block.type === 'tool') {
           kinds.set(ev.index, 'tool');
           const tname = ev.block.name;
@@ -210,6 +218,13 @@ export function AtlasCopilot({
       abortRef.current = null;
     }
   };
+
+  const lastRequest = useRef(0);
+  useEffect(() => {
+    if (!request || request.n === lastRequest.current || busy) return;
+    lastRequest.current = request.n;
+    send(request.text);
+  }, [request, busy]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleStop = () => {
     abortRef.current?.abort();

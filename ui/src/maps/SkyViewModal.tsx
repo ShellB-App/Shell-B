@@ -1,9 +1,10 @@
 // The sky from a dropped pin: a horizon dome plus a list, computed live from sky.ts (real positions).
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { Compass, Moon, Orbit, Sun, X } from 'lucide-react';
 import { fmtCoord } from './core';
 import { fmtKm, skyFrom, type SkyObject } from './sky';
+import { useClockTime } from './clock';
 
 interface SkyViewModalProps {
   bodyId: string;
@@ -30,8 +31,7 @@ function phaseName(lit: number) {
 }
 
 export function SkyViewModal({ bodyId, bodyName, lat, lon, onClose, onAskAtlas }: SkyViewModalProps) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(t); }, []);
+  const now = useClockTime(30_000);  // the shared Worlds clock
   useEffect(() => {
     const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', k);

@@ -13,6 +13,8 @@ import { AuthGate } from './components/AuthGate';
 import { SynthDJ } from './dj/SynthDJ';
 import { Splash } from './components/Splash';
 import { Screensaver } from './components/Screensaver';
+
+import { ErrorBoundary } from './components/ErrorBoundary';
 import './notify';  // notification clicks route the app; hidden-tab notifications on devices without push
 
 function ShellRoot() {
@@ -20,13 +22,15 @@ function ShellRoot() {
 
   return (
     <AuthGate>
-      {formFactor === 'mobile' ? (
-        <MobileApp />
-      ) : formFactor === 'kiosk' ? (
-        <KioskApp />
-      ) : (
-        <App />
-      )}
+      <ErrorBoundary>
+        {formFactor === 'mobile' ? (
+          <MobileApp />
+        ) : formFactor === 'kiosk' ? (
+          <KioskApp />
+        ) : (
+          <App />
+        )}
+      </ErrorBoundary>
       <SynthDJ />
       {formFactor === 'standard' && <Screensaver />}
     </AuthGate>
@@ -35,7 +39,17 @@ function ShellRoot() {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ShellRoot />
-    <Splash />
+    <ErrorBoundary>
+      <ShellRoot />
+      <Splash />
+    </ErrorBoundary>
   </StrictMode>
 );
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(err => {
+      console.error('Service worker registration failed:', err);
+    });
+  });
+}

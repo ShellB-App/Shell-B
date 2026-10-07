@@ -17,6 +17,8 @@ export interface MapBody {
   available: boolean;
   /** Earth only, while the planet file is still downloading: 0..1 */
   downloading?: number | null;
+  /** Elevation tiles (terrarium raster-dem), when built for this world */
+  terrain?: { tileSize: number; maxzoom: number; encoding: 'terrarium'; format: string; version: number; attribution: string } | null;
 }
 
 export type MapLib = typeof ML;

@@ -2,16 +2,16 @@
 import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { ChevronDown, Layers } from 'lucide-react';
-import { OVERLAYS, type LayerPrefs, type OverlayId } from './overlays';
+import { OVERLAYS, type LayerPrefs, type OverlayId, type WorldCtx } from './overlays';
 
-export function LayersPanel({ bodyId, bodyName, globe, prefs, onToggle, counts }: {
-  bodyId: string; bodyName: string; globe: boolean; prefs: LayerPrefs;
+export function LayersPanel({ bodyId, bodyName, globe, ctx, prefs, onToggle, counts }: {
+  bodyId: string; bodyName: string; globe: boolean; ctx: WorldCtx; prefs: LayerPrefs;
   onToggle: (id: OverlayId, on: boolean) => void;
   counts: Partial<Record<OverlayId, number | string>>;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const list = OVERLAYS.filter(o => o.on(bodyId, globe));
+  const list = OVERLAYS.filter(o => o.on(bodyId, globe, ctx));
   const active = list.filter(o => prefs[o.id]).length;
 
   useEffect(() => {

@@ -50,6 +50,7 @@ import weather
 import routing
 import sky
 import planetary
+import worldnotes
 import datasets
 import wiki
 import legal
@@ -66,8 +67,10 @@ import sysinfo
 import network
 import memory
 import episodes
+import me
 import feedback
 import reflection
+import suggestions
 import commitments
 import gibberlink
 import secretary
@@ -117,6 +120,7 @@ flights.register()
 weather.register()
 routing.register()
 planetary.register()
+worldnotes.register()
 ask.register()
 scrape.register()
 skills.register()
@@ -166,9 +170,11 @@ app.include_router(codex_secrets.router)
 app.include_router(codex.router)
 app.include_router(media.router)
 app.include_router(generate.router)
+app.include_router(suggestions.router)
 app.include_router(reflection.router)  # before memory.router, whose /{mid}/{action} would match /reflection/run
 app.include_router(memory.router)
 app.include_router(episodes.router)
+app.include_router(me.router)
 app.include_router(feedback.router)
 app.include_router(modelhub.router)
 app.include_router(devserver.router)
@@ -184,6 +190,7 @@ app.include_router(weather.router)
 app.include_router(routing.router)
 app.include_router(sky.router)
 app.include_router(planetary.router)
+app.include_router(worldnotes.router)
 datasets.init()
 wiki.register()
 legal.register()
@@ -222,6 +229,8 @@ async def _start_mcp():
     episodes.start()
     reflection.busy = lambda: bool(ACTIVE)
     reflection.start()
+    suggestions.busy = lambda: bool(ACTIVE)
+    suggestions.start()
     commitments.busy = lambda: bool(ACTIVE)
     commitments.start()
     datasets.start()
@@ -243,6 +252,7 @@ async def _shutdown():
     todos.stop()
     episodes.stop()
     reflection.stop()
+    suggestions.stop()
     commitments.stop()
     datasets.stop()
     watchdog.stop()

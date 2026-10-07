@@ -18,6 +18,17 @@ def _need_project(ctx):
     return ctx.project_id
 
 
+def _check_guards(ctx, rel: str):
+    if selfmod.is_self(ctx.project_id):
+        parts = Path(rel).parts
+        if not parts:
+            return
+        if selfmod.HIDDEN & set(parts):
+            raise ValueError(f"Selfmod safety guard: modifying {parts[0]}/ is not allowed.")
+        if rel in selfmod.CORE_FILES:
+            raise ValueError(f"Selfmod safety guard: {rel} is a protected core file.")
+
+
 async def _changed(ctx, path, action):
     await ctx.emit({"type": "file", "path": path, "action": action})
 
@@ -73,6 +84,7 @@ async def write_file(args, ctx):
     content = args.get("content")
     if not rel or content is None:
         return ToolResult("write_file needs path and content.", error=True)
+    _check_guards(ctx, rel)
     p = P.safe_path(pid, rel)
     existed = p.exists()
     p.parent.mkdir(parents=True, exist_ok=True)
@@ -91,6 +103,7 @@ async def edit_file(args, ctx):
     old, new = args.get("old_string"), args.get("new_string")
     if old is None or new is None:
         return ToolResult("edit_file needs old_string and new_string.", error=True)
+    _check_guards(ctx, rel)
     p = P.safe_path(pid, rel)
     if not p.is_file():
         return ToolResult(f"{rel} does not exist — create it with write_file.", error=True)
@@ -117,6 +130,7 @@ async def edit_file(args, ctx):
 async def delete_file(args, ctx):
     pid = _need_project(ctx)
     rel = str(args.get("path", "")).strip()
+    _check_guards(ctx, rel)
     p = P.safe_path(pid, rel, allow_root=False)
     if not p.exists():
         return ToolResult(f"{rel} does not exist.", error=True)
@@ -130,6 +144,8 @@ async def delete_file(args, ctx):
 async def rename_file(args, ctx):
     pid = _need_project(ctx)
     src, dst = str(args.get("from", "")).strip(), str(args.get("to", "")).strip()
+    _check_guards(ctx, src)
+    _check_guards(ctx, dst)
     ps, pd = P.safe_path(pid, src, allow_root=False), P.safe_path(pid, dst, allow_root=False)
     if not ps.exists():
         return ToolResult(f"{src} does not exist.", error=True)

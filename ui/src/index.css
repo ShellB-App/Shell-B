@@ -173,3 +173,18 @@ html:not(.light) .maplibregl-ctrl-attrib-button { filter: invert(1); }
   border-radius: 8px; padding: 8px 10px; font-size: 12px; line-height: 1.45; max-width: 240px; box-shadow: 0 6px 20px rgb(0 0 0 / .35); }
 .sb-map-popup .maplibregl-popup-tip { display: none; }
 .sb-map-popup .sb-map-coord { margin-top: 2px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-muted); }
+
+/* ── Print ─────────────────────────────────────────────────────────────── */
+@media print {
+  body { background: white !important; color: black !important; }
+  .sf-sidebar, .sf-topbar, .sf-app-rail, .sf-drawer, button, 
+  .msg-actions, .sf-agent-lab, .sf-settings-modal { display: none !important; }
+  .prose-shellb { font-size: 11pt; }
+  .prose-shellb code { border: none !important; background: transparent !important; }
+  main { overflow: visible !important; height: auto !important; }
+  #root, .h-full, .flex-1, .overflow-hidden { height: auto !important; overflow: visible !important; }
+  /* Hide the composer area completely when printing */
+  main > .shrink-0.px-3 { display: none !important; }
+  /* Messages scroller */
+  main > .flex-1.overflow-y-auto { overflow: visible !important; }
+}

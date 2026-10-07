@@ -77,6 +77,8 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
   const [tab, setTab] = useState<'notes' | 'preview'>('notes');
   const [confirmDel, setConfirmDel] = useState(false);
   const [backlinks, setBacklinks] = useState<Backlink[] | null>(null);
+  // typed as text so a trailing comma survives; meta.aka holds the parsed list
+  const [akaText, setAkaText] = useState((start.meta?.aka ?? []).join(', '));
 
   // Photo management state
   const [showPhotoModal, setShowPhotoModal] = useState(false);
@@ -91,6 +93,7 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
     const f = await api.codexEntry(id);
     setFull(f);
     setE(prev => (dirty ? prev : { ...f }));
+    if (!dirty) setAkaText((f.meta?.aka ?? []).join(', '));
     return f;
   }, [dirty]);
 
@@ -354,6 +357,19 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
               placeholder="Pronouns (they/them, she/her, he/him)"
               onChange={ev => setMeta({ pronouns: ev.target.value })}
             />
+            <label className="flex items-baseline gap-1.5 mt-1 text-xs text-[var(--text-muted)]">
+              <span className="shrink-0 text-[10px] uppercase tracking-wider">aka</span>
+            <input
+              className="w-full bg-transparent text-xs text-[var(--text-secondary)] focus:outline-none placeholder-[var(--text-muted)]"
+              value={akaText}
+              placeholder="Nicknames, comma-separated (what you call them)"
+              title="Shell:B treats these names as this person in chats and memories"
+              onChange={ev => {
+                setAkaText(ev.target.value);
+                setMeta({ aka: ev.target.value.split(',').map(s => s.trim()).filter(Boolean) });
+              }}
+            />
+            </label>
 
             {/* Quick Actions (Email, Call, Web) if values present */}
             <div className="flex flex-wrap items-center gap-2 mt-2">

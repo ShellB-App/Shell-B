@@ -1,6 +1,7 @@
 // Real-time Solar Terminator and Day/Night illumination overlay.
 // Computes the current subsolar point and constructs the night hemisphere polygon.
 import type * as ML from 'maplibre-gl';
+import { clockNow, clockSpeed, subscribeClock } from './clock';
 import type { Feature, FeatureCollection, Polygon, LineString } from 'geojson';
 
 const RAD = Math.PI / 180;
@@ -107,58 +108,37 @@ const LAYER_FILL = 'sb-terminator-night';
 const LAYER_LINE = 'sb-terminator-line';
 
 export function attachTerminator(map: ML.Map): { detach: () => void; update: () => void } {
-  let timer: ReturnType<typeof setInterval> | null = null;
   let gone = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
 
   const update = () => {
     if (gone) return;
-    const src = map.getSource(SRC) as ML.GeoJSONSource | undefined;
-    if (src) {
-      src.setData(getTerminatorFeatures(Date.now()));
-    }
+    (map.getSource(SRC) as ML.GeoJSONSource | undefined)?.setData(getTerminatorFeatures(clockNow()));
   };
+  // follows the shared clock: every 30 s live, ~5 times a second while time is playing fast
+  const schedule = () => {
+    clearTimeout(timer);
+    if (gone) return;
+    const speed = Math.abs(clockSpeed());
+    if (speed === 0) return;
+    timer = setTimeout(() => { update(); schedule(); }, speed > 1 ? 200 : 30_000);
+  };
+  const unsubscribe = subscribeClock(() => { update(); schedule(); });
 
-  if (!map.getSource(SRC)) {
-    map.addSource(SRC, {
-      type: 'geojson',
-      data: getTerminatorFeatures(Date.now()),
-    });
-
-    map.addLayer({
-      id: LAYER_FILL,
-      type: 'fill',
-      source: SRC,
-      filter: ['==', ['get', 'type'], 'night'],
-      paint: {
-        'fill-color': '#020308',
-        'fill-opacity': 0.42,
-      },
-    });
-
-    map.addLayer({
-      id: LAYER_LINE,
-      type: 'line',
-      source: SRC,
-      filter: ['==', ['get', 'type'], 'terminator'],
-      layout: {
-        'line-cap': 'round',
-        'line-join': 'round',
-      },
-      paint: {
-        'line-color': '#f59e0b',
-        'line-width': 1.5,
-        'line-opacity': 0.7,
-      },
-    });
-
-    timer = setInterval(update, 30_000);
-  }
+  map.addSource(SRC, { type: 'geojson', data: getTerminatorFeatures(clockNow()) });
+  map.addLayer({ id: LAYER_FILL, type: 'fill', source: SRC, filter: ['==', ['get', 'type'], 'night'],
+    paint: { 'fill-color': '#020308', 'fill-opacity': 0.42 } });
+  map.addLayer({ id: LAYER_LINE, type: 'line', source: SRC, filter: ['==', ['get', 'type'], 'terminator'],
+    layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#f59e0b', 'line-width': 1.5, 'line-opacity': 0.7 } });
+  schedule();
 
   return {
     update,
     detach: () => {
       gone = true;
-      if (timer) clearInterval(timer);
+      clearTimeout(timer);
+      unsubscribe();
+      if (!map.style) return;
       if (map.getLayer(LAYER_LINE)) map.removeLayer(LAYER_LINE);
       if (map.getLayer(LAYER_FILL)) map.removeLayer(LAYER_FILL);
       if (map.getSource(SRC)) map.removeSource(SRC);
