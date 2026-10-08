@@ -94,6 +94,30 @@ Point any OpenAI client at the base URL with the Shell:B key as its API key.
     carries `usage` and `shellb: {conversation, status, error}`, then `data: [DONE]`.
   - Responses add `shellb: {conversation, status, tools}`. A turn that fails before writing anything returns `502`.
 
+## MCP server
+
+Shell:B is also an MCP server, so Claude Code, Claude Desktop, Cursor and other MCP clients can hand tasks to her
+agents. Endpoint: `/api/v1/mcp` (Streamable HTTP, stateless JSON replies, POST only), with the same key and the same
+limits as above. Code: `server/mcp_server.py`.
+
+```bash
+claude mcp add --transport http shellb https://<spark tailscale name>:8443/api/v1/mcp \
+  --header "Authorization: Bearer sbk_…"
+```
+
+Tools:
+
+| Tool | Does |
+|---|---|
+| `shellb_agents` | Lists the agents the key may use |
+| `shellb_ask` | `message`, optional `agent`, `conversation`, `instructions`, `wait` (default true). Returns the reply plus the conversation id to continue with |
+| `shellb_conversations` | The key's chats, newest first |
+| `shellb_read` | One chat's messages (`last: N` for the tail); use it after `shellb_ask` with `wait: false` |
+| `shellb_stop` | Stops a running reply |
+
+A long agent turn can outlast a client's tool timeout; the turn keeps running on Shell:B either way, so use
+`wait: false` and `shellb_read` for big tasks. Refusals (busy chat, unknown agent) come back as tool errors.
+
 ## Examples
 
 ```bash

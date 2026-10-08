@@ -68,6 +68,7 @@ import community
 import ask
 import screen
 import public_api
+import mcp_server
 import browsing
 import compaction
 import composer
@@ -211,6 +212,7 @@ app.include_router(ask.router)
 app.include_router(screen.router)
 app.include_router(public_api.router)
 app.include_router(public_api.admin_router)
+app.include_router(mcp_server.router)
 app.include_router(appstate.router)
 app.include_router(auth.router)
 app.include_router(gibberlink.router)

@@ -77,6 +77,7 @@ export function ApiTab({ locked }: { locked: boolean }) {
             </p>
             <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed max-w-[65ch]">
               Base URL <code>{base}</code> · OpenAI-compatible at <code>{base}/chat/completions</code> with an agent's id as the model.
+              MCP clients (Claude Code, Claude Desktop, Cursor) connect to <code>{base}/mcp</code> with the key as a Bearer header.
               Full reference: <code>docs/API.md</code>.
             </p>
           </div>

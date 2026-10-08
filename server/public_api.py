@@ -21,6 +21,7 @@ Endpoints (all under /api/v1):
   POST conversations/{id}/stop    stop a running turn
   GET  models                     OpenAI-compatible: agents as models
   POST chat/completions           OpenAI-compatible chat completions (streaming too)
+  POST mcp                        MCP server (mcp_server.py)
 See docs/API.md.
 """
 import asyncio
@@ -108,6 +109,8 @@ _recent: dict[str, list[float]] = {}  # key id -> request times in the last minu
 
 def _caller(req: Request) -> dict:
     """The key a request carries, else 401. Also applies the per-key rate limit."""
+    if "shellb_api_key" in req.scope:  # already checked (the MCP server calls these endpoints in-process)
+        return req.scope["shellb_api_key"]
     h = req.headers.get("authorization", "")
     token = (h[7:] if h[:7].lower() == "bearer " else req.headers.get("x-shellb-key", "")).strip()
     if not token.startswith(PREFIX):
@@ -123,7 +126,8 @@ def _caller(req: Request) -> dict:
             raise HTTPException(429, f"Rate limit: {PER_MINUTE} requests a minute per key", headers={"Retry-After": "10"})
         _recent[r["id"]] = hits + [now]
         c.execute("UPDATE api_keys SET last_used=?, uses=uses+1 WHERE id=?", (now, r["id"]))
-    return _public(r)
+    req.scope["shellb_api_key"] = _public(r)
+    return req.scope["shellb_api_key"]
 
 
 # ── agents and chats ────────────────────────────────────────────────────────
