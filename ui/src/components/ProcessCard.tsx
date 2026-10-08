@@ -34,7 +34,8 @@ function ApprovalPrompt({ b }: { b: ToolBlock }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const a = b.args || {};
-  const self = b.approval?.kind === 'self' || b.approval?.kind === 'secret';
+  // any approval with a kind (self-deploy, secret, schedule, install) explains itself; kind-less ones are remote tool calls
+  const self = !!b.approval?.kind;
   const detail = self ? b.approval!.detail ?? '' : b.name === 'run_code' ? String(a.code ?? '')
     : b.name === 'write_file' ? `${a.path}\n\n${String(a.content ?? '').slice(0, 4000)}`
       : b.name === 'edit_file' ? `${a.path}\n\n− ${String(a.old_string ?? '').slice(0, 2000)}\n+ ${String(a.new_string ?? '').slice(0, 2000)}`

@@ -880,6 +880,9 @@ class Turn:
                         res = await ask.run(args, self.conv_id, self.abort, sink, idx)
                     elif name == "codex" and isinstance(args, dict) and args.get("action") == "request":
                         res = await self._secret_request(args, ctx, sink, idx)
+                    elif name == "schedule_task" and isinstance(args, dict) \
+                            and str(args.get("action") or "create").lower() == "create":
+                        res = await self._schedule_request(args, ctx, sink, idx)
                     elif name in self.mcp_specs:
                         res = await mcp_hub.call(self.mcp_specs[name], args, ctx)
                     elif name not in TOOLS:
@@ -984,11 +987,42 @@ class Turn:
                 return ToolResult(f"{why} The request was not sent. Don't retry unchanged; ask the user how to proceed.", error=True)
         return await codex_secrets.perform(plan, ctx)
 
+    async def _schedule_request(self, args, ctx, sink: Sink, idx):
+        """A new scheduled task runs unattended with this agent's tools, again and again, so the owner approves it. Live
+        chats ask right away; unattended turns (sub-agents, plans, scheduled runs) save it switched off for review."""
+        import schedules
+        args = {k: v for k, v in args.items() if k != "_pending"}
+        if not (self.interactive and self.depth == 0):
+            return await schedules.schedule_task({**args, "_pending": True}, ctx)
+        when = args.get("cron") or args.get("at") or "?"
+        title = f"Schedule “{str(args.get('name') or args.get('prompt') or '')[:60]}”"
+        detail = (f"When: {when} ({args.get('tz') or self.settings.get('timeZone') or 'UTC'})\n"
+                  f"Runs as: {args.get('agent') or self.agent.get('id')}\n\n{args.get('prompt') or ''}")
+        aid = uuid.uuid4().hex
+        b = sink.blocks[idx]
+        b.update(status="approval", approval={"id": aid, "kind": "schedule", "title": title, "detail": detail})
+        await sink.update(idx)
+        decision = await remote.wait_approval(aid, self.abort, {"kind": "schedule", "conv": self.conv_id,
+                                                                "title": title, "detail": detail})
+        b.pop("approval", None)
+        b.update(status="running", decision=decision)
+        await sink.update(idx)
+        if decision not in ("allow", "allow_turn"):
+            why = {"deny": "The owner declined.", "timeout": "Nobody approved it within 15 minutes.",
+                   "stopped": "The turn was stopped."}.get(decision, "Not approved.")
+            return ToolResult(f"{why} Nothing was scheduled.", error=True)
+        return await schedules.schedule_task(args, ctx)
+
     def _subagent_runner(self, parent_sink: Sink, parent_idx: int):
         async def run_sub(agent_id: str, task: str) -> str:
             sub_agent = next((a for a in self.agents if a["id"] == agent_id), None)
             if sub_agent is None:
                 return f"No agent named {agent_id!r}. Available: {', '.join(a['id'] for a in self.agents)}"
+            import prompts
+            allowed = {a["id"] for a in prompts.delegates(self.agent, self.agents, self.settings)}
+            if agent_id not in allowed:  # the tool's enum is only a hint to the model; this is the rule (cloudDelegation etc.)
+                return (f"{agent_id!r} isn't available to you right now (cloud agents need Cloud AI and delegation switched "
+                        f"on). You can ask: {', '.join(sorted(allowed)) or 'nobody'}.")
             parent = parent_sink.blocks[parent_idx]
             parent["children"] = []
 

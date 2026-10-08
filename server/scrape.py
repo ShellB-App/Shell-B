@@ -374,6 +374,9 @@ def extract(archive: Path, dest: Path | None = None) -> list[Path]:
             members = [m for m in t.getmembers() if m.isfile()]
             if len(members) > EXTRACT_LIMIT:
                 raise ValueError(f"{archive.name} holds {len(members)} files; the limit is {EXTRACT_LIMIT}.")
+            # tar headers carry each file's exact size, so a .tar.gz bomb is caught before anything is written
+            if sum(m.size for m in members) > CALL_LIMIT:
+                raise ValueError(f"{archive.name} unpacks to more than {CALL_LIMIT // 2**30} GB.")
             for m in members:
                 p = safe(m.name)
                 if p:

@@ -433,10 +433,21 @@ async def schedule_task(args, ctx):
         body |= {"kind": "once", "at": str(args["at"])}
     else:
         return ToolResult("Give either `at` (one time) or `cron` (repeating).", error=True)
+    pending = bool(args.get("_pending"))  # set by agent._schedule_request when nobody could approve it live
+    if pending:
+        body["enabled"] = False
     try:
         t = save(body, created_by=f"agent:{ctx.agent.get('id')}")
     except (ValueError, KeyError) as e:
         return ToolResult(f"Couldn't schedule it: {e}", error=True)
+    if pending:
+        import activity
+        activity.post("schedule", "review", f"{ctx.agent.get('name') or 'An agent'} wants to schedule “{t['name']}”",
+                      f"{t['when']} ({t['tz']}). Switch it on under Scheduled if you want it.\n\n"
+                      + activity.excerpt(t["prompt"], 600), "#/scheduled", ref=f"sched-review:{t['id']}")
+        return ToolResult(f"Saved '{t['name']}' ({t['when']}, id {t['id']}) switched OFF: no one was here to approve it, so "
+                          "the owner has to switch it on under Scheduled (they've been told in Activity).",
+                          display={"schedule": {"id": t["id"], "name": t["name"], "when": t["when"], "nextRun": None}})
     nxt = datetime.fromtimestamp(t["nextRun"] / 1000, ZoneInfo(t["tz"])).strftime("%A %B %-d, %Y at %H:%M %Z")
     return ToolResult(f"Scheduled '{t['name']}' ({t['when']}, id {t['id']}). Next run: {nxt}. Each run starts a new chat; "
                       "the user can see and edit it under Scheduled in the sidebar.",

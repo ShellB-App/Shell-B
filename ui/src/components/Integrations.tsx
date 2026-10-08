@@ -73,7 +73,7 @@ export function IntegrationsModal({ open, onClose, tools, settings, onChanged, t
           ))}
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5">
-          {admin === false && (tab === 'connectors' || tab === 'servers' || tab === 'cloud') && <AdminGate onUnlocked={() => setAdmin(true)} />}
+          {admin === false && (tab === 'connectors' || tab === 'servers' || tab === 'skills' || tab === 'cloud') && <AdminGate onUnlocked={() => setAdmin(true)} />}
           {tab === 'connectors' && !editing && (
             <ConnectorGallery connectors={connectors} servers={servers} onPick={c => setEditing({ connector: c })} />
           )}

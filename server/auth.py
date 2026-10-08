@@ -212,21 +212,35 @@ def _raw_socket_ip(scope) -> str:
     return (scope.get("client") or ("", 0))[0] or ""
 
 
+# Proxies whose forwarding headers are believed: `tailscale serve` (loopback) and hub-cloudflared / Caddy (Docker
+# bridges). Anyone else could put any address in X-Forwarded-For and get a fresh login-throttle bucket per attempt.
+_PROXY_NETS = [ipaddress.ip_network(n) for n in ("127.0.0.0/8", "::1/128", "172.16.0.0/12")]
+
+
+def _is_proxy(ip: str) -> bool:
+    try:
+        a = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    return any(a in n for n in _PROXY_NETS)
+
+
 def _client_ip(scope) -> str:
-    h = _headers(scope)
-    if "x-forwarded-for" in h:
-        raw = h["x-forwarded-for"].split(",")[0].strip()
-        try:
-            return str(ipaddress.ip_address(raw))
-        except ValueError:
-            pass
-    if "x-real-ip" in h:
-        raw = h["x-real-ip"].strip()
-        try:
-            return str(ipaddress.ip_address(raw))
-        except ValueError:
-            pass
+    """The address a request came from: the socket peer, or, behind a trusted proxy, the right-most forwarded address
+    that isn't itself a proxy (left-most entries are whatever the client claimed)."""
     raw = _raw_socket_ip(scope)
+    if _is_proxy(raw):
+        h = _headers(scope)
+        hops = [x.strip() for x in h.get("x-forwarded-for", "").split(",") if x.strip()]
+        if h.get("x-real-ip"):
+            hops.append(h["x-real-ip"].strip())
+        for hop in reversed(hops):
+            try:
+                ip = str(ipaddress.ip_address(hop))
+            except ValueError:
+                continue
+            if not _is_proxy(ip):
+                return ip
     try:
         return str(ipaddress.ip_address(raw))
     except ValueError:

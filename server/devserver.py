@@ -162,6 +162,7 @@ async def start(pid: str) -> dict:
                                "PYTHONUNBUFFERED": "1", "NODE_ENV": "development"}.items() for x in ("-e", f"{k}={v}")]
         rc, out = await _docker(
             "run", "-d", "--name", _name(pid), "--label", "shellb.dev=1", "--network", "none",
+            "--cap-drop", "ALL",  # see tools.run_code for why not no-new-privileges
             "--memory", "2g", "--cpus", "2", "--pids-limit", "256", "--read-only", "--tmpfs", "/tmp:rw,size=256m",
             "--user", f"{os.getuid()}:{os.getgid()}", *env,
             "-v", f"{ws}:/work", *(["-v", f"{ws}/.git:/work/.git:ro"] if (ws / ".git").is_dir() else []),

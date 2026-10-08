@@ -49,7 +49,7 @@ function Waiting({ p, onDeny }: { p: PendingApproval; onDeny: () => Promise<void
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const self = p.kind === 'self' || p.kind === 'secret';
+  const self = p.kind !== 'remote' && p.kind !== 'question';  // explains itself: deploy, secret, schedule, install
   const diff = p.kind === 'self';
   const deny = async () => {
     setBusy(true); setError('');

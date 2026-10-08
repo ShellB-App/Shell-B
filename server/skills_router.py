@@ -22,6 +22,7 @@ def skills_list():
 
 @router.post("/api/skills")
 async def skill_create(req: Request):
+    auth.require_admin(req)  # a skill is text in every agent's prompt and scripts it may run
     body = await req.json()
     meta, _ = skills.parse(body.get("content", ""))
     name = skills.slug(body.get("name") or meta.get("name") or "")
@@ -34,7 +35,8 @@ async def skill_create(req: Request):
 
 
 @router.post("/api/skills/upload")
-async def skill_upload(file: UploadFile = File(...)):
+async def skill_upload(req: Request, file: UploadFile = File(...)):
+    auth.require_admin(req)
     data = await file.read()
     if len(data) > skills.MAX_SKILL_BYTES:
         raise HTTPException(413, "File too large (60 MB max)")
@@ -66,6 +68,7 @@ def skill_get(name: str):
 
 @router.put("/api/skills/{name}")
 async def skill_put(name: str, req: Request):
+    auth.require_admin(req)
     try:
         return skills.save((await req.json()).get("content", ""), name)
     except (ValueError, KeyError) as e:
@@ -74,6 +77,7 @@ async def skill_put(name: str, req: Request):
 
 @router.patch("/api/skills/{name}")
 async def skill_patch(name: str, req: Request):
+    auth.require_admin(req)
     body = await req.json()
     try:
         if "enabled" in body:
@@ -84,7 +88,8 @@ async def skill_patch(name: str, req: Request):
 
 
 @router.delete("/api/skills/{name}")
-def skill_delete(name: str):
+def skill_delete(name: str, req: Request):
+    auth.require_admin(req)
     try:
         skills.delete(name)
     except ValueError as e:
@@ -109,7 +114,8 @@ def skill_file(name: str, path: str):
 
 
 @router.put("/api/skills/{name}/files/{path:path}")
-async def skill_file_put(name: str, path: str, file: UploadFile = File(...)):
+async def skill_file_put(name: str, path: str, req: Request, file: UploadFile = File(...)):
+    auth.require_admin(req)
     try:
         skills.put_file(name, path, await file.read())
         return skills.get(name)
@@ -118,7 +124,8 @@ async def skill_file_put(name: str, path: str, file: UploadFile = File(...)):
 
 
 @router.delete("/api/skills/{name}/files/{path:path}")
-def skill_file_delete(name: str, path: str):
+def skill_file_delete(name: str, path: str, req: Request):
+    auth.require_admin(req)
     try:
         skills.delete_file(name, path)
         return skills.get(name)

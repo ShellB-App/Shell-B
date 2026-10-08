@@ -499,6 +499,9 @@ TEXT_EXT = {".txt", ".md", ".py", ".js", ".ts", ".tsx", ".jsx", ".json", ".csv",
 IMG_EXT = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 
 
+UPLOAD_MAX = 200 * 1024 * 1024
+
+
 @app.post("/api/conversations/{conv_id}/upload")
 async def upload(conv_id: str, file: UploadFile = File(...)):
     if not db.get_conversation(conv_id):
@@ -511,10 +514,19 @@ async def upload(conv_id: str, file: UploadFile = File(...)):
     while dest.exists():
         dest = ws / f"{stem}-{n}{dest.suffix}"
         n += 1
-    data = await file.read()
-    dest.write_bytes(data)
+    size = 0
+    with dest.open("wb") as out:  # streamed to disk with a ceiling, not read into memory whole
+        while chunk := await file.read(1 << 20):
+            size += len(chunk)
+            if size > UPLOAD_MAX:
+                out.close()
+                dest.unlink(missing_ok=True)
+                raise HTTPException(413, f"Files over {UPLOAD_MAX // 2**20} MB can't be attached to a chat. "
+                                         "Put large files in a Code workspace or a Project's knowledge instead.")
+            out.write(chunk)
+    data = dest.read_bytes() if size <= 8 * 2**20 else b""  # small files are inspected below (text inlining)
     ext = dest.suffix.lower()
-    att = {"id": db.new_id("att"), "name": dest.name, "size": len(data), "type": file.content_type or "",
+    att = {"id": db.new_id("att"), "name": dest.name, "size": size, "type": file.content_type or "",
            "url": f"/api/workspace/{conv_id}/{dest.name}"}
     if ext in IMG_EXT or (file.content_type or "").startswith("image/"):
         att["kind"] = "image"
@@ -522,7 +534,7 @@ async def upload(conv_id: str, file: UploadFile = File(...)):
         att["kind"] = "text"
         try:
             text = data.decode("utf-8")
-            if len(text) <= 120_000:
+            if data and len(text) <= 120_000:
                 att["inline"] = text
         except UnicodeDecodeError:
             att["kind"] = "file"

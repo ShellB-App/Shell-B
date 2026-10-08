@@ -109,11 +109,14 @@ def _blocked_host(host: str) -> bool:
 
 async def _redirect_guard(request: httpx.Request):
     """httpx request hook: every hop of a redirect chain gets the same local-address check as the first URL."""
-    if _blocked_host(request.url.host):
+    if await asyncio.to_thread(_blocked_host, request.url.host):  # a DNS lookup: off the event loop
         raise httpx.RequestError(f"refused to follow a redirect to a local address ({request.url.host})", request=request)
 
 
 GUARD_HOOKS = {"request": [_redirect_guard]}  # pass as event_hooks= to any client that fetches agent-chosen URLs
+
+
+FETCH_MAX = 25 * 1024 * 1024
 
 
 async def web_fetch(args, ctx):
@@ -123,29 +126,42 @@ async def web_fetch(args, ctx):
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https") or not parsed.hostname:
         return ToolResult(f"Refusing to fetch {url!r}: only http(s) URLs are supported.", error=True)
-    if _blocked_host(parsed.hostname):
+    if await asyncio.to_thread(_blocked_host, parsed.hostname):
         return ToolResult(f"Refusing to fetch {url!r}: local addresses are off limits.", error=True)
+    doc = False
     async with httpx.AsyncClient(timeout=30, follow_redirects=True, headers={"User-Agent": UA},
                                  event_hooks=GUARD_HOOKS) as c:
-        r = await c.get(url)
-        r.raise_for_status()
-    ctype = r.headers.get("content-type", "")
-    if "html" in ctype:
-        text = await asyncio.to_thread(trafilatura.extract, r.text, output_format="markdown",
-                                       include_links=True, include_tables=True, url=str(r.url))
-        text = text or r.text
-    elif ctype.startswith("text/") or "json" in ctype or "xml" in ctype:
-        text = r.text
-    elif "pdf" in ctype or ctype.startswith("image/") or "officedocument" in ctype or "msword" in ctype \
-            or "ms-excel" in ctype or "ms-powerpoint" in ctype:
+        async with c.stream("GET", url) as r:
+            r.raise_for_status()
+            ctype = r.headers.get("content-type", "")
+            doc = "pdf" in ctype or ctype.startswith("image/") or "officedocument" in ctype or "msword" in ctype \
+                or "ms-excel" in ctype or "ms-powerpoint" in ctype
+            body, size = [], 0
+            if not doc:  # documents are fetched again by read_document, with its own limits
+                async for part in r.aiter_bytes():  # a page bigger than this is not a page; don't hold it all in RAM
+                    size += len(part)
+                    if size > FETCH_MAX:
+                        return ToolResult(f"{url} is larger than {FETCH_MAX // 2**20} MB; refusing to read it all. "
+                                          "If it's a file or dataset, use download instead.", error=True)
+                    body.append(part)
+            raw = b"".join(body)
+            final_url, encoding = str(r.url), r.encoding or "utf-8"
+    if doc:
         import doc_tools  # documents and pictures: download and read them properly (OCR included)
-        return await doc_tools.read_document({"path": str(r.url)}, ctx)
+        return await doc_tools.read_document({"path": final_url}, ctx)
+    page = raw.decode(encoding, errors="replace")
+    if "html" in ctype:
+        text = await asyncio.to_thread(trafilatura.extract, page, output_format="markdown",
+                                       include_links=True, include_tables=True, url=final_url)
+        text = text or page
+    elif ctype.startswith("text/") or "json" in ctype or "xml" in ctype:
+        text = page
     else:
-        return ToolResult(f"Unsupported content type {ctype!r} ({len(r.content)} bytes) at {r.url}")
+        return ToolResult(f"Unsupported content type {ctype!r} ({len(raw)} bytes) at {final_url}")
     chunk = text[start:start + limit]
     more = len(text) - start - len(chunk)
     tail = f"\n\n[… {more} more chars — call web_fetch again with start={start + len(chunk)}]" if more > 0 else ""
-    return ToolResult(f"# {r.url}\n\n{chunk}{tail}", {"sources": [{"title": str(r.url), "url": str(r.url)}]})
+    return ToolResult(f"# {final_url}\n\n{chunk}{tail}", {"sources": [{"title": final_url, "url": final_url}]})
 
 
 # ── code sandbox ────────────────────────────────────────────────────────────
@@ -184,6 +200,9 @@ async def run_code(args, ctx):
     before = _snapshot(ws)
     name = f"shellb-cell-{uuid.uuid4().hex[:10]}"
     cmd = ["docker", "run", "--rm", "--name", name, "--network", "none",
+           # no capabilities, so setuid binaries in the image gain nothing. (no-new-privileges would be nicer, but under
+           # the snap dockerd's AppArmor profile it makes every exec fail with EPERM.)
+           "--cap-drop", "ALL",
            "--memory", "4g", "--cpus", "4", "--pids-limit", "512", "--read-only",
            "--tmpfs", "/tmp:rw,exec,size=512m", "--user", f"{os.getuid()}:{os.getgid()}",
            "-e", "HOME=/tmp", "-e", "MPLBACKEND=Agg", "-e", "PYTHONUNBUFFERED=1",

@@ -50,6 +50,7 @@ async def mcp_server_update(sid: str, req: Request):
 
 @router.patch("/servers/{sid}")
 async def mcp_server_patch(sid: str, req: Request):
+    auth.require_admin(req)  # switching a server on starts a process on this machine
     body = {k: v for k, v in (await req.json()).items() if k in ("enabled", "disabledTools")}
     try:
         cfg = mcp_hub.patch(sid, body)
@@ -73,7 +74,8 @@ async def mcp_server_delete(sid: str, req: Request):
 
 
 @router.post("/servers/{sid}/restart")
-async def mcp_server_restart(sid: str):
+async def mcp_server_restart(sid: str, req: Request):
+    auth.require_admin(req)
     await mcp_hub.restart(sid)
     conn = mcp_hub.CONNS.get(sid)
     if conn:

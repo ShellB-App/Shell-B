@@ -81,16 +81,30 @@ def _logged_in(pid: str, exe: str) -> tuple[bool, str]:
         return False, f"{type(e).__name__}: {e}"
 
 
-def status(pid: str, fresh=False) -> dict:
-    hit = _status_cache.get(pid)
-    if hit and not fresh and time.time() - hit[0] < 60:
-        return hit[1]
+_refreshing: set[str] = set()
+
+
+def _probe(pid: str) -> dict:
     exe = _bin(pid)
     st = {"installed": bool(exe), "loggedIn": False, "account": ""}
     if exe:
         st["loggedIn"], st["account"] = _logged_in(pid, exe)
     _status_cache[pid] = (time.time(), st)
+    _refreshing.discard(pid)
     return st
+
+
+def status(pid: str, fresh=False) -> dict:
+    """Installed / logged in. Probing runs the CLI (`claude auth status` can take seconds), and this is called from
+    the event loop while prompts are built, so a stale answer is returned at once and refreshed in a thread."""
+    hit = _status_cache.get(pid)
+    if hit and not fresh:
+        if time.time() - hit[0] >= 60 and pid not in _refreshing:
+            _refreshing.add(pid)
+            import threading
+            threading.Thread(target=_probe, args=(pid,), daemon=True).start()
+        return hit[1]
+    return _probe(pid)
 
 
 def public_status(fresh=False) -> dict:

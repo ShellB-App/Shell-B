@@ -19,9 +19,13 @@ def _need_project(ctx):
 
 
 def _check_guards(ctx, rel: str):
+    """Advisory guard for the self workspace (the real gate is the owner approving the deploy). Paths are normalised
+    first, so `./server/db.py` or `server//db.py` don't slip past."""
     if selfmod.is_self(ctx.project_id):
+        import posixpath
+        rel = posixpath.normpath(str(rel or "").replace("\\", "/").lstrip("/"))
         parts = Path(rel).parts
-        if not parts:
+        if not parts or rel == ".":
             return
         if selfmod.HIDDEN & set(parts):
             raise ValueError(f"Selfmod safety guard: modifying {parts[0]}/ is not allowed.")
