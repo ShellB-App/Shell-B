@@ -11,7 +11,7 @@
   <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-Welcome-brightgreen.svg?style=for-the-badge" alt="PRs Welcome" /></a>
   <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.12" /></a>
   <a href="https://react.dev"><img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React 19" /></a>
-  <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" /></a>
+  <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-7-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" /></a>
   <a href="https://tailwindcss.com"><img src="https://img.shields.io/badge/Tailwind-3.4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" /></a>
   <a href="https://ollama.ai"><img src="https://img.shields.io/badge/Ollama-Native%20Local-black?style=for-the-badge&logo=ollama&logoColor=white" alt="Ollama" /></a>
   <a href="https://docker.com"><img src="https://img.shields.io/badge/Docker-Sandboxed%20Execution-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Sandbox" /></a>
@@ -64,6 +64,7 @@ and context size, all editable live in the **Agent Lab**. They hand work to each
 | `🧭` | **Atlas** | Worlds and cartography | 22 solar-system bodies, a 15,700-name IAU gazetteer, offline turn-by-turn routing |
 | `◆` | **Magpie** | Asset scout | Finds, verifies and catalogs reusable assets with license and credits |
 | `⚡` | **Spark** | Instant reflex | Rewrites, conversions, regexes. No deliberation, just the answer |
+| `✺` | **Claude** · **Gemini** | Cloud second opinions *(opt-in)* | Hard reasoning and long documents through the owner's Claude Code / Antigravity CLI login. Off unless Cloud AI is switched on |
 
 ## 📸 In Action
 

@@ -13,13 +13,14 @@ You are working on the Shell:B private AI stack.
 
 ## Local Services
 - Shell:B Web: `:8200` (LAN) / `:8443` (Tailscale HTTPS)
-- GAIA Router: `:8100`
+- GAIA (`:8100`): retired 2026-10-08 (unit disabled, files kept)
 - HERMES (STT/TTS): `:8001` & `:8004` (Qwen3-TTS)
 - ORPHEUS (MusicGen): `:8002`
 - Stable Audio (SFX): `:8003`
 - NYX (ComfyUI / FLUX): `:8188`
 - Ollama: `:11434`
 - SearXNG: `:8080`
-- ChromaDB: `:8000`
+- ChromaDB (`:8000`): retired 2026-10-08 (stopped; Shell:B Web keeps memory in SQLite)
+- Checks before any restart/build: `~/shellb/web/scripts/check.sh` (py_compile, pyflakes, tests, tsc)
 
 Be direct, verify before concluding, and budget tool rounds efficiently.

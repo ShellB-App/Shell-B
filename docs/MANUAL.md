@@ -24,9 +24,25 @@ address (`_ShortNameRedirect` in app.py). Check with `tailscale serve status`; r
 
 ## What it does
 
-- **Agents** (edit them in the Agent Lab): Shell:B (orchestrator, Qwen3.6), Hephaestus (engineering, Qwen3-Coder-Next),
-  Minerva (research and analysis), Heimdall (vision), NYX (images and music), Spark (instant answers). Each has its own
-  model, prompt, tools, temperature, reasoning effort and context size.
+- **Agents** (edit them in the Agent Lab): Shell:B (orchestrator), Hephaestus (engineering, ShellB-Forge =
+  Qwen3-Coder-Next), Minerva (research and analysis), Heimdall (vision), NYX (generative art), Spark (quick answers),
+  Mimir (knowledge: offline wiki, Codex, past chats), Atlas (Worlds and cartography), Magpie (asset scout) and Daedalus
+  (Studio, hidden from chat lists); the local ones run on ShellB-Swift (Qwen3.6) unless noted. Cloud: Claude
+  (`claude-code/opus`) and Gemini (`antigravity/gemini-3.1-pro-high`), see **Cloud AI**. Each agent has its own model,
+  prompt, tools, temperature, reasoning effort and context size.
+- **Long chats** (`server/compaction.py`): when the next prompt would fill about 70% of the agent's context, the
+  oldest messages are summarized in the background after a reply and the summary is applied at the start of the next
+  turn. Nothing is deleted: summarized messages get `summarizedBy` and stay in the chat (under a "Summarized N earlier
+  messages · Show originals" divider), in full-text search and in `recall_conversations`; only the prompt leaves them
+  out, and the system prompt says honestly that the summary is lossy. The Compact button does it now. A context meter
+  under the composer shows the estimate ("41k / 128k", amber from 70%); `GET /api/conversations/<id>/context`.
+- **Secretary** (`server/secretary.py`, `#/secretary`): meeting transcription (HERMES Whisper) with speaker
+  separation. Voices are told apart by neural voice prints (HERMES `POST /speaker_embed`: WeSpeaker ResNet34-LM, ONNX on
+  CPU, 256-d), compared by cosine distance (strict 0.40, balanced 0.50, relaxed 0.62); clips under 1.5 s can't start a
+  new speaker, live meetings re-cluster every 25 utterances, and fragments under 4 s fold into the nearest speaker.
+  Renamed speakers keep their names when re-clustered. Meeting audio is kept in `data/secretary/<meeting>` (deleted with
+  the meeting, voice prints too) so **Separate Voices** can re-identify from audio; meetings without audio re-cluster
+  their stored features. If HERMES is down, the old pitch/timbre features are used ("Voice ID: basic").
 - **Real agent loop**: streams reasoning and text from Ollama, runs tool calls in parallel, and loops until the model
   answers (`maxToolRounds` caps it). Sub-agent delegation goes through `ask_agent`.
 - **Tools**: web search through VASSAGO/SearXNG; page reading via trafilatura, with local addresses blocked; a Python/Bash
@@ -295,9 +311,15 @@ address (`_ShortNameRedirect` in app.py). Check with `tailscale serve status`; r
   restores the previous files, rebuilds and restarts again.
   `action=rollback` (also approved by the owner) undoes a deploy. `action=history` and `GET /api/self` list deploys,
   which are kept in `data/selfmod/deploys.json`.
-  **This tree is a git repository (since 2026-10-02).** Edits made outside Shell:B, by Claude Code or by hand, are
-  committed automatically as "Outside edits" before each sync or deploy, so every deploy has a clean base to roll back
-  to. `.gitignore` keeps `data/`, the venv, node_modules, `ui/dist` and `ui/public/vendor` out.
+  **This tree is a git repository (since 2026-10-02).** Edits made outside Shell:B to tracked files, by Claude Code or
+  by hand, are committed automatically as "Outside edits" before each sync or deploy, so every deploy has a clean base
+  to roll back to. Untracked files are left alone and listed in the deploy approval instead.
+- **Self-review** (`server/selfreview.py`): `shellb_source` is a read-only view of the committed source (outline, read,
+  regex search, history, and `checks`: the last `scripts/check.sh` result). Paths outside `git ls-files` are refused,
+  so it's safe to give a cloud reviewer: data, keys and logs never leave. `self_findings` keeps a ledger of what reviews
+  found (severity, file, open / fixed / won't fix; the same title + file again refreshes it, and a "fixed" one seen
+  again re-opens). The nightly 04:00 review (agent `claude`) re-checks open findings, adds new ones and writes a report;
+  **Activity → Self-review** lists them. `.gitignore` keeps `data/`, the venv, node_modules, `ui/dist` and `ui/public/vendor` out.
 - **UI**: conversations are stored on the server, so they work from any device, and they survive reloads mid-reply.
   Also: a collapsible thinking/tool trace; a sandboxed artifact panel with versions; attachments (images go to the
   vision model, files to `/work`); dictation and read-aloud through HERMES; Ctrl+K palette; light/dark themes; mobile layout.
@@ -381,13 +403,22 @@ Open **Tools & Connectors** in the sidebar.
 - **MCP servers** lists live connections with their status and tools. Switch individual tools on or off there. To give an agent
   a server, tick it in the Agent Lab: it shows up as a tool entry with the id `mcp:<server>`. Its tools reach the model
   as `mcp__<server>__<tool>`. Server code is in `server/mcp_hub.py`, and stdio server logs are in `data/mcp-logs/`.
-- **Cloud AI** is off by default. With it on and a key set, the built-in **Claude** agent (`anthropic/claude-opus-5-5`)
-  and **Gemini** agent (`gemini/gemini-3.1-pro-preview`) work. Any agent can also use a cloud model, and local agents may
+- **Cloud AI** is off by default. With it on, the built-in **Claude** agent (`claude-code/opus`, through the Claude Code
+  CLI login on this machine) and **Gemini** agent (`antigravity/gemini-3.1-pro-high`, through the Antigravity CLI) work;
+  API-key models (`anthropic/…`, `gemini/…`, `openai/…`) can be picked per agent too. Any agent can also use a cloud model, and local agents may
   consult cloud agents through `ask_agent`. Cloud agents get no long-term memory unless you allow it.
   Provider code is in `server/providers.py`: Claude goes through the Anthropic SDK; Gemini and OpenAI use OpenAI-compatible endpoints.
 - **Admin key:** connectors can launch programs and API keys cost money. So adding or editing servers, saving keys and
   changing cloud settings need the owner's login, or the key in `data/admin.key` (`cat ~/shellb/web/data/admin.key`).
-  Localhost on its own doesn't count as admin.
+  Localhost on its own doesn't count as admin. Turning servers on or off, restarting them and editing skills need admin too.
+- **Discover** (`server/community.py`, `ui/src/components/Discover.tsx`): browse and install what others published:
+  MCP servers from the official MCP Registry, and Agent Skills from GitHub (Anthropic's skills, the official Claude
+  plugin marketplace, or any repo added under Sources: `owner/repo[@ref][/folder]`). Everything is unverified, so the
+  detail view shows the full SKILL.md and its scripts, or the exact command/URL a server runs as. Installs need admin
+  and arrive switched off. Package servers (npm, PyPI, OCI) run in a throwaway container (`--cap-drop ALL`, 1 GB, the
+  `shellb-mcp` network, secrets passed by environment); remote servers are HTTP/SSE connections. Repos are fetched as a
+  tarball at a pinned commit and indexed into `community_items`, so browsing works offline. Agents get
+  `find_capability` (search, details, propose); a proposal is an approval card, never a silent install.
 
 ## Login
 
@@ -470,4 +501,5 @@ switches theme, `&peek=N` opens the Nth rich-link popover, and `&modal=agents|to
 - One owner account only. There are no per-user accounts or private data.
 - An artifact that hard-codes `/api/workspace/<conv>/…` (rather than going through the frame-key prefix) can't load
   that file inside its sandboxed preview, because no cookie is sent from there.
-- The microphone needs HTTPS (browser rule), so dictation works only through a Tailscale `https://` URL.
+- The microphone needs HTTPS (browser rule), so dictation works only over HTTPS: the Tailscale `https://` URL or the
+  Cloudflare tunnel (`ai.eviemi.net`, behind Cloudflare Access).
