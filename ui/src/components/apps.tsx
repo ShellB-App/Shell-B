@@ -1,10 +1,10 @@
-import { AudioLines, BookMarked, BookOpen, Brain, BrainCircuit, Boxes, CalendarClock, CodeXml, Cpu, HardDrive, ImagePlus, Inbox, LibraryBig, Map as MapIcon, MessageSquare, NotebookPen, Palette, Radio, RadioTower, Settings, Shapes, Telescope, UserRound, Workflow, type LucideIcon } from 'lucide-react';
+import { AudioLines, BookMarked, BookOpen, Brain, BrainCircuit, Boxes, CalendarClock, CodeXml, Cpu, HardDrive, ImagePlus, Inbox, LibraryBig, Map as MapIcon, MessageSquare, NotebookPen, Palette, Radio, RadioTower, Settings, Shapes, ShoppingCart, Telescope, UserRound, Workflow, type LucideIcon } from 'lucide-react';
 import { useSyncExternalStore } from 'react';
 import type { Status } from '../types';
 import { djLive } from '../dj/live';
 
 export type AppId = 'chat' | 'studio' | 'code' | 'library' | 'maps' | 'wiki' | 'me' | 'notes' | 'codex' | 'memory' | 'research' | 'plans' | 'assets' | 'scheduled' | 'activity'
-  | 'secretary' | 'gibberlink' | 'radio' | 'generate' | 'models' | 'data' | 'agents' | 'tools' | 'settings';
+  | 'secretary' | 'shop' | 'gibberlink' | 'radio' | 'generate' | 'models' | 'data' | 'agents' | 'tools' | 'settings';
 
 export type AppGroup = 'chat' | 'make' | 'know' | 'run' | 'system';
 
@@ -94,6 +94,8 @@ export const APPS: AppDef[] = [
     } },
   { id: 'secretary', label: 'Secretary', hint: 'Transcribe meetings with speaker identification and compile summaries', icon: AudioLines, tint: '#38bdf8', group: 'run',
     hash: '#/secretary', route: /^#\/secretary\b/, keywords: 'meeting secretary transcribe audio voice notes minutes speech diarization speakers summary' },
+  { id: 'shop', label: 'Shopping', hint: 'Compare prices across stores, build carts and watch for price drops', icon: ShoppingCart, tint: '#34d399', group: 'run',
+    hash: '#/shop', route: /^#\/shop\b/, keywords: 'shopping buy price compare cheapest deal cart basket amazon walmart target best buy ebay grocery watch alert' },
   { id: 'gibberlink', label: 'Gibberlink', hint: 'Send and receive short messages over audio', icon: RadioTower, tint: '#f472b6', group: 'run',
     hash: '#/gibberlink', route: /^#\/gibberlink\b/, keywords: 'audio sound wave agent message' },
   { id: 'models', label: 'Models', hint: 'Download, load and unload models; see what is using memory', icon: Cpu, tint: '#22d3ee', group: 'system',

@@ -453,6 +453,8 @@ class Turn:
             names.append("track_flight")  # live ADS-B (flights.py); online like web search, so only for agents that search
         if "web_search" in names and "weather" in TOOLS and switches.get("weather", True):
             names.append("weather")  # Open-Meteo (weather.py), same online gate
+        if "web_search" in names and "shop" in TOOLS and switches.get("shop", True):
+            names.append("shop")  # price comparison, basket and cart links (shopping.py), same online gate
         if "web_search" in names and "geocode" in TOOLS and switches.get("geocode", True):
             names.append("geocode")  # OSM place lookup (weather.py), same online gate
         if "directions" in TOOLS and switches.get("directions", True) and places.regions():

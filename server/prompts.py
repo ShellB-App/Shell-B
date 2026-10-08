@@ -252,6 +252,9 @@ system. Your tools still run on Shell:B's own machine; your reasoning runs on {p
         guide.append(asset_libs.GUIDE + (f"\n  Asset libraries:\n" + "\n".join("  " + l for l in libs.splitlines()) if libs else ""))
     if "scrape" in tool_names:
         guide.append(scrape.GUIDE)
+    if "shop" in tool_names:
+        import shopping
+        guide.append(shopping.GUIDE)
     if "research_board" in tool_names:
         guide.append(research.GUIDE)
     if "mega_plan" in tool_names:

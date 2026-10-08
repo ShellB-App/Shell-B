@@ -66,12 +66,13 @@ KINDS = [
     ("codex", "Codex drafts", "A contact or calendar draft needs review", "attention"),
     ("memory", "Memory", "Shell:B learned something and wants you to check it", "off"),
     ("data", "Offline data", "A dataset download finished or failed", "attention"),
+    ("shopping", "Price watch", "A watched item hit your target price, dropped or came back in stock", "all"),
     ("health", "System health", "A service went down or came back, a crash loop, low disk or memory", "all"),
 ]
 KIND_IDS = {k[0] for k in KINDS}
 NOUN = {"approval": "Approval", "question": "Question", "schedule": "Scheduled task", "plan": "Mega Plan",
         "todo": "To-do", "deploy": "Self-deploy", "scout": "Asset scout", "notebook": "Notebook", "codex": "Codex draft",
-        "memory": "Memory", "data": "Offline data", "health": "System health"}
+        "memory": "Memory", "data": "Offline data", "health": "System health", "shopping": "Price watch"}
 VERB = {"done": "finished", "complete": "finished", "failed": "failed", "blocked": "is blocked", "paused": "paused",
         "interrupted": "was interrupted", "rolled-back": "rolled back", "restart-pending": "is waiting for a restart",
         "review": "needs your review", "waiting": "is waiting for you", "warning": "needs attention",
@@ -190,6 +191,8 @@ def _message(kind: str, status: str, title: str, route: str, tag: str, noun: str
     head = f"{noun or NOUN.get(kind, 'Shell:B')} {VERB.get(status, status)}"
     if kind == "health" and title:  # watchdog titles hold no private content and are the whole message
         head, title = title[:90], ""
+    elif kind == "shopping":  # the item and price stay in the body, which follows the "details" preference
+        head = "Price alert" if status in ATTENTION else "Price drop"
     msg = {"t": head, "r": route if route.startswith("#/") else "#/activity", "tag": tag,
            "a": status in ATTENTION, "k": kind}
     if prefs()["details"] and title:

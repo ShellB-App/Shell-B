@@ -58,6 +58,7 @@ import wiki
 import legal
 import library
 import scrape
+import shopping
 import assets as asset_libs
 import remote
 import offline
@@ -133,6 +134,8 @@ skills.register()
 groups.register()
 doc_tools.register()
 adult.register()
+shopping.register()
+shopping.init()
 schedules.init()
 schedules.register()
 research.init()
@@ -204,6 +207,7 @@ app.include_router(auth.router)
 app.include_router(gibberlink.router)
 app.include_router(maps.router)
 app.include_router(flights.router)
+app.include_router(shopping.router)
 app.include_router(weather.router)
 app.include_router(routing.router)
 app.include_router(sky.router)
@@ -252,6 +256,8 @@ async def _start_mcp():
     commitments.busy = lambda: bool(ACTIVE)
     commitments.start()
     datasets.start()
+    shopping.busy = lambda: bool(ACTIVE)
+    shopping.start()
     watchdog.probe = service_status
     watchdog.start()
     backup.start_scheduler()

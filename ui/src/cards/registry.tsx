@@ -23,6 +23,7 @@ const CARDS: Record<string, ComponentType<CardProps>> = {
   diagram: lazy(() => import('./DiagramCard').then(m => ({ default: m.DiagramCard }))),
   mermaid: lazy(() => import('./DiagramCard').then(m => ({ default: m.DiagramCard }))),
   route: lazy(() => import('./RouteCard').then(m => ({ default: m.RouteCard }))),
+  basket: lazy(() => import('./BasketCard').then(m => ({ default: m.BasketCard }))),
 };
 
 export const hasCard = (lang: string) => lang.toLowerCase() in CARDS;
