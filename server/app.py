@@ -67,6 +67,7 @@ import selfreview
 import community
 import ask
 import screen
+import public_api
 import browsing
 import compaction
 import composer
@@ -121,6 +122,7 @@ app.add_middleware(_ShortNameRedirect)
 db.init()
 activity.init()
 auth.init()
+public_api.init()
 studio_tools.register()
 studio_assets.register()
 devserver.register()
@@ -207,6 +209,8 @@ app.include_router(projects.router)
 app.include_router(remote.router)
 app.include_router(ask.router)
 app.include_router(screen.router)
+app.include_router(public_api.router)
+app.include_router(public_api.admin_router)
 app.include_router(appstate.router)
 app.include_router(auth.router)
 app.include_router(gibberlink.router)
@@ -637,9 +641,10 @@ VOICE_REMINDER = ("\n\n[Spoken aloud by voice: answer in two to four plain spoke
                   "No lists, headings, bold or tables. Offer to go deeper instead of covering everything.]")
 
 
-def begin_turn(conv, body, stream=True, note="", adult_ok=False):
+def begin_turn(conv, body, stream=True, note="", adult_ok=False, interactive=None):
     """Start an agent turn in the background. Returns (event queue or None, task); the task's result is the final
-    assistant message. `note` is appended to the system prompt (scheduled runs say no one is watching)."""
+    assistant message. `note` is appended to the system prompt (scheduled runs say no one is watching). `interactive`
+    (default: same as stream) says someone is watching live; API turns stream to a program, so they pass False."""
     conv_id = conv["id"]
     if body.get("fromMessageId"):
         db.delete_messages_from(conv_id, body["fromMessageId"])
@@ -708,7 +713,7 @@ def begin_turn(conv, body, stream=True, note="", adult_ok=False):
         sink = Sink(emit)
         live["blocks"] = sink.blocks
         turn = Turn(conv_id, asst_id, agent, agents, settings, emit, abort, project_id=project_id)
-        turn.interactive = stream  # streamed turns have someone watching; background ones can't ask questions
+        turn.interactive = stream if interactive is None else interactive  # streamed turns have someone watching; background ones can't ask questions
         turn.plan = plan
         turn.user_request = content.split("\n\n[Selected element in ")[0][:800]
         status, error = "complete", None
@@ -841,6 +846,9 @@ def _abort_turn(conv_id):
     if live:
         _signal_abort(live)
     return bool(live)
+
+
+public_api.begin_turn, public_api.ACTIVE, public_api.abort_turn = begin_turn, ACTIVE, _abort_turn
 
 
 async def _run_scheduled(t, on_conv):

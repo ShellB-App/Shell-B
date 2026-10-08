@@ -10,6 +10,7 @@ import { Modal, Toggle, btn, toolIcon } from './common';
 import { SkillsPanel } from './Skills';
 import { Discover } from './Discover';
 import { ScreenTab } from './ScreenTab';
+import { ApiTab } from './ApiTab';
 
 const ICONS: Record<string, LucideIcon> = {
   FolderOpen, Database, Workflow, Github: GitBranch, NotebookText, Share2, ListOrdered, Link, SquareTerminal, Plug, Compass,
@@ -21,7 +22,7 @@ const SERVICE_NAMES: Record<string, string> = {
 };
 const SECRET = '__secret__';
 
-type Tab = 'connectors' | 'servers' | 'skills' | 'discover' | 'tools' | 'cloud' | 'screen' | 'adult';
+type Tab = 'connectors' | 'servers' | 'skills' | 'discover' | 'tools' | 'cloud' | 'screen' | 'api' | 'adult';
 
 interface Props {
   open: boolean;
@@ -63,6 +64,7 @@ export function IntegrationsModal({ open, onClose, tools, settings, onChanged, t
     { id: 'tools', label: 'Built-in tools', icon: Boxes },
     { id: 'cloud', label: 'Cloud AI', icon: Cloud },
     { id: 'screen', label: 'Screen', icon: MonitorUp },
+    { id: 'api', label: 'API', icon: KeyRound },
     { id: 'adult', label: 'Aphrodite', icon: Heart },
   ] as const;
 
@@ -78,7 +80,7 @@ export function IntegrationsModal({ open, onClose, tools, settings, onChanged, t
           ))}
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5">
-          {admin === false && (tab === 'connectors' || tab === 'servers' || tab === 'skills' || tab === 'discover' || tab === 'cloud' || tab === 'screen' || tab === 'adult') && <AdminGate onUnlocked={() => setAdmin(true)} />}
+          {admin === false && (tab === 'connectors' || tab === 'servers' || tab === 'skills' || tab === 'discover' || tab === 'cloud' || tab === 'screen' || tab === 'api' || tab === 'adult') && <AdminGate onUnlocked={() => setAdmin(true)} />}
           {tab === 'connectors' && !editing && (
             <ConnectorGallery connectors={connectors} servers={servers} onPick={c => setEditing({ connector: c })} />
           )}
@@ -105,6 +107,7 @@ export function IntegrationsModal({ open, onClose, tools, settings, onChanged, t
           {tab === 'tools' && <BuiltinTools tools={tools.filter(t => t.category !== 'mcp')} onChanged={onChanged} />}
           {tab === 'cloud' && <CloudTab settings={settings} locked={!admin} onChanged={onChanged} />}
           {tab === 'screen' && <ScreenTab locked={!admin} cloudScreen={!!settings?.cloudScreen} />}
+          {tab === 'api' && <ApiTab locked={!admin} />}
           {tab === 'adult' && <AphroditeTab settings={settings} locked={!admin} onChanged={onChanged} />}
         </div>
       </div>
