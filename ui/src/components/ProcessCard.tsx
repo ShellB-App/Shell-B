@@ -16,7 +16,7 @@ export function argSummary(b: ToolBlock): string {
     case 'web_fetch': return pick('url').replace(/^https?:\/\//, '');
     case 'run_code': return (pick('code').trim().split('\n')[0] || '').slice(0, 90);
     case 'create_artifact': return pick('title') || pick('id');
-    case 'generate_image': case 'generate_music': return pick('prompt');
+    case 'generate_image': case 'generate_adult_image': case 'generate_music': return pick('prompt');
     case 'memory_save': return pick('text');
     case 'memory_search': return pick('query');
     case 'ask_agent': return `${pick('agent_id')}: ${pick('task')}`;

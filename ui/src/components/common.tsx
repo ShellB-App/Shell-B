@@ -8,7 +8,7 @@ import {
 import type { Agent } from '../types';
 
 export const TOOL_ICONS: Record<string, LucideIcon> = {
-  web_search: Search, web_fetch: Globe, run_code: Terminal, create_artifact: Boxes, generate_image: Image,
+  web_search: Search, web_fetch: Globe, run_code: Terminal, create_artifact: Boxes, generate_image: Image, generate_adult_image: Image,
   generate_music: Music, memory_save: Brain, memory_search: BrainCircuit, memory_forget: Brain, recall_conversations: History, ask_agent: GitFork,
   list_files: FolderTree, read_file: FileText, write_file: FilePlus, edit_file: FilePen, delete_file: Trash2,
   rename_file: FileSymlink, view_image: Eye, screenshot: Camera,
@@ -27,6 +27,7 @@ export const TOOL_LABELS: Record<string, [string, string]> = {
   run_code: ['Running code', 'Ran code'],
   create_artifact: ['Building artifact', 'Built artifact'],
   generate_image: ['Painting with NYX', 'Generated image'],
+  generate_adult_image: ['Painting after dark', 'Generated image'],
   generate_music: ['Composing with ORPHEUS', 'Generated music'],
   memory_save: ['Remembering', 'Saved to memory'],
   memory_search: ['Recalling', 'Searched memory'],

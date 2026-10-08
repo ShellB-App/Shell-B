@@ -264,14 +264,20 @@ system. Your tools still run on Shell:B's own machine; your reasoning runs on {p
             blocks.append(f'### `{a["id"]}` v{a["version"]}: {a["title"]} ({a["type"]})\n```{a["language"]}\n{body}\n```')
         parts.append("## Artifacts in this conversation (latest versions)\nTo change one, call create_artifact with the same id "
                      "and the complete new content.\n\n" + "\n\n".join(blocks[::-1]))
+    import adult
+    if adult.is_adult(agent):
+        parts.append(adult.GUARDRAILS)  # last, so nothing earlier in the prompt can talk it down
     return "\n\n".join(parts)
 
 
 def delegates(agent, agents, settings):
     """Agents this one may hand work to with ask_agent. Cloud agents only when cloud use and delegation are allowed."""
+    import adult
+    if adult.is_adult(agent):
+        return []
     out = []
     for a in agents:
-        if a["id"] == agent["id"]:
+        if a["id"] == agent["id"] or adult.is_adult(a):
             continue
         if providers.is_cloud(a["model"]):
             if not settings.get("cloudDelegation", True) or not providers.available(a["model"], settings)[0]:

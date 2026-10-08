@@ -487,6 +487,11 @@ class Turn:
         import privacy
         if privacy.is_incognito(self.conv_id):  # incognito: nothing recalled, nothing remembered
             names = [t for t in names if t not in privacy.MEMORY_TOOLS]
+        import adult
+        if adult.is_adult(self.agent):
+            self.mcp_specs = {}
+            return [t for t in names if t in adult.TOOLS_ALLOWED]
+        names = [t for t in names if t not in adult.TOOLS_ALLOWED]
         if self.plan:  # MCP tools are unknown quantities, so planning goes without them
             self.mcp_specs = {}
             return [t for t in names if planmode.offered(t)]
@@ -1053,9 +1058,10 @@ class Turn:
 
     def _subagent_runner(self, parent_sink: Sink, parent_idx: int):
         async def run_sub(agent_id: str, task: str) -> str:
-            sub_agent = next((a for a in self.agents if a["id"] == agent_id), None)
+            import adult
+            sub_agent = next((a for a in self.agents if a["id"] == agent_id and not adult.is_adult(a)), None)
             if sub_agent is None:
-                return f"No agent named {agent_id!r}. Available: {', '.join(a['id'] for a in self.agents)}"
+                return f"No agent named {agent_id!r}. Available: {', '.join(a['id'] for a in self.agents if not adult.is_adult(a))}"
             import prompts
             allowed = {a["id"] for a in prompts.delegates(self.agent, self.agents, self.settings)}
             if agent_id not in allowed:  # the tool's enum is only a hint to the model; this is the rule (cloudDelegation etc.)

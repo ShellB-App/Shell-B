@@ -39,11 +39,13 @@ import codex_secrets
 import media
 import generate
 import modelhub
+import modelstore
 import appstate
 import studio_tools
 import studio_assets
 import devserver
 import doc_tools
+import adult
 import maps
 import flights
 import weather
@@ -129,6 +131,7 @@ scrape.register()
 skills.register()
 groups.register()
 doc_tools.register()
+adult.register()
 schedules.init()
 schedules.register()
 research.init()
@@ -187,6 +190,7 @@ app.include_router(episodes.router)
 app.include_router(me.router)
 app.include_router(feedback.router)
 app.include_router(modelhub.router)
+app.include_router(modelstore.router)
 app.include_router(devserver.router)
 app.include_router(projects.router)
 app.include_router(remote.router)
@@ -578,7 +582,23 @@ async def chat(conv_id: str, req: Request):
     # checked again after the last await: begin_turn claims ACTIVE synchronously, so a double-submit can't slip in
     if conv_id in ACTIVE:
         raise HTTPException(409, "This conversation is already generating")
-    queue, _ = begin_turn(conv, body)
+    agent, _ = find_agent(body.get("agentId") or conv["agentId"])
+    adult_ok = False
+    if adult.is_adult(agent):
+        settings = get_settings()
+        why = adult.refuse_reason(agent, settings, auth.is_owner(req))
+        if why:
+            raise HTTPException(403, why)
+        why = await adult.screen(body.get("content") or "", settings)
+        if why:
+            raise HTTPException(400, why)
+        if not conv.get("incognito"):  # After Dark chats are never remembered and expire on their own
+            import privacy
+            conv = privacy.mark_incognito(conv_id)
+        adult_ok = True
+        if conv_id in ACTIVE:
+            raise HTTPException(409, "This conversation is already generating")
+    queue, _ = begin_turn(conv, body, adult_ok=adult_ok)
 
     async def stream():
         # the turn keeps running (and persists) even if the browser disconnects mid-stream
@@ -602,7 +622,7 @@ VOICE_REMINDER = ("\n\n[Spoken aloud by voice: answer in two to four plain spoke
                   "No lists, headings, bold or tables. Offer to go deeper instead of covering everything.]")
 
 
-def begin_turn(conv, body, stream=True, note=""):
+def begin_turn(conv, body, stream=True, note="", adult_ok=False):
     """Start an agent turn in the background. Returns (event queue or None, task); the task's result is the final
     assistant message. `note` is appended to the system prompt (scheduled runs say no one is watching)."""
     conv_id = conv["id"]
@@ -614,6 +634,8 @@ def begin_turn(conv, body, stream=True, note=""):
         settings = {**settings, "maxToolRounds": int(body["maxToolRounds"])}
     project_id = conv.get("projectId")
     agent, agents = find_agent(body.get("agentId") or conv["agentId"])
+    if adult.is_adult(agent) and not adult_ok:  # schedules, plans, retries: nobody there to check, so never
+        raise RuntimeError(adult.refuse_reason(agent, settings, owner=False, interactive=False) or "After Dark is interactive-only.")
     pick, own = body.get("model"), providers.split(agent.get("model", ""))
     if pick and pick != agent.get("model") and own and (providers.split(pick) or ("",))[0] == own[0]:
         agent = {**agent, "model": pick}  # the composer's model picker: same provider only, so privacy doesn't change
@@ -848,10 +870,13 @@ async def _run_asset_job(job, message, note, on_conv):
 # ── agents, tools, settings, models ─────────────────────────────────────────
 
 @app.get("/api/agents")
-def agents_list():
+def agents_list(req: Request):
     settings = get_settings()
     out = []
+    show_adult = adult.visible(settings, auth.is_owner(req))
     for a in get_agents():
+        if adult.is_adult(a) and not show_adult:
+            continue
         ok, why = providers.available(a["model"], settings)
         out.append({**a, "cloud": providers.is_cloud(a["model"]), "unavailable": "" if ok else why})
     return out
@@ -863,6 +888,10 @@ async def agent_upsert(agent_id: str, req: Request):
     body["id"] = re.sub(r"[^a-z0-9-]+", "-", (body.get("id") or agent_id).lower()).strip("-") or agent_id
     agents = get_agents()
     idx = next((i for i, a in enumerate(agents) if a["id"] == agent_id), None)
+    if body.get("adult") or (idx is not None and adult.is_adult(agents[idx])):
+        require_admin(req)
+        if idx is not None and adult.is_adult(agents[idx]):
+            body["adult"] = True  # the Agent Lab can tune After Dark, not turn it into an unguarded agent
     if idx is None:
         agents.append(body)
     else:
@@ -901,6 +930,8 @@ async def tools_list():
     status = await service_status()
     out = []
     for tid, t in TOOLS.items():
+        if t.get("hidden"):
+            continue
         svc = t["service"]
         out.append({"id": tid, **t["ui"], "enabled": switches.get(tid, True), "scope": t.get("scope", "global"),
                     "service": svc, "available": True if svc is None else status.get(svc, {}).get("ok", False)})
@@ -936,7 +967,7 @@ def settings_get():
 @app.put("/api/settings")
 async def settings_put(req: Request):
     body = await req.json()
-    if any(k.startswith("cloud") and body[k] != get_settings().get(k) for k in body):
+    if any(k.startswith(("cloud", "adult")) and body[k] != get_settings().get(k) for k in body):
         require_admin(req)
     old = get_settings()
     merged = {**old, **{k: v for k, v in body.items() if k in DEFAULT_SETTINGS}}
@@ -1097,6 +1128,21 @@ def files(name: str):
     if p.parent != FILES.resolve() or not p.is_file():
         raise HTTPException(404)
     return FileResponse(p, headers={"Cache-Control": "public, max-age=31536000, immutable"})
+
+
+@app.get("/api/adult/checkpoints")
+def adult_checkpoints(req: Request):
+    require_admin(req)
+    from tools import flux_dev_available
+    return {"checkpoints": adult.checkpoints(), "fluxDev": flux_dev_available()}
+
+
+@app.get("/api/adult/files/{conv_id}/{name}")
+def adult_file(conv_id: str, name: str, req: Request):
+    p = adult.file_path(conv_id, name)
+    if not p or not adult.visible(get_settings(), auth.is_owner(req)):
+        raise HTTPException(404)
+    return FileResponse(p, headers={"Cache-Control": "private, no-store"})
 
 
 @app.get("/api/workspace/{conv_id}")

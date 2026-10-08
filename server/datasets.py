@@ -584,6 +584,11 @@ def downloads() -> list[dict]:
                             "started": (p.get("started") or 0) / 1000, "link": "#/models"})
     except Exception:  # noqa: BLE001
         pass
+    try:
+        import modelstore
+        out += modelstore.running()
+    except Exception:  # noqa: BLE001
+        pass
     return out
 
 

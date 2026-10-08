@@ -212,7 +212,12 @@ async def _pull(name: str):
 @router.post("/pull")
 async def api_pull(req: Request):
     _owner(req)
-    name = str((await req.json()).get("model") or "").strip()
+    return start_pull(str((await req.json()).get("model") or ""))
+
+
+def start_pull(name: str) -> dict:
+    """Start (or resume) an Ollama pull in the background; also used by the Model Store (modelstore.py)."""
+    name = name.strip()
     if name.startswith("ollama pull "):
         name = name[len("ollama pull "):].strip()
     if not NAME_RE.match(name):

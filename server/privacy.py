@@ -67,6 +67,8 @@ def forget_conversation(conv_id: str):
         for table in ("mega_links", "conv_summary", "feedback"):
             if c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone():
                 c.execute(f"DELETE FROM {table} WHERE conv_id=?", (conv_id,))
+    import adult
+    adult.forget(conv_id)
     ws = db.DATA / "workspaces" / conv_id
     if conv_id and ws.is_dir() and ws.resolve().parent == (db.DATA / "workspaces").resolve():
         shutil.rmtree(ws, ignore_errors=True)

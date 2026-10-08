@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import clsx from 'clsx';
 import {
   Boxes, ChevronDown, Compass, ChevronRight, Cloud, Database, FolderOpen, GitBranch, KeyRound, Link, ListOrdered, Loader2, Lock,
-  NotebookText, Pencil, Plug, Plus, RefreshCw, Share2, ShieldCheck, Sparkles, SquareTerminal, Trash2, Workflow, type LucideIcon,
+  Moon, NotebookText, Pencil, Plug, Plus, RefreshCw, Share2, ShieldCheck, Sparkles, SquareTerminal, Trash2, Workflow, type LucideIcon,
 } from 'lucide-react';
 import type { CliAgent, Connector, McpServer, Provider, Settings, ToolInfo } from '../types';
 import { adminKey, api } from '../api';
@@ -20,7 +20,7 @@ const SERVICE_NAMES: Record<string, string> = {
 };
 const SECRET = '__secret__';
 
-type Tab = 'connectors' | 'servers' | 'skills' | 'discover' | 'tools' | 'cloud';
+type Tab = 'connectors' | 'servers' | 'skills' | 'discover' | 'tools' | 'cloud' | 'adult';
 
 interface Props {
   open: boolean;
@@ -61,6 +61,7 @@ export function IntegrationsModal({ open, onClose, tools, settings, onChanged, t
     { id: 'discover', label: 'Discover', icon: Compass },
     { id: 'tools', label: 'Built-in tools', icon: Boxes },
     { id: 'cloud', label: 'Cloud AI', icon: Cloud },
+    { id: 'adult', label: 'After Dark', icon: Moon },
   ] as const;
 
   return (
@@ -75,7 +76,7 @@ export function IntegrationsModal({ open, onClose, tools, settings, onChanged, t
           ))}
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5">
-          {admin === false && (tab === 'connectors' || tab === 'servers' || tab === 'skills' || tab === 'discover' || tab === 'cloud') && <AdminGate onUnlocked={() => setAdmin(true)} />}
+          {admin === false && (tab === 'connectors' || tab === 'servers' || tab === 'skills' || tab === 'discover' || tab === 'cloud' || tab === 'adult') && <AdminGate onUnlocked={() => setAdmin(true)} />}
           {tab === 'connectors' && !editing && (
             <ConnectorGallery connectors={connectors} servers={servers} onPick={c => setEditing({ connector: c })} />
           )}
@@ -101,6 +102,7 @@ export function IntegrationsModal({ open, onClose, tools, settings, onChanged, t
           {tab === 'discover' && !editing && <Discover locked={!admin} onInstalled={() => { load(); onChanged(); }} />}
           {tab === 'tools' && <BuiltinTools tools={tools.filter(t => t.category !== 'mcp')} onChanged={onChanged} />}
           {tab === 'cloud' && <CloudTab settings={settings} locked={!admin} onChanged={onChanged} />}
+          {tab === 'adult' && <AfterDarkTab settings={settings} locked={!admin} onChanged={onChanged} />}
         </div>
       </div>
     </Modal>
@@ -379,6 +381,58 @@ function BuiltinTools({ tools, onChanged }: { tools: ToolInfo[]; onChanged: () =
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// ── After Dark (adult agent) ──────────────────────────────────────────────
+
+function AfterDarkTab({ settings, locked, onChanged }: { settings?: Settings; locked: boolean; onChanged: () => void }) {
+  const [ckpts, setCkpts] = useState<{ name: string; size: number }[] | null>(null);
+  const [fluxDev, setFluxDev] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    if (locked) return;
+    api.adultCheckpoints().then(r => { setCkpts(r.checkpoints); setFluxDev(r.fluxDev); }).catch(() => setCkpts([]));
+  }, [locked]);
+  if (!settings) return null;
+  const on = !!settings.adultEnabled;
+  const current = settings.adultImageCheckpoint ?? '';
+  const save = async (patch: Partial<Settings>) => {
+    setError('');
+    try { await api.saveSettings(patch); onChanged(); } catch (e) { setError(String(e).includes('admin-key-required') ? 'Unlock with the admin key first.' : String(e)); }
+  };
+  return (
+    <div className="space-y-5 max-w-3xl">
+      <div className={clsx('p-4 rounded-xl border', on ? 'border-rose-500/30 bg-rose-500/5' : 'border-[var(--border-subtle)] bg-[var(--bg-secondary)]')}>
+        <div className="flex items-start gap-3">
+          <Moon className={clsx('w-5 h-5 mt-0.5 shrink-0', on ? 'text-rose-400' : 'text-[var(--text-muted)]')} />
+          <div className="flex-1">
+            <div className="text-sm font-semibold">{on ? 'After Dark is on' : 'After Dark is off'}</div>
+            <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed max-w-[65ch]">
+              An adult (18+) agent for explicit fiction, roleplay and images of fictional adult characters. It appears only
+              in the owner's signed-in session, runs on local models only, never delegates or is delegated to, and every
+              chat is incognito. Original adult characters only; background checks run quietly on each request.
+            </p>
+          </div>
+          <Toggle on={on} disabled={locked} label="After Dark" onChange={v => save({ adultEnabled: v })} />
+        </div>
+      </div>
+      <div className="p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] space-y-2">
+        <div className="text-sm font-semibold">Image model</div>
+        <p className="text-xs text-[var(--text-muted)] leading-relaxed max-w-[65ch]">
+          SDXL checkpoints in <code className="font-mono">~/comfyui/models/checkpoints</code>. FLUX.1-dev is the fallback,
+          but it rarely renders explicit images.
+        </p>
+        <select className="w-full max-w-md px-2.5 py-1.5 rounded-lg text-sm bg-[var(--bg-primary)] border border-[var(--border-subtle)]"
+          value={current} disabled={locked || ckpts === null} onChange={e => save({ adultImageCheckpoint: e.target.value })}>
+          <option value="">{fluxDev ? 'FLUX.1-dev (fallback)' : 'None installed'}</option>
+          {current && ckpts && !ckpts.some(c => c.name === current) && <option value={current}>{current} (missing)</option>}
+          {(ckpts ?? []).map(c => <option key={c.name} value={c.name}>{c.name} · {(c.size / 1e9).toFixed(1)} GB</option>)}
+        </select>
+        {ckpts && ckpts.length === 0 && <div className="text-[11px] text-amber-400">No SDXL checkpoints installed yet.</div>}
+      </div>
+      {error && <div className="text-xs text-red-400">{error}</div>}
     </div>
   );
 }
