@@ -30,6 +30,7 @@ import remote
 import selfmod
 import ask
 import screen
+import browsing
 import compaction
 import memory
 import places
@@ -484,6 +485,9 @@ class Turn:
                 and "vision" in info["capabilities"] and screen.available() \
                 and (not providers.is_cloud(self.model) or self.settings.get("cloudScreen", False)):
             names.append("look_at_screen")  # screen.py: only while the owner shares a screen, and only in a live chat
+        if self.depth == 0 and self.interactive and "browser" in TOOLS and switches.get("browser", True) and browsing.available() \
+                and (not providers.is_cloud(self.model) or self.settings.get("cloudBrowser", False)):
+            names.append("browser")  # browsing.py: a browser window on the owner's computer, via the Screen helper
         if self.depth == 0 and "chat_transcript" in TOOLS and "chat_transcript" not in names and switches.get("chat_transcript", True) \
                 and (providers.is_cloud(self.model) or self.user_request.startswith("/verify-chat")):
             names.append("chat_transcript")  # verify.py: lets an agent audit this chat's full record
@@ -890,6 +894,8 @@ class Turn:
                         res = await self._self_change(args, ctx, sink, idx)
                     elif name == "ask_user" and self.interactive and self.depth == 0:
                         res = await ask.run(args, self.conv_id, self.abort, sink, idx)
+                    elif name == "browser" and self.interactive and self.depth == 0:
+                        res = await browsing.run(args, ctx, self.abort, sink, idx, self.model)
                     elif name == "codex" and isinstance(args, dict) and args.get("action") == "request":
                         res = await self._secret_request(args, ctx, sink, idx)
                     elif name == "schedule_task" and isinstance(args, dict) \

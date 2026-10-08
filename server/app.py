@@ -67,6 +67,7 @@ import selfreview
 import community
 import ask
 import screen
+import browsing
 import compaction
 import composer
 import planmode
@@ -131,6 +132,7 @@ planetary.register()
 worldnotes.register()
 ask.register()
 screen.register()
+browsing.register()
 scrape.register()
 skills.register()
 groups.register()

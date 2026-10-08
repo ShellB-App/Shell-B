@@ -20,6 +20,7 @@ import remote
 import selfmod
 import ask
 import screen
+import browsing
 import memory
 import episodes
 import chatmail
@@ -264,6 +265,8 @@ system. Your tools still run on Shell:B's own machine; your reasoning runs on {p
         guide.append(ask.GUIDE)
     if "look_at_screen" in tool_names:
         guide.append(screen.GUIDE + f"\n  Shared now: {screen.describe() or 'nothing'}.")
+    if "browser" in tool_names:
+        guide.append(browsing.GUIDE.format(where=browsing.describe() or "connected"))
     if "shellb_self" in tool_names:
         guide.append(selfmod.GUIDE + f"\n  Running version: {selfmod.version()}.")
     if guide:

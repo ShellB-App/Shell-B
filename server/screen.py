@@ -56,6 +56,8 @@ class Source:
     label: str         # what is shared: "Entire screen", "Window: Visual Studio Code"
     owner: str         # "session:<id>" or "device:<id>": only it may poll and answer
     monitors: list = field(default_factory=list)
+    screen: bool = True    # can take screenshots
+    browser: bool = False  # can drive a browser window (helper with Playwright; browsing.py)
     since: float = field(default_factory=time.time)
     seen: float = field(default_factory=time.time)
     polling: int = 0
@@ -67,7 +69,7 @@ class Source:
 
     def public(self) -> dict:
         return {"id": self.id, "kind": self.kind, "name": self.name, "label": self.label, "monitors": self.monitors,
-                "since": self.since, "seen": self.seen, "looks": self.looks}
+                "since": self.since, "seen": self.seen, "looks": self.looks, "screen": self.screen, "browser": self.browser}
 
 
 _sources: dict[str, Source] = {}
@@ -82,14 +84,19 @@ def live_sources() -> list[Source]:
 
 
 def available() -> bool:
-    return bool(live_sources())
+    return any(s.screen for s in live_sources())
+
+
+def browser_sources() -> list[Source]:
+    return [s for s in live_sources() if s.browser]
 
 
 def describe() -> str:
     out = []
     for s in live_sources():
         mon = f", {len(s.monitors)} monitors" if len(s.monitors) > 1 else ""
-        out.append(f"`{s.id}` {s.name}: {s.label}{mon}")
+        if s.screen:
+            out.append(f"`{s.id}` {s.name}: {s.label}{mon}")
     return "; ".join(out)
 
 
@@ -163,7 +170,8 @@ async def connect(req: Request):
     mons = [{"w": int(m.get("w") or 0), "h": int(m.get("h") or 0)} for m in (body.get("monitors") or [])[:16] if isinstance(m, dict)]
     s = Source(id="scr-" + uuid.uuid4().hex[:8], kind=kind, name=name or "Browser",
                label=str(body.get("label") or ("Desktop" if kind == "helper" else "Screen")).strip()[:120],
-               owner=who, monitors=mons)
+               owner=who, monitors=mons, screen=kind == "browser" or body.get("screen", True) is not False,
+               browser=kind == "helper" and bool(body.get("browser")))
     _sources[s.id] = s
     return {"id": s.id, "poll": POLL}
 
@@ -199,6 +207,24 @@ async def frame(rid: str, id: str, req: Request):
     if not data or len(data) > MAX_FRAME:
         raise HTTPException(413, "Send one JPEG or PNG under 12 MB.")
     w[1].set_result(("ok", data))
+    return {"ok": True}
+
+
+@router.post("/result/{rid}")
+async def result(rid: str, id: str, req: Request):
+    """A helper's answer to anything other than a screenshot (browser actions): one JSON object."""
+    s = _mine(id, req)
+    w = _waiting.get(rid)
+    if not w or w[0] != s.id or w[1].done():
+        raise HTTPException(404, "Nobody is waiting for that result any more.")
+    body = await req.body()
+    if len(body) > MAX_FRAME * 2:
+        raise HTTPException(413, "Result too large.")
+    try:
+        data = json.loads(body)
+    except ValueError:
+        raise HTTPException(400, "Send JSON.")
+    w[1].set_result(("json", data if isinstance(data, dict) else {"ok": False, "error": "bad result"}))
     return {"ok": True}
 
 
@@ -288,7 +314,7 @@ def helper_plain(req: Request):
 # ── the tool ────────────────────────────────────────────────────────────────
 
 def _pick(want: str) -> Source | None:
-    live = live_sources()
+    live = [s for s in live_sources() if s.screen]
     if not want:
         return live[0] if live else None
     w = want.lower()
@@ -296,20 +322,25 @@ def _pick(want: str) -> Source | None:
         or next((s for s in live if w in s.name.lower() or w in s.label.lower() or w == s.kind), None)
 
 
-async def capture(src: Source, monitor: int | None, timeout: float = ANSWER) -> bytes:
+async def send(src: Source, payload: dict, timeout: float):
+    """Hand a request to a source and wait for its answer: ("ok", image bytes), ("json", dict) or ("error", text)."""
     rid = uuid.uuid4().hex
     fut = asyncio.get_running_loop().create_future()
     _waiting[rid] = (src.id, fut)
     try:
-        src.queue.put_nowait({"rid": rid, "monitor": monitor, "maxEdge": 2560})
+        src.queue.put_nowait({"rid": rid, **payload})
         try:
-            status, data = await asyncio.wait_for(fut, timeout)
+            return await asyncio.wait_for(fut, timeout)
         except asyncio.TimeoutError:
-            raise RuntimeError(f"{src.name} didn't send a picture within {int(timeout)} s. "
+            raise RuntimeError(f"{src.name} didn't answer within {int(timeout)} s. "
                                + ("The sharing tab may be asleep or closed." if src.kind == "browser"
                                   else "The helper may have stopped."))
     finally:
         _waiting.pop(rid, None)
+
+
+async def capture(src: Source, monitor: int | None, timeout: float = ANSWER) -> bytes:
+    status, data = await send(src, {"monitor": monitor, "maxEdge": 2560}, timeout)
     if status != "ok":
         raise RuntimeError(f"{src.name}: {data}")
     src.looks += 1

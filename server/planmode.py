@@ -15,6 +15,7 @@ READ_ONLY = {
 }
 # tools with a mix of actions: only these actions (or methods) are allowed while planning
 READ_ACTIONS = {
+    "browser": {"open", "read", "back", "scroll", "wait", "screenshot", "tabs"},
     "library": {"list", "search", "browse", "read", "view"},
     "codex": {"search", "read", "list", "collections"},
     "follow_ups": {"list"},

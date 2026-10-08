@@ -16,7 +16,7 @@ export const TOOL_ICONS: Record<string, LucideIcon> = {
   read_document: FileSearch, view_document: ScanEye, ocr: ScanText,
   use_skill: Sparkles, read_skill_file: FileText, save_skill: WandSparkles, schedule_task: CalendarClock, project_todos: ListChecks,
   research_board: Telescope, mega_plan: Workflow, library: Library, codex: BookMarked, follow_ups: ListTodo, asset_library: Shapes, scrape: Download,
-  shellb_self: ScanFace, ask_user: MessageCircleQuestion, wiki: BookOpen,
+  shellb_self: ScanFace, ask_user: MessageCircleQuestion, wiki: BookOpen, look_at_screen: Camera, browser: Globe,
 };
 export const toolIcon = (name: string) => TOOL_ICONS[name] ?? Wrench;
 
@@ -35,6 +35,8 @@ export const TOOL_LABELS: Record<string, [string, string]> = {
   recall_conversations: ['Looking back', 'Looked through past chats'],
   ask_agent: ['Delegating', 'Delegated'],
   ask_user: ['Asking you', 'Asked you'],
+  look_at_screen: ['Looking at your screen', 'Looked at your screen'],
+  browser: ['Using your browser', 'Used your browser'],
   schedule_task: ['Scheduling', 'Scheduled a task'],
   project_todos: ['Updating the to-do list', 'Updated the to-do list'],
   research_board: ['Updating the research board', 'Updated the research board'],

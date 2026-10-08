@@ -77,7 +77,7 @@ VERB = {"done": "finished", "complete": "finished", "failed": "failed", "blocked
         "interrupted": "was interrupted", "rolled-back": "rolled back", "restart-pending": "is waiting for a restart",
         "review": "needs your review", "waiting": "is waiting for you", "warning": "needs attention",
         "recovered": "recovered"}
-APPROVAL_NOUN = {"self": "Self-deploy", "remote": "Remote command", "secret": "Secret access", "question": "Question"}
+APPROVAL_NOUN = {"self": "Self-deploy", "remote": "Remote command", "secret": "Secret access", "question": "Question", "browser": "Browser submit"}
 
 _ready = False
 _recent: deque = deque(maxlen=50)

@@ -8,7 +8,7 @@ import { toast } from './toast';
 /** Settings → Tools & Connectors → Screen: what's shared right now, and the computers paired with the Screen helper
  *  (server/screen.py, clients/shellb_screen.py). */
 
-interface Source { id: string; kind: 'browser' | 'helper'; name: string; label: string; monitors: { w: number; h: number }[]; since: number; looks: number }
+interface Source { id: string; kind: 'browser' | 'helper'; name: string; label: string; monitors: { w: number; h: number }[]; since: number; looks: number; screen?: boolean; browser?: boolean }
 interface Device { id: string; name: string; created: number; lastSeen?: number; connected: boolean }
 interface Paired { id: string; name: string; token: string; url: string; script: string }
 
@@ -97,7 +97,7 @@ export function ScreenTab({ locked, cloudScreen }: { locked: boolean; cloudScree
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shrink-0" aria-hidden />
               <div className="flex-1 min-w-0">
                 <div className="text-sm truncate">{s.name} <span className="text-[var(--text-muted)]">· {s.label}{s.monitors.length > 1 ? ` · ${s.monitors.length} monitors` : ''}</span></div>
-                <div className="text-[11px] text-[var(--text-muted)]">{s.kind === 'helper' ? 'Screen helper' : 'Browser'} · since {new Date(s.since * 1000).toLocaleTimeString()} · {s.looks} look{s.looks === 1 ? '' : 's'}</div>
+                <div className="text-[11px] text-[var(--text-muted)]">{s.kind === 'helper' ? `Screen helper${s.browser ? (s.screen ? ' · screen + browser' : ' · browser only') : ''}` : 'Browser tab'} · since {new Date(s.since * 1000).toLocaleTimeString()} · {s.looks} look{s.looks === 1 ? '' : 's'}</div>
               </div>
               <button className={btn.ghost} onClick={() => endSource(s)}>End</button>
             </div>
@@ -108,7 +108,9 @@ export function ScreenTab({ locked, cloudScreen }: { locked: boolean; cloudScree
         <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Paired computers</h3>
         <p className="text-xs text-[var(--text-muted)] leading-relaxed max-w-[65ch]">
           The Screen helper is a small Python script for Windows, macOS or Linux. While it runs, agents can look at that computer's
-          screen without a browser prompt; it prints a line each time. Stop it with Ctrl+C. Unpairing revokes it.
+          screen without a browser prompt, and use their own Chrome window there to read pages and fill in forms. Anything that
+          submits, sends, pays or deletes waits for your approval in the chat. The helper prints a line for every action; stop
+          it with Ctrl+C. Unpairing revokes it.
         </p>
         {devices?.map(d => (
           <div key={d.id} className="flex items-center gap-3 px-3 py-2 rounded-lg border border-[var(--border-subtle)]">
@@ -132,10 +134,12 @@ export function ScreenTab({ locked, cloudScreen }: { locked: boolean; cloudScree
           <div className="p-3 rounded-lg border border-[var(--accent)]/40 bg-[var(--bg-secondary)] space-y-2 text-xs leading-relaxed">
             <div className="text-sm font-medium">Paired {paired.name}. On that computer:</div>
             <ol className="list-decimal pl-4 space-y-1 text-[var(--text-secondary)]">
-              <li>Install Python 3, then run <code>pip install mss pillow</code></li>
-              <li>Run the downloaded script: <code>python shellb_screen.py</code></li>
+              <li>Install Python 3, then run <code>pip install mss pillow playwright</code></li>
+              <li>If Chrome or Edge isn't installed: <code>python -m playwright install chromium</code></li>
+              <li>Run the downloaded script: <code>python shellb_screen.py</code> (add <code>--no-browser</code> or <code>--no-screen</code> to share less)</li>
             </ol>
-            <p className="text-[var(--text-muted)]">It connects to <code>{paired.url}</code>, so that computer must be on your tailnet.
+            <p className="text-[var(--text-muted)]">Shell:B's browser window has its own profile, separate from your normal browser:
+              sign in to sites there yourself when she needs an account. It connects to <code>{paired.url}</code>, so that computer must be on your tailnet.
               The script holds the device token; keep it like a password. It's shown only now.</p>
             <div className="flex gap-2">
               <button className={btn.subtle} onClick={() => download(paired)}><Download className="w-3.5 h-3.5" /> Download again</button>

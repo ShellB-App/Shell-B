@@ -498,6 +498,12 @@ function CloudTab({ settings, locked, onChanged }: { settings?: Settings; locked
               </span>
               <Toggle on={!!settings.cloudScreen} disabled={locked} label="Screen" onChange={v => save({ cloudScreen: v })} />
             </label>
+            <label className="flex items-center justify-between gap-3">
+              <span className="text-sm">Let cloud agents use the browser on your computer
+                <span className="block text-[11px] text-[var(--text-muted)]">Off: only local models get the browser tool, so the pages it reads stay on this machine.</span>
+              </span>
+              <Toggle on={!!settings.cloudBrowser} disabled={locked} label="Browser" onChange={v => save({ cloudBrowser: v })} />
+            </label>
           </div>
         )}
       </div>
