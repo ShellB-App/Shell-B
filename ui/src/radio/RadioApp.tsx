@@ -281,7 +281,7 @@ export function RadioApp() {
           className={clsx(
             'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold font-mono transition',
             activeTab === 'dj'
-              ? 'bg-[var(--accent)] text-white shadow-md'
+              ? 'bg-[var(--accent)] text-[var(--accent-fg)] shadow-md'
               : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-hover)]'
           )}
         >
@@ -294,7 +294,7 @@ export function RadioApp() {
           className={clsx(
             'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold font-mono transition',
             activeTab === 'sampler'
-              ? 'bg-[var(--accent)] text-white shadow-md'
+              ? 'bg-[var(--accent)] text-[var(--accent-fg)] shadow-md'
               : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-hover)]'
           )}
         >
@@ -307,7 +307,7 @@ export function RadioApp() {
           className={clsx(
             'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold font-mono transition',
             activeTab === 'forge'
-              ? 'bg-[var(--accent)] text-white shadow-md'
+              ? 'bg-[var(--accent)] text-[var(--accent-fg)] shadow-md'
               : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-hover)]'
           )}
         >
@@ -320,7 +320,7 @@ export function RadioApp() {
           className={clsx(
             'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold font-mono transition',
             activeTab === 'library'
-              ? 'bg-[var(--accent)] text-white shadow-md'
+              ? 'bg-[var(--accent)] text-[var(--accent-fg)] shadow-md'
               : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-hover)]'
           )}
         >
@@ -529,7 +529,7 @@ export function RadioApp() {
                       </button>
                       <button
                         onClick={() => dj.playSong(s, true)}
-                        className="p-1.5 rounded-lg bg-[var(--accent)] text-white hover:opacity-90 transition shadow-sm"
+                        className="p-1.5 rounded-lg bg-[var(--accent)] text-[var(--accent-fg)] hover:opacity-90 transition shadow-sm"
                         title="Mix track now"
                       >
                         <Play className="w-3.5 h-3.5 fill-current" />

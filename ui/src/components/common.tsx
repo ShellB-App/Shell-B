@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import clsx from 'clsx';
 import {
   BookMarked, BookOpen,
@@ -27,7 +27,7 @@ export const TOOL_LABELS: Record<string, [string, string]> = {
   run_code: ['Running code', 'Ran code'],
   create_artifact: ['Building artifact', 'Built artifact'],
   generate_image: ['Painting with NYX', 'Generated image'],
-  generate_adult_image: ['Painting after dark', 'Generated image'],
+  generate_adult_image: ['Painting with Aphrodite', 'Generated image'],
   generate_music: ['Composing with ORPHEUS', 'Generated music'],
   memory_save: ['Remembering', 'Saved to memory'],
   memory_search: ['Recalling', 'Searched memory'],
@@ -81,18 +81,38 @@ export function AgentAvatar({ agent, size = 20, className }: { agent?: Agent; si
 export function Modal({ open, onClose, title, icon, children, wide }: {
   open: boolean; onClose: () => void; title: string; icon?: ReactNode; children: ReactNode; wide?: boolean;
 }) {
+  const box = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
+  // keyboard users land inside the dialog, Tab stays in it, and focus goes back where it was on close
+  useEffect(() => {
+    if (!open) return;
+    const before = document.activeElement as HTMLElement | null;
+    const focusables = () => Array.from(box.current?.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])') ?? [])
+      .filter(el => el.offsetParent !== null);
+    if (box.current && !box.current.contains(document.activeElement)) (focusables()[1] ?? focusables()[0] ?? box.current).focus();
+    const trap = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab' || !box.current) return;
+      const els = focusables();
+      if (!els.length) return;
+      const [first, last] = [els[0], els[els.length - 1]];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    window.addEventListener('keydown', trap);
+    return () => { window.removeEventListener('keydown', trap); if (before?.isConnected) before.focus(); };
+  }, [open]);
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/55 backdrop-blur-sm animate-fade-in" onMouseDown={onClose}>
-      <div
+      <div ref={box} tabIndex={-1}
         role="dialog" aria-modal="true" aria-label={title}
-        className={clsx('bg-[var(--bg-primary)] border border-[var(--border-subtle)] sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-slide-up',
+        className={clsx('bg-[var(--bg-primary)] border border-[var(--border-subtle)] sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-slide-up focus:outline-none',
           'w-full h-full sm:h-auto sm:max-h-[86vh]', wide ? 'sm:max-w-5xl' : 'sm:max-w-2xl')}
         onMouseDown={e => e.stopPropagation()}
       >
@@ -122,7 +142,7 @@ export function Toggle({ on, onChange, disabled, label }: { on: boolean; onChang
 export const btn = {
   ghost: 'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition',
   icon: 'p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition',
-  primary: 'inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--accent)] hover:brightness-110 text-white transition disabled:opacity-40',
+  primary: 'inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--accent)] hover:brightness-110 text-[var(--accent-fg)] transition disabled:opacity-40',
   subtle: 'inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] hover:bg-[var(--bg-hover)] text-[var(--text-primary)] transition disabled:opacity-40',
   input: 'w-full px-2.5 py-1.5 text-sm rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]/70',
 };

@@ -351,17 +351,17 @@ Asset generation (all of it saves into the project)
 }
 DEFAULT_AGENTS.append(DAEDALUS)
 
-AFTER_DARK = {
-    "id": "after-dark",
-    "name": "After Dark",
+APHRODITE = {
+    "id": "aphrodite",
+    "name": "Aphrodite",
     "title": "Adult Fiction & Art (18+)",
-    "avatar": "☾",
+    "avatar": "♀",
     "color": ["#7f1d1d", "#4c1d95"],
     "description": "Opt-in adult fiction, roleplay and images between fictional adult characters. Local models only, "
                    "every chat incognito, owner session only. Hard limits on minors and real people (adult.py).",
     "systemPrompt": SHELLB_PERSONA + """
 
-You are After Dark, Shell:B's adult creative writer and artist, for a consenting adult owner. You write explicit
+You are Aphrodite, Shell:B's adult creative writer and artist, for a consenting adult owner. You write explicit
 fiction and roleplay and make adult images (generate_adult_image) of original, fictional adult characters.
 
 Voice: flirty, warm, playful and confident. Tease a little, enjoy the moment, compliment the user's ideas. Never judge,
@@ -377,7 +377,7 @@ only when a scenario is too vague to write well.""",
     "builtin": True,
     "adult": True,
 }
-DEFAULT_AGENTS.append(AFTER_DARK)
+DEFAULT_AGENTS.append(APHRODITE)
 
 CLOUD_PERSONA = """You are {name}, a frontier cloud model that Shell:B, a private personal AI system, calls on for
 the hardest problems: deep reasoning, careful analysis, difficult code, and second opinions. Shell:B's local agents
@@ -467,6 +467,6 @@ DEFAULT_SETTINGS = {
     "cloudMemory": False,      # cloud agents get long-term memory (recall + memory tools)
     "cloudLibrary": False,     # cloud agents get the shared library (other projects, notebooks, artifacts; library.py)
     "cloudCodex": False,       # cloud agents get the Codex tool (the owner's notes, links, snippets and files; codex.py)
-    "adultEnabled": False,     # After Dark (adult.py): master switch, admin-only; off = the agent is hidden and refuses
-    "adultImageCheckpoint": "",  # SDXL-style file in ~/comfyui/models/checkpoints for After Dark; "" = FLUX.1-dev
+    "adultEnabled": False,     # Aphrodite, the adult agent (adult.py): master switch, admin-only; off = the agent is hidden and refuses
+    "adultImageCheckpoint": "",  # SDXL-style file in ~/comfyui/models/checkpoints for Aphrodite; "" = FLUX.1-dev
 }

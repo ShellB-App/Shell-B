@@ -121,7 +121,7 @@ export function LandmarkModal({ landmark, onClose, onFlyTo }: LandmarkModalProps
       <div className="mt-3 pt-2.5 border-t border-[var(--border-subtle)] flex items-center gap-2">
         <button
           onClick={() => onFlyTo(landmark.lat, landmark.lon)}
-          className="flex-1 py-1.5 px-2.5 rounded-md bg-[var(--accent)] text-white text-[11px] font-medium flex items-center justify-center gap-1.5 hover:opacity-90 transition"
+          className="flex-1 py-1.5 px-2.5 rounded-md bg-[var(--accent)] text-[var(--accent-fg)] text-[11px] font-medium flex items-center justify-center gap-1.5 hover:opacity-90 transition"
         >
           <Navigation className="w-3.5 h-3.5" />
           <span>Fly to Site</span>

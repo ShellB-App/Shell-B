@@ -78,7 +78,7 @@ export function KioskTopBar({
       <div className="flex items-center gap-2">
         <button
           onClick={onOpenStartMenu}
-          className="flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-[var(--accent)] hover:brightness-110 text-white font-semibold text-xs shadow-sm transition"
+          className="flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-[var(--accent)] hover:brightness-110 text-[var(--accent-fg)] font-semibold text-xs shadow-sm transition"
         >
           <span className="font-mono font-bold tracking-tight">Shell:B</span>
           <ChevronDown className="w-3 h-3 opacity-80" />

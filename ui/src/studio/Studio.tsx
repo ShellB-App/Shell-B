@@ -11,6 +11,7 @@ import { Modal, btn, relTime } from '../components/common';
 import { FavoriteStar } from '../components/Favorites';
 import { isFavorite } from '../favorites';
 import { ProjectView } from './ProjectView';
+import { SearchButton } from '../components/SearchButton';
 
 export const KIND_ICON: Record<ProjectKind, typeof Monitor> = {
   website: Monitor, deck: Presentation, print: FileText, mobile: Smartphone, dashboard: LayoutDashboard,
@@ -63,6 +64,7 @@ function StudioHome({ theme, onToggleTheme, onExit, onOpenProject }: Props) {
           <span className="font-semibold tracking-tight">Studio</span>
         </div>
         <div className="flex-1" />
+        <SearchButton />
         <button className={btn.icon} onClick={onToggleTheme} title="Toggle theme">{theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}</button>
         <input ref={importInput} type="file" accept=".zip,.html,.htm" className="hidden" onChange={async e => {
           const f = e.target.files?.[0]; e.target.value = '';

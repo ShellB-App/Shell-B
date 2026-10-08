@@ -60,3 +60,10 @@ export function downloadCsv(name: string, header: string[], rows: unknown[][]) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
+
+/** Card fields come from a model: stringify anything, and only follow web, API and in-app links. */
+export const text = (v: unknown): string => (v == null ? '' : Array.isArray(v) ? v.map(text).filter(Boolean).join(', ') : typeof v === 'object' ? JSON.stringify(v) : String(v));
+export const safeUrl = (u: unknown): string | undefined => (typeof u === 'string' && /^(https?:\/\/|\/api\/|#\/)/.test(u) ? u : undefined);
+export const obj = (v: unknown): Record<string, unknown> | null => (v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : null);
+export const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
+export const linkProps = (url: string) => (url.startsWith('#/') ? {} : { target: '_blank', rel: 'noreferrer noopener' });

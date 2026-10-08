@@ -1,3 +1,4 @@
+import { djLive } from './live';
 // Shell:B FM: a procedural radio station built on the Web Audio API.
 // Nine styles (lo-fi, jazzhop, city pop, synthwave, darkwave, deep house, liquid DnB, chiptune, ambient)
 // each define tempo, modes, harmonic rhythm, drum grooves, bass lines, instrument patches and song forms.
@@ -743,6 +744,8 @@ class Engine {
   }
   private emit(patch: Partial<DJState>) {
     this.state = { ...this.state, ...patch };
+    const song = this.state.song;
+    djLive.publish({ playing: this.state.playing, song: song ? { title: song.title, bpm: song.bpm } : null });
     this.listeners.forEach(f => f(this.state));
   }
   /** run fn when the audio clock reaches t */

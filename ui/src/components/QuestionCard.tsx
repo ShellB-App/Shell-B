@@ -92,7 +92,7 @@ export function QuestionCard({ b, live, isLast, busy, onAsk }: {
                     on ? 'border-[var(--accent)]/60 bg-[var(--accent)]/10' : 'border-[var(--border-subtle)]',
                     open && !on && 'hover:bg-[var(--bg-hover)] hover:border-[var(--border-strong)]', !open && !on && 'opacity-50')}>
                   <span className={clsx('mt-0.5 w-4 h-4 shrink-0 flex items-center justify-center border',
-                    q.multiSelect ? 'rounded' : 'rounded-full', on ? 'bg-[var(--accent)] border-[var(--accent)] text-white' : 'border-[var(--border-strong)]')}>
+                    q.multiSelect ? 'rounded' : 'rounded-full', on ? 'bg-[var(--accent)] border-[var(--accent)] text-[var(--accent-fg)]' : 'border-[var(--border-strong)]')}>
                     {on && <Check className="w-3 h-3" />}
                   </span>
                   <span className="min-w-0">

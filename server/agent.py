@@ -483,7 +483,7 @@ class Turn:
         if self.depth > 0:
             names = [t for t in names if t != "ask_agent"]
         if providers.is_cloud(self.model) and not self.settings.get("cloudMemory", False):
-            names = [t for t in names if t not in ("memory_save", "memory_forget", "memory_search", "recall_conversations")]
+            names = [t for t in names if t not in ("memory_save", "memory_forget", "memory_search", "recall_conversations", "leave_message", "check_messages")]
         import privacy
         if privacy.is_incognito(self.conv_id):  # incognito: nothing recalled, nothing remembered
             names = [t for t in names if t not in privacy.MEMORY_TOOLS]

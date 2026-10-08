@@ -6,6 +6,7 @@ import {
 import clsx from 'clsx';
 import { dj, STYLES, STYLE_IDS, type DJState, type SongInfo, type Style, type TransitionKind, type Vibe } from './engine';
 import { Visualizer } from './Visualizer';
+import { useFormFactor } from '../formFactor';
 
 // Shell:B FM: a floating mini player for the procedural DJ. Mounted once beside <App/> so the music
 // keeps going across chat, Studio, Code and every other view. The command palette drives it through
@@ -108,6 +109,7 @@ export function SynthDJ() {
   const tasteTuned = Object.values(st.weights).some(w => Math.abs(w - 1) > 0.01);
   const list = tab === 'history' ? st.history.slice(1) : prefs.favs;
   const live = st.playing;
+  const formFactor = useFormFactor();
 
   const pad = 'flex-1 flex items-center justify-center gap-1 text-[11px] py-1.5 rounded-lg border transition disabled:opacity-40';
   const padIdle = 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]';
@@ -115,7 +117,8 @@ export function SynthDJ() {
   return (
     <>
       {createPortal(<Visualizer active={st.playing} />, document.body)}
-      {!isRadioRoute && (
+      {/* phones have their own radio bar (MobileRadioBar); this floating button sat on top of the bottom tab bar */}
+      {!isRadioRoute && formFactor !== 'mobile' && (
         <div ref={card} className="fixed bottom-3 right-3 z-30 flex flex-col items-end gap-2 pointer-events-none">
           {open && (
           <div className="pointer-events-auto w-[21rem] max-w-[calc(100vw-1.5rem)] max-h-[calc(100vh-5rem)] overflow-y-auto rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-secondary)]/95 backdrop-blur-md shadow-2xl p-3.5 animate-fade-in">

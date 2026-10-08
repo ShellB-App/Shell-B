@@ -311,7 +311,7 @@ export function Composer({
             </button>
           ) : (
             <button onClick={submit} disabled={uploading || (!text.trim() && atts.length === 0)}
-              className="p-2 rounded-xl bg-[var(--accent)] hover:brightness-110 disabled:opacity-30 text-white transition shadow-md" title="Send (Enter)">
+              className="p-2 rounded-xl bg-[var(--accent)] hover:brightness-110 disabled:opacity-30 text-[var(--accent-fg)] transition shadow-md" title="Send (Enter)">
               <ArrowUp className="w-4 h-4 stroke-[2.5]" />
             </button>
           )}

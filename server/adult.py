@@ -1,4 +1,4 @@
-"""After Dark: the opt-in adult agent (fiction, roleplay and images for consenting adults).
+"""Aphrodite: the opt-in adult agent (fiction, roleplay and images for consenting adults).
 
 Everything that keeps it contained lives here and is enforced server-side, so editing the agent in the Agent Lab can't
 loosen it:
@@ -76,13 +76,13 @@ def visible(settings: dict, owner: bool) -> bool:
 def refuse_reason(agent: dict, settings: dict, owner: bool, interactive: bool = True) -> str:
     """Why this turn may not run with the adult agent ("" = it may)."""
     if not enabled(settings):
-        return "After Dark is switched off (setting adultEnabled, admin only)."
+        return "Aphrodite is switched off (Tools & Connectors → Aphrodite, admin only)."
     if not owner:
-        return "After Dark is only available to the owner's signed-in session."
+        return "Aphrodite is only available to the owner's signed-in session."
     if not interactive:
-        return "After Dark only runs in a live chat, not in schedules, plans or delegated work."
+        return "Aphrodite only runs in a live chat, not in schedules, plans or delegated work."
     if providers.is_cloud(agent.get("model", "")):
-        return "After Dark runs on local models only; pick an Ollama model for it."
+        return "Aphrodite runs on local models only; pick an Ollama model for it."
     return ""
 
 
@@ -119,7 +119,7 @@ CHECKPOINTS = Path.home() / "comfyui/models/checkpoints"
 
 
 def checkpoints() -> list[dict]:
-    """SDXL-style checkpoints After Dark can use (FLUX and 3D checkpoints need other workflows)."""
+    """SDXL-style checkpoints Aphrodite can use (FLUX and 3D checkpoints need other workflows)."""
     out = []
     for f in sorted(CHECKPOINTS.glob("*.safetensors")):
         if not re.search(r"flux|hunyuan|3d", f.name, re.I):
@@ -169,7 +169,7 @@ async def generate_adult_image(args, ctx):
                           f"fictional alternative.", error=True)
     model = checkpoint(ctx.settings)
     if not model:
-        return ToolResult("No image model for After Dark is installed: put an SDXL checkpoint in "
+        return ToolResult("No image model for Aphrodite is installed: put an SDXL checkpoint in "
                           "~/comfyui/models/checkpoints and set it as adultImageCheckpoint.", error=True)
     kind, ckpt = model
     width = _snap(args.get("width") or 832, 256, 1536)
@@ -226,7 +226,7 @@ def register():
     TOOLS["generate_adult_image"] = {
         "fn": generate_adult_image, "service": "nyx", "hidden": True,
         "ui": {"displayName": "Adult Image Generation", "icon": "Image", "category": "creative",
-               "description": "After Dark only. SDXL checkpoint (or FLUX.1-dev) on NYX, screened."},
+               "description": "Aphrodite only. SDXL checkpoint (or FLUX.1-dev) on NYX, screened."},
         "schema": _fn("generate_adult_image",
                       "Generate an adult (18+) image of fictional adult characters. Every prompt is screened; prompts "
                       "involving minors, childlike traits or real people are refused. Describe the subjects as adults.",

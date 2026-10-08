@@ -95,7 +95,7 @@ export function WallpaperModal({ open, onClose, onChanged }: Props) {
                       style={{ background: w.previewGradient }}
                     >
                       {isSelected && (
-                        <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-[var(--accent)] text-white flex items-center justify-center shadow-lg">
+                        <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-[var(--accent)] text-[var(--accent-fg)] flex items-center justify-center shadow-lg">
                           <Check className="w-3 h-3 stroke-[3]" />
                         </div>
                       )}
@@ -143,7 +143,7 @@ export function WallpaperModal({ open, onClose, onChanged }: Props) {
               <button
                 onClick={handleCustomUrlApply}
                 disabled={!customUrl.trim()}
-                className="px-4 py-2 rounded-lg bg-[var(--accent)] text-white text-xs font-semibold hover:opacity-90 transition disabled:opacity-40"
+                className="px-4 py-2 rounded-lg bg-[var(--accent)] text-[var(--accent-fg)] text-xs font-semibold hover:opacity-90 transition disabled:opacity-40"
               >
                 Apply
               </button>

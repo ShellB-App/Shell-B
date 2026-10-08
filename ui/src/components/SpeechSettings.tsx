@@ -388,7 +388,7 @@ function VoiceEditor({ v, fxInfo, bases, models, onChanged }: {
           <span className="text-xs font-medium mr-1">Effects</span>
           {fxInfo && Object.keys(fxInfo.presets).map(name => (
             <button key={name} onClick={() => set({ fx: { ...fxInfo.presets[name] } })}
-              className={clsx('text-[11px] px-2 py-0.5 rounded-full capitalize', preset === name ? 'bg-[var(--accent)] text-white' : 'bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover)]')}>
+              className={clsx('text-[11px] px-2 py-0.5 rounded-full capitalize', preset === name ? 'bg-[var(--accent)] text-[var(--accent-fg)]' : 'bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover)]')}>
               {name === 'glados' ? 'GLaDOS' : name}
             </button>
           ))}

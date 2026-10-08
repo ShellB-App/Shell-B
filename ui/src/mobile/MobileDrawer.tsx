@@ -246,7 +246,7 @@ export function MobileDrawer({
               onNew();
               onClose();
             }}
-            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[var(--accent)] hover:brightness-110 text-white text-xs font-semibold shadow-sm transition"
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[var(--accent)] hover:brightness-110 text-[var(--accent-fg)] text-xs font-semibold shadow-sm transition"
           >
             <SquarePen className="w-4 h-4" />
             <span>New Chat</span>

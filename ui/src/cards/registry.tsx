@@ -13,6 +13,15 @@ const CARDS: Record<string, ComponentType<CardProps>> = {
   satellite: lazy(() => import('./SatelliteCard').then(m => ({ default: m.SatelliteCard }))),
   system: lazy(() => import('./SystemCard').then(m => ({ default: m.SystemCard }))),
   timeline: lazy(() => import('./TimelineCard').then(m => ({ default: m.TimelineCard }))),
+  infobox: lazy(() => import('./InfoboxCard').then(m => ({ default: m.InfoboxCard }))),
+  compare: lazy(() => import('./CompareCard').then(m => ({ default: m.CompareCard }))),
+  profile: lazy(() => import('./ProfileCard').then(m => ({ default: m.ProfileCard }))),
+  steps: lazy(() => import('./StepsCard').then(m => ({ default: m.StepsCard }))),
+  callout: lazy(() => import('./CalloutCard').then(m => ({ default: m.CalloutCard }))),
+  quote: lazy(() => import('./QuoteCard').then(m => ({ default: m.QuoteCard }))),
+  status: lazy(() => import('./StatusCard').then(m => ({ default: m.StatusCard }))),
+  diagram: lazy(() => import('./DiagramCard').then(m => ({ default: m.DiagramCard }))),
+  mermaid: lazy(() => import('./DiagramCard').then(m => ({ default: m.DiagramCard }))),
   route: lazy(() => import('./RouteCard').then(m => ({ default: m.RouteCard }))),
 };
 

@@ -252,7 +252,7 @@ export function MixerSection({
                 onClick={() => onCrossfaderChange(0)}
                 className={clsx(
                   'px-1.5 py-0.5 rounded font-mono',
-                  crossfader === 0 ? 'bg-[var(--accent)] text-white' : 'text-[var(--text-muted)] hover:text-white'
+                  crossfader === 0 ? 'bg-[var(--accent)] text-[var(--accent-fg)]' : 'text-[var(--text-muted)] hover:text-white'
                 )}
               >
                 Center

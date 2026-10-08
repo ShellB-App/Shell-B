@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import { LayoutGrid, Pin, PinOff, Search, Settings } from 'lucide-react';
 import type { Status } from '../types';
 import { APPS, DEFAULT_PINS, GROUP_LABEL, PINNABLE, setPins, setRailOrder, shortcutLabel, togglePin, usePins, type AppDef, type AppGroup, type AppId, type AppLive } from './apps';
-import { dj } from '../dj/engine';
+import { djLive } from '../dj/live';
 
 interface Props {
   active: AppId;
@@ -129,11 +129,11 @@ export function AppRail({ active, status, onOpen }: Props) {
   const navRef = useRef<HTMLElement>(null);
   const [popup, setPopup] = useState<{ kind: 'all' | 'system'; anchor: Anchor } | { kind: 'pin'; app: AppId; anchor: Anchor; owner: HTMLElement } | null>(null);
   const [q, setQ] = useState('');
-  const [djState, setDjState] = useState(() => dj.state);
+  const [djState, setDjState] = useState(() => djLive.state);
   const allBtn = useRef<HTMLButtonElement>(null);
   const gearBtn = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => dj.subscribe(setDjState), []);
+  useEffect(() => djLive.subscribe(setDjState), []);
 
   const live = (a: AppDef) => a.live?.(status);
   const pinned = new Set(pins);

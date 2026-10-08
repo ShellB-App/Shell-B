@@ -213,7 +213,7 @@ export function CalendarView({
                   'hover:bg-[var(--bg-hover)]')}>
                 <div className="flex items-center justify-between">
                   <span className={clsx('text-xs font-medium w-6 h-6 rounded-full flex items-center justify-center',
-                    c.isToday ? 'bg-[var(--accent)] text-white font-bold' : 'text-[var(--text-secondary)]')}>
+                    c.isToday ? 'bg-[var(--accent)] text-[var(--accent-fg)] font-bold' : 'text-[var(--text-secondary)]')}>
                     {c.dayNum}
                   </span>
                   {(c.events.length > 0 || c.birthdays.length > 0) && (

@@ -113,7 +113,7 @@ export function DesktopIcons({ onOpenApp, status }: Props) {
                     'absolute -top-1.5 -right-1.5 px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold leading-tight shadow',
                     live.urgent
                       ? 'bg-amber-500 text-black'
-                      : 'bg-[var(--accent)] text-white'
+                      : 'bg-[var(--accent)] text-[var(--accent-fg)]'
                   )}
                 >
                   {live.badge}
@@ -126,7 +126,7 @@ export function DesktopIcons({ onOpenApp, status }: Props) {
               className={clsx(
                 'text-[11px] font-medium tracking-tight mt-1.5 px-1.5 py-0.5 rounded max-w-[90px] truncate drop-shadow',
                 isSel
-                  ? 'bg-[var(--accent)] text-white'
+                  ? 'bg-[var(--accent)] text-[var(--accent-fg)]'
                   : 'text-[var(--text-primary)] group-hover:text-white'
               )}
             >

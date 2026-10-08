@@ -57,7 +57,7 @@ function PlayButton({ url, className, size = 'w-4 h-4' }: { url: string; classNa
   };
   return (
     <button onClick={toggle} title={on ? 'Stop' : 'Play'}
-      className={clsx('rounded-full bg-[var(--accent)] text-white flex items-center justify-center shadow hover:brightness-110 transition', className)}>
+      className={clsx('rounded-full bg-[var(--accent)] text-[var(--accent-fg)] flex items-center justify-center shadow hover:brightness-110 transition', className)}>
       {on ? <Pause className={size} /> : <Play className={clsx(size, 'translate-x-px')} />}
     </button>
   );
@@ -852,7 +852,7 @@ export function AssetLibraryView({ libId, agents, live, onBack, onOpen, onOpenCh
                 {topTags.slice(0, 24).map(([t, n]) => (
                   <button key={t} onClick={() => setTagFilter(f => (f.includes(t) ? f.filter(x => x !== t) : [...f, t]))}
                     className={clsx('px-2 py-0.5 rounded-full text-[11px] border transition', tagFilter.includes(t)
-                      ? 'bg-[var(--accent)] text-white border-transparent' : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]')}>
+                      ? 'bg-[var(--accent)] text-[var(--accent-fg)] border-transparent' : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]')}>
                     {t} <span className="opacity-60">{n}</span>
                   </button>
                 ))}
@@ -978,7 +978,7 @@ export function AssetPicker({ projectId, dir = 'assets', onClose, onAdded }: {
                 return (
                   <button key={a.id} onClick={() => setSel(s => { const x = new Set(s); if (x.has(a.id)) x.delete(a.id); else x.add(a.id); return x; })}
                     className={clsx('text-left rounded-lg border overflow-hidden', on ? 'border-[var(--accent)] ring-1 ring-[var(--accent)]' : 'border-[var(--border-subtle)] hover:border-[var(--border-strong)]')}>
-                    <div className="relative aspect-square"><Thumb a={a} />{on && <Check className="absolute top-1 right-1 w-4 h-4 p-0.5 rounded bg-[var(--accent)] text-white" />}</div>
+                    <div className="relative aspect-square"><Thumb a={a} />{on && <Check className="absolute top-1 right-1 w-4 h-4 p-0.5 rounded bg-[var(--accent)] text-[var(--accent-fg)]" />}</div>
                     <div className="px-1.5 py-1 text-[11px] truncate">{a.title || a.path}</div>
                   </button>
                 );

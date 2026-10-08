@@ -7,6 +7,7 @@ import { AgentAvatar, Modal, btn, relTime } from '../components/common';
 import { FavoriteStar } from '../components/Favorites';
 import { isFavorite } from '../favorites';
 import { ProjectView } from '../studio/ProjectView';
+import { SearchButton } from '../components/SearchButton';
 
 interface Props {
   projectId?: string;
@@ -49,6 +50,7 @@ function CodeHome({ agents, theme, onToggleTheme, onExit, onOpenProject }: Props
           <span className="font-semibold tracking-tight">Code</span>
         </div>
         <div className="flex-1" />
+        <SearchButton />
         <button className={btn.icon} onClick={onToggleTheme} title="Toggle theme">{theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}</button>
         <input ref={zipInput} type="file" accept=".zip" className="hidden" onChange={async e => {
           const f = e.target.files?.[0]; e.target.value = '';

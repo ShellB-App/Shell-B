@@ -10,6 +10,7 @@ import { api, req } from '../api';
 import { SECURE_URL, secureHere } from '../secureUrl';
 import type { Meeting, MeetingSpeaker, MeetingSummaryItem, MeetingUtterance } from '../types';
 import { Markdown } from './Markdown';
+import { toast } from './toast';
 
 type RecordingState = 'idle' | 'listening' | 'hearing' | 'paused' | 'summarizing';
 
@@ -249,7 +250,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
           location.href = sec;
         }
       } else {
-        alert("Audio recording APIs (navigator.mediaDevices) are unavailable in this browser environment. Please connect via HTTPS or localhost (e.g. " + SECURE_URL + "/#/secretary).");
+        toast("Audio recording APIs (navigator.mediaDevices) are unavailable in this browser environment. Please connect via HTTPS or localhost (e.g. " + SECURE_URL + "/#/secretary).", { kind: 'error' });
       }
       setRecState('idle');
       return;
@@ -274,7 +275,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
           const aTracks = displayStream.getAudioTracks();
           if (aTracks.length === 0) {
             displayStream.getTracks().forEach(t => t.stop());
-            alert("No computer audio was shared. In the browser prompt, please ensure 'Share audio' or 'Also share tab audio' is enabled.");
+            toast("No computer audio was shared. In the browser prompt, please ensure 'Share audio' or 'Also share tab audio' is enabled.", { kind: 'error' });
             setRecState('idle');
             return;
           }
@@ -409,7 +410,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
         setLiveDuration(liveDurationRef.current);
       }, 500);
     } catch (err) {
-      alert(`Could not access microphone: ${err}`);
+      toast(`Could not access microphone: ${err}`, { kind: 'error' });
       setRecState('idle');
     }
   };
@@ -491,7 +492,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
       setActiveTab('summary');
       await loadMeetings();
     } catch (err) {
-      alert(`Summary generation failed: ${err}`);
+      toast(`Summary generation failed: ${err}`, { kind: 'error' });
     } finally {
       setRecState('idle');
     }
@@ -506,7 +507,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
       setMeeting(prev => prev ? { ...prev, codexEntryId: res.codexEntry.id } : null);
       await loadMeetings();
     } catch (err) {
-      alert(`Failed to save to Codex: ${err}`);
+      toast(`Failed to save to Codex: ${err}`, { kind: 'info' });
     } finally {
       setCodexSaving(false);
     }
@@ -519,7 +520,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
       const res = await api.secretarySuggestNames(meeting.id);
       const suggestions = res.suggestions || {};
       if (Object.keys(suggestions).length === 0) {
-        alert('No obvious names or introductions were detected in the transcript.');
+        toast('No obvious names or introductions were detected in the transcript.', { kind: 'info' });
         return;
       }
       const updatedSpeakers = meeting.speakers.map(spk => {
@@ -540,7 +541,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
       });
       setMeeting(updated);
     } catch (err) {
-      alert(`Name suggestion failed: ${err}`);
+      toast(`Name suggestion failed: ${err}`, { kind: 'error' });
     } finally {
       setSuggestingNames(false);
     }
@@ -563,7 +564,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
       setRediarizeModalOpen(false);
       await loadMeetings();
     } catch (err) {
-      alert(`Could not re-cluster speakers: ${err}`);
+      toast(`Could not re-cluster speakers: ${err}`, { kind: 'error' });
     } finally {
       setRediarizing(false);
     }
@@ -580,7 +581,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
       setActiveTab('transcript');
       await loadMeetings();
     } catch (err) {
-      alert(`File upload failed: ${err}`);
+      toast(`File upload failed: ${err}`, { kind: 'error' });
     } finally {
       setUploadingAudio(false);
       e.target.value = '';
@@ -840,7 +841,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                   className={clsx(
                     'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-medium transition',
                     audioSource === 'both'
-                      ? 'bg-[var(--accent)] text-white shadow-sm'
+                      ? 'bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm'
                       : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                   )}
                   title="Capture both computer/call audio (Google Meet, Zoom, Teams) and your microphone"
@@ -856,7 +857,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                   className={clsx(
                     'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-medium transition',
                     audioSource === 'system'
-                      ? 'bg-[var(--accent)] text-white shadow-sm'
+                      ? 'bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm'
                       : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                   )}
                   title="Capture computer / meeting audio only (tab audio or system audio)"
@@ -870,7 +871,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                   className={clsx(
                     'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-medium transition',
                     audioSource === 'mic'
-                      ? 'bg-[var(--accent)] text-white shadow-sm'
+                      ? 'bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm'
                       : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                   )}
                   title="Capture microphone only (in-person meeting)"
@@ -1438,7 +1439,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                   <button
                     onClick={handleAskMeeting}
                     disabled={asking || !askQuestion.trim()}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--accent)] text-white font-medium text-xs hover:opacity-90 transition disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--accent)] text-[var(--accent-fg)] font-medium text-xs hover:opacity-90 transition disabled:opacity-50"
                   >
                     {asking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                     <span>Ask</span>
@@ -1531,7 +1532,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                   setMeeting(updated);
                   setEditingSpeaker(null);
                 }}
-                className="px-4 py-1.5 rounded-xl bg-[var(--accent)] text-white font-medium text-xs hover:opacity-90 transition"
+                className="px-4 py-1.5 rounded-xl bg-[var(--accent)] text-[var(--accent-fg)] font-medium text-xs hover:opacity-90 transition"
               >
                 Save
               </button>

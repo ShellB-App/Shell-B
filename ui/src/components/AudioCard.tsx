@@ -264,7 +264,7 @@ export function AudioCard({ src, info }: { src: string; info?: AudioInfo }) {
     <div className="my-2 w-full max-w-xl rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] overflow-hidden">
       <div className="flex items-center gap-3 px-3 pt-3">
         <button onClick={toggle} disabled={!!err} aria-label={playing ? 'Pause' : 'Play'}
-          className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-[var(--accent)] text-white hover:brightness-110 disabled:opacity-40 transition shadow-[0_0_0_4px_var(--accent-glow)]">
+          className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-[var(--accent)] text-[var(--accent-fg)] hover:brightness-110 disabled:opacity-40 transition shadow-[0_0_0_4px_var(--accent-glow)]">
           {playing ? <Pause className="w-4 h-4" fill="currentColor" /> : <Play className="w-4 h-4 translate-x-px" fill="currentColor" />}
         </button>
         <div className="flex-1 min-w-0">

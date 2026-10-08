@@ -271,7 +271,7 @@ export function Canvas({ projectId, kind, file, pages, entry, viewport, version,
               {[0.25, 0.5, 0.75, 1].map(z => <option key={z} value={z}>{z * 100}%</option>)}
             </select>
             <button onClick={() => setInspect(v => !v)} title="Point at an element to comment on it"
-              className={clsx('flex items-center gap-1 px-2 py-1 rounded-lg border transition', inspect ? 'bg-[var(--accent)] text-white border-transparent' : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]')}>
+              className={clsx('flex items-center gap-1 px-2 py-1 rounded-lg border transition', inspect ? 'bg-[var(--accent)] text-[var(--accent-fg)] border-transparent' : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]')}>
               <Crosshair className="w-3.5 h-3.5" /><span className="hidden lg:inline">Comment</span>
             </button>
           </>
@@ -359,7 +359,7 @@ export function Canvas({ projectId, kind, file, pages, entry, viewport, version,
                     <textarea autoFocus rows={2} value={ask} onChange={e => setAsk(e.target.value)} placeholder="What should change here?"
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitAsk(); } if (e.key === 'Escape') setPick(null); }}
                       className="flex-1 resize-none bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-[var(--accent)]/60" />
-                    <button onClick={submitAsk} disabled={!ask.trim() || busy} className="p-2 rounded-lg bg-[var(--accent)] text-white disabled:opacity-40" title="Send to the agent">
+                    <button onClick={submitAsk} disabled={!ask.trim() || busy} className="p-2 rounded-lg bg-[var(--accent)] text-[var(--accent-fg)] disabled:opacity-40" title="Send to the agent">
                       <ArrowUp className="w-3.5 h-3.5" />
                     </button>
                   </div>

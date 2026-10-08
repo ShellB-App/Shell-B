@@ -993,7 +993,7 @@ export function MapsApp() {
                     {measurePoints.length > 0 && (
                       <button onClick={() => setMeasurePoints(p => p.slice(0, -1))} className="px-2 py-1 rounded-md bg-[var(--bg-tertiary)] text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)]">Undo</button>
                     )}
-                    <button onClick={() => { setMeasuring(false); setMeasurePoints([]); }} className="px-2.5 py-1 rounded-md bg-[var(--accent)] text-white font-medium text-[11px]">Done</button>
+                    <button onClick={() => { setMeasuring(false); setMeasurePoints([]); }} className="px-2.5 py-1 rounded-md bg-[var(--accent)] text-[var(--accent-fg)] font-medium text-[11px]">Done</button>
                   </div>
                 </div>
               )}

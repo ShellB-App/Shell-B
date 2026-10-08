@@ -445,9 +445,9 @@ export interface Settings {
   cloudMemory: boolean;
   cloudLibrary: boolean;
   cloudCodex: boolean;
-  /** After Dark, the opt-in adult agent (server/adult.py): admin-only master switch */
+  /** Aphrodite, the opt-in adult agent (server/adult.py): admin-only master switch */
   adultEnabled?: boolean;
-  /** SDXL checkpoint file for After Dark's images; "" = FLUX.1-dev */
+  /** SDXL checkpoint file for Aphrodite's images; "" = FLUX.1-dev */
   adultImageCheckpoint?: string;
   timeZone: string;
   /** a ThemeId (src/themes); kept on the server so it follows you across devices */

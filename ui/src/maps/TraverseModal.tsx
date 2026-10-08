@@ -166,7 +166,7 @@ export function TraverseModal({
 
           <button
             onClick={() => onFlyTo(waypoint.lat, waypoint.lon, 14)}
-            className="px-3 py-1.5 rounded-lg bg-[var(--accent)] hover:opacity-90 text-white font-medium text-[11px] flex items-center gap-1 transition shadow"
+            className="px-3 py-1.5 rounded-lg bg-[var(--accent)] hover:opacity-90 text-[var(--accent-fg)] font-medium text-[11px] flex items-center gap-1 transition shadow"
           >
             <Navigation className="w-3 h-3" /> Center
           </button>

@@ -176,7 +176,7 @@ export function GeneratorStudio({ onPlaySong, onSaveFav, onExportWav }: Generato
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl border border-[var(--accent)]/30 bg-gradient-to-r from-[var(--bg-tertiary)] via-[var(--bg-secondary)] to-[var(--bg-tertiary)] shadow-inner">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-[var(--accent)] text-white shadow-sm">
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm">
               {STYLES[style].label}
             </span>
             <span className="text-[11px] font-mono text-[var(--text-muted)]">

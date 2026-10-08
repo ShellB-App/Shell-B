@@ -285,7 +285,7 @@ export function Soundboard({
               className={clsx(
                 'px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold transition',
                 activeCategory === idx
-                  ? 'bg-[var(--accent)] text-white'
+                  ? 'bg-[var(--accent)] text-[var(--accent-fg)]'
                   : 'text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-secondary)]'
               )}
             >
@@ -325,7 +325,7 @@ export function Soundboard({
           <button
             type="submit"
             disabled={!customText.trim() || isDroppingVoice}
-            className="px-4 py-2 rounded-xl bg-[var(--accent)] text-white text-xs font-medium flex items-center gap-1.5 hover:opacity-90 disabled:opacity-40 transition shrink-0 shadow-md"
+            className="px-4 py-2 rounded-xl bg-[var(--accent)] text-[var(--accent-fg)] text-xs font-medium flex items-center gap-1.5 hover:opacity-90 disabled:opacity-40 transition shrink-0 shadow-md"
           >
             {isDroppingVoice ? (
               <RefreshCw className="w-3.5 h-3.5 animate-spin" />

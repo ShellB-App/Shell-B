@@ -120,7 +120,7 @@ function Editor({ task, open, onClose, onSaved, agents, groups, defaultAgent }: 
   const label = 'block text-[11px] font-medium text-[var(--text-muted)] mb-1';
   const seg = (r: Repeat, text: string) => (
     <button key={r} onClick={() => set({ repeat: r })}
-      className={clsx('px-2.5 py-1 rounded-md text-xs transition', f.repeat === r ? 'bg-[var(--accent)] text-white' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]')}>{text}</button>
+      className={clsx('px-2.5 py-1 rounded-md text-xs transition', f.repeat === r ? 'bg-[var(--accent)] text-[var(--accent-fg)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]')}>{text}</button>
   );
 
   return (

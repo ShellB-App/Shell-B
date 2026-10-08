@@ -418,7 +418,7 @@ export function KioskLockScreen({ open, onUnlock, status }: Props) {
                       key={d}
                       onClick={() => handleDigitPress(d)}
                       disabled={verifying || success}
-                      className="h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:scale-95 border border-white/10 text-xl font-bold font-mono text-white transition flex items-center justify-center shadow-md active:bg-[var(--accent)]/40"
+                      className="h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:scale-95 border border-white/10 text-xl font-bold font-mono text-[var(--accent-fg)] transition flex items-center justify-center shadow-md active:bg-[var(--accent)]/40"
                     >
                       {d}
                     </button>
@@ -433,7 +433,7 @@ export function KioskLockScreen({ open, onUnlock, status }: Props) {
                   <button
                     onClick={() => handleDigitPress('0')}
                     disabled={verifying || success}
-                    className="h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:scale-95 border border-white/10 text-xl font-bold font-mono text-white transition flex items-center justify-center shadow-md active:bg-[var(--accent)]/40"
+                    className="h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:scale-95 border border-white/10 text-xl font-bold font-mono text-[var(--accent-fg)] transition flex items-center justify-center shadow-md active:bg-[var(--accent)]/40"
                   >
                     0
                   </button>
@@ -487,7 +487,7 @@ export function KioskLockScreen({ open, onUnlock, status }: Props) {
                 <button
                   type="submit"
                   disabled={verifying || !password}
-                  className="w-full py-3 rounded-xl bg-[var(--accent)] text-white font-semibold text-sm hover:opacity-90 active:scale-98 transition shadow-lg disabled:opacity-40"
+                  className="w-full py-3 rounded-xl bg-[var(--accent)] text-[var(--accent-fg)] font-semibold text-sm hover:opacity-90 active:scale-98 transition shadow-lg disabled:opacity-40"
                 >
                   {verifying
                     ? 'Verifying…'

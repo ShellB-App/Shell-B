@@ -314,7 +314,7 @@ export function RichLink({ href, children }: { href: string; children: ReactNode
         className={clsx('inline-flex items-center justify-center my-1 mr-2 px-4 py-1.5 rounded-lg text-sm font-semibold no-underline border active:scale-[0.98] transition disabled:bg-[var(--bg-tertiary)] disabled:border-[var(--border-subtle)] disabled:text-[var(--text-muted)] disabled:shadow-none disabled:cursor-default',
           // (the Synthwave and Synthfield themes paint anything whose class names bg-[var(--accent)] with its gradient, so only an
           // enabled primary button may carry it)
-          off ? '' : scheme === 'button' ? 'bg-[var(--accent)] border-transparent text-white shadow-sm hover:brightness-110'
+          off ? '' : scheme === 'button' ? 'bg-[var(--accent)] border-transparent text-[var(--accent-fg)] shadow-sm hover:brightness-110'
             : 'bg-transparent border-[var(--accent)]/60 text-[var(--accent-soft)] hover:bg-[var(--bg-hover)]')}>
         {children}
       </button>

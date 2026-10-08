@@ -379,7 +379,7 @@ export function MobileComposer({
                 className={clsx(
                   'p-2 rounded-xl transition flex items-center justify-center',
                   text.trim() || atts.length > 0
-                    ? 'bg-[var(--accent)] text-white hover:brightness-110 shadow-sm'
+                    ? 'bg-[var(--accent)] text-[var(--accent-fg)] hover:brightness-110 shadow-sm'
                     : 'bg-[var(--bg-tertiary)] text-[var(--text-muted)] opacity-50 cursor-not-allowed'
                 )}
                 title="Send message"

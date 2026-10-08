@@ -89,6 +89,8 @@ export function Sidebar(p: Props) {
         className={clsx('group relative flex items-center gap-2 pl-2 pr-1 py-1.5 rounded-lg cursor-pointer text-[13px] transition',
           active ? 'bg-[var(--bg-hover)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]')}
         onClick={() => editing !== c.id && p.onSelect(c.id)}
+        role="button" tabIndex={0} aria-current={active ? 'page' : undefined}
+        onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ') && editing !== c.id) { e.preventDefault(); p.onSelect(c.id); } }}
       >
         <AgentAvatar agent={agent} size={16} />
         {editing === c.id ? (
@@ -111,7 +113,7 @@ export function Sidebar(p: Props) {
               <button className="px-1.5 py-0.5 rounded text-[10px] hover:bg-[var(--bg-hover)]" onClick={() => setConfirmDel(null)}>Keep</button>
             </span>
           ) : (
-            <span className="hidden group-hover:flex focus-within:flex items-center shrink-0" onClick={e => e.stopPropagation()}>
+            <span className="hidden group-hover:flex group-focus-within:flex items-center shrink-0" onClick={e => e.stopPropagation()}>
               <FavoriteStar kind="chat" id={c.id} title={c.title} size={12} />
               <button className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--accent)]" title={c.pinned ? 'Unpin' : 'Pin'} onClick={() => p.onPin(c.id, !c.pinned)}>
                 <Pin className={clsx('w-3 h-3', c.pinned && 'fill-[var(--accent)] text-[var(--accent)]')} />
@@ -174,7 +176,7 @@ export function Sidebar(p: Props) {
             </button>
           </div>
           <div className="flex items-stretch gap-2">
-            <button onClick={p.onNew} className="flex-1 min-w-0 flex items-center justify-between px-3 py-2 rounded-xl bg-[var(--accent)] hover:brightness-110 text-white text-sm font-medium transition shadow-md">
+            <button onClick={p.onNew} className="flex-1 min-w-0 flex items-center justify-between px-3 py-2 rounded-xl bg-[var(--accent)] hover:brightness-110 text-[var(--accent-fg)] text-sm font-medium transition shadow-md">
               <span className="flex items-center gap-2"><SquarePen className="w-4 h-4" />New chat</span>
               <kbd className="text-[10px] opacity-75 font-mono hidden md:inline">Ctrl ⇧ O</kbd>
             </button>

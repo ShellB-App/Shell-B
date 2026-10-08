@@ -26,27 +26,31 @@ import { ArtifactViewer, Library } from './components/Library';
 import { FavoriteStar, FavoritesPage } from './components/Favorites';
 import { Scheduled, browserTz } from './components/Scheduled';
 import { Activity } from './components/Activity';
-import { Me } from './components/Me';
-import { Codex } from './components/Codex';
-import { Notes } from './components/Notes';
-import { Models } from './components/Models';
-import { Wiki } from './components/Wiki';
-import { OfflineData } from './components/OfflineData';
-import { Generate } from './components/Generate';
 import { Downloads } from './components/Downloads';
 import { VoiceMode } from './components/VoiceMode';
-import { ResearchBoardView, ResearchIndex } from './components/Research';
-import { MegaPlanBoard, MegaPlansIndex } from './components/MegaPlans';
-import { AssetLibraryView, AssetsIndex } from './components/Assets';
-import { Gibberlink } from './components/Gibberlink';
-import { Secretary } from './components/Secretary';
-import { MapsApp } from './maps/MapsApp';
-import { RadioApp } from './radio/RadioApp';
 import { nextTheme, setTheme as applyTheme, themeInfo, type ThemeId } from './themes';
 import { foldSummarized } from './summarized';
 import { ContextMeter } from './components/composer/ContextMeter';
 
 const Studio = lazy(() => import('./studio/Studio'));
+// the apps load when first opened, not with the chat (the main bundle was 2.7 MB)
+const Me = lazy(() => import('./components/Me').then(m => ({ default: m.Me })));
+const Codex = lazy(() => import('./components/Codex').then(m => ({ default: m.Codex })));
+const Notes = lazy(() => import('./components/Notes').then(m => ({ default: m.Notes })));
+const Models = lazy(() => import('./components/Models').then(m => ({ default: m.Models })));
+const Wiki = lazy(() => import('./components/Wiki').then(m => ({ default: m.Wiki })));
+const OfflineData = lazy(() => import('./components/OfflineData').then(m => ({ default: m.OfflineData })));
+const Generate = lazy(() => import('./components/Generate').then(m => ({ default: m.Generate })));
+const ResearchBoardView = lazy(() => import('./components/Research').then(m => ({ default: m.ResearchBoardView })));
+const ResearchIndex = lazy(() => import('./components/Research').then(m => ({ default: m.ResearchIndex })));
+const MegaPlanBoard = lazy(() => import('./components/MegaPlans').then(m => ({ default: m.MegaPlanBoard })));
+const MegaPlansIndex = lazy(() => import('./components/MegaPlans').then(m => ({ default: m.MegaPlansIndex })));
+const AssetLibraryView = lazy(() => import('./components/Assets').then(m => ({ default: m.AssetLibraryView })));
+const AssetsIndex = lazy(() => import('./components/Assets').then(m => ({ default: m.AssetsIndex })));
+const Gibberlink = lazy(() => import('./components/Gibberlink').then(m => ({ default: m.Gibberlink })));
+const Secretary = lazy(() => import('./components/Secretary').then(m => ({ default: m.Secretary })));
+const MapsApp = lazy(() => import('./maps/MapsApp').then(m => ({ default: m.MapsApp })));
+const RadioApp = lazy(() => import('./radio/RadioApp').then(m => ({ default: m.RadioApp })));
 const Code = lazy(() => import('./code/Code'));
 
 const QUICK: Record<string, { title: string; prompt: string }[]> = {
@@ -232,8 +236,11 @@ export function App() {
     else if (m) setModal(m as 'agents' | 'tools' | 'settings' | 'palette');
     const poll = () => api.status().then(setStatus).catch(() => setStatus(undefined));
     poll();
-    const t = setInterval(poll, 10000);
-    return () => clearInterval(t);
+    // hidden tabs stop polling (and catch up the moment they're shown again)
+    const t = setInterval(() => { if (!document.hidden) poll(); }, 10000);
+    const onShow = () => { if (!document.hidden) poll(); };
+    document.addEventListener('visibilitychange', onShow);
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', onShow); };
   }, []);
 
   const openConversation = useCallback(async (id: string) => {
@@ -449,11 +456,18 @@ export function App() {
   }, []);
 
   const toggleSkin = useCallback(() => applyTheme(nextTheme()), []);
+  // pages outside the chat shell (Studio, Code) open the palette with this event (components/SearchButton.tsx)
+  useEffect(() => {
+    const open = () => setModal('palette');
+    window.addEventListener('shellb:palette', open);
+    return () => window.removeEventListener('shellb:palette', open);
+  }, []);
 
   const toggleTheme = useCallback(() => {
     setTheme(t => {
       const next = t === 'dark' ? 'light' : 'dark';
-      document.documentElement.className = next;
+      document.documentElement.classList.remove('dark', 'light');  // only the theme class: others (dj-live) stay
+      document.documentElement.classList.add(next);
       try { localStorage.setItem('shellb.theme', next); } catch { /* private mode */ }
       return next;
     });
@@ -591,6 +605,10 @@ export function App() {
   const artifacts = conv?.artifacts ?? [];
   const voiceOk = !!status?.services.hermes?.ok;
   const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant');
+  // the chat page (not one of the apps): chat-only panels and header buttons must not linger over Worlds, Wiki, etc.
+  const onChatPage = !plans && !research && !groupRoute && !library && !scheduled && !activity && codexRoute === null
+    && !modelsRoute && !assetRoute && !radioRoute && !mapsRoute && wikiRoute === null && !secretaryRoute && !gibberlinkRoute
+    && !dataRoute && !generateRoute;
   // the chat's research board: from the server, or from a research_board call made during this session
   const chatBoard = conv?.researchBoard?.id ?? [...messages].reverse().flatMap(m => (m.blocks ?? []).flatMap(b => (b.type === 'tool' && b.display?.board ? [b.display.board.id] : [])))[0];
 
@@ -669,20 +687,20 @@ export function App() {
             <kbd className="text-[9px] font-mono px-1 py-0.5 rounded bg-[var(--bg-tertiary)] border border-[var(--border-subtle)]">Ctrl K</kbd>
           </button>
           <button onClick={() => setModal('palette')} className={clsx(btn.icon, 'sm:hidden')} aria-label="Search"><Search className="w-4 h-4" /></button>
-          {conv?.megaPlan && !plans && !research && !groupRoute && !library && !scheduled && !activity && codexRoute === null && !modelsRoute && !assetRoute && !radioRoute && (
+          {conv?.megaPlan && onChatPage && (
             <button onClick={() => openPlans(conv.megaPlan!.id)} title={`This chat is ${conv.megaPlan.role === 'step' ? 'a step' : conv.megaPlan.role === 'orchestrator' ? 'the orchestrator' : 'the creator'} of the mega plan "${conv.megaPlan.title}"`}
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-violet-500/40 text-xs text-violet-600 dark:text-violet-300 bg-violet-500/10 hover:bg-violet-500/20 transition">
               <Workflow className="w-3.5 h-3.5" /><span className="hidden sm:inline">Mega plan</span>
             </button>
           )}
-          {chatBoard && !plans && !research && !groupRoute && !library && !scheduled && !activity && codexRoute === null && !modelsRoute && !assetRoute && !radioRoute && (
+          {chatBoard && onChatPage && (
             <button onClick={() => openResearch(chatBoard)} title="Open this chat's research board"
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-teal-500/40 text-xs text-teal-600 dark:text-teal-300 bg-teal-500/10 hover:bg-teal-500/20 transition">
               <Telescope className="w-3.5 h-3.5" /><span className="hidden sm:inline">Research board</span>
             </button>
           )}
-          {conv && !plans && !research && !groupRoute && !library && !scheduled && !activity && codexRoute === null && !modelsRoute && !assetRoute && !radioRoute && <WorkspaceFiles convId={conv.id} refreshKey={`${messages.length}-${busy}`} />}
-          {artifacts.length > 0 && !plans && !research && !library && !scheduled && !activity && codexRoute === null && !modelsRoute && !assetRoute && !groupRoute && !radioRoute && (
+          {conv && onChatPage && <WorkspaceFiles convId={conv.id} refreshKey={`${messages.length}-${busy}`} />}
+          {artifacts.length > 0 && onChatPage && (
             <button onClick={() => setPanel(p => (p ? null : { id: artifacts[artifacts.length - 1].id }))}
               className={clsx('flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs transition',
                 panel ? 'bg-[var(--accent)]/15 text-[var(--accent-soft)] border-[var(--accent)]/40' : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]')}>
@@ -690,7 +708,7 @@ export function App() {
               <span className="font-mono text-[10px]">{artifacts.length}</span>
             </button>
           )}
-          {conv && messages.length > 0 && !plans && !research && !library && !scheduled && !activity && codexRoute === null && !modelsRoute && !assetRoute && !groupRoute && !radioRoute && (
+          {conv && messages.length > 0 && onChatPage && (
             <div className="flex items-center gap-1 border-l border-[var(--border-subtle)] pl-2 ml-1">
               <button className={btn.icon} onClick={() => {
                 const lines = [`# ${conv.title || 'Conversation'}\n`];
@@ -713,6 +731,7 @@ export function App() {
           <button className={btn.icon} onClick={toggleTheme} title="Toggle theme">{theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}</button>
         </header>
 
+        <Suspense fallback={<div className="flex-1 flex items-center justify-center text-sm text-[var(--text-muted)]">Opening…</div>}>
         {secretaryRoute ? (
           <div className="flex-1 min-h-0"><Secretary onBack={() => { location.hash = '#'; }} /></div>
         ) : radioRoute ? (
@@ -872,9 +891,10 @@ export function App() {
           </div>
         </div>
         </>)}
+        </Suspense>
       </main>
 
-      {panel && artifacts.length > 0 && !plans && !research && !groupRoute && !library && !scheduled && !activity && codexRoute === null && !modelsRoute && !assetRoute && (
+      {panel && artifacts.length > 0 && onChatPage && (
         <ArtifactPanel groups={artifacts} activeId={panel.id} version={panel.version} dark={theme === 'dark'} convId={conv?.id}
           onSelect={(id, version) => setPanel({ id, version })} onClose={() => setPanel(null)} />
       )}

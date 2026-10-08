@@ -6,6 +6,7 @@ import {
 import { req } from '../api';
 import type { ActivityItem, FollowUpNoted, Message } from '../types';
 import { btn, relTime } from './common';
+import { toastError } from './toast';
 
 // Follow-ups and the morning brief (server/commitments.py): the note under replies, the Follow-ups tab in Activity,
 // the brief card in the feed, and the brief's settings (also shown in Settings → Memory).
@@ -93,7 +94,10 @@ export function FollowUpNote({ message, fresh }: { message: Message; fresh: bool
   }, [fresh, message.id, message.followUps, message.status, message.timestamp]);
   const shown = items.filter(i => !undone.has(i.id));
   if (!shown.length) return null;
-  const undo = async (i: FollowUpNoted) => { await fu.undo(i.id, message.id).catch(() => {}); setUndone(s => new Set(s).add(i.id)); };
+  const undo = async (i: FollowUpNoted) => {
+    try { await fu.undo(i.id, message.id); } catch (e) { toastError("Couldn't undo that follow-up")(e); return; }
+    setUndone(s => new Set(s).add(i.id));
+  };
   return (
     <div className="mt-1 space-y-0.5">
       {shown.map(i => {
@@ -179,7 +183,7 @@ export function BriefSettingsRow({ compact = false }: { compact?: boolean }) {
   const load = useCallback(() => fu.brief().then(i => { setInfo(i); setPlace(i.place); }).catch(() => {}), []);
   useEffect(() => { load(); }, [load]);
   if (!info) return null;
-  const save = async (s: Parameters<typeof fu.settings>[0]) => { await fu.settings(s).catch(() => {}); load(); };
+  const save = async (s: Parameters<typeof fu.settings>[0]) => { await fu.settings(s).catch(toastError("Couldn't save the brief settings")); load(); };
   const next = new Date(info.next);
   return (
     <div className="space-y-1.5 text-[11px] text-[var(--text-secondary)]">

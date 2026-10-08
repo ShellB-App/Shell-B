@@ -214,7 +214,7 @@ export function OfflineData() {
                       return (
                         <button key={c} onClick={() => setWikiCat(c)}
                           className={clsx('px-2.5 py-1 rounded-lg text-xs font-medium transition focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--accent)]',
-                            active ? 'bg-[var(--accent)] text-white shadow-sm' : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-subtle)]')}>
+                            active ? 'bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm' : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-subtle)]')}>
                           {c} <span className={clsx('ml-1 text-[10px] font-mono', active ? 'text-white/80' : 'text-[var(--text-muted)]')}>{count}</span>
                         </button>
                       );

@@ -6,6 +6,7 @@ import type { CodexEntry, CodexIndex } from '../types';
 import { Markdown } from './Markdown';
 import { TagInput } from './Codex';
 import { btn, relTime } from './common';
+import { toastError } from './toast';
 
 /**
  * Notes: a writing-first view of the Codex's notes, at #/codex/notes(/<entry id>). Same entries as the Codex page, so
@@ -291,7 +292,7 @@ function NoteEditor({ id, index, titles, view, onView, onSaved, onDeleted, onBac
     if (!eid) { onBack(); return; }
     clearTimeout(relinkTimer.current);
     if (!confirm(`Delete "${cur.current.title}"? This can't be undone.`)) return;
-    await api.deleteCodexEntry(eid).catch(() => {});
+    try { await api.deleteCodexEntry(eid); } catch (e) { toastError("Couldn't delete the note")(e); return; }
     onDeleted(eid);
   };
 
@@ -550,7 +551,7 @@ export function Notes({ sub, onDiscuss }: { sub: string; onDiscuss?: (prompt: st
             <div className="flex flex-wrap gap-1">
               {topTags.map(([t]) => (
                 <button key={t} onClick={() => setTag(x => (x === t ? '' : t))}
-                  className={clsx('px-1.5 py-0.5 rounded text-[11px] transition', tag === t ? 'bg-[var(--accent)] text-white' : 'bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]')}>#{t}</button>
+                  className={clsx('px-1.5 py-0.5 rounded text-[11px] transition', tag === t ? 'bg-[var(--accent)] text-[var(--accent-fg)]' : 'bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]')}>#{t}</button>
               ))}
             </div>
           )}

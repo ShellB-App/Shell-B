@@ -60,7 +60,7 @@ export function MobileBottomNav({ activeTab, onTabChange, status }: Props) {
                       'absolute -top-1 -right-2 px-1 py-0.2 min-w-4 text-center rounded-full text-[9px] font-mono leading-tight font-bold',
                       tab.urgent
                         ? 'bg-amber-500 text-black animate-pulse'
-                        : 'bg-[var(--accent)] text-white'
+                        : 'bg-[var(--accent)] text-[var(--accent-fg)]'
                     )}
                   >
                     {tab.badge}

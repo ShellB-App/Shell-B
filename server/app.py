@@ -72,6 +72,7 @@ import sysinfo
 import network
 import memory
 import episodes
+import chatmail
 import me
 import feedback
 import reflection
@@ -153,6 +154,8 @@ codex.init()
 media.init()
 memory.init()
 episodes.init()
+chatmail.init()
+chatmail.register()
 compaction.migrate_legacy()  # after episodes.init: the FTS triggers index the messages it puts back
 feedback.init()
 cli_agents.cleanup()
@@ -187,6 +190,7 @@ app.include_router(suggestions.router)
 app.include_router(reflection.router)  # before memory.router, whose /{mid}/{action} would match /reflection/run
 app.include_router(memory.router)
 app.include_router(episodes.router)
+app.include_router(chatmail.router)
 app.include_router(me.router)
 app.include_router(feedback.router)
 app.include_router(modelhub.router)
@@ -592,7 +596,7 @@ async def chat(conv_id: str, req: Request):
         why = await adult.screen(body.get("content") or "", settings)
         if why:
             raise HTTPException(400, why)
-        if not conv.get("incognito"):  # After Dark chats are never remembered and expire on their own
+        if not conv.get("incognito"):  # Aphrodite's chats are never remembered and expire on their own
             import privacy
             conv = privacy.mark_incognito(conv_id)
         adult_ok = True
@@ -635,7 +639,7 @@ def begin_turn(conv, body, stream=True, note="", adult_ok=False):
     project_id = conv.get("projectId")
     agent, agents = find_agent(body.get("agentId") or conv["agentId"])
     if adult.is_adult(agent) and not adult_ok:  # schedules, plans, retries: nobody there to check, so never
-        raise RuntimeError(adult.refuse_reason(agent, settings, owner=False, interactive=False) or "After Dark is interactive-only.")
+        raise RuntimeError(adult.refuse_reason(agent, settings, owner=False, interactive=False) or "Aphrodite is interactive-only.")
     pick, own = body.get("model"), providers.split(agent.get("model", ""))
     if pick and pick != agent.get("model") and own and (providers.split(pick) or ("",))[0] == own[0]:
         agent = {**agent, "model": pick}  # the composer's model picker: same provider only, so privacy doesn't change
@@ -891,7 +895,7 @@ async def agent_upsert(agent_id: str, req: Request):
     if body.get("adult") or (idx is not None and adult.is_adult(agents[idx])):
         require_admin(req)
         if idx is not None and adult.is_adult(agents[idx]):
-            body["adult"] = True  # the Agent Lab can tune After Dark, not turn it into an unguarded agent
+            body["adult"] = True  # the Agent Lab can tune Aphrodite, not turn it into an unguarded agent
     if idx is None:
         agents.append(body)
     else:

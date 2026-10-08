@@ -12,6 +12,7 @@ html.dark[data-skin='synthwave'] {
   --text-secondary: #bba9de;
   --text-muted: #8f7db8;
   --accent: #ff7a3d;
+  --accent-fg: #160f1c;  /* text on the accent colour: WCAG AA (4.5:1) */
   --accent-soft: #ff9a5c;
   --accent-glow: rgba(255, 122, 61, 0.4);
   --brand: #a855f7;

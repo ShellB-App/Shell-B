@@ -68,7 +68,7 @@ export function FormFactorSwitcher({ open, onClose }: Props) {
                 <div
                   className={clsx(
                     'p-2.5 rounded-lg shrink-0 mt-0.5',
-                    active ? 'bg-[var(--accent)] text-white' : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]'
+                    active ? 'bg-[var(--accent)] text-[var(--accent-fg)]' : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]'
                   )}
                 >
                   <Icon className="w-5 h-5" />

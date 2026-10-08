@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import clsx from 'clsx';
 import {
   Boxes, ChevronDown, Compass, ChevronRight, Cloud, Database, FolderOpen, GitBranch, KeyRound, Link, ListOrdered, Loader2, Lock,
-  Moon, NotebookText, Pencil, Plug, Plus, RefreshCw, Share2, ShieldCheck, Sparkles, SquareTerminal, Trash2, Workflow, type LucideIcon,
+  Heart, NotebookText, Pencil, Plug, Plus, RefreshCw, Share2, ShieldCheck, Sparkles, SquareTerminal, Trash2, Workflow, type LucideIcon,
 } from 'lucide-react';
 import type { CliAgent, Connector, McpServer, Provider, Settings, ToolInfo } from '../types';
 import { adminKey, api } from '../api';
@@ -61,7 +61,7 @@ export function IntegrationsModal({ open, onClose, tools, settings, onChanged, t
     { id: 'discover', label: 'Discover', icon: Compass },
     { id: 'tools', label: 'Built-in tools', icon: Boxes },
     { id: 'cloud', label: 'Cloud AI', icon: Cloud },
-    { id: 'adult', label: 'After Dark', icon: Moon },
+    { id: 'adult', label: 'Aphrodite', icon: Heart },
   ] as const;
 
   return (
@@ -102,7 +102,7 @@ export function IntegrationsModal({ open, onClose, tools, settings, onChanged, t
           {tab === 'discover' && !editing && <Discover locked={!admin} onInstalled={() => { load(); onChanged(); }} />}
           {tab === 'tools' && <BuiltinTools tools={tools.filter(t => t.category !== 'mcp')} onChanged={onChanged} />}
           {tab === 'cloud' && <CloudTab settings={settings} locked={!admin} onChanged={onChanged} />}
-          {tab === 'adult' && <AfterDarkTab settings={settings} locked={!admin} onChanged={onChanged} />}
+          {tab === 'adult' && <AphroditeTab settings={settings} locked={!admin} onChanged={onChanged} />}
         </div>
       </div>
     </Modal>
@@ -385,9 +385,9 @@ function BuiltinTools({ tools, onChanged }: { tools: ToolInfo[]; onChanged: () =
   );
 }
 
-// ── After Dark (adult agent) ──────────────────────────────────────────────
+// ── Aphrodite (adult agent) ───────────────────────────────────────────────
 
-function AfterDarkTab({ settings, locked, onChanged }: { settings?: Settings; locked: boolean; onChanged: () => void }) {
+function AphroditeTab({ settings, locked, onChanged }: { settings?: Settings; locked: boolean; onChanged: () => void }) {
   const [ckpts, setCkpts] = useState<{ name: string; size: number }[] | null>(null);
   const [fluxDev, setFluxDev] = useState(false);
   const [error, setError] = useState('');
@@ -406,16 +406,16 @@ function AfterDarkTab({ settings, locked, onChanged }: { settings?: Settings; lo
     <div className="space-y-5 max-w-3xl">
       <div className={clsx('p-4 rounded-xl border', on ? 'border-rose-500/30 bg-rose-500/5' : 'border-[var(--border-subtle)] bg-[var(--bg-secondary)]')}>
         <div className="flex items-start gap-3">
-          <Moon className={clsx('w-5 h-5 mt-0.5 shrink-0', on ? 'text-rose-400' : 'text-[var(--text-muted)]')} />
+          <Heart className={clsx('w-5 h-5 mt-0.5 shrink-0', on ? 'text-rose-400' : 'text-[var(--text-muted)]')} />
           <div className="flex-1">
-            <div className="text-sm font-semibold">{on ? 'After Dark is on' : 'After Dark is off'}</div>
+            <div className="text-sm font-semibold">{on ? 'Aphrodite is on' : 'Aphrodite is off'}</div>
             <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed max-w-[65ch]">
               An adult (18+) agent for explicit fiction, roleplay and images of fictional adult characters. It appears only
               in the owner's signed-in session, runs on local models only, never delegates or is delegated to, and every
               chat is incognito. Original adult characters only; background checks run quietly on each request.
             </p>
           </div>
-          <Toggle on={on} disabled={locked} label="After Dark" onChange={v => save({ adultEnabled: v })} />
+          <Toggle on={on} disabled={locked} label="Aphrodite" onChange={v => save({ adultEnabled: v })} />
         </div>
       </div>
       <div className="p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] space-y-2">

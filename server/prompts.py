@@ -21,6 +21,7 @@ import selfmod
 import ask
 import memory
 import episodes
+import chatmail
 from defaults import DESIGN_STANDARDS
 
 
@@ -104,6 +105,27 @@ More live cards (fenced blocks holding JSON; never write chart or table code by 
 - ```timeline  {"title": "...", "events": [{"date": "1969-07-20", "label": "Apollo 11 lands", "note": "...",
   "end": "1969-07-24", "group": "Apollo"}]}. Dates: "1969", "1969-07", "1969-07-20" or ISO time; "-500" is 500 BCE.
   Use it for histories, project milestones and sequences of dated events.
+- ```infobox  {"title": "Voyager 1", "subtitle": "Space probe", "image": "https://…", "caption": "...",
+  "rows": {"Launched": "1977-09-05", "Operator": "NASA / JPL"},
+  "sections": [{"heading": "Mission", "rows": {"Status": "Active"}}], "source": "Wikipedia"}
+  A Wikipedia-style fact card that floats beside your text. Use it when the answer is about one named thing (a person, place,
+  company, product, species, event) and you have 4+ facts. Keep values short; "image" only if a tool gave you the URL.
+- ```compare  {"title": "...", "items": [{"name": "A", "subtitle": "$999"}, {"name": "B"}],
+  "rows": [{"label": "Battery", "values": ["12 h", "9 h"], "best": 0}], "verdict": "..."}  2-4 options against shared criteria;
+  "best" is the winning column index (omit when there is no winner). Prefer it to a table for "X vs Y" questions.
+- ```profile  {"name": "...", "role": "...", "org": "...", "image": "https://…", "bio": "2 sentences", "tags": [],
+  "facts": {"Born": "..."}, "links": [{"label": "Site", "url": "https://…"}]}  one person or organisation.
+- ```steps  {"title": "...", "steps": [{"title": "...", "detail": "...", "code": "command"}]}  a tickable how-to checklist for
+  procedures of 3+ steps the user will carry out (installs, setups). Put commands in "code".
+- ```callout  {"type": "note|tip|warning|danger|success", "title": "...", "body": "plain text"}  one short aside that must
+  not be missed (a data-loss risk, a prerequisite). At most one or two per reply; no Markdown inside.
+- ```quote  {"text": "verbatim passage", "source": "...", "author": "...", "date": "...", "url": "#/wiki/Title"}
+  only for text you actually retrieved from a tool or document; never paraphrase inside a quote card.
+- ```status  {"title": "...", "items": [{"name": "SearXNG", "state": "ok|warn|down|unknown", "detail": "...", "service":
+  "searxng"}]}  a pass/fail board. "service" (ollama, searxng, nyx, orpheus, hermes, embeddings, sandbox, studio) makes
+  that row live from this machine; otherwise state only what your tools showed.
+- ```diagram  Mermaid source (flowchart, sequenceDiagram, stateDiagram-v2, erDiagram, gantt, classDiagram), nothing else
+  in the fence. Keep node labels short and quote labels containing punctuation. For processes, architectures and relationships.
 - ```route  {"from": "Orlando International Airport", "to": "Kennedy Space Center", "mode": "auto|bicycle|pedestrian"}
   turn-by-turn directions on a map, computed offline. Use the directions tool first for the distance and time.
 Only put real data in cards and say where numbers came from. A card looks authoritative, so check dates and figures
@@ -213,6 +235,11 @@ system. Your tools still run on Shell:B's own machine; your reasoning runs on {p
         latest = episodes.recent(exclude=conv_id)
         guide.append(episodes.GUIDE + (f"\n  Your most recent other conversations:\n" + "\n".join("  " + l for l in latest.splitlines())
                                        if latest else ""))
+    if "leave_message" in tool_names or "check_messages" in tool_names:
+        guide.append(chatmail.GUIDE)
+        note = chatmail.prompt_note(conv_id)
+        if note:
+            guide.append(note)
     if "library" in tool_names:
         shelf = library.catalog(exclude=project_id)
         guide.append(library.GUIDE + (f"\n  Recent work (more via library list/search):\n" + "\n".join("  " + l for l in shelf.splitlines())

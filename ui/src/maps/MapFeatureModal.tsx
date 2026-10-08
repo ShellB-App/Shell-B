@@ -167,7 +167,7 @@ export function MapFeatureModal({ feature, onClose, onFlyTo }: MapFeatureModalPr
       <div className="mt-3 pt-2.5 border-t border-[var(--border-subtle)] flex items-center gap-2">
         <button
           onClick={() => onFlyTo(lat, lon)}
-          className="flex-1 py-1.5 px-2.5 rounded-lg bg-[var(--accent)] text-white text-[11px] font-semibold flex items-center justify-center gap-1.5 hover:opacity-90 transition shadow-sm"
+          className="flex-1 py-1.5 px-2.5 rounded-lg bg-[var(--accent)] text-[var(--accent-fg)] text-[11px] font-semibold flex items-center justify-center gap-1.5 hover:opacity-90 transition shadow-sm"
         >
           <Navigation className="w-3.5 h-3.5" />
           <span>Fly to Location</span>

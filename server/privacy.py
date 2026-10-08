@@ -18,7 +18,7 @@ import time
 
 import db
 
-MEMORY_TOOLS = ("memory_save", "memory_forget", "memory_search", "recall_conversations", "follow_ups")
+MEMORY_TOOLS = ("memory_save", "memory_forget", "memory_search", "recall_conversations", "follow_ups", "leave_message", "check_messages")
 DEFAULT_HOURS = 24
 HIDDEN_SQL = "SELECT id FROM conversations WHERE incognito=1"  # for `conv_id NOT IN (…)` filters
 

@@ -253,8 +253,11 @@ export function MobileApp() {
     loadGroups();
     const poll = () => api.status().then(setStatus).catch(() => setStatus(undefined));
     poll();
-    const t = setInterval(poll, 10000);
-    return () => clearInterval(t);
+    // hidden tabs stop polling (and catch up the moment they're shown again)
+    const t = setInterval(() => { if (!document.hidden) poll(); }, 10000);
+    const onShow = () => { if (!document.hidden) poll(); };
+    document.addEventListener('visibilitychange', onShow);
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', onShow); };
   }, []);
 
   const openConversation = useCallback(async (id: string) => {
@@ -429,7 +432,8 @@ export function MobileApp() {
   const toggleTheme = useCallback(() => {
     setTheme(t => {
       const next = t === 'dark' ? 'light' : 'dark';
-      document.documentElement.className = next;
+      document.documentElement.classList.remove('dark', 'light');  // only the theme class: others (dj-live) stay
+      document.documentElement.classList.add(next);
       try {
         localStorage.setItem('shellb.theme', next);
       } catch {}
@@ -723,6 +727,8 @@ export function MobileApp() {
               <Notes
                 sub={codexRoute}
                 onDiscuss={async (text, note) => {
+                  convRef.current = null;  // "in a new chat": never the one that happens to be open
+                  setConv(null);
                   const id = await ensureConversation();
                   const att = await api.upload(id, note);
                   send(text, [att]);

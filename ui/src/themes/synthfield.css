@@ -41,6 +41,7 @@ html.dark[data-skin='synthfield'] {
   --text-secondary: #b3b2c4;
   --text-muted: #8086a3;
   --accent: #ff7a2f;
+  --accent-fg: #160f1c;  /* text on the accent colour: WCAG AA (4.5:1) */
   --accent-soft: #ff9a5c;
   --accent-glow: rgba(255, 122, 47, 0.35);
   --brand: #ff3d7f;
@@ -64,6 +65,7 @@ html.light[data-skin='synthfield'] {
   --text-secondary: #4a4c5e;
   --text-muted: #6c6d7c;
   --accent: #e2551b;
+  --accent-fg: #160f1c;  /* text on the accent colour: WCAG AA (4.5:1) */
   --accent-soft: #c94a16;
   --accent-glow: rgba(226, 85, 27, 0.25);
   --brand: #d6245f;
@@ -230,7 +232,8 @@ html[data-skin='synthfield'] .sf-hero h1 + p > span:first-child {
 html[data-skin='synthfield'] .sf-hero > div.grid { counter-reset: sf-mission; gap: 12px; }
 html[data-skin='synthfield'] .sf-card {
   position: relative; counter-increment: sf-mission; padding: 16px 16px 14px !important;
-  background: color-mix(in srgb, var(--bg-secondary) 82%, transparent) !important; backdrop-filter: blur(6px);
+  /* 94%: the planet sits right behind the bottom-right card, and its stripes made the text hard to read */
+  background: color-mix(in srgb, var(--bg-secondary) 94%, transparent) !important; backdrop-filter: blur(6px);
   border-radius: 0 !important;
   background-image:
     linear-gradient(var(--text-secondary), var(--text-secondary)), linear-gradient(var(--text-secondary), var(--text-secondary)),
@@ -252,11 +255,14 @@ html[data-skin='synthfield'] .sf-card:hover { transform: translateY(-1px); backg
 html[data-skin='synthfield'] .sf-card:hover::after { transform: scaleY(1); }
 html[data-skin='synthfield'] .sf-card > div:first-child {
   font-family: var(--sf-display); font-weight: 600; font-size: 14px; letter-spacing: 0.12em; text-transform: uppercase;
+  padding-right: 28px;  /* room for the 01-04 readout in the corner */
 }
 html[data-skin='synthfield'] .sf-card > div:last-child { font-size: 13px; margin-top: 4px; }
 
 html[data-skin='synthfield'] .sf-tagline {
   font-family: 'JetBrains Mono Variable', monospace; font-size: 10.5px !important; letter-spacing: 0.08em; text-transform: uppercase;
+  /* a backing plate, so the line stays legible where it crosses the planet */
+  padding: 2px 8px; background: color-mix(in srgb, var(--bg-primary) 80%, transparent);
 }
 html[data-skin='synthfield'] .sf-tagline::before { content: '◢ '; color: var(--sf-orange); }
 

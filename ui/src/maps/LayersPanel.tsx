@@ -32,7 +32,7 @@ export function LayersPanel({ bodyId, bodyName, globe, ctx, prefs, onToggle, cou
       >
         <Layers className="w-3.5 h-3.5" />
         <span className="hidden sm:inline">Layers</span>
-        {active > 0 && <span className="min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full bg-[var(--accent)] text-white text-[10px] font-bold tabular-nums">{active}</span>}
+        {active > 0 && <span className="min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full bg-[var(--accent)] text-[var(--accent-fg)] text-[10px] font-bold tabular-nums">{active}</span>}
         <ChevronDown className={clsx('w-3 h-3 transition-transform', open && 'rotate-180')} />
       </button>
       {open && (

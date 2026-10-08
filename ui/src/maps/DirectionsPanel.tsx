@@ -221,7 +221,7 @@ export function DirectionsPanel({
         <button
           type="submit"
           disabled={loading || !from.trim() || !to.trim()}
-          className="w-full py-2 px-3 rounded-md bg-[var(--accent)] text-white font-medium flex items-center justify-center gap-1.5 hover:opacity-90 disabled:opacity-50 transition"
+          className="w-full py-2 px-3 rounded-md bg-[var(--accent)] text-[var(--accent-fg)] font-medium flex items-center justify-center gap-1.5 hover:opacity-90 disabled:opacity-50 transition"
         >
           {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Navigation className="w-3.5 h-3.5" />}
           <span>Find Route</span>

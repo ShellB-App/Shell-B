@@ -319,8 +319,11 @@ export function KioskApp() {
     loadGroups();
     const poll = () => api.status().then(setStatus).catch(() => setStatus(undefined));
     poll();
-    const t = setInterval(poll, 10000);
-    return () => clearInterval(t);
+    // hidden tabs stop polling (and catch up the moment they're shown again)
+    const t = setInterval(() => { if (!document.hidden) poll(); }, 10000);
+    const onShow = () => { if (!document.hidden) poll(); };
+    document.addEventListener('visibilitychange', onShow);
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', onShow); };
   }, []);
 
   // Track fullscreen state
@@ -372,6 +375,10 @@ export function KioskApp() {
 
   const openApp = useCallback(
     (appId: AppId, params?: Record<string, any>) => {
+      // these are dialogs, not windows (they used to open as empty windows)
+      if (appId === 'agents') { setModal('agents'); return; }
+      if (appId === 'tools') { setModal('tools'); return; }
+      if (appId === 'memory') { appId = 'settings'; params = { ...params, tab: 'memory' }; }
       const def = appById(appId);
       if (appId === 'settings' && params?.tab) {
         setSettingsTab(params.tab);
@@ -522,6 +529,25 @@ export function KioskApp() {
     [windows, focusWindow, openApp, setConv]
   );
 
+  // In-app links set the hash (Codex's side nav, palette results, Activity, notifications): open or focus the
+  // window for that app, which reads the rest of the hash (kiosk used to ignore them, so links did nothing).
+  const [hash, setHash] = useState(() => location.hash);
+  const hashRoute = (app: 'wiki' | 'codex') => {
+    const m = new RegExp(`^#\\/${app}(?:\\/(.*))?$`).exec(hash);
+    return m ? (app === 'wiki' ? (m[1] ? `/${m[1]}` : '') : m[1] ?? '') : '';
+  };
+  useEffect(() => {
+    const onHash = () => {
+      setHash(location.hash);
+      const chat = /^#\/c\/([\w-]+)/.exec(location.hash);
+      if (chat) { openConversation(chat[1]); return; }
+      const app = appForHash(location.hash);
+      if (app !== 'chat') openApp(app);
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, [openApp, openConversation]);
+
   const newChat = useCallback(
     (aid?: string) => {
       setConv(null);
@@ -591,7 +617,8 @@ export function KioskApp() {
   const toggleTheme = useCallback(() => {
     setTheme(t => {
       const next = t === 'dark' ? 'light' : 'dark';
-      document.documentElement.className = next;
+      document.documentElement.classList.remove('dark', 'light');  // only the theme class: others (dj-live) stay
+      document.documentElement.classList.add(next);
       try {
         localStorage.setItem('shellb.theme', next);
       } catch {}
@@ -868,6 +895,8 @@ export function KioskApp() {
                       <Notes
                         sub=""
                         onDiscuss={async (text, note) => {
+                          convRef.current = null;  // "in a new chat": never the one that happens to be open
+                          setConv(null);
                           const id = await ensureConversation();
                           const att = await api.upload(id, note);
                           send(text, [att]);
@@ -875,10 +904,14 @@ export function KioskApp() {
                         }}
                       />
                     </div>
+                  ) : win.appId === 'wiki' ? (
+                    <div className="h-full min-h-0">
+                      <Wiki route={hashRoute('wiki')} />
+                    </div>
                   ) : win.appId === 'codex' ? (
                     <div className="h-full overflow-y-auto">
                       <Codex
-                        sub=""
+                        sub={hashRoute('codex')}
                         agentNames={Object.fromEntries(agents.map(a => [a.id, a.name]))}
                       />
                     </div>

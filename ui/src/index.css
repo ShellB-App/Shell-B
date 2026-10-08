@@ -16,6 +16,7 @@
     --text-secondary: #a3a19d;
     --text-muted: #8a8884;
     --accent: #c96442;
+    --accent-fg: #160f1c;  /* text on the accent colour: WCAG AA (4.5:1) */
     --accent-soft: #da7756;
     --accent-glow: rgba(201, 100, 66, 0.25);
     --brand: #8b5cf6;
@@ -35,6 +36,7 @@
     --text-secondary: #575550;
     --text-muted: #77746e;
     --accent: #b5532f;
+    --accent-fg: #ffffff;
     --accent-soft: #c96442;
     --accent-glow: rgba(201, 100, 66, 0.2);
     --brand: #7c3aed;

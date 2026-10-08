@@ -127,7 +127,7 @@ export function BookmarksModal({ currentBodyId, pinCoord, onSelect, onClose }: B
                 <button
                   type="submit"
                   disabled={!newName.trim()}
-                  className="flex-1 py-1 rounded bg-[var(--accent)] text-white font-medium hover:opacity-90 disabled:opacity-50 text-[11px]"
+                  className="flex-1 py-1 rounded bg-[var(--accent)] text-[var(--accent-fg)] font-medium hover:opacity-90 disabled:opacity-50 text-[11px]"
                 >
                   Save
                 </button>
