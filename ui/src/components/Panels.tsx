@@ -32,6 +32,7 @@ const SERVICE_INFO: Record<string, [string, string]> = {
   nyx: ['NYX', 'ComfyUI + FLUX images · :8188'],
   orpheus: ['ORPHEUS', 'MusicGen · :8002'],
   hermes: ['HERMES', 'Whisper + Kokoro voice · :8001'],
+  stableaudio: ['Stable Audio', 'Sound effects and loops · :8003'],
   embeddings: ['MIMIR-lite', 'Embedding model for memory'],
 };
 

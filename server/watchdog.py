@@ -44,13 +44,13 @@ SERVICES = {  # /api/status id -> plain name, systemd unit (None: not a unit we 
     "nyx": ("Image generation (ComfyUI)", "shellb-nyx"),
     "orpheus": ("Music generation (ORPHEUS)", "shellb-orpheus"),
     "hermes": ("Speech (HERMES)", "shellb-hermes"),
+    "stableaudio": ("Sound effects (Stable Audio)", "shellb-stableaudio"),
     "embeddings": ("Memory embeddings model", None),
     "sandbox": ("Code sandbox", None),
     "studio": ("Studio browser", None),
 }
 UNITS = {
     "shellb-web": "Shell:B Web",
-    "shellb-gaia": "GAIA router",
     "shellb-hermes": "Speech (HERMES)",
     "shellb-hermes-qwen": "Expressive voice (HERMES Qwen)",
     "shellb-orpheus": "Music generation (ORPHEUS)",

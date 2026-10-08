@@ -1160,6 +1160,7 @@ async def service_status():
             _probe(c, f"{COMFY}/system_stats", ok=lambda r: r.status_code == 200),
             _probe(c, f"{ORPHEUS}/health", ok=lambda r: r.status_code == 200),
             _probe(c, f"{HERMES}/health", ok=lambda r: r.status_code == 200),
+            _probe(c, f"{studio_assets.STABLE_AUDIO}/health", ok=lambda r: r.status_code == 200),
         )
         try:
             tags = (await c.get(f"{OLLAMA}/api/tags", timeout=3)).json().get("models", [])
@@ -1169,7 +1170,7 @@ async def service_status():
     proc = await asyncio.create_subprocess_exec("docker", "image", "inspect", SANDBOX_IMAGE,
                                                 stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
     sandbox_ok = (await proc.wait()) == 0
-    names = ["ollama", "searxng", "nyx", "orpheus", "hermes"]
+    names = ["ollama", "searxng", "nyx", "orpheus", "hermes", "stableaudio"]
     status = dict(zip(names, results))
     status["embeddings"] = {"ok": embed_ok}
     status["sandbox"] = {"ok": sandbox_ok}

@@ -76,7 +76,7 @@ export function Sidebar(p: Props) {
 
   const services = p.status?.services ?? {};
   const svcOrder = ['ollama', 'searxng', 'sandbox', 'nyx', 'orpheus', 'hermes', 'embeddings'];
-  const svcLabel: Record<string, string> = { ollama: 'Ollama', searxng: 'VASSAGO search', sandbox: 'Code sandbox', nyx: 'NYX images', orpheus: 'ORPHEUS music', hermes: 'HERMES voice', embeddings: 'Memory embeddings' };
+  const svcLabel: Record<string, string> = { ollama: 'Ollama', searxng: 'VASSAGO search', sandbox: 'Code sandbox', nyx: 'NYX images', orpheus: 'ORPHEUS music', hermes: 'HERMES voice', stableaudio: 'Stable Audio', embeddings: 'Memory embeddings' };
   const down = svcOrder.filter(s => services[s] && !services[s].ok);
   const mem = p.status?.memory;
   const usedPct = mem ? Math.round((1 - mem.MemAvailable / mem.MemTotal) * 100) : 0;
