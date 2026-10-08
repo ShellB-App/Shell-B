@@ -16,7 +16,7 @@ def _server_out(cfg):
 
 @router.get("/connectors")
 def mcp_connectors():
-    return mcp_hub.CONNECTORS
+    return [c for c in mcp_hub.CONNECTORS if not c.get("hidden")]
 
 
 @router.get("/servers")

@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import clsx from 'clsx';
 import {
-  Boxes, ChevronDown, ChevronRight, Cloud, Database, FolderOpen, GitBranch, KeyRound, Link, ListOrdered, Loader2, Lock,
+  Boxes, ChevronDown, Compass, ChevronRight, Cloud, Database, FolderOpen, GitBranch, KeyRound, Link, ListOrdered, Loader2, Lock,
   NotebookText, Pencil, Plug, Plus, RefreshCw, Share2, ShieldCheck, Sparkles, SquareTerminal, Trash2, Workflow, type LucideIcon,
 } from 'lucide-react';
 import type { CliAgent, Connector, McpServer, Provider, Settings, ToolInfo } from '../types';
 import { adminKey, api } from '../api';
 import { Modal, Toggle, btn, toolIcon } from './common';
 import { SkillsPanel } from './Skills';
+import { Discover } from './Discover';
 
 const ICONS: Record<string, LucideIcon> = {
-  FolderOpen, Database, Workflow, Github: GitBranch, NotebookText, Share2, ListOrdered, Link, SquareTerminal, Plug,
+  FolderOpen, Database, Workflow, Github: GitBranch, NotebookText, Share2, ListOrdered, Link, SquareTerminal, Plug, Compass,
 };
 export const connectorIcon = (name?: string) => ICONS[name ?? ''] ?? Plug;
 
@@ -19,7 +20,7 @@ const SERVICE_NAMES: Record<string, string> = {
 };
 const SECRET = '__secret__';
 
-type Tab = 'connectors' | 'servers' | 'skills' | 'tools' | 'cloud';
+type Tab = 'connectors' | 'servers' | 'skills' | 'discover' | 'tools' | 'cloud';
 
 interface Props {
   open: boolean;
@@ -57,6 +58,7 @@ export function IntegrationsModal({ open, onClose, tools, settings, onChanged, t
     { id: 'connectors', label: 'Connectors', icon: Plug },
     { id: 'servers', label: `MCP servers${servers.length ? ` · ${servers.length}` : ''}`, icon: Workflow },
     { id: 'skills', label: 'Skills', icon: Sparkles },
+    { id: 'discover', label: 'Discover', icon: Compass },
     { id: 'tools', label: 'Built-in tools', icon: Boxes },
     { id: 'cloud', label: 'Cloud AI', icon: Cloud },
   ] as const;
@@ -73,7 +75,7 @@ export function IntegrationsModal({ open, onClose, tools, settings, onChanged, t
           ))}
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5">
-          {admin === false && (tab === 'connectors' || tab === 'servers' || tab === 'skills' || tab === 'cloud') && <AdminGate onUnlocked={() => setAdmin(true)} />}
+          {admin === false && (tab === 'connectors' || tab === 'servers' || tab === 'skills' || tab === 'discover' || tab === 'cloud') && <AdminGate onUnlocked={() => setAdmin(true)} />}
           {tab === 'connectors' && !editing && (
             <ConnectorGallery connectors={connectors} servers={servers} onPick={c => setEditing({ connector: c })} />
           )}
@@ -84,10 +86,19 @@ export function IntegrationsModal({ open, onClose, tools, settings, onChanged, t
           )}
           {tab === 'servers' && !editing && (
             <ServerList servers={servers} connectors={connectors} locked={!admin} onReload={() => { load(); onChanged(); }}
-              onEdit={s => { const c = connectors.find(x => x.id === s.connector); if (c) setEditing({ connector: c, server: s }); }}
+              onEdit={s => {
+                // a community server carries its own form fields (installed from Discover)
+                const c = s.connector === 'community'
+                  ? { id: 'community', name: s.name, icon: 'Compass', category: 'Community' as const, local: null,
+                      description: `Installed from Discover: ${s.community?.registryName ?? ''} ${s.community?.version ?? ''} (unverified community server).`,
+                      fields: s.community?.fields ?? [] }
+                  : connectors.find(x => x.id === s.connector);
+                if (c) setEditing({ connector: c, server: s });
+              }}
               onAdd={() => setTab('connectors')} />
           )}
           {tab === 'skills' && !editing && <SkillsPanel locked={!admin} onChanged={onChanged} />}
+          {tab === 'discover' && !editing && <Discover locked={!admin} onInstalled={() => { load(); onChanged(); }} />}
           {tab === 'tools' && <BuiltinTools tools={tools.filter(t => t.category !== 'mcp')} onChanged={onChanged} />}
           {tab === 'cloud' && <CloudTab settings={settings} locked={!admin} onChanged={onChanged} />}
         </div>

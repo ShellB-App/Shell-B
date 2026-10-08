@@ -401,6 +401,7 @@ class SearchEverything(unittest.TestCase):
         (shellb.WORKSPACES / self.conv / "node_modules").mkdir(exist_ok=True)
         (shellb.WORKSPACES / self.conv / "node_modules" / f"{self.WORD}_dep.js").write_text("x")
         search._files["at"] = 0.0  # rebuild the filename index
+        search._file_index()  # ...now, not inside the request's time budget (it timed out under load: a flaky test)
 
     def tearDown(self):
         import commitments

@@ -111,10 +111,37 @@ def get(name: str) -> dict:
     return s
 
 
-def _origin(name, source):
+def _origin(name, source, **extra):
+    """Where a skill came from. Community installs also keep url, ref, sha and path, for update checks."""
     o = db.kv_get("skill_origins", {})
-    o[name] = {"source": source, "at": time.time()}
+    o[name] = {"source": source, "at": time.time(), **extra}
     db.kv_set("skill_origins", o)
+
+
+def origin(name: str) -> dict:
+    return db.kv_get("skill_origins", {}).get(name, {})
+
+
+def install_tree(src: Path, name: str, source: str, enabled: bool = True, **extra) -> str:
+    """Copy a skill folder (holding SKILL.md) into the library as `name`, replacing any skill of that name."""
+    if not (src / "SKILL.md").is_file():
+        raise ValueError("That folder has no SKILL.md")
+    files = [p for p in src.rglob("*") if p.is_file() and not any(part in SKIP_DIRS for part in p.relative_to(src).parts)]
+    if len(files) > MAX_FILES or sum(p.stat().st_size for p in files) > MAX_SKILL_BYTES:
+        raise ValueError("That skill is too large (60 MB / 3000 files max)")
+    d = _dir(name)
+    tmp = SKILLS / f".install-{name}-{time.time_ns()}"
+    try:
+        shutil.copytree(src, tmp, ignore=shutil.ignore_patterns(*SKIP_DIRS), symlinks=False)
+        if d.exists():
+            shutil.rmtree(d)
+        tmp.rename(d)
+    finally:
+        if tmp.exists():
+            shutil.rmtree(tmp)
+    _origin(name, source, **extra)
+    set_enabled(name, enabled)
+    return name
 
 
 def save(content: str, name: str | None = None, source="local") -> dict:

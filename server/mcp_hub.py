@@ -70,11 +70,24 @@ CONNECTORS = [
                  "placeholder": "npx -y @modelcontextprotocol/server-everything"},
                 {"key": "env", "label": "Environment (KEY=value per line)", "kind": "secret", "multiline": True}]},
 ]
+# Installed from Discover (community.py): its form fields travel with the server config (cfg["community"]["fields"]).
+CONNECTORS.append({"id": "community", "name": "Community MCP server", "icon": "Compass", "category": "Community",
+                   "local": None, "hidden": True, "fields": []})
 CONNECTOR_BY_ID = {c["id"]: c for c in CONNECTORS}
 
 
-def build_config(connector_id: str, v: dict) -> dict:
+def fields_of(cfg_or_connector: dict, community: dict | None = None) -> list[dict]:
+    """The form fields of a server: its connector's, or for a community install the ones stored with it."""
+    if (cfg_or_connector.get("connector") or cfg_or_connector.get("id")) == "community":
+        return list(((community or cfg_or_connector.get("community")) or {}).get("fields") or [])
+    return CONNECTOR_BY_ID.get(cfg_or_connector.get("connector", ""), {}).get("fields", [])
+
+
+def build_config(connector_id: str, v: dict, community: dict | None = None) -> dict:
     """Turn a connector form into the transport part of a server config."""
+    if connector_id == "community":
+        import community as hub
+        return hub.build(community or {}, v)
     bearer = lambda t: {"Authorization": f"Bearer {t}"} if t else {}
     if connector_id == "folder":
         root = Path(str(v.get("path", "")).strip()).expanduser()
@@ -128,8 +141,7 @@ def _save(cfgs):
 
 
 def _secret_keys(cfg):
-    conn = CONNECTOR_BY_ID.get(cfg.get("connector", ""), {})
-    return {f["key"] for f in conn.get("fields", []) if f["kind"] == "secret"}
+    return {f["key"] for f in fields_of(cfg) if f["kind"] == "secret"}
 
 
 def public(cfg: dict) -> dict:
@@ -153,7 +165,8 @@ def upsert(body: dict) -> dict:
     for k, v in list(values.items()):  # placeholders mean "keep what is stored"
         if v == SECRET:
             values[k] = ((old or {}).get("values") or {}).get(k, "")
-    for f in CONNECTOR_BY_ID[connector]["fields"]:
+    community = body.get("community") or (old or {}).get("community") if connector == "community" else None
+    for f in fields_of({"connector": connector}, community):
         if f.get("required") and not str(values.get(f["key"], "")).strip():
             raise ValueError(f"{f['label']} is required")
     name = (body.get("name") or (old or {}).get("name") or CONNECTOR_BY_ID[connector]["name"]).strip()
@@ -166,7 +179,8 @@ def upsert(body: dict) -> dict:
            "enabled": body.get("enabled", (old or {}).get("enabled", True)),
            "disabledTools": body.get("disabledTools", (old or {}).get("disabledTools", [])),
            "createdAt": (old or {}).get("createdAt", time.time() * 1000),
-           **build_config(connector, values)}
+           **({"community": community} if community else {}),
+           **build_config(connector, values, community)}
     cfgs = [c for c in cfgs if c["id"] != sid] + [cfg] if not old else [cfg if c["id"] == sid else c for c in cfgs]
     _save(cfgs)
     return cfg
@@ -205,9 +219,17 @@ class Conn:
         self.ready = asyncio.Event()
         self.log = LOGS / f"{cfg['id']}.log"
 
+    def _container(self) -> str | None:
+        """Community servers run as `docker run --name shellb-mcp-<id>`; the container can outlive its docker CLI."""
+        args = self.cfg.get("args") or []
+        return args[args.index("--name") + 1] if "--name" in args and self.cfg.get("command", "").endswith("docker") else None
+
     def start(self):
         if self.task and not self.task.done():
             return
+        if self._container():  # a leftover from a crash would block the name
+            import subprocess
+            subprocess.run(["docker", "rm", "-f", self._container()], capture_output=True)
         self.ready = asyncio.Event()
         self.status, self.error = "starting", ""
         self.task = asyncio.create_task(self._main())
@@ -219,6 +241,10 @@ class Conn:
                 await self.task
             except BaseException:
                 pass
+        if self._container():
+            proc = await asyncio.create_subprocess_exec("docker", "rm", "-f", self._container(),
+                                                        stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
+            await proc.wait()
         self.status = "stopped"
 
     def _transport(self, stack: AsyncExitStack):

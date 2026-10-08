@@ -883,6 +883,8 @@ class Turn:
                     elif name == "schedule_task" and isinstance(args, dict) \
                             and str(args.get("action") or "create").lower() == "create":
                         res = await self._schedule_request(args, ctx, sink, idx)
+                    elif name == "find_capability" and isinstance(args, dict) and args.get("action") == "propose":
+                        res = await self._capability_proposal(args, ctx, sink, idx)
                     elif name in self.mcp_specs:
                         res = await mcp_hub.call(self.mcp_specs[name], args, ctx)
                     elif name not in TOOLS:
@@ -1012,6 +1014,42 @@ class Turn:
                    "stopped": "The turn was stopped."}.get(decision, "Not approved.")
             return ToolResult(f"{why} Nothing was scheduled.", error=True)
         return await schedules.schedule_task(args, ctx)
+
+    async def _capability_proposal(self, args, ctx, sink: Sink, idx):
+        """Install a community skill or MCP server the agent found, once the owner approves it here. Only a live,
+        top-level chat can ask; skills arrive switched on (the owner just read them), MCP servers switched off."""
+        import community
+        if not (self.interactive and self.depth == 0):
+            return ToolResult("Only a live chat can propose installs; tell the user what you'd install and why.", error=True)
+        try:
+            plan = await community.prepare_proposal(str(args.get("id") or ""), str(args.get("option") or ""))
+        except (KeyError, ValueError) as e:
+            return ToolResult(f"Can't propose that: {e}", error=True)
+        detail = (f"Why: {args['why']}\n\n" if args.get("why") else "") + plan["detail"]
+        aid = uuid.uuid4().hex
+        b = sink.blocks[idx]
+        b.update(status="approval", approval={"id": aid, "kind": "install", "title": plan["title"], "detail": detail})
+        await sink.update(idx)
+        decision = await remote.wait_approval(aid, self.abort, {"kind": "install", "conv": self.conv_id,
+                                                                "title": plan["title"], "detail": detail})
+        b.pop("approval", None)
+        b.update(status="running", decision=decision)
+        await sink.update(idx)
+        if decision not in ("allow", "allow_turn"):
+            why = {"deny": "The owner declined.", "timeout": "Nobody approved it within 15 minutes.",
+                   "stopped": "The turn was stopped."}.get(decision, "Not approved.")
+            return ToolResult(f"{why} Nothing was installed.", error=True)
+        try:
+            res = await community.install(str(args["id"]), plan.get("option", ""), {}, "", enable_skill=True)
+        except (KeyError, ValueError) as e:
+            return ToolResult(f"Install failed: {e}", error=True)
+        db.audit_log("community:install", {"id": args["id"], "as": res["name"], "by": self.agent.get("id")})
+        if res["kind"] == "skill":
+            return ToolResult(f"Installed the skill `{res['name']}` and switched it on; call use_skill to load it.")
+        await mcp_hub.sync()
+        return ToolResult(f"Installed the MCP server `{res['name']}` switched OFF"
+                          + (f" (it still needs: {', '.join(res['missing'])})" if res.get("missing") else "")
+                          + ". The owner turns it on under Tools → Servers, then adds it to an agent as mcp:" + res["name"] + ".")
 
     def _subagent_runner(self, parent_sink: Sink, parent_idx: int):
         async def run_sub(agent_id: str, task: str) -> str:

@@ -61,6 +61,7 @@ import remote
 import offline
 import selfmod
 import selfreview
+import community
 import ask
 import compaction
 import composer
@@ -143,6 +144,8 @@ selfmod.init()
 selfmod.register()
 selfreview.init()
 selfreview.register()
+community.init()
+community.register()
 codex.init()
 media.init()
 memory.init()
@@ -157,6 +160,7 @@ codex.register()
 commitments.register()
 app.include_router(selfmod.router)
 app.include_router(selfreview.router)
+app.include_router(community.router)
 app.include_router(composer.router)
 app.include_router(sysinfo.router)
 app.include_router(network.router)

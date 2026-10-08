@@ -22,6 +22,7 @@ READ_ACTIONS = {
     "research_board": {"view", "list", "open", "search"},
     "project_todos": {"list"},
     "schedule_task": {"list"},
+    "find_capability": {"search", "details"},
     "mega_plan": {"view"},
     "dev_server": {"status", "logs"},
     "shellb_self": {"about", "status", "logs", "source", "workspace", "history", "read_file", "search_files", "find_files", "diff"},

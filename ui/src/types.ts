@@ -66,7 +66,7 @@ export interface Connector {
   id: string;
   name: string;
   icon: string;
-  category: 'Local' | 'Cloud' | 'Custom';
+  category: 'Local' | 'Cloud' | 'Custom' | 'Community';
   local: boolean | null;
   description: string;
   fields: ConnectorField[];
@@ -86,7 +86,46 @@ export interface McpServer {
   status: 'stopped' | 'starting' | 'ready' | 'error';
   error: string;
   tools: { name: string; description: string; enabled: boolean; readOnly: boolean }[];
+  /** installed from Discover (server/community.py): where it came from, and its own form fields */
+  community?: { itemId: string; registryName: string; version: string; fields: ConnectorField[]; installedAt: number };
+  /** a community server still missing a required key */
+  incomplete?: boolean;
 }
+
+/** Discover (server/community.py): community MCP servers, skills and plugins. */
+export interface CommunityItem {
+  id: string;
+  kind: 'mcp' | 'skill' | 'plugin';
+  name: string;
+  title?: string;
+  description: string;
+  source: string;
+  repo?: string;
+  sha?: string;
+  version?: string;
+  publisher?: string;
+  plugin?: string;
+  license?: string;
+  installed?: { kind: 'skill' | 'mcp'; name: string; enabled?: boolean } | null;
+}
+
+export interface CommunityOption {
+  key: string; kind: 'remote' | 'npm' | 'pypi' | 'oci'; label: string; preview: string; local: boolean; fields: ConnectorField[];
+}
+
+export interface CommunityDetails extends CommunityItem {
+  content?: string;
+  files?: { path: string; size: number }[];
+  scripts?: string[];
+  url?: string;
+  options?: CommunityOption[];
+  skills?: CommunityItem[];
+  mcpServers?: string[];
+  note?: string;
+  websiteUrl?: string;
+}
+
+export interface CommunitySource { id: string; kind: 'registry' | 'github' | 'marketplace'; name: string; repo?: string; items: number; fetched: number; custom?: boolean }
 
 export interface Provider {
   name: string;
