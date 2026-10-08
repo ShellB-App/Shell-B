@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import clsx from 'clsx';
 import {
-  Box, ChevronDown, ChevronRight, FileCode, FileImage, FilePlus, FileText, FileType, Folder, History, Home, Loader2, Pencil,
-  RotateCcw, Trash2, Upload, Film, Music2, FileArchive, Shapes,
+  Box, ChevronDown, ChevronRight, Copy, Download, ExternalLink, FileCode, FileImage, FilePlus, FileText, FileType, Folder, History, Home, Link2,
+  Loader2, Pencil, RotateCcw, Trash2, Upload, Film, Music2, FileArchive, Shapes,
 } from 'lucide-react';
 import type { Commit, ProjectFile } from '../types';
 import { api, fmtBytes, rawUrl } from '../api';
 import { relTime } from '../components/common';
 import { AssetPicker } from '../components/Assets';
+import { openContextMenu, type MenuEntry } from '../components/ContextMenu';
+import { toast } from '../components/toast';
+import { copyText } from '../quote';
 
 type Node = { name: string; path: string; file?: ProjectFile; children: Node[] };
 
@@ -61,16 +64,131 @@ export function FilesPanel({ projectId, files, selected, entry, onSelect, onChan
   const [renaming, setRenaming] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const input = useRef<HTMLInputElement>(null);
+  const uploadDir = useRef<string | null>(null);  // "Upload here…" on a folder; otherwise assets/ or uploads/
+  const home = code ? 'uploads' : 'assets';
 
-  const upload = async (list: File[]) => {
+  // file actions report failures (a remote workspace refuses deletes, a name may be taken) instead of failing silently
+  const run = async (what: string, fn: () => Promise<unknown>) => {
+    try { await fn(); } catch (e) { toast(`Couldn’t ${what}: ${String(e instanceof Error ? e.message : e).replace(/^\d+: /, '')}`, { kind: 'error' }); }
+  };
+
+  const upload = async (list: File[], dir = home) => {
     if (!list.length) return;
     setUploading(list.length);
     try {
-      const r = await api.uploadAssets(projectId, list, code ? 'uploads' : 'assets');
+      const r = await api.uploadAssets(projectId, list, dir);
       onChanged();
       if (r.saved.length === 1) onSelect(r.saved[0]);
+    } catch (e) {
+      toast(`Couldn’t upload: ${String(e instanceof Error ? e.message : e).replace(/^\d+: /, '')}`, { kind: 'error' });
     } finally { setUploading(0); }
   };
+  const pickUploads = (dir: string | null) => { uploadDir.current = dir; input.current?.click(); };
+
+  const newFile = (prefix = '') => run('create the file', async () => {
+    const name = prompt(code ? 'New file path (e.g. src/utils.py, tests/test_utils.py):' : 'New file path (e.g. about.html, css/styles.css):', prefix);
+    if (!name?.trim() || name.trim().endsWith('/')) return;
+    await api.saveFile(projectId, name.trim(), ''); onChanged(); onSelect(name.trim());
+  });
+
+  const startRename = (path: string) => { setRenaming(path); setDraft(path); };
+  const finishRename = (from: string) => run('rename it', async () => {
+    const to = draft.trim().replace(/\/+$/, '');
+    setRenaming(null);
+    if (!to || to === from) return;
+    await api.moveFile(projectId, from, to);
+    onChanged();
+    // keep the open file open under its new name
+    if (selected === from) onSelect(to);
+    else if (selected?.startsWith(`${from}/`)) onSelect(to + selected.slice(from.length));
+  });
+
+  const remove = (path: string, folderFiles?: number) => {
+    const ask = folderFiles === undefined ? `Delete ${path}? You can restore it from History.`
+      : `Delete the folder ${path} and its ${folderFiles} file${folderFiles === 1 ? '' : 's'}? You can restore them from History.`;
+    if (!confirm(ask)) return;
+    run('delete it', async () => {
+      await api.deleteFile(projectId, path);
+      // the open file went with it: show the entry page instead of an editor for a file that's gone
+      const gone = (x?: string) => !!x && (x === path || x.startsWith(`${path}/`));
+      if (gone(selected) && entry && !gone(entry)) onSelect(entry);
+      onChanged();
+    });
+  };
+
+  const duplicate = (f: ProjectFile) => run('duplicate it', async () => {
+    const r = await fetch(rawUrl(projectId, f.path));
+    if (!r.ok) throw new Error(`${r.status}: ${r.statusText}`);
+    const slash = f.path.lastIndexOf('/');
+    // the upload picks a free name next to it ("logo-1.png"); it never overwrites. "." is the project root: an
+    // empty folder would fall back to the server's default, assets/
+    const saved = await api.uploadAssets(projectId, [new File([await r.blob()], f.path.slice(slash + 1))], slash < 0 ? '.' : f.path.slice(0, slash));
+    onChanged();
+    if (saved.saved[0]) onSelect(saved.saved[0]);
+  });
+
+  const download = (path: string) => {
+    const a = document.createElement('a');
+    a.href = rawUrl(projectId, path);
+    a.download = path.slice(path.lastIndexOf('/') + 1);
+    a.click();
+  };
+
+  const folders = useMemo(() => {
+    const out: string[] = [];
+    const walk = (ns: Node[]) => ns.forEach(n => { if (!n.file) { out.push(n.path); walk(n.children); } });
+    walk(tree);
+    return out;
+  }, [tree]);
+  const countFiles = (n: Node): number => (n.file ? 1 : n.children.reduce((k, c) => k + countFiles(c), 0));
+  const toggle = (path: string) => setClosed(s => { const x = new Set(s); if (x.has(path)) x.delete(path); else x.add(path); return x; });
+
+  const fileMenu = (f: ProjectFile): MenuEntry[] => [
+    { label: 'Open', icon: FileText, onSelect: () => onSelect(f.path) },
+    { label: f.kind === 'html' ? 'Preview in new tab' : 'Open in new tab', icon: ExternalLink, onSelect: () => window.open(rawUrl(projectId, f.path), '_blank', 'noopener') },
+    'sep',
+    { label: 'Rename / move…', icon: Pencil, hint: 'F2', onSelect: () => startRename(f.path) },
+    !f.path.toLowerCase().endsWith('.zip') && { label: 'Duplicate', icon: Copy, onSelect: () => duplicate(f) },
+    !code && f.kind === 'html' && f.path !== entry && { label: 'Make this the entry page', icon: Home,
+      onSelect: () => run('set the entry page', async () => { await api.patchProject(projectId, { entry: f.path }); onChanged(); }) },
+    'sep',
+    { label: 'Copy path', icon: Link2, onSelect: () => copyText(f.path, 'Path copied') },
+    { label: 'Download', icon: Download, onSelect: () => download(f.path) },
+    'sep',
+    { label: 'Delete…', icon: Trash2, danger: true, hint: 'Del', onSelect: () => remove(f.path) },
+  ];
+
+  const folderMenu = (n: Node): MenuEntry[] => [
+    { label: closed.has(n.path) ? 'Expand' : 'Collapse', icon: closed.has(n.path) ? ChevronRight : ChevronDown, onSelect: () => toggle(n.path) },
+    'sep',
+    { label: 'New file here…', icon: FilePlus, onSelect: () => newFile(`${n.path}/`) },
+    { label: 'Upload here…', icon: Upload, onSelect: () => pickUploads(n.path) },
+    'sep',
+    { label: 'Rename / move…', icon: Pencil, hint: 'F2', onSelect: () => startRename(n.path) },
+    { label: 'Copy path', icon: Link2, onSelect: () => copyText(n.path, 'Path copied') },
+    'sep',
+    { label: 'Delete folder…', icon: Trash2, danger: true, hint: 'Del', onSelect: () => remove(n.path, countFiles(n)) },
+  ];
+
+  const panelMenu: MenuEntry[] = [
+    { label: 'New file…', icon: FilePlus, onSelect: () => newFile() },
+    { label: code ? 'Upload files…' : 'Upload assets…', icon: Upload, onSelect: () => pickUploads(null) },
+    { label: 'Add from an asset library…', icon: Shapes, onSelect: () => setPicking(true) },
+    folders.length > 0 && 'sep',
+    folders.length > 0 && { label: 'Expand all', icon: ChevronDown, disabled: closed.size === 0, onSelect: () => setClosed(new Set()) },
+    folders.length > 0 && { label: 'Collapse all', icon: ChevronRight, disabled: closed.size === folders.length, onSelect: () => setClosed(new Set(folders)) },
+  ];
+
+  const renameBox = (path: string, mono = true) => (
+    <input autoFocus value={draft} onChange={e => setDraft(e.target.value)} onClick={e => e.stopPropagation()}
+      onKeyDown={e => {
+        e.stopPropagation();
+        if (e.key === 'Escape') setRenaming(null);
+        if (e.key === 'Enter') finishRename(path);
+      }}
+      onBlur={() => setRenaming(null)}
+      className={clsx('flex-1 min-w-0 bg-[var(--bg-primary)] px-1 rounded border border-[var(--accent)] focus:outline-none text-[11.5px]', mono && 'font-mono')} />
+  );
 
   const node = (n: Node, depth: number) => {
     const pad = { paddingLeft: 8 + depth * 12 };
@@ -78,12 +196,23 @@ export function FilesPanel({ projectId, files, selected, entry, onSelect, onChan
       const isClosed = closed.has(n.path);
       return (
         <div key={n.path}>
-          <button style={pad} onClick={() => setClosed(s => { const x = new Set(s); isClosed ? x.delete(n.path) : x.add(n.path); return x; })}
-            className="w-full flex items-center gap-1.5 pr-2 py-1 text-[12.5px] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] rounded-md">
-            {isClosed ? <ChevronRight className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-            <Folder className="w-3.5 h-3.5 text-[var(--text-muted)]" />{n.name}
-            <span className="ml-auto text-[10px] text-[var(--text-muted)]">{n.children.length}</span>
-          </button>
+          {renaming === n.path ? (
+            <div style={pad} className="flex items-center gap-1.5 pr-2 py-1 text-[12.5px]">
+              <Folder className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" />{renameBox(n.path)}
+            </div>
+          ) : (
+            <button style={pad} onClick={() => toggle(n.path)} aria-expanded={!isClosed}
+              onContextMenu={e => openContextMenu(e, folderMenu(n))}
+              onKeyDown={e => {
+                if (e.key === 'F2') { e.preventDefault(); startRename(n.path); }
+                else if (e.key === 'Delete') { e.preventDefault(); remove(n.path, countFiles(n)); }
+              }}
+              className="w-full flex items-center gap-1.5 pr-2 py-1 text-[12.5px] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] rounded-md">
+              {isClosed ? <ChevronRight className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              <Folder className="w-3.5 h-3.5 text-[var(--text-muted)]" />{n.name}
+              <span className="ml-auto text-[10px] text-[var(--text-muted)]">{n.children.length}</span>
+            </button>
+          )}
           {!isClosed && n.children.map(c => node(c, depth + 1))}
         </div>
       );
@@ -92,32 +221,30 @@ export function FilesPanel({ projectId, files, selected, entry, onSelect, onChan
     const active = selected === f.path;
     return (
       <div key={f.path} style={pad} onClick={() => renaming !== f.path && onSelect(f.path)} title={`${f.path} · ${fmtBytes(f.size)}`}
-        className={clsx('group flex items-center gap-1.5 pr-1 py-1 rounded-md cursor-pointer text-[12.5px]',
+        role="button" tabIndex={0} aria-current={active ? 'true' : undefined}
+        onContextMenu={e => { if (renaming !== f.path) openContextMenu(e, fileMenu(f)); }}
+        onKeyDown={e => {
+          if (e.target !== e.currentTarget || renaming === f.path) return;
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(f.path); }
+          else if (e.key === 'F2') { e.preventDefault(); startRename(f.path); }
+          else if (e.key === 'Delete') { e.preventDefault(); remove(f.path); }
+        }}
+        className={clsx('group flex items-center gap-1.5 pr-1 py-1 rounded-md cursor-pointer text-[12.5px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent)]/60',
           active ? 'bg-[var(--bg-hover)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]')}>
         <span className="w-3" />
         <FileIcon f={f} projectId={projectId} />
-        {renaming === f.path ? (
-          <input autoFocus value={draft} onChange={e => setDraft(e.target.value)} onClick={e => e.stopPropagation()}
-            onKeyDown={async e => {
-              if (e.key === 'Escape') setRenaming(null);
-              if (e.key === 'Enter' && draft.trim() && draft.trim() !== f.path) { await api.moveFile(projectId, f.path, draft.trim()); setRenaming(null); onChanged(); }
-            }}
-            onBlur={() => setRenaming(null)}
-            className="flex-1 min-w-0 bg-[var(--bg-primary)] px-1 rounded border border-[var(--accent)] focus:outline-none font-mono text-[11.5px]" />
-        ) : (
-          <span className="flex-1 min-w-0 truncate">{n.name}</span>
-        )}
+        {renaming === f.path ? renameBox(f.path) : <span className="flex-1 min-w-0 truncate">{n.name}</span>}
         {!code && f.path === entry && <Home className="w-3 h-3 text-[var(--accent)] shrink-0" aria-label="Entry page" />}
         {renaming !== f.path && (
           <span className="hidden group-hover:flex items-center shrink-0" onClick={e => e.stopPropagation()}>
             {!code && f.kind === 'html' && f.path !== entry && (
-              <button className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--accent)]" title="Make this the entry page"
-                onClick={async () => { await api.patchProject(projectId, { entry: f.path }); onChanged(); }}><Home className="w-3 h-3" /></button>
+              <button className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--accent)]" title="Make this the entry page" tabIndex={-1}
+                onClick={() => run('set the entry page', async () => { await api.patchProject(projectId, { entry: f.path }); onChanged(); })}><Home className="w-3 h-3" /></button>
             )}
-            <button className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)]" title="Rename / move"
-              onClick={() => { setRenaming(f.path); setDraft(f.path); }}><Pencil className="w-3 h-3" /></button>
-            <button className="p-0.5 rounded text-[var(--text-muted)] hover:text-red-400" title="Delete"
-              onClick={async () => { if (confirm(`Delete ${f.path}? You can restore it from History.`)) { await api.deleteFile(projectId, f.path); onChanged(); } }}>
+            <button className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)]" title="Rename / move (F2)" tabIndex={-1}
+              onClick={() => startRename(f.path)}><Pencil className="w-3 h-3" /></button>
+            <button className="p-0.5 rounded text-[var(--text-muted)] hover:text-red-400" title="Delete (Del)" tabIndex={-1}
+              onClick={() => remove(f.path)}>
               <Trash2 className="w-3 h-3" />
             </button>
           </span>
@@ -131,24 +258,23 @@ export function FilesPanel({ projectId, files, selected, entry, onSelect, onChan
       onDragOver={(e: DragEvent) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)}
       onDrop={(e: DragEvent) => { e.preventDefault(); setDrag(false); upload(Array.from(e.dataTransfer.files)); }}>
       <div className="flex items-center gap-1 px-2 py-1.5">
-        <input ref={input} type="file" multiple className="hidden" onChange={e => { upload(Array.from(e.target.files ?? [])); e.target.value = ''; }} />
-        <button onClick={() => input.current?.click()} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] hover:bg-[var(--bg-hover)]">
+        <input ref={input} type="file" multiple className="hidden"
+          onChange={e => { upload(Array.from(e.target.files ?? []), uploadDir.current ?? home); uploadDir.current = null; e.target.value = ''; }} />
+        <button onClick={() => pickUploads(null)} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] hover:bg-[var(--bg-hover)]">
           {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
           {uploading ? `Uploading ${uploading}…` : code ? 'Upload files' : 'Upload assets'}
         </button>
         <button title="Add from an asset library" className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
           onClick={() => setPicking(true)}><Shapes className="w-4 h-4" /></button>
         <button title="New file" className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
-          onClick={async () => {
-            const name = prompt(code ? 'New file path (e.g. src/utils.py, tests/test_utils.py):' : 'New file path (e.g. about.html, css/styles.css):');
-            if (name?.trim()) { await api.saveFile(projectId, name.trim(), ''); onChanged(); onSelect(name.trim()); }
-          }}><FilePlus className="w-4 h-4" /></button>
+          onClick={() => newFile()}><FilePlus className="w-4 h-4" /></button>
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto px-1 pb-2">
+      <div className="flex-1 min-h-0 overflow-y-auto px-1 pb-2" onContextMenu={e => openContextMenu(e, panelMenu)}>
         {tree.map(n => node(n, 0))}
         <p className="px-3 pt-3 text-[10.5px] leading-relaxed text-[var(--text-muted)]">
           {code ? <>Drop data files, logs, specs or a .zip here. Uploads go to <span className="font-mono">uploads/</span> and the agent can read them.</>
             : <>Drop logos, photos, fonts, PDFs or a .zip here. Uploads go to <span className="font-mono">assets/</span> and the agent can see them.</>}
+          {' '}Right-click a file or folder for more.
         </p>
       </div>
       {picking && <AssetPicker projectId={projectId} onClose={() => setPicking(false)}
