@@ -631,7 +631,7 @@ export function App() {
         onFork={id => forkChat(id)}
         onOpenSettings={() => { setSettingsTab('system'); setModal('settings'); }}
         groups={groups} activeGroupId={groupRoute?.id ?? (groupRoute ? '' : undefined)} onOpenGroup={openGroup}
-        onNewGroup={() => setNewProject(true)} onMoveToGroup={moveToGroup}
+        onNewGroup={() => setNewProject(true)} onMoveToGroup={moveToGroup} onGroupsChanged={loadGroups}
       />
 
       <main className="flex-1 flex flex-col min-w-0 h-full">
@@ -816,7 +816,7 @@ export function App() {
                 onStartChat={text => startProjectChat(groupRoute.id!, text)} onChanged={loadGroups}
                 onDeleted={() => { loadGroups(); loadConvs(); openGroup(); }} />
             ) : (
-              <ProjectsIndex projects={groups} onOpen={id => openGroup(id)} onNew={() => setNewProject(true)} />
+              <ProjectsIndex projects={groups} onOpen={id => openGroup(id)} onNew={() => setNewProject(true)} onChanged={loadGroups} />
             )}
           </div>
         ) : (<>

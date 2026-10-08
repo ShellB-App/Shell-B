@@ -8,8 +8,10 @@ import { api, fmtBytes } from '../api';
 import { AgentAvatar, Modal, btn, relTime } from './common';
 import { ProjectTodos } from './ProjectTodos';
 import { FavoriteStar } from './Favorites';
+import { openContextMenu } from './ContextMenu';
+import { chatProjectMenu, PROJECT_EMOJIS } from './projectMenu';
 
-const EMOJIS = ['📁', '🧪', '📐', '🛠️', '📊', '🧾', '🚀', '🎯', '🧠', '📦', '🔌', '🏭'];
+const EMOJIS = PROJECT_EMOJIS;
 
 export function ProjectGlyph({ project, size = 18 }: { project?: Pick<ChatProject, 'emoji' | 'name'>; size?: number }) {
   return (
@@ -64,7 +66,11 @@ export function NewProjectDialog({ open, onClose, onCreated }: { open: boolean; 
 
 // ── all projects ───────────────────────────────────────────────────────────
 
-export function ProjectsIndex({ projects, onOpen, onNew }: { projects: ChatProject[]; onOpen: (id: string) => void; onNew: () => void }) {
+export function ProjectsIndex({ projects, onOpen, onNew, onChanged }: {
+  projects: ChatProject[]; onOpen: (id: string) => void; onNew: () => void;
+  /** the list changed through a card's context menu (rename, icon, pin, delete) */
+  onChanged?: () => void;
+}) {
   const [q, setQ] = useState('');
   const shown = projects.filter(p => `${p.name} ${p.description}`.toLowerCase().includes(q.toLowerCase()));
   return (
@@ -81,6 +87,7 @@ export function ProjectsIndex({ projects, onOpen, onNew }: { projects: ChatProje
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {shown.map(p => (
             <button key={p.id} onClick={() => onOpen(p.id)}
+              onContextMenu={e => openContextMenu(e, chatProjectMenu(p, { onOpen: () => onOpen(p.id), onChanged: () => onChanged?.() }), { own: true })}
               className="text-left p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:border-[var(--border-strong)] hover:bg-[var(--bg-hover)] transition">
               <div className="flex items-center gap-2.5">
                 <ProjectGlyph project={p} size={26} />

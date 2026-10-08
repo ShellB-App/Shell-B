@@ -8,6 +8,8 @@ import { FavoriteStar } from '../components/Favorites';
 import { isFavorite } from '../favorites';
 import { ProjectView } from '../studio/ProjectView';
 import { SearchButton } from '../components/SearchButton';
+import { openContextMenu, openMenuAt } from '../components/ContextMenu';
+import { workspaceMenu } from '../components/projectMenu';
 
 interface Props {
   projectId?: string;
@@ -33,7 +35,6 @@ export default function Code(p: Props) {
 function CodeHome({ agents, theme, onToggleTheme, onExit, onOpenProject }: Props) {
   const [items, setItems] = useState<ProjectSummary[] | null>(null);
   const [dialog, setDialog] = useState<null | 'new' | 'clone' | 'ssh'>(null);
-  const [menu, setMenu] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState('');
   const zipInput = useRef<HTMLInputElement>(null);
@@ -97,7 +98,8 @@ function CodeHome({ agents, theme, onToggleTheme, onExit, onOpenProject }: Props
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {items.map(w => (
-                <div key={w.id} className="group relative rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:border-[var(--border-strong)] hover:bg-[var(--bg-hover)] transition">
+                <div key={w.id} className="group relative rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:border-[var(--border-strong)] hover:bg-[var(--bg-hover)] transition"
+                  onContextMenu={e => openContextMenu(e, workspaceMenu(w, { onOpen: () => onOpenProject(w.id), reload: load }), { own: true })}>
                   <button onClick={() => onOpenProject(w.id)} className="block w-full text-left p-3.5">
                     <div className="flex items-center gap-2">
                       {w.remote ? <Server className="w-4 h-4 text-amber-400 shrink-0" /> : <FolderGit2 className="w-4 h-4 text-[var(--accent)] shrink-0" />}
@@ -107,26 +109,10 @@ function CodeHome({ agents, theme, onToggleTheme, onExit, onOpenProject }: Props
                     <div className="text-[11px] text-[var(--text-muted)] mt-2 truncate">{w.remote ? `${w.remote.target}:${w.remote.path}${w.remote.autoApprove ? ' · auto' : ''}` : `${w.fileCount} files`} · {relTime(w.updatedAt)}</div>
                   </button>
                   <FavoriteStar kind="project" id={w.id} title={w.name} className={clsx('absolute right-9 top-3', !isFavorite('project', w.id) && 'opacity-0 group-hover:opacity-100 focus:opacity-100')} />
-                  <button onClick={() => setMenu(menu === w.id ? null : w.id)} aria-label="Workspace actions"
+                  <button onClick={e => openMenuAt(e, workspaceMenu(w, { onOpen: () => onOpenProject(w.id), reload: load }))} aria-label="Workspace actions" aria-haspopup="menu"
                     className="absolute right-2 top-3 p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]">
                     <MoreHorizontal className="w-4 h-4" />
                   </button>
-                  {menu === w.id && (
-                    <>
-                      <div className="fixed inset-0 z-10" onClick={() => setMenu(null)} />
-                      <div className="absolute right-2 top-10 z-20 w-40 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] shadow-2xl p-1 text-xs">
-                        <button className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-[var(--bg-hover)]"
-                          onClick={async () => { const n = prompt('Rename workspace', w.name); setMenu(null); if (n?.trim()) { await api.patchProject(w.id, { name: n.trim() }); load(); } }}>Rename</button>
-                        {!w.remote && <button className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-[var(--bg-hover)]"
-                          onClick={async () => { const n = prompt('Name for the copy', `${w.name} (copy)`); setMenu(null); if (n === null) return; try { await api.duplicateProject(w.id, n.trim()); load(); } catch (e) { alert(`Couldn't duplicate: ${e}`); } }}>Duplicate</button>}
-                        <a className="block px-2.5 py-1.5 rounded-lg hover:bg-[var(--bg-hover)]" href={`/api/projects/${w.id}/export.zip`} onClick={() => setMenu(null)}>Download .zip</a>
-                        <button className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-red-500/15 text-red-400 flex items-center gap-1.5"
-                          onClick={async () => { setMenu(null); if (confirm(w.remote ? `Remove "${w.name}" and its chats? The files on ${w.remote.host} stay where they are.` : `Delete "${w.name}" with all its files, history and chats? This cannot be undone.`)) { await api.deleteProject(w.id); load(); } }}>
-                          <Trash2 className="w-3.5 h-3.5" />Delete
-                        </button>
-                      </div>
-                    </>
-                  )}
                 </div>
               ))}
             </div>

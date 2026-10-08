@@ -803,6 +803,7 @@ export function MobileApp() {
                 projects={groups}
                 onOpen={id => openGroup(id)}
                 onNew={() => setNewProject(true)}
+                onChanged={loadGroups}
               />
             )}
           </div>

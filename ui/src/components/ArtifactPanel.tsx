@@ -9,6 +9,7 @@ import { frameApi } from '../api';
 import { Markdown } from './Markdown';
 import { btn } from './common';
 import { FavoriteStar } from './Favorites';
+import { downloadArtifact } from './artifactMenu';
 import { localizeCdn } from '../offline';
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -50,8 +51,6 @@ export function srcDoc(type: string, content: string, dark: boolean, scope?: str
   return '';
 }
 
-const EXT: Record<string, string> = { html: 'html', svg: 'svg', markdown: 'md', mermaid: 'mmd' };
-const LANG_EXT: Record<string, string> = { python: 'py', javascript: 'js', typescript: 'ts', bash: 'sh', shell: 'sh', rust: 'rs', go: 'go', c: 'c', cpp: 'cpp', java: 'java', json: 'json', yaml: 'yml', sql: 'sql', css: 'css', tsx: 'tsx', jsx: 'jsx' };
 
 interface Props {
   groups: ArtifactGroup[];
@@ -86,14 +85,7 @@ export function ArtifactPanel({ groups, activeId, version, dark, onSelect, onClo
 
   if (!group || !current) return null;
 
-  const download = () => {
-    const ext = current.type === 'code' ? LANG_EXT[current.language] ?? 'txt' : EXT[current.type] ?? 'txt';
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([current.content], { type: 'text/plain;charset=utf-8' }));
-    a.download = `${current.id}.${ext}`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
+  const download = () => downloadArtifact(current);
 
   return (
     <section

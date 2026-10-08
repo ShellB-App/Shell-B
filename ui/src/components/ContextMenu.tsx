@@ -23,7 +23,7 @@ export interface MenuAction {
 /** `'sep'` draws a divider; falsy entries are skipped, so items can be written as `cond && {…}`. */
 export type MenuEntry = MenuAction | 'sep' | false | null | undefined | '' | 0;
 
-interface MenuState { x: number; y: number; items: MenuEntry[]; key: number; keyboard: boolean; restore: HTMLElement | null }
+interface MenuState { x: number; y: number; items: MenuEntry[]; key: number; keyboard: boolean; restore: HTMLElement | null; anchor?: Element }
 
 let state: MenuState | null = null;
 const listeners = new Set<() => void>();
@@ -43,11 +43,15 @@ function clean(entries: MenuEntry[]): (MenuAction | 'sep')[] {
   return out;
 }
 
-/** Opens a menu for this contextmenu event. Returns false (and leaves the browser's menu) when it shouldn't take over. */
-export function openContextMenu(e: ReactMouseEvent | MouseEvent, entries: MenuEntry[]) {
+/**
+ * Opens a menu for this contextmenu event. Returns false (and leaves the browser's menu) when it shouldn't take over.
+ * `own`: the element is a card whose menu already covers its links and pictures (Open in new tab, Copy link…), so
+ * right-clicking those opens this menu too; text fields still keep the browser's.
+ */
+export function openContextMenu(e: ReactMouseEvent | MouseEvent, entries: MenuEntry[], opts: { own?: boolean } = {}) {
   if (e.shiftKey) return false;
   const target = e.target as Element | null;
-  if (target?.closest?.(NATIVE)) return false;
+  if (target?.closest?.(opts.own ? 'input, textarea, select, [contenteditable=""], [contenteditable="true"]' : NATIVE)) return false;
   const items = clean(entries);
   if (!items.some(i => i !== 'sep')) return false;
   e.preventDefault();
@@ -61,6 +65,19 @@ export function openContextMenu(e: ReactMouseEvent | MouseEvent, entries: MenuEn
   return true;
 }
 
+/** The same menu from a "⋯" button: opens under it, and a second click on the button closes it. */
+export function openMenuAt(e: ReactMouseEvent<Element>, entries: MenuEntry[]) {
+  e.preventDefault();
+  e.stopPropagation();
+  const anchor = e.currentTarget;
+  if (state?.anchor === anchor) { closeContextMenu(); return; }
+  const items = clean(entries);
+  if (!items.length) return;
+  const box = anchor.getBoundingClientRect();
+  // opened with Enter/Space (detail 0): start on the first item, as a keyboard menu should
+  set({ x: box.left, y: box.bottom + 4, items, key: Date.now(), keyboard: e.detail === 0, restore: anchor as HTMLElement, anchor });
+}
+
 export function closeContextMenu() {
   const s = state;
   set(null);
@@ -71,7 +88,11 @@ export function ContextMenuHost() {
   const s = useSyncExternalStore(cb => { listeners.add(cb); return () => { listeners.delete(cb); }; }, () => state, () => null);
   useEffect(() => {
     if (!s) return;
-    const away = (e: Event) => { if (!(e.target instanceof Element && e.target.closest('[data-context-menu]'))) set(null); };
+    const away = (e: Event) => {
+      const t = e.target instanceof Element ? e.target : null;
+      if (t?.closest('[data-context-menu]') || (s.anchor && t && s.anchor.contains(t))) return;  // its own button toggles it
+      set(null);
+    };
     const gone = () => set(null);
     document.addEventListener('pointerdown', away, true);
     document.addEventListener('scroll', away, true);

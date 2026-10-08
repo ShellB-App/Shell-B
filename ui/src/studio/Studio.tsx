@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import {
   ArrowLeft, Blocks, Box, Brush, Clapperboard, CodeXml, FileText, Gamepad2, LayoutDashboard, Loader2, Mail, Monitor, MoreHorizontal, Music, Palette, PenTool, Plus,
   Server,
-  Presentation, Share2, Smartphone, Sparkles, Sun, Moon, Trash2, Upload, X,
+  Presentation, Share2, Smartphone, Sparkles, Sun, Moon, Upload, X,
 } from 'lucide-react';
 import type { Agent, KindInfo, ModelInfo, ProjectKind, ProjectSummary } from '../types';
 import { api, fmtBytes } from '../api';
@@ -12,6 +12,8 @@ import { FavoriteStar } from '../components/Favorites';
 import { isFavorite } from '../favorites';
 import { ProjectView } from './ProjectView';
 import { SearchButton } from '../components/SearchButton';
+import { openContextMenu, openMenuAt } from '../components/ContextMenu';
+import { workspaceMenu } from '../components/projectMenu';
 
 export const KIND_ICON: Record<ProjectKind, typeof Monitor> = {
   website: Monitor, deck: Presentation, print: FileText, mobile: Smartphone, dashboard: LayoutDashboard,
@@ -47,7 +49,6 @@ function StudioHome({ theme, onToggleTheme, onExit, onOpenProject }: Props) {
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
   const [kinds, setKinds] = useState<Record<ProjectKind, KindInfo>>();
   const [creating, setCreating] = useState<ProjectKind | null>(null);
-  const [menu, setMenu] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState('');
   const importInput = useRef<HTMLInputElement>(null);
@@ -118,7 +119,8 @@ function StudioHome({ theme, onToggleTheme, onExit, onOpenProject }: Props) {
               {projects.map(pr => {
                 const I = KIND_ICON[pr.kind] ?? Sparkles;
                 return (
-                  <div key={pr.id} className="group relative rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] overflow-hidden hover:border-[var(--border-strong)] transition">
+                  <div key={pr.id} className="group relative rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] overflow-hidden hover:border-[var(--border-strong)] transition"
+                    onContextMenu={e => openContextMenu(e, workspaceMenu(pr, { onOpen: () => onOpenProject(pr.id), reload: load }), { own: true })}>
                     <button onClick={() => onOpenProject(pr.id)} className="block w-full text-left">
                       <div className="aspect-[16/10] bg-[var(--bg-tertiary)] overflow-hidden flex items-center justify-center">
                         {pr.cover ? <img src={pr.cover} alt="" className="w-full h-full object-cover object-top group-hover:scale-[1.02] transition-transform duration-300" />
@@ -133,26 +135,10 @@ function StudioHome({ theme, onToggleTheme, onExit, onOpenProject }: Props) {
                     </button>
                     <FavoriteStar kind="project" id={pr.id} title={pr.name}
                       className={clsx('absolute right-2 top-2 bg-black/50 backdrop-blur hover:bg-black/60', !isFavorite('project', pr.id) && 'opacity-0 group-hover:opacity-100 focus:opacity-100 !text-white/80')} />
-                    <button onClick={() => setMenu(menu === pr.id ? null : pr.id)} aria-label="Project actions"
+                    <button onClick={e => openMenuAt(e, workspaceMenu(pr, { onOpen: () => onOpenProject(pr.id), reload: load }))} aria-label="Project actions" aria-haspopup="menu"
                       className="absolute right-2 bottom-3 p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]">
                       <MoreHorizontal className="w-4 h-4" />
                     </button>
-                    {menu === pr.id && (
-                      <>
-                        <div className="fixed inset-0 z-10" onClick={() => setMenu(null)} />
-                        <div className="absolute right-2 bottom-10 z-20 w-40 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] shadow-2xl p-1 text-xs">
-                          <button className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-[var(--bg-hover)]"
-                            onClick={async () => { const n = prompt('Rename project', pr.name); setMenu(null); if (n?.trim()) { await api.patchProject(pr.id, { name: n.trim() }); load(); } }}>Rename</button>
-                          <button className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-[var(--bg-hover)]"
-                            onClick={async () => { const n = prompt('Name for the copy', `${pr.name} (copy)`); setMenu(null); if (n === null) return; try { await api.duplicateProject(pr.id, n.trim()); load(); } catch (e) { alert(`Couldn't duplicate: ${e}`); } }}>Duplicate</button>
-                          <a className="block px-2.5 py-1.5 rounded-lg hover:bg-[var(--bg-hover)]" href={`/api/projects/${pr.id}/export.zip`} onClick={() => setMenu(null)}>Download .zip</a>
-                          <button className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-red-500/15 text-red-400 flex items-center gap-1.5"
-                            onClick={async () => { setMenu(null); if (confirm(`Delete "${pr.name}" and all its files and history? This cannot be undone.`)) { await api.deleteProject(pr.id); load(); } }}>
-                            <Trash2 className="w-3.5 h-3.5" />Delete
-                          </button>
-                        </div>
-                      </>
-                    )}
                   </div>
                 );
               })}

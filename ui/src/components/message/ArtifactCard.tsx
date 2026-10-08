@@ -10,6 +10,11 @@ import {
 } from 'lucide-react';
 import type { ToolDisplay, WorkspaceFile } from '../../types';
 import { fmtBytes } from '../../api';
+import { artifactMenu } from '../artifactMenu';
+import { openContextMenu } from '../ContextMenu';
+
+// the chat on screen (#/c/<id>): artifact cards only appear inside one
+const currentConv = () => /^#\/c\/([\w-]+)/.exec(location.hash)?.[1];
 
 export function ArtifactCard({
   art,
@@ -42,6 +47,10 @@ export function ArtifactCard({
   return (
     <button
       onClick={onOpen}
+      onContextMenu={e => {
+        const convId = currentConv();
+        if (convId) openContextMenu(e, artifactMenu({ convId, id: art.id, title: art.title, type: art.type, version: art.version, onOpen }));
+      }}
       className={clsx(
         'w-full max-w-md my-2 p-3 rounded-xl border text-left flex items-center gap-3 transition group',
         active

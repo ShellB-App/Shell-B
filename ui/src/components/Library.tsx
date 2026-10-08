@@ -11,14 +11,16 @@ import { AgentAvatar, btn, relTime } from './common';
 import { FavoriteStar } from './Favorites';
 import { MediaGallery } from './Media';
 import { useFavorites } from '../favorites';
+import { artifactMenu, artifactViewUrl } from './artifactMenu';
+import { openContextMenu } from './ContextMenu';
+import { workspaceMenu } from './projectMenu';
 
 const SANDBOX = 'allow-scripts allow-forms allow-modals allow-popups allow-downloads allow-pointer-lock';
 const TYPE_LABEL: Record<string, string> = { html: 'HTML', svg: 'SVG', markdown: 'Markdown', mermaid: 'Diagram', code: 'Code' };
 const KIND_LABEL: Record<string, string> = { website: 'Website', deck: 'Deck', print: 'Print', mobile: 'Mobile', dashboard: 'Dashboard', blank: 'Canvas', code: 'Code workspace' };
 const TYPE_ICON: Record<string, typeof Boxes> = { html: AppWindow, svg: ImageIcon, markdown: FileText, mermaid: GitFork, code: FileCode2 };
 
-/** Full-page link for one artifact; opens in its own tab, still sandboxed. */
-export const artifactViewUrl = (convId: string, artId: string) => `${location.pathname}#/view/${convId}/${artId}`;
+export { artifactViewUrl } from './artifactMenu';
 
 type Item =
   | { kind: 'artifact'; key: string; ts: number; a: LibraryArtifact }
@@ -147,7 +149,8 @@ export function Library({ agents, dark, onOpenArtifact, initial = 'all' }: Props
       const agent = agents.find(x => x.id === a.agentId);
       const Icon = TYPE_ICON[a.type] ?? Boxes;
       return (
-        <div key={it.key} className="group rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:border-[var(--border-strong)] transition overflow-hidden flex flex-col">
+        <div key={it.key} className="group rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:border-[var(--border-strong)] transition overflow-hidden flex flex-col"
+          onContextMenu={e => openContextMenu(e, artifactMenu({ ...a, content: a, onOpen: () => onOpenArtifact(a.convId, a.id), openLabel: 'Open in its chat' }), { own: true })}>
           <button onClick={() => onOpenArtifact(a.convId, a.id)} className="relative aspect-[16/10] bg-[var(--bg-tertiary)] border-b border-[var(--border-subtle)] overflow-hidden text-left" title="Open in its chat">
             <ArtifactThumb a={a} dark={dark} />
             <span className="absolute inset-0 group-hover:bg-black/5 transition" />
@@ -177,7 +180,8 @@ export function Library({ agents, dark, onOpenArtifact, initial = 'all' }: Props
     const p = it.p;
     const isCode = p.kind === 'code';
     return (
-      <div key={it.key} className="group rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:border-[var(--border-strong)] transition overflow-hidden flex flex-col">
+      <div key={it.key} className="group rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:border-[var(--border-strong)] transition overflow-hidden flex flex-col"
+        onContextMenu={e => openContextMenu(e, workspaceMenu(p, { onOpen: () => { location.hash = isCode ? `#/code/${p.id}` : `#/studio/${p.id}`; }, reload: load }), { own: true })}>
         <a href={rawUrl(p.id, p.entry)} target="_blank" rel="noopener" className="relative block aspect-[16/10] bg-[var(--bg-tertiary)] border-b border-[var(--border-subtle)] overflow-hidden" title="Launch in a new tab">
           <AppThumb p={p} />
           <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-black/60 text-white backdrop-blur">Web app</span>

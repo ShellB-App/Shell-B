@@ -7,6 +7,7 @@ import { fmtBytes } from '../api';
 import { AgentAvatar, Snippet } from './common';
 import { isFavorite, refreshFavorites, setFavorite, useFavorites } from '../favorites';
 import { openContextMenu, type MenuEntry } from './ContextMenu';
+import { chatProjectMenu } from './projectMenu';
 import { copyText } from '../quote';
 import { FavIcon, FavoriteStar } from './Favorites';
 import { req } from '../api';
@@ -34,6 +35,8 @@ interface Props {
   onNewGroup: () => void;
   onMoveToGroup: (convId: string, groupId: string | null) => void;
   onFork?: (id: string) => void;
+  /** a project changed through its context menu (rename, icon, pin, delete) */
+  onGroupsChanged?: () => void;
 }
 
 function bucket(ts: number) {
@@ -257,6 +260,7 @@ export function Sidebar(p: Props) {
             </div>
             {p.groups.slice(0, 6).map(g => (
               <button key={g.id} onClick={() => p.onOpenGroup(g.id)}
+                onContextMenu={e => openContextMenu(e, chatProjectMenu(g, { onOpen: () => p.onOpenGroup(g.id), onChanged: () => p.onGroupsChanged?.() }))}
                 className={clsx('w-full flex items-center gap-2 pl-2 pr-2 py-1.5 rounded-lg text-[13px] text-left transition',
                   p.activeGroupId === g.id ? 'bg-[var(--bg-hover)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]')}>
                 <ProjectGlyph project={g} size={16} />
