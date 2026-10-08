@@ -877,6 +877,8 @@ export interface Meeting {
   summary?: string;
   summaryData?: MeetingSummaryData;
   codexEntryId?: string | null;
+  /** how voices were told apart: 'wespeaker-r34-lm' (neural voice prints) or 'legacy-17d' (pitch/timbre features) */
+  diarizer?: string;
 }
 
 export interface MeetingSummaryItem {

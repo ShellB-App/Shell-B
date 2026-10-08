@@ -44,7 +44,7 @@ CORE_DIRS = [
     "projects", "project-meta", "codex", "skills", "groups",
     "research", "sky", "files", "selfmod", "cells", "cli-home", "ssh", "worlds", "notify"
 ]
-MEDIA_DIRS = ["workspaces", "assets", "asset-thumbs"]
+MEDIA_DIRS = ["workspaces", "assets", "asset-thumbs", "secretary"]
 ALL_DATA_DIRS = CORE_DIRS + MEDIA_DIRS
 
 INDIVIDUAL_FILES = ["admin.key", "datasets.json"]

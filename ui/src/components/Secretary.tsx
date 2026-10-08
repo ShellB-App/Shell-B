@@ -6,7 +6,7 @@ import {
   ListOrdered, ListTodo, Loader2, Mic, MicOff, Monitor, Pause, Play, Plus,
   RefreshCw, Search, Send, ShieldAlert, Sliders, Sparkles, Split, Trash2, Upload, Users, Volume2, X
 } from 'lucide-react';
-import { api } from '../api';
+import { api, req } from '../api';
 import { SECURE_URL, secureHere } from '../secureUrl';
 import type { Meeting, MeetingSpeaker, MeetingSummaryItem, MeetingUtterance } from '../types';
 import { Markdown } from './Markdown';
@@ -550,7 +550,15 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
     if (!meeting) return;
     setRediarizing(true);
     try {
-      const updated = await api.secretaryRediarize(meeting.id, numSpeakers, voiceSensitivity);
+      // neural voice prints from the saved audio when there is some; the stored features otherwise (409)
+      let updated: Meeting;
+      try {
+        updated = await req<Meeting>(`/api/secretary/meetings/${meeting.id}/reembed`,
+          { method: 'POST', body: JSON.stringify({ numSpeakers, sensitivity: voiceSensitivity }) });
+      } catch (e) {
+        if (!String(e).startsWith('Error: 409')) throw e;
+        updated = await api.secretaryRediarize(meeting.id, numSpeakers, voiceSensitivity);
+      }
       setMeeting(updated);
       setRediarizeModalOpen(false);
       await loadMeetings();
@@ -1077,6 +1085,12 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                 {rediarizing ? <Loader2 className="w-3 h-3 animate-spin text-[var(--accent)]" /> : <Split className="w-3 h-3 text-[var(--accent)]" />}
                 <span>Separate Voices</span>
               </button>
+              <span className="px-2 py-0.5 rounded-md border border-[var(--border-subtle)] text-[10px] text-[var(--text-muted)]"
+                title={meeting.diarizer === 'wespeaker-r34-lm'
+                  ? 'Voices told apart by neural voice prints (WeSpeaker, on this machine)'
+                  : 'Voices told apart by pitch and timbre only; meetings recorded from now on use neural voice prints'}>
+                Voice ID: {meeting.diarizer === 'wespeaker-r34-lm' ? 'neural' : 'basic'}
+              </span>
 
               <button
                 onClick={handleSuggestNames}

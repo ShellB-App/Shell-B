@@ -56,6 +56,156 @@ SPEAKER_PALETTE = [
 # meeting_id -> { speaker_id -> list of feature vectors }
 _SPEAKER_VECTORS: dict[str, dict[str, list[np.ndarray]]] = {}
 
+# ── neural voice prints (HERMES /speaker_embed, WeSpeaker ResNet34) ──────────
+# Cosine *distance* (1 - similarity) between a clip and a speaker's centroid. Measured on this box: the same voice in
+# two speaking styles is ~0.29 apart; different voices 0.49-0.96 (similar women's voices are the close ones).
+NEURAL = "wespeaker-r34-lm"
+COSINE_THRESHOLDS = {"strict": 0.40, "high": 0.40, "balanced": 0.50, "normal": 0.50, "relaxed": 0.62, "low": 0.62}
+NEW_SPEAKER_MIN_SECONDS = 1.5   # a shorter clip joins the nearest speaker rather than inventing a new one
+MERGE_MAX_SECONDS, MERGE_MAX_UTTS = 4.0, 2  # clusters this small are folded into their nearest neighbour
+RECLUSTER_EVERY = 25            # live meetings re-cluster everything this often
+AUDIO = db.DATA / "secretary"   # each utterance's audio (and uploads), so voices can be re-identified later
+_NEURAL: dict[str, dict[str, np.ndarray]] = {}   # meeting -> utterance id -> embedding
+_hermes_down_until = 0.0
+
+
+def _vec_init():
+    with db.conn() as c:
+        c.execute("CREATE TABLE IF NOT EXISTS meeting_vectors(meeting_id TEXT, utt_id TEXT, model TEXT, vec BLOB, "
+                  "PRIMARY KEY(meeting_id, utt_id, model))")
+        cols = {r["name"] for r in c.execute("PRAGMA table_info(meetings)")}
+        if "diarizer" not in cols:
+            c.execute("ALTER TABLE meetings ADD COLUMN diarizer TEXT DEFAULT 'legacy-17d'")
+
+
+def _vec_put(mid: str, uid: str, vec: np.ndarray):
+    with db.conn() as c:
+        c.execute("INSERT OR REPLACE INTO meeting_vectors VALUES(?,?,?,?)",
+                  (mid, uid, NEURAL, np.asarray(vec, dtype=np.float32).tobytes()))
+    _NEURAL.setdefault(mid, {})[uid] = np.asarray(vec, dtype=np.float32)
+
+
+def _vecs(mid: str) -> dict[str, np.ndarray]:
+    if mid not in _NEURAL:
+        with db.conn() as c:
+            rows = c.execute("SELECT utt_id, vec FROM meeting_vectors WHERE meeting_id=? AND model=?", (mid, NEURAL)).fetchall()
+        _NEURAL[mid] = {r["utt_id"]: np.frombuffer(r["vec"], dtype=np.float32) for r in rows}
+    return _NEURAL[mid]
+
+
+def _set_diarizer(mid: str, name: str):
+    with db.conn() as c:
+        c.execute("UPDATE meetings SET diarizer=? WHERE id=?", (name, mid))
+
+
+async def _embed(audio: bytes, filename: str, segments: list | None = None) -> list | None:
+    """Voice prints from HERMES: one per segment (or one for the clip). None when HERMES can't (then the old pitch/MFCC
+    features are used); after a failure it isn't asked again for a minute."""
+    global _hermes_down_until
+    if time.time() < _hermes_down_until:
+        return None
+    try:
+        data = {"segments": json.dumps(segments)} if segments else None
+        async with httpx.AsyncClient(timeout=20 if not segments else 300) as c:
+            r = await c.post(f"{HERMES}/speaker_embed", files={"file": (filename, audio)}, data=data)
+        r.raise_for_status()
+        return [np.asarray(e, dtype=np.float32) if e else None for e in r.json()["embeddings"]]
+    except Exception as e:  # noqa: BLE001
+        log.info("speaker_embed unavailable (%s); using basic voice features", e)
+        _hermes_down_until = time.time() + 60
+        return None
+
+
+def _cosine_cluster(vecs: list[np.ndarray], durs: list[float], threshold: float, k: int | None = None) -> list[list[int]]:
+    """Average-linkage agglomerative clustering on cosine distance (vectors are unit length), then small clusters are
+    folded into the nearest bigger one. `k` forces exactly that many clusters."""
+    n = len(vecs)
+    if n == 0:
+        return []
+    X = np.stack(vecs)
+    D = 1.0 - X @ X.T
+    np.fill_diagonal(D, np.inf)
+    clusters = {i: [i] for i in range(n)}
+    while len(clusters) > 1:
+        keys = list(clusters)
+        sub = D[np.ix_(keys, keys)]
+        a, b = np.unravel_index(np.argmin(sub), sub.shape)
+        d = sub[a, b]
+        if k is None and d > threshold or k is not None and len(clusters) <= k:
+            break
+        i, j = keys[a], keys[b]
+        ni, nj = len(clusters[i]), len(clusters[j])
+        D[i, :] = D[:, i] = (D[i, :] * ni + D[j, :] * nj) / (ni + nj)  # average linkage (Lance-Williams)
+        D[i, i] = np.inf
+        D[j, :] = D[:, j] = np.inf
+        clusters[i] += clusters.pop(j)
+    out = list(clusters.values())
+    if k is None and len(out) > 1:
+        big = [c for c in out if sum(durs[x] for x in c) > MERGE_MAX_SECONDS or len(c) > MERGE_MAX_UTTS]
+        small = [c for c in out if c not in big]
+        if big:
+            cents = [X[c].mean(axis=0) for c in big]
+            for c in small:
+                v = X[c].mean(axis=0)
+                big[int(np.argmax([v @ ct for ct in cents]))] += c
+            out = big
+    return [sorted(c) for c in out]
+
+
+def _apply_clusters(m: dict, clusters: list[list[str]], keep_unclustered_to: dict | None = None):
+    """Give utterances (by id) their new speakers, keeping names and colours: each new cluster takes the old speaker
+    id it overlaps most, so a speaker renamed "Brad" stays Brad."""
+    old = {s["id"]: s for s in m.get("speakers", [])}
+    by_utt = {u["id"]: u for u in m.get("utterances", [])}
+    clusters = sorted(clusters, key=lambda c: min(by_utt[u]["start"] for u in c))
+    used, new = set(), []
+    for c in clusters:
+        votes: dict[str, float] = {}
+        for uid in c:
+            sid = by_utt[uid].get("speakerId")
+            votes[sid] = votes.get(sid, 0) + (by_utt[uid]["end"] - by_utt[uid]["start"])
+        pick = next((sid for sid, _ in sorted(votes.items(), key=lambda kv: -kv[1]) if sid in old and sid not in used), None)
+        if pick:
+            spk = {**old[pick]}
+        else:
+            n = 1
+            while f"spk_{n}" in used or f"spk_{n}" in old:
+                n += 1
+            spk = {"id": f"spk_{n}", "name": f"Speaker {n}", "color": SPEAKER_PALETTE[(n - 1) % len(SPEAKER_PALETTE)]}
+        used.add(spk["id"])
+        pitches = [by_utt[u]["pitch"] for u in c if by_utt[u].get("pitch")]
+        spk.update(utteranceCount=len(c), totalDuration=round(sum(by_utt[u]["end"] - by_utt[u]["start"] for u in c), 1),
+                   pitch=round(float(np.mean(pitches)), 1) if pitches else spk.get("pitch", 150.0))
+        for uid in c:
+            by_utt[uid]["speakerId"], by_utt[uid]["speakerName"] = spk["id"], spk["name"]
+        new.append(spk)
+    if new:  # utterances without a voice print go with the speaker just before them
+        last = new[0]
+        ids = {s["id"]: s for s in new}
+        for u in m["utterances"]:
+            if u["speakerId"] in ids and any(u["id"] in c for c in clusters):
+                last = ids[u["speakerId"]]
+            elif not any(u["id"] in c for c in clusters):
+                u["speakerId"], u["speakerName"] = last["id"], last["name"]
+    m["speakers"] = new
+
+
+def _neural_recluster(m: dict, threshold: float, k: int | None = None) -> bool:
+    """Re-cluster a meeting on its voice prints. False if too few utterances have one (<80%)."""
+    vecs = _vecs(m["id"])
+    utts = [u for u in m.get("utterances", []) if u["id"] in vecs]
+    if not utts or len(utts) < 0.8 * len(m.get("utterances", [])):
+        return False
+    groups = _cosine_cluster([vecs[u["id"]] for u in utts], [u["end"] - u["start"] for u in utts], threshold, k)
+    _apply_clusters(m, [[utts[i]["id"] for i in g] for g in groups])
+    return True
+
+
+def _save_audio(mid: str, name: str, data: bytes):
+    d = AUDIO / mid
+    d.mkdir(parents=True, exist_ok=True)
+    (d / name).write_bytes(data)
+
 
 def init():
     with db.conn() as c:
@@ -75,6 +225,7 @@ CREATE TABLE IF NOT EXISTS meetings(
 );
 CREATE INDEX IF NOT EXISTS idx_meetings_created ON meetings(created);
 """)
+    _vec_init()
 
 
 def _extract_voice_features(audio: np.ndarray, sr: int = 16000) -> tuple[np.ndarray, float]:
@@ -362,7 +513,12 @@ async def patch_meeting(mid: str, req: Request):
 async def delete_meeting(mid: str):
     with db.conn() as c:
         c.execute("DELETE FROM meetings WHERE id=?", (mid,))
+        c.execute("DELETE FROM meeting_vectors WHERE meeting_id=?", (mid,))  # voice prints are biometric: they go too
     _SPEAKER_VECTORS.pop(mid, None)
+    _NEURAL.pop(mid, None)
+    if re.fullmatch(r"[A-Za-z0-9_-]+", mid or ""):
+        import shutil
+        shutil.rmtree(AUDIO / mid, ignore_errors=True)
     return {"deleted": True, "id": mid}
 
 
@@ -417,12 +573,39 @@ async def process_utterance(
     except Exception as e:
         log.info("Could not extract acoustic features directly via soundfile: %s", e)
 
+    # 2b. Neural voice print (HERMES); the basic features above stay as the fallback
+    uid = db.new_id("utt")
+    neural = await _embed(audio_bytes, filename)
+    nvec = neural[0] if neural else None
+    try:
+        _save_audio(mid, f"{uid}{Path(filename).suffix or '.wav'}", audio_bytes)
+    except OSError as e:
+        log.info("couldn't keep utterance audio: %s", e)
+
     # 3. Speaker assignment & diarization
     vectors_map = _ensure_meeting_vectors(mid, m)
     active_threshold = SENSITIVITY_THRESHOLDS.get(sensitivity or "balanced", SPEAKER_DIST_THRESHOLD)
 
     assigned_speaker = None
     speakers: list[dict] = m.get("speakers", [])
+
+    if not speaker_hint and nvec is not None:
+        # neural: nearest speaker centroid by cosine distance; only a clip long enough to trust starts a new speaker
+        prints = _vecs(mid)
+        by_spk: dict[str, list[np.ndarray]] = {}
+        for u in m.get("utterances", []):
+            if u["id"] in prints:
+                by_spk.setdefault(u["speakerId"], []).append(prints[u["id"]])
+        best, best_d = None, float("inf")
+        for spk in speakers:
+            if by_spk.get(spk["id"]):
+                cent = np.mean(by_spk[spk["id"]], axis=0)
+                d = 1.0 - float(nvec @ (cent / (np.linalg.norm(cent) + 1e-9)))
+                if d < best_d:
+                    best, best_d = spk, d
+        if best and (best_d <= COSINE_THRESHOLDS.get(sensitivity or "balanced", 0.50)
+                     or clip_duration < NEW_SPEAKER_MIN_SECONDS):
+            assigned_speaker = best
 
     if speaker_hint:
         # User explicitly designated a speaker
@@ -431,8 +614,8 @@ async def process_utterance(
                 assigned_speaker = spk
                 break
 
-    if not assigned_speaker and vec is not None:
-        # Match against existing speaker centroids
+    if not assigned_speaker and vec is not None and nvec is None:
+        # Match against existing speaker centroids (basic pitch/MFCC features: only when HERMES has no voice print)
         best_spk = None
         min_dist = float("inf")
 
@@ -448,19 +631,22 @@ async def process_utterance(
 
         if best_spk and min_dist <= active_threshold:
             assigned_speaker = best_spk
-        else:
-            # Create a new speaker
-            spk_idx = len(speakers) + 1
-            color = SPEAKER_PALETTE[(spk_idx - 1) % len(SPEAKER_PALETTE)]
-            assigned_speaker = {
-                "id": f"spk_{spk_idx}",
-                "name": f"Speaker {spk_idx}",
-                "color": color,
-                "pitch": round(pitch_est, 1),
-                "utteranceCount": 0,
-                "totalDuration": 0.0,
-            }
-            speakers.append(assigned_speaker)
+
+    if not assigned_speaker and (vec is not None or nvec is not None):
+        # nobody close enough: a new speaker
+        spk_idx = len(speakers) + 1
+        while any(sp["id"] == f"spk_{spk_idx}" for sp in speakers):
+            spk_idx += 1
+        color = SPEAKER_PALETTE[(spk_idx - 1) % len(SPEAKER_PALETTE)]
+        assigned_speaker = {
+            "id": f"spk_{spk_idx}",
+            "name": f"Speaker {spk_idx}",
+            "color": color,
+            "pitch": round(pitch_est, 1),
+            "utteranceCount": 0,
+            "totalDuration": 0.0,
+        }
+        speakers.append(assigned_speaker)
 
     if not assigned_speaker:
         if speakers:
@@ -487,7 +673,7 @@ async def process_utterance(
 
     # 4. Create and store utterance
     utt = {
-        "id": db.new_id("utt"),
+        "id": uid,
         "speakerId": assigned_speaker["id"],
         "speakerName": assigned_speaker["name"],
         "start": round(actual_start, 2),
@@ -502,6 +688,13 @@ async def process_utterance(
     m["speakers"] = speakers
     m["duration"] = max(float(m.get("duration") or 0.0), actual_end)
     m["status"] = "recording"
+    if nvec is not None:
+        _vec_put(mid, uid, nvec)
+        _set_diarizer(mid, NEURAL)
+        if len(m["utterances"]) % RECLUSTER_EVERY == 0:  # early guesses get revisited as voices become clearer
+            _neural_recluster(m, COSINE_THRESHOLDS.get(sensitivity or "balanced", 0.50))
+            utt = next(u for u in m["utterances"] if u["id"] == uid)
+            speakers = m["speakers"]
     _save_meeting(m)
 
     return {
@@ -625,8 +818,21 @@ async def upload_meeting_audio(mid: str, file: UploadFile = File(...)):
     m["duration"] = round(total_dur, 2)
     m["status"] = "completed"
     _SPEAKER_VECTORS[mid] = vectors_by_speaker
-    _save_meeting(m)
 
+    # neural voice prints for every segment in one HERMES call; they replace the basic grouping above when they work
+    try:
+        _save_audio(mid, f"source{Path(filename).suffix or '.wav'}", audio_bytes)
+    except OSError as e:
+        log.info("couldn't keep meeting audio: %s", e)
+    prints = await _embed(audio_bytes, filename, [[u["start"], u["end"]] for u in utterances])
+    if prints:
+        for u, v in zip(utterances, prints):
+            if v is not None:
+                _vec_put(mid, u["id"], v)
+        if _neural_recluster(m, COSINE_THRESHOLDS["balanced"]):
+            _set_diarizer(mid, NEURAL)
+    _save_meeting(m)
+    m["diarizer"] = _load_meeting(mid).get("diarizer")
     return m
 
 
@@ -644,6 +850,14 @@ async def rediarize_meeting(mid: str, req: Request):
 
     utterances = m.get("utterances", [])
     if not utterances:
+        return m
+    # neural voice prints when (nearly) every utterance has one; the basic features otherwise
+    k = int(num_speakers) if num_speakers and int(num_speakers) >= 1 else None
+    if _neural_recluster(m, COSINE_THRESHOLDS.get(sensitivity, 0.50), k):
+        _SPEAKER_VECTORS.pop(mid, None)
+        _save_meeting(m)
+        _set_diarizer(mid, NEURAL)
+        m["diarizer"] = NEURAL
         return m
 
     # Filter utterances that have voice vectors
@@ -663,59 +877,59 @@ async def rediarize_meeting(mid: str, req: Request):
     else:
         clusters = _cluster_vectors_agglomerative(vectors, threshold=threshold)
 
-    # Sort clusters by order of appearance of first utterance
-    clusters.sort(key=lambda c: min(c))
-
-    # Build new speakers list
-    new_speakers = []
-    new_vectors_by_spk = {}
-
-    for cluster_idx, member_indices in enumerate(clusters):
-        spk_id = f"spk_{cluster_idx + 1}"
-        color = SPEAKER_PALETTE[cluster_idx % len(SPEAKER_PALETTE)]
-
-        # Compute average pitch and total duration for this cluster
-        cluster_pitches = []
-        cluster_dur = 0.0
-        for m_idx in member_indices:
-            orig_u_idx = indices_with_vectors[m_idx]
-            u = utterances[orig_u_idx]
-            if u.get("pitch"):
-                cluster_pitches.append(u["pitch"])
-            dur = max(0.0, float(u.get("end", 0)) - float(u.get("start", 0)))
-            cluster_dur += dur
-
-        avg_pitch = round(float(np.mean(cluster_pitches)), 1) if cluster_pitches else 150.0
-
-        spk_obj = {
-            "id": spk_id,
-            "name": f"Speaker {cluster_idx + 1}",
-            "color": color,
-            "pitch": avg_pitch,
-            "utteranceCount": len(member_indices),
-            "totalDuration": round(cluster_dur, 1),
-        }
-        new_speakers.append(spk_obj)
-
-        cluster_vecs = [vectors[m_idx] for m_idx in member_indices]
-        new_vectors_by_spk[spk_id] = cluster_vecs
-
-        # Update utterances
-        for m_idx in member_indices:
-            orig_u_idx = indices_with_vectors[m_idx]
-            utterances[orig_u_idx]["speakerId"] = spk_id
-            utterances[orig_u_idx]["speakerName"] = spk_obj["name"]
-
-    # For utterances without vectors (if any), assign to nearest or first speaker
-    for idx, u in enumerate(utterances):
-        if idx not in indices_with_vectors and new_speakers:
-            u["speakerId"] = new_speakers[0]["id"]
-            u["speakerName"] = new_speakers[0]["name"]
-
-    m["speakers"] = new_speakers
-    m["utterances"] = utterances
-    _SPEAKER_VECTORS[mid] = new_vectors_by_spk
+    # basic features: also fold tiny clusters into their nearest neighbour (they were most of the 51 "speakers")
+    if not num_speakers and len(clusters) > 1:
+        durs = [max(0.0, float(utterances[i]["end"]) - float(utterances[i]["start"])) for i in indices_with_vectors]
+        big = [c for c in clusters if sum(durs[x] for x in c) > MERGE_MAX_SECONDS or len(c) > MERGE_MAX_UTTS]
+        if big:
+            cents = [np.mean([vectors[x] for x in c], axis=0) for c in big]
+            for c in (c for c in clusters if c not in big):
+                v = np.mean([vectors[x] for x in c], axis=0)
+                big[int(np.argmin([float(np.linalg.norm(v - ct)) for ct in cents]))].extend(c)
+            clusters = big
+    _apply_clusters(m, [[utterances[indices_with_vectors[x]]["id"] for x in c] for c in clusters])
+    _SPEAKER_VECTORS.pop(mid, None)
     _save_meeting(m)
+    m["diarizer"] = "legacy-17d"
+    return m
+
+
+@router.post("/meetings/{mid}/reembed")
+async def reembed_meeting(mid: str, req: Request):
+    """Compute neural voice prints again from the audio kept for this meeting, then re-cluster. 409 when the meeting
+    kept no audio (recorded before it was kept); re-diarize with a speaker count works for those."""
+    m = _load_meeting(mid)
+    if not m:
+        raise HTTPException(404, "Meeting not found")
+    body = await req.json() if req.headers.get("content-type", "").startswith("application/json") else {}
+    d = AUDIO / mid
+    files = {f.stem: f for f in d.glob("*")} if d.is_dir() else {}
+    utts = m.get("utterances", [])
+    got = 0
+    if "source" in files:
+        prints = await _embed(files["source"].read_bytes(), files["source"].name, [[u["start"], u["end"]] for u in utts])
+        for u, v in zip(utts, prints or []):
+            if v is not None:
+                _vec_put(mid, u["id"], v)
+                got += 1
+    else:
+        for u in utts:
+            f = files.get(u["id"])
+            if f:
+                prints = await _embed(f.read_bytes(), f.name)
+                if prints and prints[0] is not None:
+                    _vec_put(mid, u["id"], prints[0])
+                    got += 1
+    if not got:
+        raise HTTPException(409, "This meeting has no saved audio (or HERMES couldn't read it); use Re-diarize with "
+                                 "a speaker count instead.")
+    k = int(body["numSpeakers"]) if body.get("numSpeakers") else None
+    if not _neural_recluster(m, COSINE_THRESHOLDS.get(body.get("sensitivity") or "balanced", 0.50), k):
+        raise HTTPException(409, f"Only {got} of {len(utts)} utterances have usable audio; not enough to re-identify.")
+    _SPEAKER_VECTORS.pop(mid, None)
+    _save_meeting(m)
+    _set_diarizer(mid, NEURAL)
+    m["diarizer"] = NEURAL
     return m
 
 
