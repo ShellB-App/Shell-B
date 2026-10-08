@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
-import { Edit2, EyeOff, FolderInput, FolderKanban, GitFork, Loader2, PanelLeftClose, Pin, Plus, Search, Settings, SquarePen, Star, Trash2, X } from 'lucide-react';
+import { AppWindow, Edit2, EyeOff, FolderInput, FolderKanban, GitFork, Link2, Loader2, MessageSquare, PanelLeftClose, Pin, PinOff, Plus, Search, Settings, SquarePen, Star, StarOff, Trash2, X } from 'lucide-react';
 import type { Agent, ChatHit, ChatProject, ConversationSummary, Status } from '../types';
 import { ProjectGlyph } from './Projects';
 import { fmtBytes } from '../api';
 import { AgentAvatar, Snippet } from './common';
-import { refreshFavorites, useFavorites } from '../favorites';
+import { isFavorite, refreshFavorites, setFavorite, useFavorites } from '../favorites';
+import { openContextMenu, type MenuEntry } from './ContextMenu';
+import { copyText } from '../quote';
 import { FavIcon, FavoriteStar } from './Favorites';
 import { req } from '../api';
 import { jumpToMessage } from '../jump';
@@ -81,6 +83,31 @@ export function Sidebar(p: Props) {
   const mem = p.status?.memory;
   const usedPct = mem ? Math.round((1 - mem.MemAvailable / mem.MemTotal) * 100) : 0;
 
+  const menu = (c: ConversationSummary): MenuEntry[] => {
+    const fav = isFavorite('chat', c.id);
+    return [
+      { label: 'Open', icon: MessageSquare, onSelect: () => p.onSelect(c.id) },
+      { label: 'Open in new window', icon: AppWindow, onSelect: () => window.open(`/#/c/${c.id}`, '_blank', 'noopener') },
+      'sep',
+      { label: 'Rename', icon: Edit2, hint: 'F2', onSelect: () => { setEditing(c.id); setDraft(c.title); } },
+      { label: c.pinned ? 'Unpin' : 'Pin', icon: c.pinned ? PinOff : Pin, onSelect: () => p.onPin(c.id, !c.pinned) },
+      { label: fav ? 'Remove from Favorites' : 'Add to Favorites', icon: fav ? StarOff : Star, onSelect: () => { setFavorite('chat', c.id, '', !fav, c.title); } },
+      p.onFork && { label: 'Fork chat', icon: GitFork, onSelect: () => p.onFork?.(c.id) },
+      !c.incognito && { label: 'Move to project', icon: FolderInput, items: [
+        ...p.groups.map(g => ({ label: `${g.emoji ? `${g.emoji} ` : ''}${g.name}`, checked: g.id === c.groupId, disabled: g.id === c.groupId,
+          onSelect: () => p.onMoveToGroup(c.id, g.id) })),
+        !p.groups.length && { label: 'No projects yet', disabled: true },
+        'sep',
+        c.groupId && { label: 'Remove from project', icon: X, onSelect: () => p.onMoveToGroup(c.id, null) },
+        { label: 'New project…', icon: Plus, onSelect: p.onNewGroup },
+      ] },
+      'sep',
+      { label: 'Copy link', icon: Link2, onSelect: () => copyText(`${location.origin}/#/c/${c.id}`, 'Link copied') },
+      'sep',
+      { label: 'Delete…', icon: Trash2, danger: true, hint: 'Del', onSelect: () => setConfirmDel(c.id) },
+    ];
+  };
+
   const item = (c: ConversationSummary) => {
     const agent = p.agents.find(a => a.id === c.agentId);
     const active = c.id === p.activeId;
@@ -90,7 +117,13 @@ export function Sidebar(p: Props) {
           active ? 'bg-[var(--bg-hover)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]')}
         onClick={() => editing !== c.id && p.onSelect(c.id)}
         role="button" tabIndex={0} aria-current={active ? 'page' : undefined}
-        onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ') && editing !== c.id) { e.preventDefault(); p.onSelect(c.id); } }}
+        onKeyDown={e => {
+          if (e.target !== e.currentTarget || editing === c.id) return;
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); p.onSelect(c.id); }
+          else if (e.key === 'F2') { e.preventDefault(); setEditing(c.id); setDraft(c.title); }
+          else if (e.key === 'Delete') { e.preventDefault(); setConfirmDel(c.id); }
+        }}
+        onContextMenu={e => { if (editing !== c.id) openContextMenu(e, menu(c)); }}
       >
         <AgentAvatar agent={agent} size={16} />
         {editing === c.id ? (

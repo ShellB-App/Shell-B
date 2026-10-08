@@ -26,6 +26,10 @@ import { useFeedback } from './Feedback';
 import { ArtifactCard, DownloadChip } from './message/ArtifactCard';
 import { Outputs } from './message/Outputs';
 import { CopyButton, SpeakButton, VerifyButton } from './message/MessageActions';
+import { Copy as CopyIcon, FileText, Quote, Square as StopIcon, Volume2 } from 'lucide-react';
+import { openContextMenu, type MenuEntry } from './ContextMenu';
+import { copyText, quoteInComposer } from '../quote';
+import { readAloud } from '../speech';
 import { MessageAttachments as Attachments } from './message/MessageAttachments';
 
 // Re-export for external consumers (e.g. WorkspaceFiles.tsx)
@@ -80,6 +84,31 @@ function splitSelection(text: string) {
   const m = SELECTION_RE.exec(text);
   return m ? { body: text.slice(0, m.index), file: m[1], selector: m[2] } : { body: text, file: '', selector: '' };
 }
+
+/** Text selected inside this message, or ''. */
+function selectionIn(el: Element) {
+  const s = window.getSelection();
+  if (!s || s.isCollapsed || !s.anchorNode || !el.contains(s.anchorNode)) return '';
+  return s.toString().trim();
+}
+
+// one reading at a time from the context menu, so the next menu can offer to stop it
+let stopReading: (() => void) | null = null;
+function readEntry(text: string): MenuEntry {
+  if (stopReading) return { label: 'Stop reading', icon: StopIcon, onSelect: () => { stopReading?.(); stopReading = null; } };
+  return { label: 'Read aloud', icon: Volume2, disabled: !text, onSelect: () => {
+    let stop: (() => void) | null = null;
+    stop = readAloud(text, st => { if (st === 'idle' && stopReading === stop) stopReading = null; });
+    stopReading = stop;
+  } };
+}
+
+/** What every message's menu starts with when text is selected in it. */
+const selectionEntries = (sel: string): MenuEntry[] => sel ? [
+  { label: 'Copy selection', icon: CopyIcon, hint: 'Ctrl C', onSelect: () => copyText(sel) },
+  { label: 'Quote selection in reply', icon: Quote, onSelect: () => quoteInComposer(sel) },
+  'sep',
+] : [];
 
 interface Props {
   message: Message;
@@ -176,7 +205,19 @@ export const MessageView = memo(function MessageView({
   if (message.role === 'user') {
     const sel = splitSelection(message.content);
     return (
-      <div className="group flex flex-col items-end" data-msg={message.id}>
+      <div className="group flex flex-col items-end" data-msg={message.id} onContextMenu={e => {
+        if (editing) return;
+        const picked = selectionIn(e.currentTarget);
+        openContextMenu(e, [
+          ...selectionEntries(picked),
+          { label: 'Copy message', icon: CopyIcon, onSelect: () => copyText(sel.body) },
+          !picked && { label: 'Quote in reply', icon: Quote, onSelect: () => quoteInComposer(sel.body) },
+          readEntry(sel.body),
+          'sep',
+          { label: 'Edit and resend', icon: Pencil, disabled: busy, onSelect: () => { setDraft(message.content); setEditing(true); } },
+          onFork && { label: 'Fork from here', icon: GitFork, onSelect: () => onFork(message.id) },
+        ]);
+      }}>
         {message.mode === 'plan' && (
           <span className="flex items-center gap-1 mb-1 text-[10px] uppercase tracking-wide text-[var(--accent-soft)]">
             <ListChecks className="w-3 h-3" />Plan mode
@@ -259,7 +300,20 @@ export const MessageView = memo(function MessageView({
 
   return (
     <LinkContext.Provider value={{ artifacts, defs, busy, onOpenArtifact, onAsk, onOpenFile, stale: !isLast || streaming }}>
-      <div className="group" data-msg={message.id}>
+      <div className="group" data-msg={message.id} onContextMenu={e => {
+        const picked = selectionIn(e.currentTarget);
+        const markdown = textSegs.map(t => t.text).join('\n\n').trim();
+        openContextMenu(e, [
+          ...selectionEntries(picked),
+          { label: 'Copy', icon: CopyIcon, disabled: !text, onSelect: () => copyText(text) },
+          { label: 'Copy as Markdown', icon: FileText, disabled: !markdown, onSelect: () => copyText(markdown, 'Markdown copied') },
+          !picked && { label: 'Quote in reply', icon: Quote, disabled: !text, onSelect: () => quoteInComposer(text) },
+          readEntry(text),
+          'sep',
+          isLast && { label: 'Regenerate', icon: RotateCcw, disabled: busy || streaming, onSelect: onRegenerate },
+          onFork && !streaming && { label: 'Fork from here', icon: GitFork, onSelect: () => onFork(message.id) },
+        ]);
+      }}>
         <div className="flex items-center gap-2 mb-1.5 select-none">
           <AgentAvatar agent={agent} size={20} />
           <span className={clsx('text-xs font-semibold', !agent && 'text-[var(--brand-soft)]')}>{agent?.name ?? 'Shell:B'}</span>

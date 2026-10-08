@@ -5,6 +5,7 @@ import { ArrowUp, AudioLines, Loader2, Mic, Paperclip, Square, Users } from 'luc
 import type { Agent, Attachment, Effort, ModelInfo } from '../types';
 import { api } from '../api';
 import { onIncoming, takeIncoming } from '../desktop';
+import { onQuote } from '../quote';
 import { composerApi } from '../composerApi';
 import { expandVariables, findMention, ShortcutMenu, useShortcuts, type ComposerCommand } from './ComposerShortcuts';
 import { AttachmentsList } from './composer/AttachmentsList';
@@ -166,6 +167,12 @@ export function Composer({
     addFiles(got.files);
     ta.current?.focus();
   }, [inbox, arrivals]);  // eslint-disable-line react-hooks/exhaustive-deps -- addFiles reads the latest props
+
+  // "Quote in reply" from a message's context menu (quote.ts): the quote goes after any draft, the cursor after it
+  useEffect(() => (inbox ? onQuote(q => {
+    setText(t => (t.trim() ? `${t.replace(/\s*$/, '')}\n\n${q}` : q));
+    requestAnimationFrame(() => { const el = ta.current; if (el) { el.focus(); el.selectionStart = el.selectionEnd = el.value.length; } });
+  }) : undefined), [inbox]);
 
   async function submit() {
     if (busy || uploading || (!text.trim() && atts.length === 0)) return;

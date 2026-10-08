@@ -24,6 +24,7 @@ const TitleBar = lazy(() => import('./components/TitleBar').then(m => ({ default
 import './notify';  // notification clicks route the app; hidden-tab notifications on devices without push
 import './desktop';  // the installed app: launches, opened and shared files, install prompt, icon badge
 import { ConnectionBanner } from './components/ConnectionBanner';
+import { ContextMenuHost } from './components/ContextMenu';
 
 function ShellRoot() {
   const formFactor = useFormFactor();
@@ -44,6 +45,7 @@ function ShellRoot() {
       <Suspense fallback={null}><SynthDJ /></Suspense>
       <Toaster />
       <ConnectionBanner />
+      <ContextMenuHost />
       {formFactor === 'standard' && <Screensaver />}
     </AuthGate>
   );
