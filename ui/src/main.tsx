@@ -12,12 +12,15 @@ import { Screensaver } from './components/Screensaver';
 
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Toaster } from './components/toast';
+import { useWindowControlsOverlay } from './wco';
 
 // Each device loads only its own shell, and the radio (2.6k-line audio engine) comes after the first paint.
 const App = lazy(() => import('./App').then(m => ({ default: m.App })));
 const MobileApp = lazy(() => import('./mobile/MobileApp').then(m => ({ default: m.MobileApp })));
 const KioskApp = lazy(() => import('./kiosk/KioskApp').then(m => ({ default: m.KioskApp })));
 const SynthDJ = lazy(() => import('./dj/SynthDJ').then(m => ({ default: m.SynthDJ })));
+// only the installed desktop app with its title bar hidden loads this (wco.ts)
+const TitleBar = lazy(() => import('./components/TitleBar').then(m => ({ default: m.TitleBar })));
 import './notify';  // notification clicks route the app; hidden-tab notifications on devices without push
 import './desktop';  // the installed app: launches, opened and shared files, install prompt, icon badge
 import { ConnectionBanner } from './components/ConnectionBanner';
@@ -46,10 +49,15 @@ function ShellRoot() {
   );
 }
 
+function WindowTitleBar() {
+  return useWindowControlsOverlay() ? <Suspense fallback={null}><TitleBar /></Suspense> : null;
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
       <ShellRoot />
+      <WindowTitleBar />
       <Splash />
     </ErrorBoundary>
   </StrictMode>

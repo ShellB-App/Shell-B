@@ -6,8 +6,10 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
   "background_color": "#0a0d1f",
   "theme_color": "#0a0d1f",
+  "categories": ["productivity", "utilities"],
   "launch_handler": { "client_mode": ["focus-existing", "auto"] },
   "file_handlers": [
     { "action": "/?open", "accept": {
@@ -27,5 +29,25 @@
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "New chat", "url": "/#/", "description": "Start a conversation with Shell:B",
+      "icons": [{ "src": "/icons/shortcut-new-chat.png", "sizes": "96x96", "type": "image/png" }] },
+    { "name": "Activity", "url": "/#/activity", "description": "What ran while you were away, and approvals waiting on you",
+      "icons": [{ "src": "/icons/shortcut-activity.png", "sizes": "96x96", "type": "image/png" }] },
+    { "name": "Notes", "url": "/#/codex/notes", "description": "Write and brainstorm in Markdown",
+      "icons": [{ "src": "/icons/shortcut-notes.png", "sizes": "96x96", "type": "image/png" }] },
+    { "name": "Code", "url": "/#/code", "description": "Workspaces with a coding partner",
+      "icons": [{ "src": "/icons/shortcut-code.png", "sizes": "96x96", "type": "image/png" }] },
+    { "name": "Studio", "url": "/#/studio", "description": "Design projects with Daedalus",
+      "icons": [{ "src": "/icons/shortcut-studio.png", "sizes": "96x96", "type": "image/png" }] },
+    { "name": "Radio", "url": "/#/radio", "description": "Shell:B FM and the DJ workstation",
+      "icons": [{ "src": "/icons/shortcut-radio.png", "sizes": "96x96", "type": "image/png" }] }
+  ],
+  "screenshots": [
+    { "src": "/icons/screen-chat-wide.webp", "sizes": "1440x900", "type": "image/webp", "form_factor": "wide", "label": "Chat with your local agents" },
+    { "src": "/icons/screen-radio-wide.webp", "sizes": "1440x900", "type": "image/webp", "form_factor": "wide", "label": "Shell:B FM radio and DJ workstation" },
+    { "src": "/icons/screen-models-wide.webp", "sizes": "1440x900", "type": "image/webp", "form_factor": "wide", "label": "See and manage the models in memory" },
+    { "src": "/icons/screen-chat-narrow.webp", "sizes": "412x915", "type": "image/webp", "form_factor": "narrow", "label": "Shell:B on your phone" }
   ]
 }

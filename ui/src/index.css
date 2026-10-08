@@ -190,3 +190,21 @@ html:not(.light) .maplibregl-ctrl-attrib-button { filter: invert(1); }
   /* Messages scroller */
   main > .flex-1.overflow-y-auto { overflow: visible !important; }
 }
+
+/* Installed desktop app with the browser's title bar hidden (Window Controls Overlay, see src/wco.ts). Shell:B draws
+   its own strip in the title bar area and everything else, full-screen overlays included, starts below it. The env()
+   fallbacks only matter for ?shot&wco in an ordinary browser: roughly Windows' 33px bar with its buttons on the right. */
+html.wco { --titlebar-h: env(titlebar-area-height, 33px); }
+html.wco body { padding-top: var(--titlebar-h); }
+html.wco .fixed.inset-0 { top: var(--titlebar-h); }
+.wco-titlebar {
+  position: fixed; top: 0; left: 0; right: 0; height: var(--titlebar-h); z-index: 2147483000;
+  background: var(--bg-secondary); border-bottom: 1px solid var(--border-subtle);
+  app-region: drag; -webkit-app-region: drag;
+}
+.wco-titlebar-area {
+  position: absolute; top: env(titlebar-area-y, 0px); left: env(titlebar-area-x, 0px); height: var(--titlebar-h);
+  width: env(titlebar-area-width, calc(100% - 138px));
+}
+.wco-nodrag { app-region: no-drag; -webkit-app-region: no-drag; }
+@media print { .wco-titlebar { display: none; } html.wco body { padding-top: 0; } }
