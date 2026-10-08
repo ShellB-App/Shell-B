@@ -1282,6 +1282,13 @@ if UI_DIST.exists():
         app.mount("/vendor", CorsStatic(directory=UI_DIST / "vendor"), name="vendor")
 
 
+@app.post("/share-target")
+def share_target():
+    """Share → Shell:B (manifest share_target) is answered by the service worker (ui/public/sw.js). This only runs when
+    it isn't installed yet, so open the app rather than fail: the shared content can't be recovered here."""
+    return Response(status_code=303, headers={"Location": "/#/"})
+
+
 @app.get("/{path:path}")
 def spa(path: str):
     target = (UI_DIST / path).resolve()

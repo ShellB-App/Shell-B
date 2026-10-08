@@ -19,6 +19,8 @@ const MobileApp = lazy(() => import('./mobile/MobileApp').then(m => ({ default: 
 const KioskApp = lazy(() => import('./kiosk/KioskApp').then(m => ({ default: m.KioskApp })));
 const SynthDJ = lazy(() => import('./dj/SynthDJ').then(m => ({ default: m.SynthDJ })));
 import './notify';  // notification clicks route the app; hidden-tab notifications on devices without push
+import './desktop';  // the installed app: launches, opened and shared files, install prompt, icon badge
+import { ConnectionBanner } from './components/ConnectionBanner';
 
 function ShellRoot() {
   const formFactor = useFormFactor();
@@ -38,6 +40,7 @@ function ShellRoot() {
       </ErrorBoundary>
       <Suspense fallback={null}><SynthDJ /></Suspense>
       <Toaster />
+      <ConnectionBanner />
       {formFactor === 'standard' && <Screensaver />}
     </AuthGate>
   );

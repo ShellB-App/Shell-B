@@ -4,6 +4,7 @@ import clsx from 'clsx';
 import { ArrowUp, AudioLines, Loader2, Mic, Paperclip, Square, Users } from 'lucide-react';
 import type { Agent, Attachment, Effort, ModelInfo } from '../types';
 import { api } from '../api';
+import { onIncoming, takeIncoming } from '../desktop';
 import { composerApi } from '../composerApi';
 import { expandVariables, findMention, ShortcutMenu, useShortcuts, type ComposerCommand } from './ComposerShortcuts';
 import { AttachmentsList } from './composer/AttachmentsList';
@@ -40,6 +41,8 @@ interface Props {
   /** Cloud agents: the other models their provider offers, picked per agent next to the effort menu. */
   modelChoices?: ModelInfo[];
   onModel?: (name: string) => void;
+  /** Takes files and text opened with or shared to the installed app (desktop.ts); only the main chat page's composer. */
+  inbox?: boolean;
 }
 
 export function Composer({
@@ -64,6 +67,7 @@ export function Composer({
   modelChoices = [],
   onModel,
   onVoiceMode,
+  inbox,
 }: Props) {
   const [text, setText] = useState('');
   const [atts, setAtts] = useState<Attachment[]>([]);
@@ -151,6 +155,17 @@ export function Composer({
         .catch(() => setAtts(prev => prev.filter(a => a.id !== tmp.id)));
     }
   }
+
+  // files and text opened with or shared to the installed app: the shell has just started a new chat for them
+  const [arrivals, setArrivals] = useState(0);
+  useEffect(() => (inbox ? onIncoming(() => setArrivals(n => n + 1)) : undefined), [inbox]);
+  useEffect(() => {
+    const got = inbox ? takeIncoming() : null;
+    if (!got) return;
+    if (got.text) setText(t => (t ? `${t}\n\n${got.text}` : got.text));
+    addFiles(got.files);
+    ta.current?.focus();
+  }, [inbox, arrivals]);  // eslint-disable-line react-hooks/exhaustive-deps -- addFiles reads the latest props
 
   async function submit() {
     if (busy || uploading || (!text.trim() && atts.length === 0)) return;

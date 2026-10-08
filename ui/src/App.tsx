@@ -11,6 +11,7 @@ import { useChat } from './useChat';
 import { Sidebar } from './components/Sidebar';
 import { AppRail } from './components/AppRail';
 import { appById, appForHash, type AppId } from './components/apps';
+import { useInstalledApp } from './installedApp';
 import { MessageView } from './components/MessageView';
 import { Composer } from './components/Composer';
 import { findMention } from './components/ComposerShortcuts';
@@ -344,6 +345,7 @@ export function App() {
     history.replaceState(null, '', '#/');
     if (window.innerWidth < 768) setSidebar(false);
   }, [settings]);
+  useInstalledApp(status, newChat);
 
   const ensureConversation = useCallback(async () => {
     if (convRef.current) return convRef.current.id;
@@ -880,7 +882,7 @@ export function App() {
               onAgent={selectAgent} busy={busy || !!conv?.streaming} onSend={(t, a, o) => send(t, a, undefined, o?.agentId, o?.mode)} onStop={stop}
               convId={conv?.id} onCommand={c => newChat(undefined, c === 'incognito')} planMode={planMode} onPlanMode={setPlanMode}
               ensureConversation={ensureConversation} voiceOk={voiceOk} focusKey={`${conv?.id ?? 'new'}:${focusTick}`}
-              onVoiceMode={voiceMode ? undefined : () => setVoiceMode(true)}
+              onVoiceMode={voiceMode ? undefined : () => setVoiceMode(true)} inbox
             />
             {incognito && <IncognitoNote hours={settings?.incognitoHours} />}
             <div className="text-center text-[10px] text-[var(--text-muted)] mt-1.5">

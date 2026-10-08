@@ -1,4 +1,5 @@
 import { scopedPrefix } from './frameKey';
+import { reportNet } from './net';
 import type {
   Agent, Attachment, Commit, Conversation, ConversationSummary, KindInfo, Memory, ModelInfo, Project, ProjectFile, ProjectKind,
   ProjectSummary, Settings, WorkspaceFile, Status, StreamEvent, ToolInfo, Connector, McpServer, Provider, Skill, SkillDetail, ClaudeSkill, ChatProject, ChatProjectDetail, Library,
@@ -35,7 +36,7 @@ export async function req<T>(path: string, init?: RequestInit): Promise<T> {
       ...(key ? { 'X-Shellb-Admin': key } : {}),
       ...init?.headers,
     },
-  });
+  }).then(x => { reportNet(true); return x; }, e => { reportNet(false, e); throw e; });  // net.ts: is the Spark there?
   if (r.status === 401 && !path.startsWith('/api/auth/')) window.dispatchEvent(new Event(AUTH_LOST));
   if (!r.ok) {
     let detail = r.statusText;

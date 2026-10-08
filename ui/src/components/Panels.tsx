@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import {
-  Archive, AudioLines, Bell, BookMarked, Boxes, Brain, EyeOff, Inbox, Sparkles, Cpu, Monitor, Moon, Plus, Search, Settings as SettingsIcon, SlidersHorizontal, SquarePen, Star, Sun, Trash2, BrainCircuit, MessageSquare, KeyRound, Hash, Network, ShieldCheck,
+  Archive, AudioLines, Bell, BookMarked, Boxes, Brain, EyeOff, Inbox, Sparkles, Cpu, Monitor, Moon, Plus, Search, Settings as SettingsIcon, SlidersHorizontal, SquarePen, Star, Sun, Trash2, BrainCircuit, MessageSquare, KeyRound, Hash, Network, ShieldCheck, MonitorDown,
 } from 'lucide-react';
 import type { Agent, ChatHit, ConversationSummary, Memory, ModelInfo, Settings, SettingsTabId, Status, ToolInfo } from '../types';
 import { api, fmtBytes } from '../api';
@@ -19,6 +19,7 @@ import { MemoryManager } from './MemoryManager';
 import { SpeechTab } from './SpeechSettings';
 import { SCALES, setScale, useScale } from '../uiScale';
 import { ShortcutsTab } from './ShortcutsSettings';
+import { promptInstall, useInstallState } from '../desktop';
 import { SystemInfoPanel } from './SystemInfo';
 import { NetworkSettings } from './NetworkSettings';
 import { ThemePicker } from './ThemePicker';
@@ -155,6 +156,7 @@ function General({ settings, agents, models, theme, onTheme, onSaved, onOpenTab 
       <ThemePicker settings={settings} mode={theme} onMode={onTheme} />
       <ScaleRow />
       <DisplayRows />
+      <InstallRow />
       <Row label="Default agent" hint="Used for new chats">
         <select className={btn.input} value={settings.defaultAgent} onChange={e => save({ defaultAgent: e.target.value })}>
           {agents.map(a => <option key={a.id} value={a.id}>{a.name} — {a.title}</option>)}
@@ -229,6 +231,20 @@ function ScaleRow() {
 }
 
 // Startup animation and screensaver. Saved per browser (localStorage), like the theme.
+/** Offered while the browser can install Shell:B as an app (desktop.ts); hidden where it can't, or already has. */
+function InstallRow() {
+  const state = useInstallState();
+  if (state === 'unavailable') return null;
+  return (
+    <Row label="Desktop app" hint={state === 'installed' ? 'Shell:B is running as an installed app on this device'
+      : 'Its own window and dock icon with a badge for what’s waiting, “Open with Shell:B” for files, and Share → Shell:B'}>
+      {state === 'installed'
+        ? <span className="text-xs text-emerald-400">Installed</span>
+        : <button className={btn.subtle} onClick={() => { promptInstall().catch(() => {}); }}><MonitorDown className="w-3.5 h-3.5" />Install Shell:B</button>}
+    </Row>
+  );
+}
+
 function DisplayRows() {
   const amb = useAmbience();
   const preview = (ev: string) => window.dispatchEvent(new Event(ev));

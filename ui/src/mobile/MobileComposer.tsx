@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import type { Agent, Attachment, Effort, ModelInfo } from '../types';
 import { api, fmtBytes } from '../api';
+import { onIncoming, takeIncoming } from '../desktop';
 import { AgentAvatar } from '../components/common';
 
 const EFFORTS: { id: Effort; label: string }[] = [
@@ -85,7 +86,7 @@ export function MobileComposer({
 
   const uploading = atts.some(a => a.uploading);
 
-  async function addFiles(files: FileList | null) {
+  async function addFiles(files: FileList | File[] | null) {
     if (!files || !files.length) return;
     const convId = await ensureConversation();
     for (const f of Array.from(files)) {
@@ -110,6 +111,16 @@ export function MobileComposer({
         .catch(() => setAtts(prev => prev.filter(a => a.id !== tmp.id)));
     }
   }
+
+  // files and text shared to the installed app (Share → Shell:B, desktop.ts): MobileApp has just started a new chat
+  const [arrivals, setArrivals] = useState(0);
+  useEffect(() => onIncoming(() => setArrivals(n => n + 1)), []);
+  useEffect(() => {
+    const got = takeIncoming();
+    if (!got) return;
+    if (got.text) setText(t => (t ? `${t}\n\n${got.text}` : got.text));
+    addFiles(got.files);
+  }, [arrivals]);  // eslint-disable-line react-hooks/exhaustive-deps -- addFiles reads the latest props
 
   async function submit() {
     if (busy || uploading || (!text.trim() && atts.length === 0)) return;

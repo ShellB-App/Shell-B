@@ -18,6 +18,7 @@ import type {
 import { useSuggestions } from '../suggestions';
 import { useChat } from '../useChat';
 import { appById, appForHash, type AppId } from '../components/apps';
+import { useInstalledApp } from '../installedApp';
 import { MessageView } from '../components/MessageView';
 import { findMention } from '../components/ComposerShortcuts';
 import { CommandPalette, SettingsModal } from '../components/Panels';
@@ -346,6 +347,7 @@ export function MobileApp() {
     setFocusTick(t => t + 1);
     history.replaceState(null, '', '#/');
   }, [settings, setConv]);
+  useInstalledApp(status, newChat);
 
   const ensureConversation = useCallback(async () => {
     if (convRef.current) return convRef.current.id;

@@ -1,7 +1,7 @@
 /** Login screen in front of the app (server/auth.py). First run sets the password with the admin key. */
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
-import { Loader2, LockKeyhole } from 'lucide-react';
+import { Loader2, LockKeyhole, RefreshCw, WifiOff } from 'lucide-react';
 import { AUTH_LOST, api, setFrameKey, type AuthInfo } from '../api';
 import { btn } from './common';
 import { reducedMotion } from '../ambience';
@@ -45,7 +45,31 @@ export function AuthGate({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(AUTH_LOST, onLost);
   }, [accept]);
 
-  if (failed) return <Screen><p className="text-sm text-[var(--text-secondary)]">Can't reach Shell:B: {failed}</p></Screen>;
+  // the Spark is asleep, rebooting or off this network: keep trying, and come in on our own once it answers
+  const retry = useCallback(() => api.authMe().then(i => { setFailed(''); accept(i); }).catch(() => {}), [accept]);
+  useEffect(() => {
+    if (!failed) return;
+    const t = window.setInterval(retry, 5000);
+    window.addEventListener('online', retry);
+    return () => { window.clearInterval(t); window.removeEventListener('online', retry); };
+  }, [failed, retry]);
+
+  if (failed) return (
+    <Screen>
+      <div className="flex items-start gap-3">
+        <WifiOff className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+        <div className="space-y-1.5">
+          <p className="text-sm font-medium text-[var(--text-primary)]">Can’t reach Shell:B</p>
+          <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+            {navigator.onLine ? 'The Spark may be asleep, restarting or on another network.' : 'This device is offline.'} Shell:B
+            will connect by itself as soon as it answers.
+          </p>
+          <p className="text-[11px] text-[var(--text-muted)] break-words">{failed}</p>
+        </div>
+      </div>
+      <button className={clsx(btn.subtle, 'mt-4 w-full justify-center')} onClick={retry}><RefreshCw className="w-3.5 h-3.5" />Try again</button>
+    </Screen>
+  );
   if (!info) return <div className="h-dvh flex items-center justify-center"><LoginBackdrop /><Loader2 className="relative w-5 h-5 animate-spin text-white/60" /></div>;
   const form = (!info.authenticated || lost) && <Screen overlay={mounted}><LoginForm setup={!info.passwordSet} onDone={accept} /></Screen>;
   return <>{mounted && children}{form}</>;
