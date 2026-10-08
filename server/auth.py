@@ -289,6 +289,12 @@ def require_admin(req: Request):
 
 # ── middleware ──────────────────────────────────────────────────────────────
 
+def _bad_path(path: str) -> bool:
+    """A decoded path with a `.` or `..` segment, a backslash or a NUL. No route has one, and an ID taken from such a
+    segment points outside its folder: `/api/projects/%2e%2e` would be data/ itself."""
+    return "\\" in path or "\0" in path or any(seg in (".", "..") for seg in path.split("/"))
+
+
 class AuthMiddleware:
     def __init__(self, app):
         self.app = app
@@ -297,6 +303,8 @@ class AuthMiddleware:
         if scope["type"] not in ("http", "websocket") or not scope["path"].startswith("/api"):
             return await self.app(scope, receive, send)
         h, path, method = _headers(scope), scope["path"], scope.get("method", "GET")
+        if _bad_path(path):
+            return await _deny(scope, receive, send, 400, "bad-path")
 
         m = FRAME_PREFIX.match(path)
         if m:

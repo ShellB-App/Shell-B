@@ -213,7 +213,8 @@ async def run_code(args, ctx):
     rel = [r for r in rel if not r.startswith(".git/")]
     changed = [p for p in changed if ".git" not in p.relative_to(ws).parts]
     if ctx.project_id and rel:  # caches and build output the repo ignores aren't worth reporting
-        chk = subprocess.run(["git", "check-ignore", "--stdin"], cwd=ws, input="\n".join(rel), capture_output=True, text=True)
+        chk = subprocess.run(["git", "check-ignore", "--stdin"], cwd=ws, input="\n".join(rel), capture_output=True, text=True,
+                             env={**os.environ, "GIT_DIR": str(ws / ".git"), "GIT_WORK_TREE": str(ws)})  # never the app's repo
         ignored = set(chk.stdout.splitlines())
         changed = [p for r, p in zip(rel, changed) if r not in ignored]
         rel = [r for r in rel if r not in ignored]

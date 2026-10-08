@@ -123,35 +123,45 @@ export const MessageView = memo(function MessageView({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(message.content);
   const [compactExpanded, setCompactExpanded] = useState(false);
+  const [showOriginals, setShowOriginals] = useState(false);
   const feedback = useFeedback(message, onAsk, busy);
 
-  if (message.role === 'compacted' || message.compacted) {
-    const count = message.compactedCount ?? message.compactedMessages?.length ?? 0;
+  if (message.role === 'summary') {
+    const originals = message.originals ?? [];
+    const count = message.count ?? originals.length;
     return (
-      <div className="w-full my-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] overflow-hidden shadow-sm" data-msg={message.id}>
-        <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-tertiary)] border-b border-[var(--border-subtle)]">
-          <div className="flex items-center gap-2 text-xs font-semibold text-[var(--text-primary)]">
-            <span className="p-1 rounded-md bg-[var(--accent)]/15 text-[var(--accent)]"><Archive className="w-4 h-4" /></span>
-            <span>Compacted Context</span>
-            {count > 0 && <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--bg-hover)] text-[var(--text-muted)] font-mono">{count} earlier messages</span>}
-          </div>
-          {message.compactedMessages && message.compactedMessages.length > 0 && (
-            <button className="text-[11px] text-[var(--accent-soft)] hover:underline flex items-center gap-1" onClick={() => setCompactExpanded(!compactExpanded)}>
-              {compactExpanded ? 'Hide archived messages' : `Show ${count} archived messages`}
-              <ChevronDown className={clsx('w-3.5 h-3.5 transition-transform', compactExpanded && 'rotate-180')} />
+      <div className="w-full my-4 rounded-xl border border-dashed border-[var(--border-strong)] bg-[var(--bg-secondary)]" data-msg={message.id}>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-xs">
+          <span className="flex items-center gap-2 font-semibold text-[var(--text-primary)]">
+            <Archive className="w-4 h-4 text-[var(--text-muted)]" aria-hidden />
+            Summarized {count} earlier {count === 1 ? 'message' : 'messages'}
+          </span>
+          <span className="text-[var(--text-muted)]">The agent now sees this summary instead; the originals are kept and searchable.</span>
+          <span className="ml-auto flex gap-3">
+            <button className="text-[var(--accent-soft)] hover:underline" onClick={() => setCompactExpanded(v => !v)}
+              aria-expanded={compactExpanded}>
+              {compactExpanded ? 'Hide summary' : 'Show summary'}
             </button>
-          )}
+            {originals.length > 0 && (
+              <button className="text-[var(--accent-soft)] hover:underline flex items-center gap-1" onClick={() => setShowOriginals(v => !v)}
+                aria-expanded={showOriginals}>
+                {showOriginals ? 'Hide originals' : `Show ${originals.length} originals`}
+                <ChevronDown className={clsx('w-3.5 h-3.5 transition-transform', showOriginals && 'rotate-180')} aria-hidden />
+              </button>
+            )}
+          </span>
         </div>
-        <div className="p-4 text-xs leading-relaxed text-[var(--text-secondary)]">
-          <Markdown text={message.content} />
-        </div>
-        {compactExpanded && message.compactedMessages && (
-          <div className="border-t border-[var(--border-subtle)] bg-[var(--bg-primary)]/50 p-4 space-y-3 max-h-96 overflow-y-auto">
-            <div className="text-[11px] font-mono uppercase tracking-wider text-[var(--text-muted)]">Archived Messages</div>
-            {message.compactedMessages.map((m, idx) => (
-              <div key={m.id || idx} className="text-xs p-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
+        {compactExpanded && (
+          <div className="px-4 pb-4 text-xs leading-relaxed text-[var(--text-secondary)] max-w-[75ch]">
+            <Markdown text={message.content} />
+          </div>
+        )}
+        {showOriginals && (
+          <div className="border-t border-[var(--border-subtle)] p-4 space-y-3 max-h-[28rem] overflow-y-auto">
+            {originals.map(m => (
+              <div key={m.id} className="text-xs p-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)]">
                 <div className="flex items-center justify-between mb-1 text-[11px] text-[var(--text-muted)] font-medium">
-                  <span>{m.role === 'user' ? 'User' : 'Assistant'}</span>
+                  <span>{m.role === 'user' ? 'You' : 'Assistant'}</span>
                   {m.timestamp && <span className="font-mono text-[10px]">{relTime(m.timestamp)}</span>}
                 </div>
                 <div className="whitespace-pre-wrap break-words">{m.content}</div>

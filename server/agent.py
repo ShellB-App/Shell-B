@@ -29,6 +29,7 @@ import scrape
 import remote
 import selfmod
 import ask
+import compaction
 import memory
 import places
 import wiki
@@ -207,42 +208,29 @@ def fit_turn_context(messages: list[dict], num_ctx: int, schema_chars: int, keep
 
 
 def history_messages(history, conv_id, num_ctx):
-    """Prior turns as plain user/assistant text, with compacted context preserved and budget trimming."""
+    """Prior turns as plain user/assistant text. Summarized messages are left out (compaction.visible); their summary
+    goes into the system prompt instead (compaction.note). Anything still over budget is trimmed from the front, and
+    the first remaining request says so honestly (no invented "I remember everything" turns)."""
     out = []
     user_seen = 0
-    for m in reversed(history):
-        if m.get("role") == "compacted" or m.get("compacted"):
-            out.append({
-                "role": "user",
-                "content": f"[Earlier conversation history summary ({m.get('compactedCount', 'earlier')} messages compacted):\n{m['content']}]"
-            })
-            out.append({
-                "role": "assistant",
-                "content": "Understood. I retain the full context of those earlier messages."
-            })
-        elif m["role"] == "user":
+    for m in reversed(compaction.visible(history)):
+        if m["role"] == "user":
             user_seen += 1
             out.append(user_payload(m, conv_id, include_images=user_seen <= 2))
         elif m["role"] == "assistant":
             out.append({"role": "assistant", "content": assistant_text(m)})
     out.reverse()
-    budget = int(num_ctx * 0.6 * 3.2)  # chars; leaves room for system prompt, tools and the reply
+    budget = int(num_ctx * 0.6 * CHARS_PER_TOKEN)  # chars; leaves room for system prompt, tools and the reply
     dropped = []
     while out and sum(len(m["content"]) for m in out) > budget:
         dropped.append(out.pop(0))
     while out and out[0]["role"] != "user":
         dropped.append(out.pop(0))
-    if dropped:
-        dropped_summary = _compact_dropped(dropped)
-        if dropped_summary:
-            out.insert(0, {
-                "role": "user",
-                "content": f"[Context budget limit reached: the following {len(dropped)} earlier turns were trimmed and compacted:\n{dropped_summary}]"
-            })
-            out.insert(1, {
-                "role": "assistant",
-                "content": "Understood. I retain the context of those earlier compacted turns."
-            })
+    if dropped and out and isinstance(out[0].get("content"), str):
+        gist = _compact_dropped(dropped)
+        out[0] = {**out[0], "content": f"[{len(dropped)} earlier messages of this chat didn't fit in your context and were "
+                                       f"left out. Their first lines:\n{gist}\nUse recall_conversations (action read, "
+                                       f"conversation {conv_id}) if you need them.]\n\n" + out[0]["content"]}
     return out
 
 
@@ -900,21 +888,38 @@ class Turn:
                         res = await TOOLS[name]["fn"](args, ctx)
             except Exception as e:  # tool failures go back to the model, which can retry or explain
                 res = ToolResult(f"{name} failed: {type(e).__name__}: {e}", error=True)
-            if hasattr(self, "loop_guard"):
-                self.loop_guard.record_post_call(name, args, res, getattr(self, "_current_round", 0))
+            try:  # bookkeeping must never turn a finished tool call into a failed turn
+                if hasattr(self, "loop_guard"):
+                    self.loop_guard.record_post_call(name, args, res, getattr(self, "_current_round", 0))
+            except Exception as e:
+                print(f"loop_guard.record_post_call: {type(e).__name__}: {e}")
             try:  # pages read in a chat attached to a research board land on it as sources
                 research.auto_capture(self.conv_id, name, args, res)
             except Exception:
                 pass
-            if res.display and not res.error:  # generated pictures, sounds and models go into Library → Media
-                media.record(name, res.display, self.conv_id, self.agent.get("id"), self.project_id)
+            try:
+                if res.display and not res.error:  # generated pictures, sounds and models go into Library → Media
+                    media.record(name, res.display, self.conv_id, self.agent.get("id"), self.project_id)
+            except Exception as e:
+                print(f"media.record: {type(e).__name__}: {e}")
             b = sink.blocks[idx]
             b.update(status="error" if res.error else "done", durationMs=int((time.time() - t0) * 1000),
                      result=res.text if len(res.text) <= 6000 else res.text[:6000] + "\n…", display=res.display)
             await sink.update(idx)
             return res
 
-        return await asyncio.gather(*(one(tc, i) for tc, i in zip(tool_calls, idxs)))
+        # return_exceptions: one call that blows up must not abandon its siblings mid-run with cards stuck on "running"
+        results = await asyncio.gather(*(one(tc, i) for tc, i in zip(tool_calls, idxs)), return_exceptions=True)
+        out = []
+        for r, tc, idx in zip(results, tool_calls, idxs):
+            if isinstance(r, BaseException) and not isinstance(r, Exception):
+                raise r  # cancellation (Stop) still propagates
+            if isinstance(r, Exception):
+                r = ToolResult(f"{tc['function']['name']} failed: {type(r).__name__}: {r}", error=True)
+                sink.blocks[idx].update(status="error", result=r.text)
+                await sink.update(idx)
+            out.append(r)
+        return out
 
     async def _remote_tool(self, name, args, ctx, sink: Sink, idx):
         """Run a tool in the remote workspace, first asking the owner when it changes something (remote.GATED)."""

@@ -73,10 +73,20 @@ def version() -> str:
         return "unknown"
 
 
+def untracked_files() -> list[str]:
+    """New files in the live tree that nobody has committed (work in progress, scratch files)."""
+    try:
+        return [f for f in _git(LIVE, "ls-files", "--others", "--exclude-standard").splitlines() if f]
+    except RuntimeError:
+        return []
+
+
 def commit_outside_edits() -> str | None:
-    """Commit whatever changed in the live tree since the last commit, so deploys merge onto a known base."""
-    _git(LIVE, "add", "-A")
-    if not _git(LIVE, "status", "--porcelain").strip():
+    """Commit edits to tracked files in the live tree since the last commit, so deploys merge onto a known base.
+    Only tracked files (`add -u`): untracked ones may be someone's unfinished work or scratch, so they're listed in
+    the deploy request instead of being swept into a commit."""
+    _git(LIVE, "add", "-u")
+    if not _git(LIVE, "diff", "--cached", "--name-only").strip():
         return None
     _git(LIVE, "commit", "-q", "-m", "Outside edits (Claude Code or by hand)")
     return _git(LIVE, "rev-parse", "--short", "HEAD").strip()
@@ -315,7 +325,10 @@ async def prepare(args, ctx) -> dict | ToolResult:
     stat = _git(ws, "diff", "--stat", base, head).strip()
     diff = _git(ws, "diff", base, head)
     summary = str(args.get("summary") or "").strip()[:600] or "(no summary given)"
-    preview = f"{summary}\n\n{stat}\n\nChecks passed:\n{report}\n\n{diff}"
+    stray = untracked_files()
+    stray_note = ("\n\nNot committed in the live tree (left alone; commit them yourself if they belong): "
+                  + ", ".join(stray[:20]) + (" …" if len(stray) > 20 else "")) if stray else ""
+    preview = f"{summary}\n\n{stat}{stray_note}\n\nChecks passed:\n{report}\n\n{diff}"
     if len(preview) > 40000:
         preview = preview[:40000] + f"\n…[diff truncated; {len(diff):,} characters in all. Full diff in the Shell:B (self) workspace history]"
     restart = any(c.startswith("server/") for c in changed)

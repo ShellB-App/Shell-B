@@ -163,7 +163,7 @@ def read(conv_id: str, around: str = "", budget=12000) -> str | None:
         head += f"Summary: {meta['summary']}\n"
     lines, per = [], max(600, budget // max(len(msgs), 1))
     for m in msgs:
-        who = "User" if m["role"] == "user" else "Assistant"
+        who = {"user": "User", "summary": "Summary of earlier messages"}.get(m["role"], "Assistant")
         lines.append(f"[{m['id']}] {who}, {datetime.fromtimestamp(m['timestamp'] / 1000):%b %d %H:%M}:\n{_clip(m['content'], per)}")
     body = "\n\n".join(lines)
     if len(body) > budget:

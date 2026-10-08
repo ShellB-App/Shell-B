@@ -81,12 +81,13 @@ class WorkspaceFiles(unittest.TestCase):
         self.assertNotIn("content-security-policy", r.headers)
 
     def test_conv_id_cannot_escape(self):
-        self.assertEqual(client.get("/api/workspace/..%2Fprojects/x").status_code, 404)
+        # refused by the middleware's dot-segment check (400) before the route's own containment check (404)
+        self.assertIn(client.get("/api/workspace/..%2Fprojects/x").status_code, (400, 404))
 
 
 class ProjectPaths(unittest.TestCase):
     def test_root_is_refused_for_deletes(self):
-        pid = "proj-smoketest"
+        pid = "proj-5a0e7e575e57"
         (projects.PROJECTS / pid).mkdir(parents=True, exist_ok=True)
         try:
             for rel in ("", ".", "/", "./"):
@@ -113,7 +114,7 @@ class FrameScope(unittest.TestCase):
             c.execute("INSERT INTO auth_sessions VALUES(?,?,?,?,?,?,?)",
                       ("sid-frametest", cls.secret, 0, 0, 4e9, "10.0.0.2", "test"))
         cls.lan = TestClient(shellb.app, client=("10.0.0.2", 50000), raise_server_exceptions=False, follow_redirects=False)
-        for pid in ("proj-fa", "proj-fb"):
+        for pid in ("proj-0000000000fa", "proj-0000000000fb"):
             (projects.PROJECTS / pid).mkdir(parents=True, exist_ok=True)
             (projects.PROJECTS / pid / "index.html").write_text(f"<p>{pid}</p>")
         for conv in ("conv-fa", "conv-fb"):
@@ -122,34 +123,34 @@ class FrameScope(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        for d in (projects.PROJECTS / "proj-fa", projects.PROJECTS / "proj-fb", shellb.WORKSPACES / "conv-fa", shellb.WORKSPACES / "conv-fb"):
+        for d in (projects.PROJECTS / "proj-0000000000fa", projects.PROJECTS / "proj-0000000000fb", shellb.WORKSPACES / "conv-fa", shellb.WORKSPACES / "conv-fb"):
             shutil.rmtree(d, ignore_errors=True)
 
     def k(self, scope, secret=None):
         return self.auth.frame_prefix(secret or self.secret, scope)
 
     def test_project_key_reaches_only_its_project(self):
-        own = self.lan.get(f"{self.k('p-proj-fa')}/projects/proj-fa/raw/index.html")
+        own = self.lan.get(f"{self.k('p-proj-0000000000fa')}/projects/proj-0000000000fa/raw/index.html")
         self.assertEqual(own.status_code, 200, own.text[:200])
-        self.assertEqual(self.lan.get(f"{self.k('p-proj-fa')}/projects/proj-fb/raw/index.html").status_code, 403)
-        self.assertEqual(self.lan.get(f"{self.k('p-proj-fa')}/workspace/conv-fa/data.txt").status_code, 403)
+        self.assertEqual(self.lan.get(f"{self.k('p-proj-0000000000fa')}/projects/proj-0000000000fb/raw/index.html").status_code, 403)
+        self.assertEqual(self.lan.get(f"{self.k('p-proj-0000000000fa')}/workspace/conv-fa/data.txt").status_code, 403)
 
     def test_chat_key_reaches_only_its_workspace(self):
         self.assertEqual(self.lan.get(f"{self.k('w-conv-fa')}/workspace/conv-fa/data.txt").text, "conv-fa")
         self.assertEqual(self.lan.get(f"{self.k('w-conv-fa')}/workspace/conv-fb/data.txt").status_code, 403)
-        self.assertEqual(self.lan.get(f"{self.k('w-conv-fa')}/projects/proj-fa/raw/index.html").status_code, 403)
+        self.assertEqual(self.lan.get(f"{self.k('w-conv-fa')}/projects/proj-0000000000fa/raw/index.html").status_code, 403)
 
     def test_saved_state_is_scoped(self):
-        self.assertEqual(self.lan.get(f"{self.k('p-proj-fa')}/appstate/boot.js?s=proj:proj-fa").status_code, 200)
-        self.assertEqual(self.lan.get(f"{self.k('p-proj-fa')}/appstate?s=proj:proj-fb").status_code, 403)
+        self.assertEqual(self.lan.get(f"{self.k('p-proj-0000000000fa')}/appstate/boot.js?s=proj:proj-0000000000fa").status_code, 200)
+        self.assertEqual(self.lan.get(f"{self.k('p-proj-0000000000fa')}/appstate?s=proj:proj-0000000000fb").status_code, 403)
         self.assertEqual(self.lan.get(f"{self.k('w-conv-fa')}/appstate?s=art:conv-fa:a1").status_code, 200)
         self.assertEqual(self.lan.get(f"{self.k('w-conv-fa')}/appstate?s=art:conv-fb:a1").status_code, 403)
 
     def test_forged_and_old_keys_fail(self):
-        self.assertEqual(self.lan.get(f"/api/k/p-proj-fa.{'0' * 32}/projects/proj-fa/raw/index.html").status_code, 401)
-        self.assertEqual(self.lan.get(f"/api/k/{self.secret}/projects/proj-fa/raw/index.html").status_code, 401)  # unscoped
-        other = self.k("p-proj-fb").split(".")[-1]
-        self.assertEqual(self.lan.get(f"/api/k/p-proj-fa.{other}/projects/proj-fa/raw/index.html").status_code, 401)
+        self.assertEqual(self.lan.get(f"/api/k/p-proj-0000000000fa.{'0' * 32}/projects/proj-0000000000fa/raw/index.html").status_code, 401)
+        self.assertEqual(self.lan.get(f"/api/k/{self.secret}/projects/proj-0000000000fa/raw/index.html").status_code, 401)  # unscoped
+        other = self.k("p-proj-0000000000fb").split(".")[-1]
+        self.assertEqual(self.lan.get(f"/api/k/p-proj-0000000000fa.{other}/projects/proj-0000000000fa/raw/index.html").status_code, 401)
 
     def test_local_key_only_on_loopback(self):
         local = self.auth.local_frame_secret()
@@ -166,9 +167,9 @@ class FrameScope(unittest.TestCase):
 
     def test_page_loads_move_under_their_key(self):
         noredir = TestClient(shellb.app, client=("127.0.0.1", 50000), raise_server_exceptions=False, follow_redirects=False)
-        r = noredir.get("/api/projects/proj-fa/raw/index.html", headers={"Sec-Fetch-Dest": "iframe"})
+        r = noredir.get("/api/projects/proj-0000000000fa/raw/index.html", headers={"Sec-Fetch-Dest": "iframe"})
         self.assertEqual(r.status_code, 302)
-        self.assertTrue(r.headers["location"].startswith(self.k("p-proj-fa", self.auth.local_frame_secret()) + "/projects/proj-fa/raw/"))
+        self.assertTrue(r.headers["location"].startswith(self.k("p-proj-0000000000fa", self.auth.local_frame_secret()) + "/projects/proj-0000000000fa/raw/"))
         self.assertEqual(noredir.get(r.headers["location"]).status_code, 200)
         w = noredir.get("/api/workspace/conv-fa/data.txt", headers={"Sec-Fetch-Dest": "document"})
         self.assertEqual(w.status_code, 302)

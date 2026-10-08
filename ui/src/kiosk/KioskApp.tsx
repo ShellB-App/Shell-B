@@ -64,6 +64,7 @@ import {
 } from './wallpapers';
 import { WallpaperModal } from './WallpaperModal';
 import { loadAmbience } from '../ambience';
+import { foldSummarized } from '../summarized';
 
 const Studio = lazy(() => import('../studio/Studio'));
 const Code = lazy(() => import('../code/Code'));
@@ -764,7 +765,7 @@ export function KioskApp() {
                           </div>
                         ) : (
                           <div className="max-w-2xl mx-auto space-y-6 pb-4">
-                            {messages.map(m => (
+                            {foldSummarized(messages).map(m => (
                               <MessageView
                                 key={m.id}
                                 message={m}

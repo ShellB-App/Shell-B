@@ -49,10 +49,16 @@ ALL_DATA_DIRS = CORE_DIRS + MEDIA_DIRS
 
 INDIVIDUAL_FILES = ["admin.key", "datasets.json"]
 
+# Project .git folders are kept: they are each Studio/Code project's version history (leaving them out used to
+# wipe that history on restore, and made the projects' git calls fall through to the app's own repository).
 EXCLUDE_PATTERNS = {
     "backups", "asset-tmp", "doc-cache", "mcp-logs", ".restore_staging",
-    "__pycache__", ".git", "shellb.db-wal", "shellb.db-shm", ".lock"
+    "__pycache__", "shellb.db-wal", "shellb.db-shm", ".lock"
 }
+
+# Kept out of archives: the key that encrypts the Codex secrets would defeat that encryption if it sat beside them.
+# A restore keeps this machine's copy (or uses the archive's, if an older archive still carries one).
+SECRET_FILES = ["codex/.key"]
 
 
 def _now_ts() -> float:
@@ -115,8 +121,22 @@ def _load_index() -> list[dict]:
 def _save_index(items: list[dict]):
     try:
         INDEX_FILE.write_text(json.dumps(items, indent=1))
+        INDEX_FILE.chmod(0o600)
     except Exception:
         pass
+
+
+def _ignore_for(d_name: str):
+    """shutil.copytree ignore callback: EXCLUDE_PATTERNS everywhere, SECRET_FILES at their exact place."""
+    patterns = shutil.ignore_patterns(*EXCLUDE_PATTERNS)
+    secrets = {tuple(f.split("/")) for f in SECRET_FILES if f.split("/")[0] == d_name}
+
+    def ignore(src, names):
+        out = set(patterns(src, names))
+        rel = Path(src).relative_to(db.DATA).parts
+        out |= {n for n in names if (*rel, n) in secrets}
+        return out
+    return ignore
 
 
 def _rebuild_index() -> list[dict]:
@@ -202,7 +222,7 @@ def create_backup(
                 shutil.copytree(
                     src_dir,
                     dst_dir,
-                    ignore=shutil.ignore_patterns(*EXCLUDE_PATTERNS),
+                    ignore=_ignore_for(d_name),
                     symlinks=True
                 )
                 actual_dirs.append(d_name)
@@ -234,7 +254,8 @@ def create_backup(
             for item in staging.iterdir():
                 tar.add(item, arcname=item.name)
 
-        # 6. Move to destination
+        # 6. Move to destination (owner-only: an archive holds the database, admin.key and the SSH key)
+        temp_archive.chmod(0o600)
         shutil.move(str(temp_archive), str(final_archive_path))
 
     size = final_archive_path.stat().st_size
@@ -252,22 +273,31 @@ def create_backup(
 
 # ── Restore Backup ───────────────────────────────────────────────────────────
 
-def find_archive(identifier: str) -> Path | None:
-    """Finds backup archive by path, filename, or short ID."""
-    if Path(identifier).exists() and Path(identifier).is_file():
+def find_archive(identifier: str, allow_path: bool = False) -> Path | None:
+    """The archive with exactly this filename or manifest ID. Only the terminal CLI may name a file path: from the API
+    an identifier is never a path (it would resolve against server/) and never a substring of a name."""
+    identifier = (identifier or "").strip()
+    if not identifier:
+        return None
+    if allow_path and ("/" in identifier) and Path(identifier).is_file():
         return Path(identifier)
-    for p in BACKUP_DIR.glob("*.tar.gz"):
-        if p.name == identifier or identifier in p.name:
-            return p
+    if "/" in identifier or identifier.startswith("."):
+        return None
+    p = BACKUP_DIR / identifier
+    if identifier.endswith(".tar.gz") and p.is_file():
+        return p
+    for m in _load_index():
+        if m.get("id") == identifier and (BACKUP_DIR / m.get("filename", "")).is_file():
+            return BACKUP_DIR / m["filename"]
     return None
 
 
-def restore_backup(archive_identifier: str, create_safety: bool = True) -> dict:
+def restore_backup(archive_identifier: str, create_safety: bool = True, allow_path: bool = False) -> dict:
     """Restores database and data directories from a backup archive.
-    
-    archive_identifier can be an ID, filename, or direct file path.
+
+    archive_identifier is an ID or filename (or, from the CLI only, a file path).
     """
-    archive_path = find_archive(archive_identifier)
+    archive_path = find_archive(archive_identifier, allow_path=allow_path)
     if not archive_path or not archive_path.exists():
         raise FileNotFoundError(f"Backup archive not found: {archive_identifier}")
 
@@ -288,7 +318,7 @@ def restore_backup(archive_identifier: str, create_safety: bool = True) -> dict:
             for member in tar.getmembers():
                 if member.name.startswith("/") or ".." in member.name:
                     raise ValueError(f"Dangerous path in archive: {member.name}")
-            tar.extractall(staging_dir)
+            tar.extractall(staging_dir, filter="data")  # also refuses links out of the folder and device files
 
         # 3. Verify extracted SQLite database
         staged_db = staging_dir / "shellb.db"
@@ -323,7 +353,11 @@ def restore_backup(archive_identifier: str, create_safety: bool = True) -> dict:
 
         shutil.copy2(staged_db, db.DB_PATH)
 
-        # 6. Overwrite data directories
+        # 6. Overwrite data directories, keeping this machine's secret files unless the archive brings its own
+        kept = {}
+        for rel in SECRET_FILES:
+            if (db.DATA / rel).is_file() and not (staging_dir / rel).exists():
+                kept[rel] = (db.DATA / rel).read_bytes()
         for item in staging_dir.iterdir():
             if item.name in ("shellb.db", "manifest.json"):
                 continue
@@ -334,6 +368,10 @@ def restore_backup(archive_identifier: str, create_safety: bool = True) -> dict:
                 shutil.copytree(item, dst, symlinks=True)
             elif item.is_file():
                 shutil.copy2(item, dst)
+        for rel, data in kept.items():
+            (db.DATA / rel).parent.mkdir(parents=True, exist_ok=True)
+            (db.DATA / rel).write_bytes(data)
+            (db.DATA / rel).chmod(0o600)
 
         return {
             "ok": True,
@@ -391,8 +429,9 @@ async def scheduled_backup_loop():
             recent_auto = [m for m in index if m.get("source") == "auto" and now - m.get("createdAt", 0) < 86400]
             if not recent_auto:
                 # Perform daily backup
-                create_backup(scope="full", note="Scheduled daily automated backup", source="auto")
-                prune_automated_backups()
+                # a ~600 MB archive takes a while: off the event loop, so chats and streams keep running
+                await asyncio.to_thread(create_backup, scope="full", note="Scheduled daily automated backup", source="auto")
+                await asyncio.to_thread(prune_automated_backups)
         except Exception as e:
             print(f"[BackupScheduler] Error: {e}")
         await asyncio.sleep(3600)
@@ -417,15 +456,18 @@ def stop_scheduler():
 
 def init():
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    BACKUP_DIR.chmod(0o700)
+    for p in BACKUP_DIR.glob("*.tar.gz"):
+        p.chmod(0o600)
     _rebuild_index()
 
 
 # ── FastAPI Routes ──────────────────────────────────────────────────────────
 
 def _check_admin(req: Request):
-    """Restricted to logged-in owner or localhost session."""
-    if not auth.is_owner(req) and req.scope.get("shellb_auth") != "local":
-        raise HTTPException(401, "login-required")
+    """Admin only (the owner's session or the admin key). Plain localhost trust isn't enough: an archive holds
+    admin.key and the SSH key, and restore replaces everything."""
+    auth.require_admin(req)
 
 
 @router.get("")
@@ -446,7 +488,7 @@ async def api_create_backup(req: Request):
     if scope not in ("full", "core"):
         scope = "full"
     note = str(body.get("note", ""))
-    res = create_backup(scope=scope, note=note, source="manual")
+    res = await asyncio.to_thread(create_backup, scope=scope, note=note, source="manual")
     db.audit_log("backup:create", {"scope": scope, "id": res.get("id") if isinstance(res, dict) else None})
     return res
 
@@ -463,19 +505,22 @@ def download_backup(backup_id: str, req: Request):
 @router.post("/upload")
 async def upload_backup(req: Request, file: UploadFile = File(...)):
     _check_admin(req)
-    if not file.filename or not file.filename.endswith(".tar.gz"):
-        raise HTTPException(400, "Only .tar.gz backup files are supported.")
+    name = Path(file.filename or "").name
+    if not name.endswith(".tar.gz") or not re.fullmatch(r"[A-Za-z0-9._-]+", name) or name.startswith("."):
+        raise HTTPException(400, "Only .tar.gz backup files (letters, digits, dots, dashes) are supported.")
 
-    dest = BACKUP_DIR / file.filename
+    dest = BACKUP_DIR / name
     # Avoid collisions
     if dest.exists():
-        stem = file.filename[:-7]
-        dest = BACKUP_DIR / f"{stem}-{uuid.uuid4().hex[:4]}.tar.gz"
+        dest = BACKUP_DIR / f"{name[:-7]}-{uuid.uuid4().hex[:4]}.tar.gz"
 
-    with dest.open("wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    def _save():
+        with dest.open("wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        dest.chmod(0o600)
+    await asyncio.to_thread(_save)
 
-    manifest = inspect_archive(dest)
+    manifest = await asyncio.to_thread(inspect_archive, dest)
     if not manifest:
         dest.unlink(missing_ok=True)
         raise HTTPException(400, "Invalid backup archive: missing manifest or unreadable tar.gz.")
@@ -573,7 +618,7 @@ def cli():
             print(f"{m.get('id', ''):<10} {dt:<22} {m.get('sizeFormatted', ''):<10} {m.get('scope', ''):<6} {m.get('source', ''):<12} {m.get('note', '')}")
 
     elif args.cmd == "verify":
-        p = find_archive(args.backup_id)
+        p = find_archive(args.backup_id, allow_path=True)
         if not p:
             print(f"Failed to find archive: {args.backup_id}")
             sys.exit(1)
@@ -586,7 +631,7 @@ def cli():
 
     elif args.cmd == "restore":
         print(f"Restoring from {args.backup_id}...")
-        res = restore_backup(args.backup_id, create_safety=not args.no_safety)
+        res = restore_backup(args.backup_id, create_safety=not args.no_safety, allow_path=True)
         print(f"Restore complete: {res['message']}")
         if res.get("safetyBackup"):
             print(f"Safety snapshot created: {res['safetyBackup']['filename']}")
@@ -595,7 +640,7 @@ def cli():
             os.system("systemctl --user restart shellb-web")
 
     elif args.cmd == "delete":
-        p = find_archive(args.backup_id)
+        p = find_archive(args.backup_id, allow_path=True)
         if p:
             p.unlink()
             _rebuild_index()

@@ -61,6 +61,7 @@ import remote
 import offline
 import selfmod
 import ask
+import compaction
 import composer
 import planmode
 import sysinfo
@@ -143,6 +144,7 @@ codex.init()
 media.init()
 memory.init()
 episodes.init()
+compaction.migrate_legacy()  # after episodes.init: the FTS triggers index the messages it puts back
 feedback.init()
 cli_agents.cleanup()
 verify.register()
@@ -270,8 +272,10 @@ async def _shutdown():
 ADMIN_KEY_FILE = db.DATA / "admin.key"
 if not ADMIN_KEY_FILE.exists():
     import secrets
-    ADMIN_KEY_FILE.write_text(secrets.token_urlsafe(18) + "\n")
-    ADMIN_KEY_FILE.chmod(0o600)
+    # created 0600 from the first byte (write_text then chmod left a moment where it was world-readable)
+    _fd = os.open(ADMIN_KEY_FILE, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(_fd, "w") as _f:
+        _f.write(secrets.token_urlsafe(18) + "\n")
 
 
 is_admin = auth.is_admin
@@ -371,6 +375,7 @@ def delete_conversation(conv_id: str):
     if conv_id in ACTIVE:
         _signal_abort(ACTIVE[conv_id])
     db.delete_conversation(conv_id)
+    compaction.forget(conv_id)
     research.unlink(conv_id)
     with db.conn() as c:
         c.execute("DELETE FROM mega_links WHERE conv_id=?", (conv_id,))
@@ -384,136 +389,37 @@ def stop(conv_id: str):
     return {"ok": True}
 
 
-async def generate_compaction_summary(conv_title: str, msgs: list[dict], settings: dict) -> str:
-    """Generate a structured Markdown summary of older messages using the utility model (or fallback)."""
-    transcript_lines = []
-    for m in msgs:
-        role = "User" if m.get("role") == "user" else "Assistant"
-        content = (m.get("content") or "").strip()
-        if m.get("role") == "compacted":
-            transcript_lines.append(f"[Previous Compacted Context: {content[:400]}]")
-        elif content:
-            snippet = content if len(content) <= 600 else (content[:400] + " ... " + content[-150:])
-            transcript_lines.append(f"{role}: {snippet}")
-    transcript = "\n\n".join(transcript_lines[:40])
-
-    model = settings.get("utilityModel") or ""
-    from agent import OLLAMA, model_info
-    import providers
-    if model and not providers.is_cloud(model):
-        prompt = (
-            f"You are compacting earlier turns of a conversation between a user and an AI assistant.\n"
-            f"Preserve all vital continuity so the assistant can proceed without losing context:\n"
-            f"1. User goals, requirements, preferences, and project background.\n"
-            f"2. Decisions made, code/solutions developed, conclusions reached.\n"
-            f"3. Specific files created or modified (/work/...), tools run, and artifacts produced.\n"
-            f"4. Current status, pending questions, or unresolved tasks.\n\n"
-            f"Write a concise, high-density Markdown summary with bullet points. No preamble or filler.\n\n"
-            f"Conversation Title: {conv_title}\n\n"
-            f"Transcript to compact:\n{transcript}"
-        )
-        try:
-            payload = {
-                "model": model, "stream": False, "keep_alive": "2h",
-                "options": {"temperature": 0.2, "num_predict": 450},
-                "messages": [{"role": "user", "content": prompt}]
-            }
-            if "thinking" in (await model_info(model))["capabilities"]:
-                payload["think"] = False
-            async with httpx.AsyncClient(timeout=45) as client:
-                r = await client.post(f"{OLLAMA}/api/chat", json=payload)
-                if r.status_code == 200:
-                    summary = (r.json()["message"]["content"] or "").strip()
-                    if summary:
-                        return summary
-        except Exception as e:
-            print(f"Utility model compaction failed, using extractive fallback: {e}")
-
-    # Extractive fallback
-    topics = []
-    actions = []
-    files_mentioned = set()
-    for m in msgs:
-        text = m.get("content") or ""
-        for f in re.findall(r"(/work/[\w\d_./-]+|\b[\w\d_-]+\.(?:py|ts|tsx|js|html|css|json|md|sh|sql)\b)", text):
-            files_mentioned.add(f)
-        if m.get("role") == "user":
-            first = text.strip().split("\n")[0][:140]
-            if first:
-                topics.append(first)
-        elif m.get("role") == "assistant":
-            blocks = m.get("blocks", [])
-            for b in blocks:
-                if b.get("type") == "tool":
-                    actions.append(f"Used `{b.get('name')}`")
-            first = text.strip().split("\n")[0][:140]
-            if first:
-                actions.append(first)
-
-    summary_parts = [f"### Earlier Conversation Summary ({len(msgs)} messages compacted)"]
-    if topics:
-        summary_parts.append("**User requests & goals:**\n" + "\n".join(f"- {t}" for t in topics[:5]))
-    if actions:
-        summary_parts.append("**Key actions & outcomes:**\n" + "\n".join(f"- {a}" for a in actions[:6]))
-    if files_mentioned:
-        summary_parts.append("**Files & artifacts referenced:**\n" + ", ".join(f"`{f}`" for f in sorted(files_mentioned)[:10]))
-    return "\n\n".join(summary_parts)
-
-
-async def compact_conversation_history(conv_id: str, keep_recent: int = 4) -> dict:
-    conv = db.get_conversation(conv_id)
-    if not conv:
-        raise HTTPException(404, "No such conversation")
-    msgs = db.list_messages(conv_id)
-    if len(msgs) <= keep_recent:
-        return {"ok": True, "compacted": False, "message": "Conversation is short; compaction not needed.",
-                "totalMessages": len(msgs)}
-
-    to_compact = msgs[:-keep_recent]
-    to_keep = msgs[-keep_recent:]
-
-    settings = get_settings()
-    summary = await generate_compaction_summary(conv["title"], to_compact, settings)
-
-    archived = []
-    for m in to_compact:
-        if m.get("compacted") and m.get("compactedMessages"):
-            archived.extend(m["compactedMessages"])
-        else:
-            archived.append(m)
-
-    to_delete_ids = [m["id"] for m in to_compact]
-    with db.conn() as c:
-        c.executemany("DELETE FROM messages WHERE id=?", [(mid,) for mid in to_delete_ids])
-
-    comp_mid = db.new_id("msg")
-    comp_timestamp = (to_keep[0]["timestamp"] / 1000.0 - 0.1) if to_keep and to_keep[0].get("timestamp") else (time.time() - 5)
-    comp_data = {
-        "compacted": True,
-        "compactedCount": len(archived),
-        "compactedMessages": archived,
-        "timestamp": comp_timestamp * 1000
-    }
-    with db.conn() as c:
-        c.execute("INSERT INTO messages VALUES(?,?,?,?,?,?)",
-                  (comp_mid, conv_id, "compacted", summary, json.dumps(comp_data), comp_timestamp))
-
-    db.touch_conversation(conv_id)
-    return {
-        "ok": True,
-        "compacted": True,
-        "summary": summary,
-        "compactedCount": len(archived),
-        "remainingCount": len(to_keep) + 1,
-        "checkpointId": comp_mid
-    }
+async def _conv_num_ctx(conv) -> tuple[dict, int]:
+    agent, _ = find_agent(conv["agentId"])
+    info = await model_info(agent["model"])
+    return agent, int(agent.get("numCtx") or info["numCtx"] or 32768)
 
 
 @app.post("/api/conversations/{conv_id}/compact")
-async def compact_conversation_endpoint(conv_id: str, req: Request):
-    body = await req.json() if (await req.body()) else {}
-    keep_recent = max(2, min(int(body.get("keepRecent", 4)), 10))
-    return await compact_conversation_history(conv_id, keep_recent=keep_recent)
+async def compact_conversation_endpoint(conv_id: str):
+    """Summarize all but the newest messages now. Nothing is deleted (compaction.py)."""
+    conv = db.get_conversation(conv_id)
+    if not conv:
+        raise HTTPException(404, "No such conversation")
+    if conv_id in ACTIVE:
+        raise HTTPException(409, "This conversation is generating; compact it when the reply is done")
+    _, num_ctx = await _conv_num_ctx(conv)
+    return await compaction.compact_now(conv_id, num_ctx, get_settings())
+
+
+@app.get("/api/conversations/{conv_id}/context")
+async def conversation_context(conv_id: str):
+    """How full the agent's context is: the last reply's estimate, or one from the history alone."""
+    conv = db.get_conversation(conv_id)
+    if not conv:
+        raise HTTPException(404, "No such conversation")
+    history = db.list_messages(conv_id)
+    last = next((m for m in reversed(history) if m["role"] == "assistant" and m.get("context")), None)
+    _, num_ctx = await _conv_num_ctx(conv)
+    info = last["context"] if last else compaction.context_info(history, num_ctx)
+    s = compaction.latest_summary(history)
+    return {**info, "summarized": (s.get("count") or 0) if s else 0,
+            "pending": bool(db.kv_get(f"compaction_pending:{conv_id}"))}
 
 
 @app.post("/api/conversations/{conv_id}/fork")
@@ -547,13 +453,18 @@ async def fork_conversation(conv_id: str, req: Request):
         privacy.mark_incognito(new_cid)
 
     # Duplicate messages and map IDs
-    msg_id_map = {}
+    msg_id_map = {m["id"]: db.new_id("msg") for m in msgs_to_copy}
     with db.conn() as c:
         for m in msgs_to_copy:
-            old_mid = m["id"]
-            new_mid = db.new_id("msg")
-            msg_id_map[old_mid] = new_mid
+            new_mid = msg_id_map[m["id"]]
             m_data = {k: v for k, v in m.items() if k not in ("id", "role", "content", "timestamp")}
+            # summaries point at the messages they stand for, and those back at them: same links in the copy
+            if m_data.get("summarizedBy"):
+                m_data["summarizedBy"] = msg_id_map.get(m_data["summarizedBy"], "")
+            if m_data.get("summaryOf"):
+                m_data["summaryOf"] = [msg_id_map[i] for i in m_data["summaryOf"] if i in msg_id_map]
+            if m_data.get("supersedes"):
+                m_data["supersedes"] = msg_id_map.get(m_data["supersedes"])
             created_ts = (m["timestamp"] / 1000.0) if m.get("timestamp") else time.time()
             c.execute("INSERT INTO messages VALUES(?,?,?,?,?,?)",
                       (new_mid, new_cid, m["role"], m["content"], json.dumps(m_data), created_ts))
@@ -644,13 +555,9 @@ async def chat(conv_id: str, req: Request):
         raise HTTPException(409, "This conversation is already generating")
     if any(a.get("kind") == "ref" for a in body.get("attachments") or []):
         body["attachments"] = await composer.resolve_refs(body["attachments"])
-    # Auto-compact older messages if conversation is getting too long
-    raw_msgs = db.list_messages(conv_id)
-    if len(raw_msgs) >= 24 or sum(len(m.get("content", "")) for m in raw_msgs) > 36000:
-        try:
-            await compact_conversation_history(conv_id, keep_recent=4)
-        except Exception as e:
-            print(f"Auto-compaction skipped: {e}")
+    # checked again after the last await: begin_turn claims ACTIVE synchronously, so a double-submit can't slip in
+    if conv_id in ACTIVE:
+        raise HTTPException(409, "This conversation is already generating")
     queue, _ = begin_turn(conv, body)
 
     async def stream():
@@ -696,6 +603,7 @@ def begin_turn(conv, body, stream=True, note=""):
     if conv["agentId"] != agent["id"] and not body.get("routeOnly"):  # an @mention borrows the agent for one turn
         db.update_conversation(conv_id, agentId=agent["id"])
 
+    summarized = None if body.get("fromMessageId") else compaction.commit_pending(conv_id)  # written after the last reply
     history = db.list_messages(conv_id)
     first_turn = not any(m["role"] == "assistant" for m in history)
     user_msg = {"id": db.new_id("msg"), "role": "user", "content": content, "attachments": attachments,
@@ -720,7 +628,25 @@ def begin_turn(conv, body, stream=True, note=""):
         if queue is not None:
             await queue.put(ev)
 
+    closed = {"stream": False}
+
     async def run():
+        """_run, plus the guarantees: the chat is freed and the stream ends even if saving the reply or an after-turn
+        step raises (otherwise the chat answered 409 "already generating" until a restart)."""
+        try:
+            return await _run()
+        except Exception as e:
+            print(f"turn {conv_id}: {type(e).__name__}: {e}")
+            await emit({"type": "error", "error": f"{type(e).__name__}: {e}"})
+            raise
+        finally:
+            if ACTIVE.get(conv_id, {}).get("abort") is abort:  # never free a slot a newer turn has taken
+                ACTIVE.pop(conv_id, None)
+            if not closed["stream"]:
+                closed["stream"] = True
+                await emit(None)
+
+    async def _run():
         t0 = time.time()
         sink = Sink(emit)
         live["blocks"] = sink.blocks
@@ -729,8 +655,11 @@ def begin_turn(conv, body, stream=True, note=""):
         turn.plan = plan
         turn.user_request = content.split("\n\n[Selected element in ")[0][:800]
         status, error = "complete", None
+        sizing = {}  # num_ctx and the fixed prompt size, for the context meter and the next summary
         try:
             await emit({"type": "start", "userMessage": user_msg, "message": {**live, "blocks": []}})
+            if summarized:
+                await emit({"type": "summarized", "summary": summarized})
             has_images = any(a.get("kind") == "image" for a in attachments)
             info = await model_info(agent["model"])
             if has_images and "vision" not in info["capabilities"]:
@@ -755,6 +684,12 @@ def begin_turn(conv, body, stream=True, note=""):
                 system += "\n\n" + planmode.NOTE
             if body.get("voice") and stream:
                 system += "\n\n" + VOICE_NOTE
+            if not body.get("freshContext"):
+                earlier = compaction.note(history, conv_id)
+                if earlier:
+                    system += "\n\n" + earlier
+            sizing.update(num_ctx=num_ctx, fixed=len(system) + sum(len(json.dumps(TOOLS[t]["schema"])) for t in tool_names
+                                                                  if t in TOOLS and TOOLS[t].get("schema")))
             # freshContext: the model sees only this message (the system prompt carries the state it needs)
             prior = [] if body.get("freshContext") else history_messages(history, conv_id, num_ctx)
             msgs = [{"role": "system", "content": system}] + prior \
@@ -781,13 +716,19 @@ def begin_turn(conv, body, stream=True, note=""):
         if error:
             final["error"] = error
         final["content"] = "\n\n".join(b["text"] for b in sink.blocks if b["type"] == "text")
+        if sizing:  # how full the next prompt will be (the composer's context meter)
+            final["context"] = compaction.context_info(db.list_messages(conv_id) + [final], sizing["num_ctx"], sizing["fixed"])
         db.add_message(conv_id, "assistant", final["content"],
-                       {k: final[k] for k in ("agentId", "model", "blocks", "status", "durationMs", "usage", "mode", "recalled") if k in final}
+                       {k: final[k] for k in ("agentId", "model", "blocks", "status", "durationMs", "usage", "mode", "recalled",
+                                              "context") if k in final}
                        | ({"error": error} if error else {}), msg_id=asst_id)
-        ACTIVE.pop(conv_id, None)
+        if ACTIVE.get(conv_id, {}).get("abort") is abort:
+            ACTIVE.pop(conv_id, None)
         if stream and status == "complete" and not abort.is_set():
             memory.after_turn(conv_id, asst_id, content, final["content"], agent)
             commitments.after_turn(conv_id, asst_id, content, final["content"], agent)
+        if sizing and status == "complete":
+            compaction.schedule(conv_id, turn.model, sizing["num_ctx"], sizing["fixed"], settings)
         if project_id:
             try:
                 sha = await asyncio.to_thread(projects.commit, project_id,
@@ -808,6 +749,7 @@ def begin_turn(conv, body, stream=True, note=""):
             except Exception:
                 pass
         await emit({"type": "done", "message": final})
+        closed["stream"] = True
         await emit(None)
         return final
 

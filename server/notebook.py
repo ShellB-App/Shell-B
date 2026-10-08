@@ -24,6 +24,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 
 import db
 import groups
+import ids
 import providers
 import research
 from tools import GUARD_HOOKS, OLLAMA, SEARXNG, UA, _blocked_host, embed
@@ -116,7 +117,7 @@ def start():
 # ── storage helpers ─────────────────────────────────────────────────────────
 
 def _bdir(bid) -> Path:
-    return ROOT / bid
+    return ROOT / ids.check("board", bid, "research board")
 
 
 def _text_path(bid, iid) -> Path:

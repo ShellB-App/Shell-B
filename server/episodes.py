@@ -129,7 +129,7 @@ Title: {title}
 
 
 def _transcript(conv_id: str) -> str:
-    msgs = [m for m in db.list_messages(conv_id) if (m["content"] or "").strip()]
+    msgs = [m for m in db.list_messages(conv_id) if (m["content"] or "").strip() and m["role"] in ("user", "assistant")]
     lines = [f"{'User' if m['role'] == 'user' else 'Assistant'}: {_clip(m['content'], 900)}" for m in msgs]
     return _clip("\n\n".join(lines), 9000)
 

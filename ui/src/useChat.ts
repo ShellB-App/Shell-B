@@ -68,6 +68,16 @@ export function useChat(opts: { onEvent?: (ev: StreamEvent, convId: string) => v
           case 'title':
             mine(c => ({ ...c, title: ev.title }));
             break;
+          case 'summarized': {  // older messages now reach the agent as a summary: fold them under it
+            const of = new Set(ev.summary.summaryOf ?? []);
+            mine(c => {
+              const msgs = c.messages.map(m => (of.has(m.id) || m.role === 'summary' && !m.summarizedBy && m.id !== ev.summary.id
+                ? { ...m, summarizedBy: ev.summary.id } : m));
+              const at = msgs.findIndex(m => m.timestamp > ev.summary.timestamp);
+              return { ...c, messages: at < 0 ? [...msgs, ev.summary] : [...msgs.slice(0, at), ev.summary, ...msgs.slice(at)] };
+            });
+            break;
+          }
           case 'done':
             mine(c => ({ ...c, messages: c.messages.map(m => (m.id === liveId ? ev.message : m)) }));
             break;

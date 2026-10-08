@@ -19,12 +19,15 @@ import {
 import { api } from '../api';
 import type { BackupInfo } from '../types';
 import { btn, relTime } from './common';
+import { AdminGate } from './Integrations';
 
 export function BackupsTab() {
   const [backups, setBackups] = useState<BackupInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  // backups hold admin.key and the SSH key, so the server asks for admin (the owner's login or the admin key)
+  const [admin, setAdmin] = useState<boolean | null>(null);
 
   // Create modal state
   const [creating, setCreating] = useState(false);
@@ -56,7 +59,9 @@ export function BackupsTab() {
   };
 
   useEffect(() => {
-    load();
+    api.adminCheck()
+      .then(r => { setAdmin(r.ok); if (r.ok) load(); else setLoading(false); })
+      .catch(() => { setAdmin(false); setLoading(false); });
   }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -127,6 +132,8 @@ export function BackupsTab() {
     }
   };
 
+  if (admin === false) return <AdminGate onUnlocked={() => { setAdmin(true); load(); }} />;
+
   return (
     <div className="space-y-6">
       {/* Header section */}
@@ -138,6 +145,11 @@ export function BackupsTab() {
           </h2>
           <p className="text-xs text-[var(--text-muted)] mt-0.5">
             Atomic SQLite snapshots with filesystem storage. Pre-restore safety snapshots protect against data loss.
+          </p>
+          <p className="text-xs text-[var(--text-muted)] mt-1 max-w-[65ch]">
+            Archives stay on this machine and only you can read them. The key that unlocks Codex secrets is never put
+            in an archive; a restore keeps this machine's key, so copy <code>data/codex/.key</code> somewhere safe if
+            you move backups to another machine.
           </p>
         </div>
         <div className="flex items-center gap-2">

@@ -43,6 +43,8 @@ import { Secretary } from './components/Secretary';
 import { MapsApp } from './maps/MapsApp';
 import { RadioApp } from './radio/RadioApp';
 import { nextTheme, setTheme as applyTheme, themeInfo, type ThemeId } from './themes';
+import { foldSummarized } from './summarized';
+import { ContextMeter } from './components/composer/ContextMeter';
 
 const Studio = lazy(() => import('./studio/Studio'));
 const Code = lazy(() => import('./code/Code'));
@@ -814,7 +816,7 @@ export function App() {
               </div>
             ) : (
               <div className="max-w-3xl mx-auto px-4 py-6 space-y-7">
-                {messages.map(m => (
+                {foldSummarized(messages).map(m => (
                   <MessageView
                     key={m.id} message={m} agent={agents.find(a => a.id === m.agentId) ?? agent}
                     isLast={m === lastAssistant} busy={busy || !!conv?.streaming} activeArtifact={panel?.id}
@@ -863,7 +865,9 @@ export function App() {
             />
             {incognito && <IncognitoNote hours={settings?.incognitoHours} />}
             <div className="text-center text-[10px] text-[var(--text-muted)] mt-1.5">
-              {activeModel}{agent.cloud ? '' : ' · local'} · Shell:B can make mistakes; check anything important.
+              {activeModel}{agent.cloud ? '' : ' · local'}
+              {lastAssistant?.context && <> · <ContextMeter info={lastAssistant.context} /></>}
+              {' · '}Shell:B can make mistakes; check anything important.
             </div>
           </div>
         </div>

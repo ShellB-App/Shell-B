@@ -9,6 +9,7 @@ from pathlib import Path
 
 DATA = Path(__file__).resolve().parent.parent / "data"
 DATA.mkdir(exist_ok=True)
+DATA.chmod(0o700)  # the database, keys and every chat live here: owner only
 DB_PATH = DATA / "shellb.db"
 
 _audit_logger = logging.getLogger("shellb.audit")
@@ -57,6 +58,10 @@ def init():
     with conn() as c:
         c.executescript(SCHEMA)
         c.execute("PRAGMA journal_mode=WAL")
+    for f in (DB_PATH, DB_PATH.with_name(DB_PATH.name + "-wal"), DB_PATH.with_name(DB_PATH.name + "-shm")):
+        if f.exists():
+            f.chmod(0o600)  # API keys and every conversation live in here
+    with conn() as c:
         cols = {r["name"] for r in c.execute("PRAGMA table_info(conversations)")}
         if "project_id" not in cols:  # Studio threads belong to a project; chat lists skip them
             c.execute("ALTER TABLE conversations ADD COLUMN project_id TEXT")

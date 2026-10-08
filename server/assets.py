@@ -29,6 +29,7 @@ from fastapi.responses import FileResponse, Response
 from starlette.background import BackgroundTask
 
 import db
+import ids
 import scrape
 from tools import TOOLS, ToolResult, _fn
 
@@ -129,7 +130,7 @@ def slug(s: str) -> str:
 # ── libraries ───────────────────────────────────────────────────────────────
 
 def lib_dir(lid: str) -> Path:
-    return ASSETS / lid
+    return ASSETS / ids.check("assetlib", lid, "asset library")
 
 
 def get_lib(lid: str) -> dict | None:

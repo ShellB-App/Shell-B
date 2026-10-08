@@ -14,6 +14,7 @@ import { Canvas, type Pick } from './Canvas';
 import { FilesPanel, HistoryPanel } from './Sidebar';
 import { KIND_ICON } from './Studio';
 import { Terminal } from './Terminal';
+import { foldSummarized } from '../summarized';
 
 interface Props {
   projectId: string;
@@ -269,7 +270,7 @@ export function ProjectView({ projectId, agents, models, theme, onToggleTheme, v
                     ))}
                   </div>
                 </div>
-              ) : messages.map(m => (
+              ) : foldSummarized(messages).map(m => (
                 <MessageView key={m.id} message={m} agent={agents.find(a => a.id === m.agentId) ?? agent}
                   isLast={m === lastAssistant} busy={busy} onOpenArtifact={() => {}} onOpenFile={setSelected}
                   onRegenerate={() => {

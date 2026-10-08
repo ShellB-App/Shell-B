@@ -203,12 +203,19 @@ export type Block =
 
 export interface Message {
   id: string;
-  role: 'user' | 'assistant' | 'compacted';
+  /** 'summary': a lossy summary standing in for older messages in the agent's prompt (server/compaction.py) */
+  role: 'user' | 'assistant' | 'summary';
   content: string;
   timestamp: number;
-  compacted?: boolean;
-  compactedCount?: number;
-  compactedMessages?: Message[];
+  /** on a summarized message: the summary that replaced it in the prompt (the message itself is kept) */
+  summarizedBy?: string;
+  /** on a summary: the messages it stands for, and how many in total (earlier summaries folded in) */
+  summaryOf?: string[];
+  count?: number;
+  /** filled in by foldSummarized for display: the originals behind a summary */
+  originals?: Message[];
+  /** how full the agent's context will be on the next turn (estimate) */
+  context?: ContextInfo;
   attachments?: Attachment[];
   agentId?: string;
   model?: string;
@@ -638,8 +645,11 @@ export interface ResearchBoardDetail extends ResearchBoard {
 
 export type ScheduleDraft = Pick<ScheduledTask, 'name' | 'prompt' | 'agentId' | 'groupId' | 'kind' | 'cron' | 'tz'> & { at: number | string | null; enabled?: boolean };
 
+export interface ContextInfo { used: number; limit: number; estimated?: boolean; summarized?: number; pending?: boolean }
+
 export type StreamEvent =
   | { type: 'start'; userMessage: Message; message: Message }
+  | { type: 'summarized'; summary: Message }
   | { type: 'block_start'; index: number; block: Block }
   | { type: 'block_delta'; index: number; text: string }
   | { type: 'block_update'; index: number; block: Block }

@@ -18,6 +18,7 @@ from fastapi.responses import FileResponse, Response, StreamingResponse
 from PIL import Image
 
 import db
+import ids
 import remote
 from offline import localize
 
@@ -309,7 +310,7 @@ def cover_later(pid: str):
 # ── filesystem + git ────────────────────────────────────────────────────────
 
 def root(pid: str) -> Path:
-    p = PROJECTS / pid
+    p = PROJECTS / ids.check("project", pid, "project")
     if not p.is_dir():
         raise HTTPException(404, "No such project")
     return p
@@ -329,12 +330,32 @@ def safe_path(pid: str, rel: str, allow_root=True) -> Path:
     return p
 
 
+def git_env(base: Path) -> dict:
+    """Pin git to the project's own repository. Without GIT_DIR, a project whose .git is missing resolves to the
+    repository above it (Shell:B Web's own, since data/ sits inside it), and `add -A` would stage the app's code.
+    GIT_OPTIONAL_LOCKS=0: reads like the Code page's status poll must not take index.lock and break a concurrent commit."""
+    return {**os.environ, "GIT_OPTIONAL_LOCKS": "0", "GIT_DIR": str(base / ".git"), "GIT_WORK_TREE": str(base),
+            "GIT_CEILING_DIRECTORIES": str(PROJECTS)}
+
+
+def ensure_repo(pid: str) -> bool:
+    """Start a fresh history for a project whose .git is gone (older backups left it out); True if it had to."""
+    base = root(pid)
+    if (base / ".git").is_dir():
+        return False
+    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=base, check=True, env=git_env(base), capture_output=True)
+    commit(pid, "Recovered: earlier history was lost in a backup restore; it starts again here")
+    return True
+
+
 def git(pid: str, *args: str, check=True) -> str:
-    # GIT_OPTIONAL_LOCKS=0: reads like the Code page's status poll must not take index.lock and break a concurrent commit
-    env = {**os.environ, "GIT_OPTIONAL_LOCKS": "0"}
+    base = root(pid)
+    if not (base / ".git").is_dir():
+        ensure_repo(pid)
+    env = git_env(base)
     for attempt in range(5):
         r = subprocess.run(["git", "-c", "user.name=Shell:B Studio", "-c", "user.email=studio@shellb.local",
-                            "-c", "core.quotepath=off", *args], cwd=root(pid), capture_output=True, text=True, env=env)
+                            "-c", "core.quotepath=off", *args], cwd=base, capture_output=True, text=True, env=env)
         if r.returncode == 0 or "index.lock" not in r.stderr:
             break
         time.sleep(0.2 * (attempt + 1))  # another git process holds the lock; it is usually gone in a moment
@@ -353,9 +374,9 @@ def commit(pid: str, message: str) -> str | None:
 
 
 def _tracked_paths(base: Path) -> list[Path]:
-    """Files git would track (respects .gitignore); falls back to a plain walk if git is unhappy."""
+    """Files git would track (respects .gitignore); falls back to a plain walk if git is unhappy (or the .git is gone)."""
     r = subprocess.run(["git", "-c", "core.quotepath=off", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
-                       cwd=base, capture_output=True)
+                       cwd=base, capture_output=True, env=git_env(base))
     if r.returncode != 0:
         return sorted(p for p in base.rglob("*") if ".git" not in p.relative_to(base).parts)
     return sorted({base / n for n in r.stdout.decode(errors="replace").split("\0") if n})
@@ -440,7 +461,7 @@ def create_project_files(pid: str, name: str, brief: str, kind: str = "website",
         for rel, text in KINDS.get(kind, {}).get("starter", {}).items():
             (base / rel).parent.mkdir(parents=True, exist_ok=True)
             (base / rel).write_text(text)
-    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=base, check=True)
+    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=base, check=True, env=git_env(base))
     commit(pid, "Create project")
 
 
@@ -725,7 +746,7 @@ async def code_import(file: UploadFile = File(...), name: str = Form("")):
         dest.write_bytes(content)
     if not (PROJECTS / pid / ".gitignore").exists():
         (PROJECTS / pid / ".gitignore").write_text(CODE_GITIGNORE)
-    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=PROJECTS / pid, check=True)
+    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=PROJECTS / pid, check=True, env=git_env(PROJECTS / pid))
     await asyncio.to_thread(commit, pid, f"Import {file.filename or 'upload'} ({len(files)} files)")
     db.update_project(pid, entry=_code_entry(pid))
     return project_summary(db.get_project(pid))
@@ -838,6 +859,8 @@ async def project_patch(pid: str, req: Request):
 
 @router.delete("/{pid}")
 def project_delete(pid: str):
+    if not db.get_project(ids.check("project", pid, "project")):
+        raise HTTPException(404, "No such project")
     subprocess.run(["docker", "rm", "-f", f"shellb-dev-{pid}"], capture_output=True)  # its live dev server, if any
     db.delete_project(pid)
     shutil.rmtree(PROJECTS / pid, ignore_errors=True)
@@ -1116,7 +1139,7 @@ def export(pid: str):
 
 @router.get("/{pid}/cover")
 def cover(pid: str):
-    p = META / pid / "cover.jpg"
+    p = META / ids.check("project", pid, "project") / "cover.jpg"
     if not p.exists():
         raise HTTPException(404)
     return FileResponse(p, headers={"Cache-Control": "public, max-age=86400"})
@@ -1124,7 +1147,7 @@ def cover(pid: str):
 
 @router.get("/{pid}/shots/{name}")
 def shot_file(pid: str, name: str):
-    p = (META / pid / "shots" / name).resolve()
+    p = (META / ids.check("project", pid, "project") / "shots" / name).resolve()
     if p.parent != (META / pid / "shots").resolve() or not p.is_file():
         raise HTTPException(404)
     return FileResponse(p, headers={"Cache-Control": "public, max-age=31536000, immutable"})

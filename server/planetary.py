@@ -15,7 +15,7 @@ from typing import Any
 import httpx
 from fastapi import APIRouter, HTTPException, Query
 
-from tools import TOOLS, ToolResult, _fn
+from tools import GUARD_HOOKS, TOOLS, ToolResult, _fn
 from weather import DATA, UA
 
 import solsys
@@ -322,6 +322,158 @@ def plan_traverse(body: str, start: str, dest: str, num_waypoints: int = 6, acti
 
 
 # ── FASTAPI ROUTES ──────────────────────────────────────────────────────────
+
+# ── live telemetry (NOAA SWPC, JPL CAD, USGS) ───────────────────────────────
+# Cached under data/ so the Worlds layers and Atlas keep answering (marked stale) when the internet is down.
+
+async def fetch_space_weather() -> dict:
+    """Fetch live planetary space weather from NOAA SWPC."""
+    DATA.mkdir(parents=True, exist_ok=True)
+    cache_file = DATA / "space_weather.json"
+    if cache_file.exists() and time.time() - cache_file.stat().st_mtime < 1800:
+        try:
+            return json.loads(cache_file.read_text())
+        except Exception:
+            pass
+
+    url = "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json"
+    try:
+        async with httpx.AsyncClient(timeout=10, headers=UA, event_hooks=GUARD_HOOKS) as client:
+            resp = await client.get(url)
+            resp.raise_for_status()
+            rows = resp.json()
+            latest = rows[-1] if rows else {}
+            # Row format: {"time_tag": "...", "Kp": 5.67, "a_running": 67, "station_count": 8}
+            kp_raw = latest.get("Kp") if isinstance(latest, dict) else (latest[1] if len(latest) > 1 else 2.0)
+            try:
+                kp = round(float(kp_raw), 2)
+            except (ValueError, TypeError):
+                kp = 2.0
+            
+            # Storm classification
+            if kp >= 9:
+                storm = "G5 - Extreme Geomagnetic Storm"
+            elif kp >= 8:
+                storm = "G4 - Severe Geomagnetic Storm"
+            elif kp >= 7:
+                storm = "G3 - Strong Geomagnetic Storm"
+            elif kp >= 6:
+                storm = "G2 - Moderate Geomagnetic Storm"
+            elif kp >= 5:
+                storm = "G1 - Minor Geomagnetic Storm"
+            elif kp >= 4:
+                storm = "Unsettled"
+            else:
+                storm = "Quiet to Normal"
+
+            result = {
+                "timestamp": latest.get("time_tag") if isinstance(latest, dict) else datetime.now(timezone.utc).isoformat(),
+                "kp_index": kp,
+                "geomagnetic_condition": storm,
+                "aurora_visibility": "High latitudes (Kp 0-3)" if kp < 4 else "Mid-latitudes visible" if kp < 7 else "Low latitudes visible",
+                "fetched": time.time()
+            }
+            cache_file.write_text(json.dumps(result))
+            return result
+    except Exception as e:  # noqa: BLE001 — offline: serve the last copy
+        if cache_file.exists():
+            return {**json.loads(cache_file.read_text()), "stale": True}
+        return {"kp_index": 2.3, "geomagnetic_condition": "Quiet (Offline default)", "error": str(e)}
+
+
+async def fetch_near_earth_objects() -> list[dict]:
+    """Fetch upcoming close-approach Near-Earth Asteroids (NEOs)."""
+    DATA.mkdir(parents=True, exist_ok=True)
+    cache_file = DATA / "neo.json"
+    if cache_file.exists() and time.time() - cache_file.stat().st_mtime < 21600:
+        try:
+            return json.loads(cache_file.read_text())
+        except Exception:
+            pass
+
+    # JPL CAD (Close Approach Data) API
+    url = "https://ssd-api.jpl.nasa.gov/cad.api"
+    params = {"dist-max": "10LD", "date-min": "now", "limit": "10", "sort": "dist"}
+    try:
+        async with httpx.AsyncClient(timeout=10, headers=UA, event_hooks=GUARD_HOOKS) as client:
+            resp = await client.get(url, params=params)
+            resp.raise_for_status()
+            data = resp.json()
+            fields = data.get("fields", [])
+            rows = data.get("data", [])
+            out = []
+            for r in rows:
+                item = dict(zip(fields, r))
+                des = item.get("des", "Unknown")
+                cd = item.get("cd", "")
+                dist_ld = float(item.get("dist", 0)) * 389.17  # AU to Lunar Distances (~384,400 km)
+                v_rel = float(item.get("v_rel", 0))
+                h_mag = float(item.get("h", 25))
+                # Approx diameter from absolute magnitude H (assuming albedo 0.14)
+                diam_m = round(1329 / math.sqrt(0.14) * (10 ** (-0.2 * h_mag)) * 1000, 1)
+
+                out.append({
+                    "designation": des,
+                    "close_approach_date": cd,
+                    "miss_distance_lunar_distances": round(dist_ld, 2),
+                    "miss_distance_km": round(float(item.get("dist", 0)) * AU_KM, 0),
+                    "relative_velocity_kms": round(v_rel, 2),
+                    "approx_diameter_meters": diam_m,
+                    "potential_hazardous": dist_ld < 19.5 and diam_m > 140
+                })
+            cache_file.write_text(json.dumps(out))
+            return out
+    except Exception:  # noqa: BLE001 — offline: serve the last copy
+        if cache_file.exists():
+            return json.loads(cache_file.read_text())
+        return []
+
+
+async def fetch_earthquakes(min_magnitude: float = 2.5, limit: int = 20) -> list[dict]:
+    """Fetch live seismic activity from USGS GeoJSON feed."""
+    DATA.mkdir(parents=True, exist_ok=True)
+    cache_file = DATA / "earthquakes.json"
+    if cache_file.exists() and time.time() - cache_file.stat().st_mtime < 600:
+        try:
+            cached = json.loads(cache_file.read_text())
+            return [eq for eq in cached if eq["magnitude"] >= min_magnitude][:limit]
+        except Exception:
+            pass
+
+    url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson"
+    try:
+        async with httpx.AsyncClient(timeout=10, headers=UA, event_hooks=GUARD_HOOKS) as client:
+            resp = await client.get(url)
+            resp.raise_for_status()
+            data = resp.json()
+            features = data.get("features", [])
+            out = []
+            for f in features:
+                props = f.get("properties", {})
+                geom = f.get("geometry", {})
+                coords = geom.get("coordinates", [0, 0, 0])
+                mag = props.get("mag")
+                if mag is None:
+                    continue
+                out.append({
+                    "id": f.get("id"),
+                    "place": props.get("place", "Unknown"),
+                    "magnitude": round(float(mag), 1),
+                    "time": datetime.fromtimestamp(props.get("time", 0) / 1000.0, tz=timezone.utc).isoformat(),
+                    "lon": round(coords[0], 4),
+                    "lat": round(coords[1], 4),
+                    "depth_km": round(coords[2], 1),
+                    "url": props.get("url", "")
+                })
+            out.sort(key=lambda x: x["magnitude"], reverse=True)
+            cache_file.write_text(json.dumps(out))
+            return [eq for eq in out if eq["magnitude"] >= min_magnitude][:limit]
+    except Exception:  # noqa: BLE001 — offline: serve the last copy
+        if cache_file.exists():
+            cached = json.loads(cache_file.read_text())
+            return [eq for eq in cached if eq["magnitude"] >= min_magnitude][:limit]
+        return []
+
 
 @router.get("/search")
 async def search_route(q: str = Query(..., min_length=1), body: str | None = None, limit: int = 15):

@@ -55,6 +55,7 @@ import { MobileArtifactSheet } from './MobileArtifactSheet';
 import { MobileAgentPicker } from './MobileAgentPicker';
 import { MobileRadioBar } from './MobileRadioBar';
 import { FormFactorSwitcher } from './FormFactorSwitcher';
+import { foldSummarized } from '../summarized';
 
 const Studio = lazy(() => import('../studio/Studio'));
 const Code = lazy(() => import('../code/Code'));
@@ -885,7 +886,7 @@ export function MobileApp() {
                 </div>
               ) : (
                 <div className="max-w-xl mx-auto space-y-5 pb-4">
-                  {messages.map(m => (
+                  {foldSummarized(messages).map(m => (
                     <MessageView
                       key={m.id}
                       message={m}

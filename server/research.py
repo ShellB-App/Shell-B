@@ -762,6 +762,7 @@ async def api_patch(board_id: str, req: Request):
 
 @router.delete("/api/research/{board_id}")
 def api_delete(board_id: str):
+    _need(board_id)
     delete_board(board_id)
     return {"ok": True}
 
