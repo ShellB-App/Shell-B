@@ -70,11 +70,14 @@ async def _ask(src, payload: dict) -> dict:
 
 
 def _commit_reason(d: dict, action: str, key: str) -> str | None:
+    # a search or filter form (GET, no email/phone/password/card fields) only changes the address: no approval.
+    # Forms that post through scripts instead are caught by the helper's guard when they send what was typed.
+    sends = d.get("method", "post") == "post" or d.get("personal", True)
     if action == "press":
-        if key.lower() == "enter" and d.get("form") and d.get("textInput") and d.get("tag") != "textarea":
+        if key.lower() == "enter" and d.get("form") and d.get("textInput") and d.get("tag") != "textarea" and sends:
             return "pressing Enter in this form field sends the form"
         return None
-    if d.get("submitButton"):
+    if d.get("submitButton") and sends:
         return "it's the form's submit button"
     if d.get("words"):
         return f"“{d.get('name', '')[:60]}” sounds like it sends, buys, books or deletes something"

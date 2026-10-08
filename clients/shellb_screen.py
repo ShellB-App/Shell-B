@@ -121,7 +121,7 @@ BADGE_JS = r"""(() => {
 COMMON_JS = r"""
 const SENSITIVE = /(card.?num|cc.?num|cvv|cvc|csc|security.?code|ssn|social.?security|iban|routing|account.?num|\bpin\b|passw)/i;
 const nameOf = (el) => {
-  const clean = (s) => (s || '').replace(/\s+/g, ' ').trim();
+  const clean = (s) => (s || '').replace(/\s+/g, ' ').trim().replace(/\s*[:*]+$/, '');
   const aria = clean(el.getAttribute('aria-label')); if (aria) return aria;
   const lb = el.getAttribute('aria-labelledby');
   if (lb) { const t = clean(lb.split(/\s+/).map(id => document.getElementById(id)?.innerText || '').join(' ')); if (t) return t; }
@@ -246,7 +246,10 @@ DESCRIBE_JS = "(el) => {" + COMMON_JS + r"""
   const COOKIES = /cookie|consent|gdpr/i;
   const inCookieBanner = !!el.closest('[id*=cookie i],[class*=cookie i],[id*=consent i],[class*=consent i]');
   const words = !realLink && COMMIT.test(name) && !COOKIES.test(name) && !inCookieBanner;
-  return { tag, type: t, role, name, form: !!form, fields: formFields(form), submitButton, words,
+  // a GET form (search, filters) only puts the query in the address; it commits when it carries personal details
+  const method = (form?.getAttribute('method') || 'get').toLowerCase();
+  const personal = !!form?.querySelector('input[type=email],input[type=tel],input[type=password],[autocomplete*=email],[autocomplete*=tel],[autocomplete*=address],[autocomplete^=cc-]');
+  return { tag, type: t, role, name, form: !!form, method, personal, fields: formFields(form), submitButton, words,
            textInput: tag === 'textarea' || el.isContentEditable || (tag === 'input' && !['checkbox', 'radio', 'submit', 'button', 'reset', 'image', 'file'].includes(t)),
            sensitive: ['input', 'textarea'].includes(tag) && sensitive(el), file: tag === 'input' && t === 'file',
            select: tag === 'select', check: ['checkbox', 'radio'].includes(t) || ['checkbox', 'radio', 'switch', 'menuitemcheckbox'].includes(el.getAttribute('role') || '') };
@@ -263,7 +266,7 @@ class Browser:
     def __init__(self, headless=False):
         self.headless = headless
         self.pw = self.ctx = self.page = None
-        self.filled: list[tuple[str, str]] = []  # (field name, value) typed by the agent since the last approved submit
+        self.filled: list[tuple[str, str, bool]] = []  # (field, value, sensitive) typed by the agent since the last approved submit
         self.blocked = None
         self.dialogs: list[str] = []
         self.acting = False
@@ -402,6 +405,11 @@ class Browser:
         text = "\n".join(out) + ("\n…(page cut off here; the rest isn't shown)" if cut else "")
         return {"url": url, "title": title, "tabs": tabs, "text": text}
 
+    def shown_fields(self):
+        """What the agent typed, for the approval card: passwords and card numbers masked."""
+        return [[n, ("\u2022\u2022\u2022\u2022" + (v[-4:] if len(v) > 8 and v.replace(" ", "").isdigit() else "")) if sens else v]
+                for n, v, sens in self.filled]
+
     # actions
     def do(self, r):
         self.ensure()
@@ -500,7 +508,7 @@ class Browser:
             except Exception:
                 d = {"name": "", "form": False, "fields": []}
         if not d.get("fields"):
-            d["fields"] = [[n, v] for n, v in self.filled]
+            d["fields"] = self.shown_fields()
         d["url"] = self.page.url
         return d
 
@@ -521,7 +529,7 @@ class Browser:
             fn()
             self.filled = []
             return
-        typed = {v for _, v in self.filled if len(v) >= 3}
+        typed = {v for _, v, _s in self.filled if len(v) >= 3}
         forms = set()
         for v in typed:
             forms |= {v, urllib.parse.quote_plus(v), urllib.parse.quote(v), json.dumps(v)[1:-1]}
@@ -549,7 +557,10 @@ class Browser:
 
     def a_click(self, r):
         loc = self.loc(r["ref"]) if r.get("ref") else self._by_text(str(r.get("text") or ""))
-        name = loc.evaluate("el => (el.innerText || el.value || el.getAttribute('aria-label') || '').trim().slice(0, 60)")
+        if loc.evaluate("el => el.tagName") == "SELECT":  # a native dropdown opens outside the page; choosing is fill's job
+            opts = loc.evaluate("el => [...el.options].map(o => o.text.trim()).filter(Boolean)")
+            raise ValueError("That's a dropdown: choose with fill, e.g. fields=[{ref, value: '<option>'}]. Options: " + " | ".join(opts[:30]))
+        name = loc.evaluate("el => (el.getAttribute('aria-label') || el.labels?.[0]?.innerText || el.innerText || el.value || '').trim().split('\\n')[0].slice(0, 60)")
         loc.scroll_into_view_if_needed(timeout=5000)
         loc.evaluate(FLASH_JS)
 
@@ -561,7 +572,7 @@ class Browser:
         self._guarded(click, bool(r.get("approved")))
         if self.blocked:
             say(f"Held back a submit from {name!r} until you approve it in the chat")
-            return {**self.page_state(read=False), "blocked": self.blocked, "fields": [[n, v] for n, v in self.filled]}
+            return {**self.page_state(read=False), "blocked": self.blocked, "fields": self.shown_fields()}
         self.settle()
         say(f"Shell:B clicked {name!r}" + (" (approved)" if r.get("approved") else ""))
         return self.page_state()
@@ -573,7 +584,7 @@ class Browser:
         self._guarded(lambda: self.page.keyboard.press(key), bool(r.get("approved")))
         if self.blocked:
             say(f"Held back a submit from pressing {key} until you approve it in the chat")
-            return {**self.page_state(read=False), "blocked": self.blocked, "fields": [[n, v] for n, v in self.filled]}
+            return {**self.page_state(read=False), "blocked": self.blocked, "fields": self.shown_fields()}
         self.settle()
         return self.page_state()
 
@@ -625,7 +636,7 @@ class Browser:
                         self.page.keyboard.type(v, delay=15)
                     now = loc.evaluate("el => el.isContentEditable && el.tagName !== 'INPUT' ? el.innerText : el.value")
                     if v:
-                        self.filled.append((label, v))
+                        self.filled.append((label, v, bool(d.get("sensitive"))))
                     if d.get("sensitive"):
                         now = "••••"
                 done.append(f"[{ref}] {label} = {json.dumps(now)[:200]}")
@@ -633,9 +644,10 @@ class Browser:
                 problems.append(f"[{ref}]: {str(e).splitlines()[0][:300]}")
         if done:
             say(f"Shell:B filled {len(done)} field(s)")
-        self.page.wait_for_timeout(300)
-        return {**self.page_state(read=False), "text": "\n".join(["Filled:"] + done if done else []) +
-                ("\n\nProblems:\n" + "\n".join(problems) if problems else "")}
+        self.page.wait_for_timeout(400)
+        summary = "\n".join(["Filled:"] + done if done else []) + ("\n\nProblems:\n" + "\n".join(problems) if problems else "")
+        page = self.read(6000)  # the page as it is now: suggestions, validation messages, fields that appeared
+        return {**page, "text": summary + "\n\nThe page now:\n" + page["text"]}
 
 
 # ── main loop ───────────────────────────────────────────────────────────────
