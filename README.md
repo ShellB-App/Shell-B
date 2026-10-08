@@ -116,7 +116,7 @@ Every feature, its code, API and tables: **[the Shell:B Manual →](docs/MANUAL.
 
 ```mermaid
 flowchart TD
-    User(["Browser / Tailscale device"]) <-->|"HTTPS :8443 · LAN :8200"| Web["Shell:B Web<br/>FastAPI · React 19"]
+    User(["Browser / Tailscale device"]) <-->|"HTTPS :8443 · Cloudflare tunnel"| Web["Shell:B Web<br/>FastAPI · React 19"]
 
     subgraph Local ["Your hardware"]
         Web <-->|"Streaming tokens"| Ollama["Ollama<br/>local models"]
@@ -140,8 +140,10 @@ docs/     MANUAL.md, the full feature reference
 
 ## 🚀 Quick Start
 
-Shell:B runs as the systemd user unit `shellb-web` on port **8200**. Open `http://localhost:8200`, or
-`https://<device>.<tailnet>.ts.net:8443` over Tailscale; HTTPS is what unlocks the mic, clipboard and notifications.
+Shell:B runs as the systemd user unit `shellb-web` (`server/serve.py`) on port **8200**, bound to `127.0.0.1` by
+default (`SHELLB_HOSTS` adds more addresses). Open `http://localhost:8200` on the machine itself, or serve it over HTTPS
+(e.g. `tailscale serve --https=8443 http://127.0.0.1:8200`); HTTPS is what unlocks the mic, clipboard, notifications and
+screen sharing.
 
 On the first visit, sign in with the admin key and choose the owner password:
 

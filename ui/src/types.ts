@@ -445,6 +445,7 @@ export interface Settings {
   cloudMemory: boolean;
   cloudLibrary: boolean;
   cloudCodex: boolean;
+  cloudScreen?: boolean;
   /** Aphrodite, the opt-in adult agent (server/adult.py): admin-only master switch */
   adultEnabled?: boolean;
   /** SDXL checkpoint file for Aphrodite's images; "" = FLUX.1-dev */

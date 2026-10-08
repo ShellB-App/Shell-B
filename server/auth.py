@@ -43,7 +43,8 @@ router = APIRouter(prefix="/api/auth")
 COOKIE = "shellb_session"
 SESSION_TTL = 30 * 86400
 MIN_PASSWORD = 8
-PUBLIC = re.compile(r"^/api/(auth(/|$)|_hold$|files/[^/]+$)")
+# screen/*: the Shell:B Screen helper signs in with its own device token (screen.py checks it on every call)
+PUBLIC = re.compile(r"^/api/(auth(/|$)|_hold$|files/[^/]+$|screen/(connect|next|frame/[0-9a-f]+|disconnect)$)")
 # what every frame key may reach, whatever its scope: (methods, path under /api/)
 FRAME_SHARED = [
     ({"GET", "HEAD"}, re.compile(r"^assets/file/[A-Za-z0-9_-]+/.+")),

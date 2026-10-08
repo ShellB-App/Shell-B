@@ -1,11 +1,14 @@
-import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent } from 'react';
+import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import { secureHere } from '../secureUrl';
 import clsx from 'clsx';
-import { ArrowUp, AudioLines, Loader2, Mic, Paperclip, Square, Users } from 'lucide-react';
+import { ArrowUp, AudioLines, Camera, Loader2, Mic, Paperclip, ScreenShare, ScreenShareOff, Square, Users } from 'lucide-react';
 import type { Agent, Attachment, Effort, ModelInfo } from '../types';
 import { api } from '../api';
 import { onIncoming, takeIncoming } from '../desktop';
 import { onQuote } from '../quote';
+import { screenSupported, snapshot, startLive, stopLive, useLiveShare } from '../screenShare';
+import { openMenuAt } from './ContextMenu';
+import { toast } from './toast';
 import { composerApi } from '../composerApi';
 import { expandVariables, findMention, ShortcutMenu, useShortcuts, type ComposerCommand } from './ComposerShortcuts';
 import { AttachmentsList } from './composer/AttachmentsList';
@@ -135,6 +138,28 @@ export function Composer({
   const canThink = model ? model.capabilities.includes('thinking') : true;
   const canSee = model ? model.capabilities.includes('vision') : true;
   const uploading = atts.some(a => a.uploading);
+  const share = useLiveShare();
+
+  function screenMenu(e: ReactMouseEvent<HTMLButtonElement>) {
+    const sec = secureHere();
+    if (!screenSupported()) {
+      if (sec) location.href = sec;
+      else toast('Screen sharing needs HTTPS and a desktop browser.', { kind: 'error' });
+      return;
+    }
+    const failed = (what: string) => (err: unknown) => {
+      if (!/NotAllowed|AbortError|Permission/i.test(String(err))) toast(`${what}: ${String(err).replace(/^Error: (\d+: )?/, '')}`, { kind: 'error' });
+    };
+    openMenuAt(e, [
+      { label: share ? 'Attach a screenshot of the share' : 'Attach a screenshot…', icon: Camera,
+        onSelect: () => { snapshot().then(f => addFiles([f]), failed("Couldn't take a screenshot")); } },
+      share
+        ? { label: 'Stop sharing', icon: ScreenShareOff, danger: true, onSelect: () => { void stopLive(); } }
+        : { label: 'Share screen live…', icon: ScreenShare, hint: 'agents look when needed',
+            onSelect: () => { startLive().then(() => toast(canSee ? `${agent.name} can now look at your screen when it helps.`
+              : `Sharing. ${agent.name}'s model can't see images; pick a vision model or agent to use it.`), failed("Couldn't share the screen")); } },
+    ]);
+  }
 
   async function addFiles(files: File[]) {
     if (!files.length) return;
@@ -282,6 +307,14 @@ export function Composer({
       </div>
 
       {notice && <div className="px-1.5 pb-1 text-[11px] text-amber-400">{notice}</div>}
+      {share && (
+        <div className="flex items-center gap-2 px-1.5 pb-1 text-[11px] text-[var(--text-muted)]">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shrink-0" aria-hidden />
+          <span className="truncate">Sharing <span className="text-[var(--text-secondary)]">{share.label}</span>
+            {share.looks ? ` · looked ${share.looks}×` : ' · agents look only when needed'}</span>
+          <button onClick={() => { void stopLive(); }} className="ml-auto shrink-0 px-1.5 rounded text-red-400 hover:bg-red-500/10 focus-visible:outline focus-visible:outline-1">Stop</button>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center justify-between pt-1.5 gap-x-2 gap-y-1">
         <ComposerMenus
@@ -302,6 +335,11 @@ export function Composer({
           <input ref={fileRef} type="file" multiple className="hidden" onChange={e => { addFiles(Array.from(e.target.files ?? [])); e.target.value = ''; }} />
           <button onClick={() => fileRef.current?.click()} className="p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition" title="Attach files or images">
             <Paperclip className="w-4 h-4" />
+          </button>
+          <button onClick={screenMenu} aria-haspopup="menu"
+            className={clsx('p-2 rounded-lg transition', share ? 'text-red-400 hover:bg-red-500/10' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]')}
+            title={share ? `Sharing ${share.label}: click to stop or attach a screenshot` : 'Screen: attach a screenshot or share live'}>
+            <ScreenShare className="w-4 h-4" />
           </button>
           <button
             onClick={secure ? () => { location.href = secure; } : toggleMic} disabled={!!micDisabledReason || recording === 'transcribing'}

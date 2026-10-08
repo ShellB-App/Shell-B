@@ -10,8 +10,11 @@ The full reference for Shell:B Web: every feature, where its code lives, its API
 
 ## Access & networking
 
-**URL:** `https://<tailscale-device>.<tailnet>.ts.net:8443` (Tailscale HTTPS: needed for mic, clipboard and
-notifications) or `http://localhost:8200` (LAN) · service `shellb-web` (systemd user unit, port 8200)
+**URL:** `https://<tailscale-device>.<tailnet>.ts.net:8443` (Tailscale HTTPS) or the Cloudflare tunnel hostname ·
+service `shellb-web` (systemd user unit, port 8200). **HTTPS only:** `server/serve.py` listens on the addresses in
+`SHELLB_HOSTS` (default `127.0.0.1`; this Spark adds the docker0 gateway `172.17.0.1`, where hub-cloudflared and the hub's
+`_probe` reach `host.docker.internal:8200`). There is no plain-HTTP LAN address; `http://localhost:8200` still works on
+the Spark itself for tools, `shot.sh` and the kiosk.
 
 **HTTPS** is configured via `tailscale serve` (tailnet only, Tailscale's certificate, persists across reboots): `--https=8443` →
 `http://127.0.0.1:8200`, and Studio dev-server previews `--https=8410…8417` → `http://127.0.0.1:8210…8217` (82xx is
@@ -393,6 +396,24 @@ address (`_ShortNameRedirect` in app.py). Check with `tailscale serve status`; r
   **Mega Plans** tool (`mega_plan`, on for Shell:B) can create plans from chat and link them with `[text](plan:<id>)`.
   The orchestrator always gets the tool in its plan chat. Code is in `server/megaplan.py` and
   `ui/src/components/MegaPlans.tsx`; the tables are `mega_plans`, `mega_steps`, `mega_events` and `mega_links`.
+
+## Screen sight
+
+Agents can look at your screen while you share it (`server/screen.py`, `ui/src/screenShare.ts`).
+- **Screen button** by the message box: *Attach a screenshot* (one picture of a screen, window or tab, attached to the
+  message) or *Share screen live*. A live share stays on across chats until you press Stop (or the browser's own Stop
+  sharing); a red dot and "Sharing …" sit above the composer, and a toast appears each time an agent looks.
+- **Screen helper** (`clients/shellb_screen.py`, Windows/macOS/Linux, `pip install mss pillow`): Settings → Tools &
+  Connectors → **Screen** → *Pair a computer* downloads a copy with the tailnet address and a device token baked in.
+  While it runs, agents can look at that computer without a browser prompt (`monitor`: 1 = primary, 0 = all); it prints
+  a line per look. Unpairing revokes the token at once. It talks to the Tailscale address, since Cloudflare Access
+  needs a browser login.
+- **`look_at_screen`** is offered only while a screen is shared, only in live top-level chats (not schedules, plans or
+  sub-agents), only to models with vision, and to cloud models only with Cloud AI → *Let cloud agents look at a shared
+  screen* (`cloudScreen`, off by default). Each look is saved in the chat's `/work/screen/` and shown in the chat; the
+  model gets a copy at most 1600 px on its longest side. Settings → Screen lists what's shared and can end any share.
+- Sources are the owner's browser session or a paired helper; localhost and other logins can't be one. The helper's
+  four endpoints (`/api/screen/connect|next|frame|disconnect`) skip the login wall and check the device token instead.
 
 ## Connectors, MCP servers and cloud AI
 

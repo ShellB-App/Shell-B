@@ -12,7 +12,7 @@ You are working on the Shell:B private AI stack.
   - Health check: `curl -s http://localhost:8200/api/status`
 
 ## Local Services
-- Shell:B Web: `:8200` (LAN) / `:8443` (Tailscale HTTPS)
+- Shell:B Web: `:8443` (Tailscale HTTPS) / Cloudflare tunnel; `:8200` only on 127.0.0.1 + docker0 172.17.0.1 (serve.py, SHELLB_HOSTS; no LAN HTTP since 2026-10-08)
 - GAIA (`:8100`): retired 2026-10-08 (unit disabled, files kept)
 - HERMES (STT/TTS): `:8001` & `:8004` (Qwen3-TTS)
 - ORPHEUS (MusicGen): `:8002`

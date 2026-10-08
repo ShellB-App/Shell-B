@@ -9,7 +9,7 @@ mode. MCP tools are left out entirely because Shell:B can't tell what they do.
 # tools that never change anything
 READ_ONLY = {
     "web_search", "web_fetch", "read_document", "view_document", "ocr", "memory_search", "recall_conversations", "use_skill", "read_skill_file",
-    "ask_user", "ask_agent", "wiki", "legal", "project_search", "project_read_file", "project_read_chat",
+    "ask_user", "ask_agent", "look_at_screen", "wiki", "legal", "project_search", "project_read_file", "project_read_chat",
     # Studio/Code project and remote workspace readers
     "list_files", "read_file", "view_image", "screenshot", "search_files", "find_files", "project_diff",
 }

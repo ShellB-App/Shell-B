@@ -66,6 +66,7 @@ import selfmod
 import selfreview
 import community
 import ask
+import screen
 import compaction
 import composer
 import planmode
@@ -129,6 +130,7 @@ routing.register()
 planetary.register()
 worldnotes.register()
 ask.register()
+screen.register()
 scrape.register()
 skills.register()
 groups.register()
@@ -202,6 +204,7 @@ app.include_router(devserver.router)
 app.include_router(projects.router)
 app.include_router(remote.router)
 app.include_router(ask.router)
+app.include_router(screen.router)
 app.include_router(appstate.router)
 app.include_router(auth.router)
 app.include_router(gibberlink.router)

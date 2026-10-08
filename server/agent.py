@@ -29,6 +29,7 @@ import scrape
 import remote
 import selfmod
 import ask
+import screen
 import compaction
 import memory
 import places
@@ -479,6 +480,10 @@ class Turn:
             names.append("mega_plan")  # whoever orchestrates a plan needs the tool to review and edit it
         if self.depth == 0 and self.interactive and "ask_user" in TOOLS and switches.get("ask_user", True):
             names.append("ask_user")  # unattended runs (schedules, plans, scouts) have nobody to ask
+        if self.depth == 0 and self.interactive and "look_at_screen" in TOOLS and switches.get("look_at_screen", True) \
+                and "vision" in info["capabilities"] and screen.available() \
+                and (not providers.is_cloud(self.model) or self.settings.get("cloudScreen", False)):
+            names.append("look_at_screen")  # screen.py: only while the owner shares a screen, and only in a live chat
         if self.depth == 0 and "chat_transcript" in TOOLS and "chat_transcript" not in names and switches.get("chat_transcript", True) \
                 and (providers.is_cloud(self.model) or self.user_request.startswith("/verify-chat")):
             names.append("chat_transcript")  # verify.py: lets an agent audit this chat's full record
