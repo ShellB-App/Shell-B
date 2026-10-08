@@ -372,7 +372,8 @@ DEFAULT_AGENTS += [
         "model": "claude-code/opus",
         "temperature": 0.6,
         "effort": "high",
-        "tools": ["web_search", "web_fetch", "read_document", "view_document", "ocr", "run_code", "create_artifact"],
+        "tools": ["web_search", "web_fetch", "read_document", "view_document", "ocr", "run_code", "create_artifact",
+                  "shellb_source", "self_findings"],
         "builtin": True,
     },
     {

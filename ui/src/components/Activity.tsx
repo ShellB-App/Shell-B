@@ -6,6 +6,7 @@ import { api } from '../api';
 import type { ActivityItem, ActivitySource, ActivitySummary, PendingApproval } from '../types';
 import { btn, relTime } from './common';
 import { BriefNowButton, BriefRow, FollowUpsPanel, useFollowUpCounts } from './FollowUps';
+import { FindingsPanel } from './Findings';
 
 const SOURCES: Record<ActivitySource, { label: string; icon: typeof Inbox; color: string }> = {
   schedule: { label: 'Scheduled', icon: CalendarClock, color: 'text-emerald-400' },
@@ -132,8 +133,9 @@ export function Activity({ live }: { live?: ActivitySummary }) {
   const [more, setMore] = useState(false);
   const [error, setError] = useState('');
   // #/activity/follow-ups opens the Follow-ups tab (server/commitments.py); briefs link there
-  const readTab = () => (/^#\/activity\/follow-ups/.test(location.hash) ? 'follow-ups' : 'feed');
-  const [tab, setTab] = useState<'feed' | 'follow-ups'>(readTab);
+  const readTab = () => (/^#\/activity\/follow-ups/.test(location.hash) ? 'follow-ups'
+    : /^#\/activity\/findings/.test(location.hash) ? 'findings' : 'feed');
+  const [tab, setTab] = useState<'feed' | 'follow-ups' | 'findings'>(readTab);
   useEffect(() => { const f = () => setTab(readTab()); window.addEventListener('hashchange', f); return () => window.removeEventListener('hashchange', f); }, []);
   const [fuTick, setFuTick] = useState(0);
   const fuCounts = useFollowUpCounts(fuTick);
@@ -205,9 +207,10 @@ export function Activity({ live }: { live?: ActivitySummary }) {
         <p className="text-sm text-[var(--text-secondary)] mb-5">What scheduled runs, to-dos, Mega Plans, asset scouts, notebooks and self-deploys did while you were away, and anything agents are waiting on you for.</p>
         {error && <div className="mb-4 text-xs text-red-500 dark:text-red-400">{error}</div>}
         <div role="tablist" className="flex gap-4 mb-5 border-b border-[var(--border-subtle)]">
-          {([['feed', 'Feed', counts.unread], ['follow-ups', 'Follow-ups', fuCounts ? fuCounts.overdue + fuCounts.today || fuCounts.open : 0]] as const).map(([id, label, n]) => (
+          {([['feed', 'Feed', counts.unread], ['follow-ups', 'Follow-ups', fuCounts ? fuCounts.overdue + fuCounts.today || fuCounts.open : 0],
+             ['findings', 'Self-review', 0]] as const).map(([id, label, n]) => (
             <button key={id} role="tab" aria-selected={tab === id}
-              onClick={() => { location.hash = id === 'feed' ? '#/activity' : '#/activity/follow-ups'; setTab(id); }}
+              onClick={() => { location.hash = id === 'feed' ? '#/activity' : `#/activity/${id}`; setTab(id); }}
               className={clsx('-mb-px pb-2 text-sm border-b-2 transition flex items-center gap-1.5 focus-visible:outline-none focus-visible:text-[var(--text-primary)]',
                 tab === id ? 'border-[var(--accent)] text-[var(--text-primary)] font-medium' : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]')}>
               {label}
@@ -225,7 +228,7 @@ export function Activity({ live }: { live?: ActivitySummary }) {
           </section>
         )}
 
-        {tab === 'follow-ups' ? <FollowUpsPanel onChange={() => setFuTick(t => t + 1)} /> : (<>
+        {tab === 'findings' ? <FindingsPanel /> : tab === 'follow-ups' ? <FollowUpsPanel onChange={() => setFuTick(t => t + 1)} /> : (<>
         <div className="flex flex-wrap gap-1.5 mb-2">
           {chip(filter === 'all', 'All', () => setFilter('all'))}
           {chip(filter === 'attention', 'Needs you', () => setFilter('attention'), counts.attention)}

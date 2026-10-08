@@ -60,6 +60,7 @@ import assets as asset_libs
 import remote
 import offline
 import selfmod
+import selfreview
 import ask
 import compaction
 import composer
@@ -140,6 +141,8 @@ asset_libs.init()
 asset_libs.register()
 selfmod.init()
 selfmod.register()
+selfreview.init()
+selfreview.register()
 codex.init()
 media.init()
 memory.init()
@@ -153,6 +156,7 @@ codemap.init()
 codex.register()
 commitments.register()
 app.include_router(selfmod.router)
+app.include_router(selfreview.router)
 app.include_router(composer.router)
 app.include_router(sysinfo.router)
 app.include_router(network.router)
