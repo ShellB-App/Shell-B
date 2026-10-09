@@ -162,7 +162,7 @@ stays signed in for 90 days. Replace this with real accounts in `server/guests.p
   - nothing about accounts is reachable from inside a cell
 
 ## Progress
-- **Guest accounts: built 2026-10-09** (not deployed until shellb-web restarts with a fresh UI build).
+- **Guest accounts: built and deployed 2026-10-09** (commit 5a04fee, live at the guest address since 22:34).
   `server/guest_accounts.py` (accounts, TOTP, lockout, reset links, sign-in log, owner routes under /api/guests/{gid}/),
   session changes in `guests.py` (`via`, `remember`, 30 d / 12 h idle), gateway routes in `guest_app.py` (OPEN /
   SETUP_OPEN wall), `ui/src/guest/GuestGate.tsx` (sign-in, two-step, create account, reset, device code, choose a
