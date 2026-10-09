@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Shell:B link
+Comment=Open shellb:// links in the Shell:B app
+Exec=shellb-link %u
+Icon=shellb
+NoDisplay=true
+Terminal=false
+MimeType=x-scheme-handler/shellb;

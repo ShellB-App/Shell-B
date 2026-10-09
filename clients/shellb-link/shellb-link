@@ -1,0 +1,29 @@
+#!/bin/sh
+# Opens a shellb:// link in the Shell:B app. Browsers only let a web app claim `web+` schemes, so the installed app
+# handles web+shellb: (manifest protocol_handlers) and this helper, registered for shellb:, hands links on to it.
+#
+#   shellb-link shellb://c/<chat>
+#
+# With SHELLB_URL set (environment, or ~/.config/shellb/link.conf), the link opens at that address instead:
+# <SHELLB_URL>/?link=<link>, which the installed app picks up if the browser sends its links to apps.
+set -eu
+link="${1:-}"
+case "$link" in
+  shellb:*|web+shellb:*|SHELLB:*) ;;
+  *) echo "shellb-link: not a Shell:B link: $link" >&2; exit 2 ;;
+esac
+conf="${XDG_CONFIG_HOME:-$HOME/.config}/shellb/link.conf"
+[ -z "${SHELLB_URL:-}" ] && [ -f "$conf" ] && SHELLB_URL=$(sed -n 's/^SHELLB_URL=//p' "$conf" | tail -n 1)
+case "$link" in web+*) target="$link" ;; *) target="web+$link" ;; esac
+
+open_url() { if command -v xdg-open >/dev/null 2>&1; then xdg-open "$1"; else open "$1"; fi; }
+
+if [ -n "${SHELLB_URL:-}" ]; then
+  enc=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$target")
+  open_url "${SHELLB_URL%/}/?link=$enc"
+elif [ "$(uname)" = Darwin ] || [ -n "$(xdg-mime query default x-scheme-handler/web+shellb 2>/dev/null)" ]; then
+  open_url "$target"
+else
+  echo "shellb-link: install the Shell:B app (it registers web+shellb:) or set SHELLB_URL in $conf" >&2
+  exit 1
+fi

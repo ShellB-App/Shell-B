@@ -9,6 +9,7 @@ import { isFavorite, refreshFavorites, setFavorite, useFavorites } from '../favo
 import { openContextMenu, type MenuEntry } from './ContextMenu';
 import { chatProjectMenu } from './projectMenu';
 import { copyText } from '../quote';
+import { shellbLink } from '../links';
 import { FavIcon, FavoriteStar } from './Favorites';
 import { req } from '../api';
 import { jumpToMessage } from '../jump';
@@ -106,6 +107,7 @@ export function Sidebar(p: Props) {
       ] },
       'sep',
       { label: 'Copy link', icon: Link2, onSelect: () => copyText(`${location.origin}/#/c/${c.id}`, 'Link copied') },
+      { label: 'Copy Shell:B link', icon: Link2, onSelect: () => copyText(shellbLink(`#/c/${c.id}`), 'Shell:B link copied') },
       'sep',
       { label: 'Delete…', icon: Trash2, danger: true, hint: 'Del', onSelect: () => setConfirmDel(c.id) },
     ];

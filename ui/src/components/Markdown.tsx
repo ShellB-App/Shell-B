@@ -8,6 +8,7 @@ import rehypeHighlight from 'rehype-highlight';
 import { Check, Copy, Loader2, Play, X } from 'lucide-react';
 import clsx from 'clsx';
 import { RichLink, rewriteLinks } from './RichLinks';
+import { linkRoute, remarkShellbLinks } from '../links';
 
 /** Models write math in several dialects; remark-math wants $…$ inline and $$ on their own lines for display.
  *  Rich links (tip:, artifact:, …) are made parser-safe here too, since both must skip code. */
@@ -121,9 +122,9 @@ export const Markdown = memo(function Markdown({ text, className, streaming }: {
   return (
     <div className={clsx('prose-shellb', streaming && 'caret-last', className)}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMath]}
+        remarkPlugins={[remarkGfm, remarkMath, remarkShellbLinks]}
         rehypePlugins={[rehypeKatex, [rehypeHighlight, { detect: true, ignoreMissing: true }]]}
-        urlTransform={url => (url.startsWith('sb:') ? url : defaultUrlTransform(url))}
+        urlTransform={url => (url.startsWith('sb:') ? url : linkRoute(url) ?? defaultUrlTransform(url))}
         components={{
           pre: ({ children }) => {
             const child = Array.isArray(children) ? children[0] : children;

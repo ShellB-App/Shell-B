@@ -397,6 +397,24 @@ address (`_ShortNameRedirect` in app.py). Check with `tailscale serve status`; r
   The orchestrator always gets the tool in its plan chat. Code is in `server/megaplan.py` and
   `ui/src/components/MegaPlans.tsx`; the tables are `mega_plans`, `mega_steps`, `mega_events` and `mega_links`.
 
+## Shell:B links
+
+`shellb://<route>` names a place in the app, where the route is the app's hash route without `#/`:
+`shellb://c/<chat>`, `shellb://codex/notes`, `shellb://studio/<project>`, `shellb://wiki/<page>`. A link means the
+same thing in every Shell:B (the owner's and a guest's): it opens in the reader's own app, and that app's server decides
+what they may see. Parsing lives in `ui/src/links.ts` (`linkRoute`, `shellbLink`); routes are limited to URL-safe
+characters and only ever set the hash, so a link can't leave the app or carry markup.
+
+- **In chats:** Markdown links to `shellb:`/`web+shellb:` and bare `shellb://…` in text open in the same tab
+  (`remarkShellbLinks`; code spans and blocks are left alone). The sidebar's chat menu has **Copy Shell:B link**.
+- **From other apps:** browsers only let a web app claim `web+` schemes, so both manifests register
+  `protocol_handlers` `web+shellb` → `/?link=%s`; `desktop.ts` (owner) and `guest/main.tsx` route the launch, through
+  `launchQueue` when the app is already open. The browser asks once before the app may open them.
+- **Bare `shellb://` on a desktop:** `clients/shellb-link/` registers the scheme with the OS and hands links on as
+  `web+shellb:` (`install-linux.sh [address]` → `~/.local/bin/shellb-link` + `x-scheme-handler/shellb`;
+  `shellb-link.reg` for Windows, per user; `install-macos.sh` builds a small AppleScript handler app). With `SHELLB_URL`
+  set (`~/.config/shellb/link.conf`, or the installer's argument) the Linux helper opens `<address>/?link=…` instead.
+
 ## Screen sight
 
 Agents can look at your screen while you share it (`server/screen.py`, `ui/src/screenShare.ts`).

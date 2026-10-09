@@ -11,6 +11,7 @@
   "theme_color": "#0a0d1f",
   "categories": ["productivity", "utilities"],
   "launch_handler": { "client_mode": ["focus-existing", "auto"] },
+  "protocol_handlers": [{ "protocol": "web+shellb", "url": "/?link=%s" }],
   "file_handlers": [
     { "action": "/?open", "accept": {
         "image/png": [".png"], "image/jpeg": [".jpg", ".jpeg"], "image/webp": [".webp"], "image/gif": [".gif"],

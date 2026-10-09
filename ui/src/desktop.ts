@@ -1,10 +1,12 @@
 import { useSyncExternalStore } from 'react';
+import { linkRoute } from './links';
 
 /**
  * The installed app's ties to the operating system (manifest.webmanifest, public/sw.js). Imported for its side effects
  * in main.tsx, so launches are caught before the app has loaded:
  * - launch_handler `focus-existing`: a shortcut, a link or a file opened while Shell:B is already running comes to the
  *   open window through `launchQueue` instead of opening a second window; this moves that window to the route.
+ * - protocol_handlers: a `web+shellb:` link clicked in another app opens `/?link=<url>` (links.ts says what it means).
  * - file_handlers ("Open with Shell:B") and share_target ("Share → Shell:B") hand over files and text. They wait in
  *   `incoming` until a composer takes them into a new chat (Composer.tsx, mobile/MobileComposer.tsx).
  * - the install prompt (Settings → General) and the dock/taskbar badge.
@@ -48,8 +50,10 @@ function consumeLaunch(p: LaunchParams) {
     return;
   }
   if (!p.targetURL) return;
-  const hash = new URL(p.targetURL).hash;
-  if (hash.startsWith('#/') && hash !== location.hash) location.hash = hash;
+  const target = new URL(p.targetURL);
+  const link = target.searchParams.get('link');
+  const hash = link !== null ? linkRoute(link) : target.hash;
+  if (hash?.startsWith('#/') && hash !== location.hash) location.hash = hash;
 }
 
 /** The service worker stashes a share (POST /share-target) in this cache and opens `/?share=<id>`. */
@@ -75,10 +79,14 @@ async function readShare(id: string) {
 if (typeof window !== 'undefined') {
   (window as unknown as { launchQueue?: LaunchQueue }).launchQueue?.setConsumer(consumeLaunch);
 
-  // launches arrive as /?share=<id> (share_target, via sw.js) and /?open (file_handlers); keep the address clean
+  // launches arrive as /?share=<id> (share_target, via sw.js), /?open (file_handlers) and /?link=<url>
+  // (protocol_handlers); keep the address clean
   const q = new URLSearchParams(location.search);
   const share = q.get('share');
-  if (share !== null || q.has('open')) history.replaceState(null, '', '/' + (location.hash || '#/'));
+  const link = q.get('link');
+  if (share !== null || q.has('open') || link !== null) {
+    history.replaceState(null, '', '/' + ((link !== null && linkRoute(link)) || location.hash || '#/'));
+  }
   if (share && /^[\w-]{1,64}$/.test(share) && 'caches' in window) readShare(share).catch(() => {});
 }
 

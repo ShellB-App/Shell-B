@@ -1,0 +1,11 @@
+Windows Registry Editor Version 5.00
+
+; Opens shellb:// links in the Shell:B app: hands them on as web+shellb:, which the installed app registered.
+; Per-user (no admin). Double-click to import; remove the key to undo.
+
+[HKEY_CURRENT_USER\Software\Classes\shellb]
+@="URL:Shell:B link"
+"URL Protocol"=""
+
+[HKEY_CURRENT_USER\Software\Classes\shellb\shell\open\command]
+@="rundll32.exe url.dll,FileProtocolHandler \"web+%1\""
