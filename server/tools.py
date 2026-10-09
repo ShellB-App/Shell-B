@@ -714,10 +714,10 @@ async def generate_music(args, ctx):
 # ── memory (embeddings in SQLite) ───────────────────────────────────────────
 
 async def embed(texts: list[str], model: str) -> np.ndarray:
-    async with httpx.AsyncClient(timeout=60) as c:
-        r = await c.post(f"{OLLAMA}/api/embed", json={"model": model, "input": texts, "keep_alive": "2h",
-                                                       "options": {"num_ctx": 2048}})  # memories are short; default ctx wastes ~10 GB
-        r.raise_for_status()
+    import fleet
+    r = await fleet.post("/api/embed", {"model": model, "input": texts, "keep_alive": "2h",
+                                        "options": {"num_ctx": 2048}}, timeout=60)  # memories are short; default ctx wastes ~10 GB
+    r.raise_for_status()
     v = np.array(r.json()["embeddings"], dtype=np.float32)
     return v / (np.linalg.norm(v, axis=1, keepdims=True) + 1e-9)
 

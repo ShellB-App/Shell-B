@@ -262,7 +262,7 @@ export interface Message {
   status?: 'streaming' | 'complete' | 'stopped' | 'error';
   error?: string;
   durationMs?: number;
-  usage?: { prompt: number; completion: number };
+  usage?: { prompt: number; completion: number; node?: string };
   note?: string;
   /** 'plan': sent in plan mode (read-only research ending in a plan for the owner to approve; server/planmode.py) */
   mode?: 'plan';

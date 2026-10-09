@@ -4,6 +4,7 @@ import { AlertTriangle, ChevronDown, Cpu, Download, HardDrive, Loader2, Play, Po
 import { fmtBytes, req } from '../api';
 import { btn, relTime } from './common';
 import { ModelStore, ModelUpdates } from './ModelStore';
+import { Fleet } from './Fleet';
 
 interface Installed {
   name: string; size: number; modifiedAt?: string; family: string; parameterSize: string; quantization: string;
@@ -72,8 +73,8 @@ export function Models({ busyTurns }: { busyTurns: number }) {
   const [open, setOpen] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
   const [q, setQ] = useState('');
-  const [view, setView] = useState<'installed' | 'store' | 'updates'>(() =>
-    location.hash.includes('store') ? 'store' : location.hash.includes('updates') ? 'updates' : 'installed');
+  const [view, setView] = useState<'installed' | 'store' | 'updates' | 'fleet'>(() =>
+    location.hash.includes('store') ? 'store' : location.hash.includes('updates') ? 'updates' : location.hash.includes('fleet') ? 'fleet' : 'installed');
 
   const load = useCallback(() => hub.overview().then(d => { setO(d); setError(''); }).catch(e => setError(clean(e))), []);
   useEffect(() => { load(); }, [load]);
@@ -109,7 +110,7 @@ export function Models({ busyTurns }: { busyTurns: number }) {
           </div>
           <p className="text-sm text-[var(--text-secondary)]">What's installed, what's holding memory right now, and room to change both. A loaded model uses unified memory nothing else can use.</p>
           <div className="mt-4 inline-flex p-0.5 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-subtle)]" role="tablist">
-            {([['installed', 'Installed'], ['store', 'Store'], ['updates', 'Updates']] as const).map(([id, label]) => (
+            {([['installed', 'Installed'], ['store', 'Store'], ['updates', 'Updates'], ['fleet', 'Fleet']] as const).map(([id, label]) => (
               <button key={id} role="tab" aria-selected={view === id} onClick={() => setView(id)}
                 className={clsx('px-3.5 py-1 rounded-md text-xs font-medium transition', view === id ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)] shadow-sm' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]')}>{label}</button>
             ))}
@@ -117,7 +118,7 @@ export function Models({ busyTurns }: { busyTurns: number }) {
           {error && view === 'installed' && <div className="mt-3 flex items-start gap-2 text-xs text-red-400"><AlertTriangle className="w-3.5 h-3.5 mt-px shrink-0" />{error}</div>}
         </div>
 
-        {view === 'store' ? <ModelStore /> : view === 'updates' ? <ModelUpdates /> : !o ? <div className="flex justify-center py-16"><Loader2 className="w-5 h-5 animate-spin text-[var(--text-muted)]" /></div> : <>
+        {view === 'store' ? <ModelStore /> : view === 'updates' ? <ModelUpdates /> : view === 'fleet' ? <Fleet /> : !o ? <div className="flex justify-center py-16"><Loader2 className="w-5 h-5 animate-spin text-[var(--text-muted)]" /></div> : <>
           <section className="space-y-3">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Memory right now</h2>
             {mem && (

@@ -41,6 +41,7 @@ import media
 import generate
 import modelhub
 import modelstore
+import fleet
 import appstate
 import studio_tools
 import studio_assets
@@ -221,6 +222,7 @@ app.include_router(me.router)
 app.include_router(feedback.router)
 app.include_router(modelhub.router)
 app.include_router(modelstore.router)
+app.include_router(fleet.router)
 app.include_router(devserver.router)
 app.include_router(projects.router)
 app.include_router(remote.router)
@@ -295,6 +297,7 @@ async def _start_mcp():
     if cell_boot.CELL:  # inside a guest's container: none of the host's own loops (cell_boot.py)
         return
     datasets.start()
+    fleet.start()
     watchdog.probe = service_status
     watchdog.start()
     backup.start_scheduler()
@@ -1098,6 +1101,12 @@ async def models():
             info = {"capabilities": []}
         out.append({"name": name.removesuffix(":latest"), "size": m.get("size", 0), **info,
                     "loaded": name in loaded, "modifiedAt": m.get("modified_at")})
+    for name, machines in fleet.remote_models().items():  # only on fleet machines (Models → Fleet)
+        try:
+            info = await model_info(name)
+        except Exception:
+            info = {"capabilities": []}
+        out.append({"name": name.removesuffix(":latest"), "size": 0, **info, "loaded": False, "nodes": machines})
     out.sort(key=lambda m: (not m["name"].startswith("ShellB"), m["name"].lower()))
     if get_settings().get("cloudEnabled"):
         for pid, c in providers.config().items():

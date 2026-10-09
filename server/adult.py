@@ -93,16 +93,15 @@ async def screen(text: str, settings: dict, image: bool = False) -> str:
         return ""
     if _HARD.search(text) or (image and _IMAGE.search(text)):
         return "Limit: characters must be adults (18+), so this one can't be written."
-    from tools import OLLAMA
+    import fleet
     try:
-        async with httpx.AsyncClient(timeout=60) as c:
-            r = await c.post(f"{OLLAMA}/api/chat", json={
-                "model": settings.get("utilityModel") or "ShellB-Swift", "stream": False, "think": False,
-                "format": "json", "options": {"temperature": 0},
-                "messages": [{"role": "system", "content": CLASSIFY},
-                             {"role": "user", "content": f"REQUEST ({'image prompt' if image else 'chat message'}):\n{text[:6000]}"}]})
-            r.raise_for_status()
-            verdict = json.loads(r.json()["message"]["content"])
+        r = await fleet.post("/api/chat", private=True, timeout=60, body={
+            "model": settings.get("utilityModel") or "ShellB-Swift", "stream": False, "think": False,
+            "format": "json", "options": {"temperature": 0},
+            "messages": [{"role": "system", "content": CLASSIFY},
+                         {"role": "user", "content": f"REQUEST ({'image prompt' if image else 'chat message'}):\n{text[:6000]}"}]})
+        r.raise_for_status()
+        verdict = json.loads(r.json()["message"]["content"])
     except Exception as e:  # fail closed: no verdict, no content
         print(f"adult.screen: classifier unavailable: {type(e).__name__}: {e}")
         return "Background check unavailable right now, so nothing was sent. Try again in a moment."

@@ -13,7 +13,6 @@ their summaries so there is continuity between chats. The sidebar search uses `/
 import asyncio
 import time
 
-import httpx
 import numpy as np
 from fastapi import APIRouter
 
@@ -135,7 +134,7 @@ def _transcript(conv_id: str) -> str:
 
 
 async def summarize(conv_id: str, settings: dict) -> str:
-    from agent import OLLAMA, model_info
+    from agent import model_info
     import providers
     model = settings.get("utilityModel") or ""
     if not model or providers.is_cloud(model):  # transcripts stay on this machine
@@ -149,9 +148,9 @@ async def summarize(conv_id: str, settings: dict) -> str:
                "messages": [{"role": "user", "content": SUMMARY_PROMPT.format(title=conv["title"], transcript=_transcript(conv_id))}]}
     if "thinking" in (await model_info(model))["capabilities"]:
         payload["think"] = False
-    async with httpx.AsyncClient(timeout=120) as c:
-        r = await c.post(f"{OLLAMA}/api/chat", json=payload)
-        r.raise_for_status()
+    import fleet
+    r = await fleet.post("/api/chat", payload, timeout=120)
+    r.raise_for_status()
     summary = " ".join((r.json()["message"]["content"] or "").replace("**", "").split())[:700]
     emb = None
     if summary:

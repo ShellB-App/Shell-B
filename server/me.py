@@ -17,7 +17,6 @@ import re
 import time
 from datetime import date, datetime, timedelta
 
-import httpx
 from fastapi import APIRouter
 
 import db
@@ -290,16 +289,16 @@ async def _write_portrait():
                 db.kv_set("me_portrait", {**db.kv_get("me_portrait", {}), "errorAt": time.time(),
                                           "error": "Needs a local utility model (Settings → General)."})
                 break
-            from agent import OLLAMA, model_info
+            from agent import model_info
             payload = {"model": model, "stream": False, "keep_alive": "2h",
                        "options": {"temperature": 0.4, "num_predict": 260},
                        "messages": [{"role": "user", "content": PORTRAIT_PROMPT.format(facts=facts, people=people)}]}
             if "thinking" in (await model_info(model))["capabilities"]:
                 payload["think"] = False
             async with memory._lock:  # one utility-model job at a time on the shared GPU
-                async with httpx.AsyncClient(timeout=180) as c:
-                    r = await c.post(f"{OLLAMA}/api/chat", json=payload)
-                    r.raise_for_status()
+                import fleet
+                r = await fleet.post("/api/chat", payload, timeout=180)
+                r.raise_for_status()
             text = (r.json()["message"]["content"] or "").replace("**", "").strip()
             text = re.sub(r"^(here(’|')?s|portrait:).*?\n+", "", text, flags=re.I).strip()
             db.kv_set("me_portrait", {"text": text[:1200], "hash": h, "at": time.time(), "error": ""})

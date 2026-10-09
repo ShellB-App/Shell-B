@@ -391,6 +391,7 @@ export const MessageView = memo(function MessageView({
             <span className="ml-2 text-[10px] font-mono text-[var(--text-muted)]">
               {secs && `${secs}s`}
               {message.usage?.completion ? ` · ${message.usage.completion.toLocaleString()} tok` : ''}
+              {message.usage?.node && <span title="Written on this fleet machine (Models → Fleet)"> · on {message.usage.node}</span>}
             </span>
           </div>
         )}

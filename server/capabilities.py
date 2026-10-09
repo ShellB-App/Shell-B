@@ -2,10 +2,8 @@
 import time
 from typing import Any
 
-import httpx
 
 import providers
-from tools import OLLAMA
 
 _caps_cache: dict[str, tuple[float, dict[str, Any]]] = {}
 
@@ -17,10 +15,10 @@ async def model_info(model: str) -> dict[str, Any]:
     hit = _caps_cache.get(model)
     if hit and time.time() - hit[0] < 600:
         return hit[1]
-    async with httpx.AsyncClient(timeout=30) as c:
-        r = await c.post(f"{OLLAMA}/api/show", json={"model": model})
-        r.raise_for_status()
-        d = r.json()
+    import fleet
+    r = await fleet.post("/api/show", {"model": model}, timeout=30, light=True)  # a model only a fleet machine has works too
+    r.raise_for_status()
+    d = r.json()
     num_ctx = 0
     for line in (d.get("parameters") or "").splitlines():
         parts = line.split()

@@ -454,6 +454,27 @@ in there yourself and it stays signed in. A corner badge marks every page, and t
   only matters for `screenshot`). Cloud models need Cloud AI → *Let cloud agents use the browser* (`cloudBrowser`, off).
   Plan mode allows only open/read/back/scroll/wait/screenshot/tabs. Helper flags: `--no-browser`, `--no-screen`.
 
+## Fleet (more machines)
+
+Models → Fleet lets other computers run Shell:B's local models, so several chats, background jobs and agents don't
+queue behind each other on the Spark. Only model calls travel; agents, tools, files and memories stay on the Spark.
+
+- **Add a machine**: give its Tailscale name or IP. Shell:B shows a one-line command (Linux/macOS or Windows
+  PowerShell) that downloads `clients/shellb_node.py` and starts it with that machine's own token. The helper needs
+  Python 3.9+ and Ollama, relays to the Ollama there (which stays on 127.0.0.1), and reports memory and GPUs. Add
+  `--install-service` to keep it running (systemd user unit on Linux, a logon task on Windows). A plain Ollama URL
+  works too, without a token or stats, for a network you trust.
+- **Copy models**: pick a Spark model on the machine's card. Registry models are pulled there; models built here
+  (ShellB-*) are rebuilt from their parent with the same system prompt, template and parameters.
+- **Modes**: *Only the Spark*; *Overflow* (default: the Spark first, another machine only while the Spark's slots are
+  full or when only it has the model); *Spread* (least busy machine, a warm model wins ties). Slots should match each
+  machine's OLLAMA_NUM_PARALLEL.
+- **Privacy**: incognito chats and Aphrodite never leave the Spark unless a machine is marked Private. Guest cells
+  never use the fleet.
+- **Failover**: a machine that stops answering is marked offline and the request goes to the next one, ending at the
+  Spark. Replies written elsewhere say "on <machine>" under them.
+- Nodes and tokens: `data/fleet/nodes.json` (0600). Code: `server/fleet.py`, `clients/shellb_node.py`.
+
 ## Connectors, MCP servers and cloud AI
 
 Open **Tools & Connectors** in the sidebar.

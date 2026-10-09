@@ -19,12 +19,11 @@ import json
 import re
 import time
 
-import httpx
 
 import db
 import providers
 from capabilities import model_info
-from tools import OLLAMA
+import fleet
 
 CHARS_PER_TOKEN = 3.0      # agent.CHARS_PER_TOKEN (not imported: agent imports this module)
 TRIGGER = 0.70             # summarize once the next prompt would fill this much of num_ctx
@@ -151,8 +150,7 @@ async def _summarize(title: str, previous: str, msgs: list[dict], settings: dict
                        "messages": [{"role": "user", "content": prompt}]}
             if "thinking" in (await model_info(model))["capabilities"]:
                 payload["think"] = False
-            async with httpx.AsyncClient(timeout=120) as client:
-                r = await client.post(f"{OLLAMA}/api/chat", json=payload)
+            r = await fleet.post("/api/chat", payload, timeout=120)
             if r.status_code == 200:
                 text = re.sub(r"<think>.*?</think>", "", r.json()["message"]["content"] or "", flags=re.S).strip()
                 if text:

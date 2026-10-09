@@ -46,7 +46,7 @@ SESSION_TTL = 30 * 86400
 MIN_PASSWORD = 8
 # screen/*: the Shell:B Screen helper signs in with its own device token (screen.py checks it on every call)
 # v1/*: the Shell:B API checks its own API key on every call (public_api.py)
-PUBLIC = re.compile(r"^/api/(auth(/|$)|_hold$|files/[^/]+$|screen/(connect|next|(frame|result)/[0-9a-f]+|disconnect)$|v1/)")
+PUBLIC = re.compile(r"^/api/(auth(/|$)|_hold$|files/[^/]+$|screen/(connect|next|(frame|result)/[0-9a-f]+|disconnect)$|fleet/agent$|v1/)")
 # what every frame key may reach, whatever its scope: (methods, path under /api/)
 FRAME_SHARED = [
     ({"GET", "HEAD"}, re.compile(r"^assets/file/[A-Za-z0-9_-]+/.+")),

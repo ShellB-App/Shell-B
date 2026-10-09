@@ -33,6 +33,7 @@ import ask
 import screen
 import browsing
 import compaction
+import fleet
 import memory
 import places
 import wiki
@@ -688,48 +689,51 @@ class Turn:
         cur_think = cur_text = None
         think_started = 0.0
         self._done_reason = None
-        async with httpx.AsyncClient(timeout=httpx.Timeout(stall + 60, connect=10)) as c:
-            async with c.stream("POST", f"{OLLAMA}/api/chat", json=payload) as r:
-                if r.status_code != 200:
-                    raise RuntimeError(f"Ollama {r.status_code}: {(await r.aread()).decode()[:500]}")
-                async for line in r.aiter_lines():
-                    self._last_chunk = time.monotonic()
-                    if self.abort.is_set():
-                        break
-                    if not line.strip():
-                        continue
-                    chunk = json.loads(line)
-                    if chunk.get("error"):
-                        raise RuntimeError(chunk["error"])
-                    m = chunk.get("message") or {}
-                    if m.get("thinking"):
-                        if cur_think is None:
-                            think_started = time.time()
-                            cur_think = await sink.start({"type": "thinking", "text": "", "startedAt": think_started * 1000})
-                            self._think = (cur_think, think_started)
-                        thinking += m["thinking"]
-                        await sink.delta(cur_think, m["thinking"])
-                    if m.get("content"):
-                        if cur_think is not None and "durationMs" not in sink.blocks[cur_think]:
-                            sink.blocks[cur_think]["durationMs"] = int((time.time() - think_started) * 1000)
-                            await sink.update(cur_think)
-                        if cur_text is None:
-                            cur_text = await sink.start({"type": "text", "text": ""})
-                        content += m["content"]
-                        await sink.delta(cur_text, m["content"])
-                    for tc in m.get("tool_calls") or []:
-                        fn = tc.get("function", {})
-                        args = fn.get("arguments", {})
-                        if isinstance(args, str):
-                            try:
-                                args = json.loads(args)
-                            except json.JSONDecodeError:
-                                args = {"_raw": args}
-                        tool_calls.append({"function": {"name": fn.get("name", ""), "arguments": args}})
-                    if chunk.get("done"):
-                        self._done_reason = chunk.get("done_reason")  # "length" = cut off at num_ctx/num_predict
-                        self.usage["prompt"] += chunk.get("prompt_eval_count", 0)
-                        self.usage["completion"] += chunk.get("eval_count", 0)
+        import adult, privacy  # noqa: E401
+        home = privacy.is_incognito(self.conv_id) or adult.is_adult(self.agent)  # never leaves the Spark (fleet.py)
+        async with fleet.stream("/api/chat", payload, timeout=httpx.Timeout(stall + 60, connect=10), private=home) as r:
+            if r.extensions.get("fleet_node") != fleet.LOCAL_NAME:
+                self.usage["node"] = r.extensions["fleet_node"]  # shown under the reply: which machine wrote it
+            if r.status_code != 200:
+                raise RuntimeError(f"Ollama {r.status_code}: {(await r.aread()).decode()[:500]}")
+            async for line in r.aiter_lines():
+                self._last_chunk = time.monotonic()
+                if self.abort.is_set():
+                    break
+                if not line.strip():
+                    continue
+                chunk = json.loads(line)
+                if chunk.get("error"):
+                    raise RuntimeError(chunk["error"])
+                m = chunk.get("message") or {}
+                if m.get("thinking"):
+                    if cur_think is None:
+                        think_started = time.time()
+                        cur_think = await sink.start({"type": "thinking", "text": "", "startedAt": think_started * 1000})
+                        self._think = (cur_think, think_started)
+                    thinking += m["thinking"]
+                    await sink.delta(cur_think, m["thinking"])
+                if m.get("content"):
+                    if cur_think is not None and "durationMs" not in sink.blocks[cur_think]:
+                        sink.blocks[cur_think]["durationMs"] = int((time.time() - think_started) * 1000)
+                        await sink.update(cur_think)
+                    if cur_text is None:
+                        cur_text = await sink.start({"type": "text", "text": ""})
+                    content += m["content"]
+                    await sink.delta(cur_text, m["content"])
+                for tc in m.get("tool_calls") or []:
+                    fn = tc.get("function", {})
+                    args = fn.get("arguments", {})
+                    if isinstance(args, str):
+                        try:
+                            args = json.loads(args)
+                        except json.JSONDecodeError:
+                            args = {"_raw": args}
+                    tool_calls.append({"function": {"name": fn.get("name", ""), "arguments": args}})
+                if chunk.get("done"):
+                    self._done_reason = chunk.get("done_reason")  # "length" = cut off at num_ctx/num_predict
+                    self.usage["prompt"] += chunk.get("prompt_eval_count", 0)
+                    self.usage["completion"] += chunk.get("eval_count", 0)
         await self._close_thinking(sink, cur_think, think_started)
         await sink.flush()
         return content, thinking, tool_calls
@@ -1212,8 +1216,7 @@ async def make_title(user_text, reply, settings):
     info = await model_info(settings["utilityModel"])
     if "thinking" in info["capabilities"]:
         payload["think"] = False
-    async with httpx.AsyncClient(timeout=60) as c:
-        r = await c.post(f"{OLLAMA}/api/chat", json=payload)
-        r.raise_for_status()
+    r = await fleet.post("/api/chat", payload, timeout=60)
+    r.raise_for_status()
     title = r.json()["message"]["content"].strip().strip('"\'*#').splitlines()[0]
     return title[:60] or None

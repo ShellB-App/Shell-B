@@ -164,17 +164,15 @@ async def rename_file(args, ctx):
 
 async def _vision_review(images_b64, instruction, ctx):
     """For agents on text-only models: have the vision model describe what's on screen."""
-    import httpx
     from agent import model_info
-    from tools import OLLAMA
+    import fleet
     model = ctx.settings.get("visionFallbackModel", "ShellB-Swift")
     payload = {"model": model, "stream": False, "keep_alive": "2h", "options": {"temperature": 0.2},
                "messages": [{"role": "user", "content": instruction, "images": images_b64}]}
     if "thinking" in (await model_info(model))["capabilities"]:
         payload["think"] = False
-    async with httpx.AsyncClient(timeout=300) as c:
-        r = await c.post(f"{OLLAMA}/api/chat", json=payload)
-        r.raise_for_status()
+    r = await fleet.post("/api/chat", payload, timeout=300)
+    r.raise_for_status()
     return r.json()["message"]["content"]
 
 
