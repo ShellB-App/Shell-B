@@ -61,21 +61,22 @@ export function ComposerMenus({
     <button
       key={a.id}
       role="menuitem"
+      title={a.unavailable || a.description}
       onClick={() => {
         onAgent(a);
         setMenu(null);
       }}
       className={clsx(
-        'w-full flex items-start gap-2.5 px-2 py-2 rounded-lg text-left transition',
+        'w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition',
         a.id === agent.id ? 'bg-[var(--accent)]/15' : 'hover:bg-[var(--bg-hover)]'
       )}
     >
-      <AgentAvatar agent={a} size={22} className="mt-0.5" />
-      <span className="min-w-0">
-        <span className="block text-xs font-semibold">
+      <AgentAvatar agent={a} size={20} className="shrink-0" />
+      <span className="min-w-0 flex-1">
+        <span className="block text-xs font-semibold truncate">
           {a.name} <span className="font-normal text-[var(--text-muted)]">· {a.title}</span>
         </span>
-        <span className="block text-[11px] text-[var(--text-muted)] line-clamp-2">
+        <span className="block text-[11px] text-[var(--text-muted)] truncate">
           {a.unavailable || a.description}
         </span>
       </span>
@@ -101,7 +102,7 @@ export function ComposerMenus({
               className="absolute bottom-full left-0 mb-1.5 w-72 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-xl shadow-2xl p-1 z-40 animate-fade-in"
               role="menu"
             >
-              {localAgents.map(agentItem)}
+              <div className="max-h-[min(60vh,28rem)] overflow-y-auto">{localAgents.map(agentItem)}</div>
               {cloudAgents.length > 0 && (
                 <div
                   className="relative"
@@ -115,11 +116,11 @@ export function ComposerMenus({
                     aria-expanded={cloudOpen}
                     onClick={() => setCloudOpen(o => !o)}
                     className={clsx(
-                      'w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-left transition',
+                      'w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition',
                       cloudOpen ? 'bg-[var(--bg-hover)]' : agent.cloud ? 'bg-[var(--accent)]/15' : 'hover:bg-[var(--bg-hover)]'
                     )}
                   >
-                    <span className="w-[22px] h-[22px] rounded-full bg-sky-500/15 flex items-center justify-center shrink-0">
+                    <span className="w-5 h-5 rounded-full bg-sky-500/15 flex items-center justify-center shrink-0">
                       <Cloud className="w-3.5 h-3.5 text-sky-400" />
                     </span>
                     <span className="flex-1 min-w-0 text-xs font-semibold">
