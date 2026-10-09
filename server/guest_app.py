@@ -35,6 +35,7 @@ from fastapi.routing import APIRoute
 import app as owner
 import appstate
 import auth
+import cells
 import db
 import flights
 import guest_accounts
@@ -56,7 +57,7 @@ STT_MAX = 25 * 2**20
 PER_MINUTE = 240  # API requests per guest per minute, all routes together
 UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
 STATIC_DIRS = ("assets", "fonts", "icons", "vendor")
-STATIC_FILES = ("favicon.svg", "guest.html", "manifest-guest.webmanifest", "guest-sw.js")
+STATIC_FILES = ("favicon.svg", "guest.html", "manifest-guest.webmanifest", "guest-sw.js", "sw.js", "manifest.webmanifest")
 # the only /api paths that answer without a guest session (every handler checks again; this is the outer wall)
 OPEN = ("/api/auth/me", "/api/guest/login", "/api/guest/login/two-step", "/api/guest/code", "/api/guest/signup",
         "/api/guest/reset", "/api/guest/redeem", "/api/guest/logout", "/api/_hold")
@@ -93,6 +94,7 @@ async def guard(req: Request, call_next):
     framed = path.startswith("/api/k/")
     if req.method in UNSAFE and not framed and not _origin_ok(req):
         return JSONResponse({"detail": "Cross-site request refused"}, status_code=403)
+    got = None
     if path.startswith("/api/") and not framed and path not in OPEN:
         got = guests.session_of(req)
         if not got:
@@ -110,7 +112,10 @@ async def guard(req: Request, call_next):
         _hits[token] = hits
         if len(_hits) > 5000:
             _hits.clear()
-    resp = await call_next(req)
+    if got and cells.enabled(got[0]) and not path.startswith("/api/guest/"):
+        resp = await cells.proxy(req, got[0])  # their own Shell:B answers everything but the gateway's account routes
+    else:
+        resp = await call_next(req)
     resp.headers.setdefault("X-Content-Type-Options", "nosniff")
     resp.headers.setdefault("Referrer-Policy", "same-origin")
     if not framed:
@@ -182,6 +187,10 @@ def auth_me(req: Request):
     if not got:
         return {"authenticated": False, "via": None, "passwordSet": True, "frameKey": None}
     g = got[0]
+    if g["passwordSet"] and cells.enabled(g):  # what the full Shell:B UI asks first (cell_boot.auth_me answers the same)
+        return {"authenticated": True, "via": "session", "passwordSet": True, "needsAccount": False,
+                "frameKey": guests.frame_secret(g["id"]), "cell": {"guest": g["name"]},
+                "guest": {"id": g["id"], "name": g["name"], "username": g["username"]}}
     return {"authenticated": True, "via": "guest", "passwordSet": True, "needsAccount": not g["passwordSet"],
             "frameKey": guests.frame_secret(g["id"]) if g["passwordSet"] else None,
             "guest": {"id": g["id"], "name": g["name"], "username": g["username"]}}
@@ -551,7 +560,11 @@ def clear_appstate(s: str, req: Request):
 @guest_app.api_route("/api/k/{key}/{rest:path}", methods=["GET", "HEAD", "POST"])
 async def framed(key: str, rest: str, req: Request):
     """What a sandboxed artifact may load without a cookie: its own chat's /work files, the files its guest generated,
-    and its own saved state. The key is only good for chats of the guest whose frame secret signed it."""
+    and its own saved state. The key is only good for chats of the guest whose frame secret signed it. A cell guest's
+    key goes to their cell, without the gate header: the cell checks the key and its scope itself (auth._cell_auth)."""
+    cell_guest = cells.frame_owner(key)
+    if cell_guest:
+        return await cells.proxy(req, cell_guest, gate=False)
     m = auth.SCOPED_KEY.match(key)
     scope, mac = m.groups() if m else ("", "")
     conv_id = scope[2:] if scope.startswith("w-") else ""
@@ -645,7 +658,7 @@ def not_here(rest: str):
 
 
 @guest_app.get("/{path:path}")
-def spa(path: str):
+def spa(path: str, req: Request):
     dist = owner.UI_DIST.resolve()
     first = path.split("/", 1)[0]
     if path in STATIC_FILES or (first in STATIC_DIRS and "/" in path):
@@ -657,7 +670,8 @@ def spa(path: str):
                 headers["Access-Control-Allow-Origin"] = "*"
             return FileResponse(target, headers=headers)
         raise HTTPException(404)
-    page = dist / "guest.html"
+    got = guests.session_of(req)
+    page = dist / ("index.html" if got and got[0]["passwordSet"] and cells.enabled(got[0]) else "guest.html")
     if page.is_file():
         return FileResponse(page, headers={"Cache-Control": "no-cache"})
     return JSONResponse({"error": "Shell:B Guest isn't built yet"}, status_code=503)

@@ -16,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 
 import db
 import auth
+import cell_boot
 import mcp_hub
 import mcp_router
 import projects
@@ -69,6 +70,7 @@ import ask
 import themes
 import screen
 import public_api
+import cells
 import guest_accounts
 import guests
 import mcp_server
@@ -104,6 +106,8 @@ UI_DIST = Path(__file__).resolve().parent.parent / "ui" / "dist"
 VERSION = "1.0.0"
 
 app = FastAPI(title="Shell:B Web", version=VERSION)
+if cell_boot.CELL:  # one guest's Shell:B in a container: host routers and routes are never added (cell_boot.py)
+    cell_boot.guard(app)
 app.add_middleware(auth.AuthMiddleware)
 
 # Optional HTTPS redirect for Tailscale serve / reverse proxy. Set SHELLB_SECURE_URL to enable short-host redirects.
@@ -256,6 +260,8 @@ commitments.init()  # tables at import like the others; start() runs it again (i
 app.include_router(importer.router)
 app.include_router(watchdog.router)
 app.include_router(everything_search.router)  # GET /api/search: the command palette's "search everything"
+if cell_boot.CELL:
+    cell_boot.apply()  # host tools out, the cell's settings and roster in
 
 
 
@@ -282,15 +288,19 @@ async def _start_mcp():
     commitments.start()
     nightshift.run_turn, nightshift.abort_turn, nightshift.get_settings = _run_nightshift, _abort_turn, get_settings
     nightshift.active_convs, nightshift.busy = lambda: list(ACTIVE), _background_busy
-    nightshift.start()
-    datasets.start()
+    if not cell_boot.CELL:
+        nightshift.start()
     shopping.busy = lambda: bool(ACTIVE)
     shopping.start()
+    if cell_boot.CELL:  # inside a guest's container: none of the host's own loops (cell_boot.py)
+        return
+    datasets.start()
     watchdog.probe = service_status
     watchdog.start()
     backup.start_scheduler()
     await devserver.serve_proxy()
     await mcp_hub.sync()
+    cells.startup()
 
 
 @app.on_event("shutdown")
@@ -299,6 +309,8 @@ async def _shutdown():
         _signal_abort(live)
     await devserver.stop_proxy()
     await mcp_hub.shutdown()
+    if not cell_boot.CELL:
+        await cells.shutdown()
     schedules.stop()
     megaplan.stop()
     todos.stop()
@@ -1305,9 +1317,12 @@ async def service_status():
             embed_ok = any(m["name"] == settings["embeddingModel"] for m in tags)
         except Exception:
             embed_ok = False
-    proc = await asyncio.create_subprocess_exec("docker", "image", "inspect", SANDBOX_IMAGE,
-                                                stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
-    sandbox_ok = (await proc.wait()) == 0
+    try:
+        proc = await asyncio.create_subprocess_exec("docker", "image", "inspect", SANDBOX_IMAGE,
+                                                    stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
+        sandbox_ok = (await proc.wait()) == 0
+    except OSError:  # no docker CLI here (a guest's cell: its sandbox goes through the host broker)
+        sandbox_ok = False
     names = ["ollama", "searxng", "nyx", "orpheus", "hermes", "stableaudio"]
     status = dict(zip(names, results))
     status["embeddings"] = {"ok": embed_ok}

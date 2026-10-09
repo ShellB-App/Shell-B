@@ -27,6 +27,7 @@ import asyncio
 import hashlib
 import hmac
 import ipaddress
+import os
 import re
 import secrets
 import time
@@ -60,6 +61,16 @@ SANDBOX_SITES = {"cross-site", "same-site"}  # Sec-Fetch-Site of a request a pag
 # the only writes sandboxed content (Origin: null) may make on localhost trust: saved app state and the screenshot beacon
 SANDBOX_WRITES = re.compile(r"^/api/(appstate|projects/_shotinfo/[A-Za-z0-9]+)$")
 UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
+# Cell mode (cell_boot.py): this instance is one guest's Shell:B in a container. Its only way in is the guest gateway,
+# which sends CELL_HEADER with this container's secret on requests from the signed-in guest; that counts as the owner.
+# Frame keys are signed with the cell's frame secret. No cookie, localhost or admin key means anything here.
+CELL = os.environ.get("SHELLB_CELL") == "1"
+CELL_SECRET = os.environ.get("SHELLB_CELL_SECRET", "")
+CELL_FRAME_SECRET = os.environ.get("SHELLB_CELL_FRAME_SECRET", "")
+CELL_HEADER = "x-shellb-cell-gate"
+if CELL and (len(CELL_SECRET) < 32 or len(CELL_FRAME_SECRET) < 32):
+    raise RuntimeError("cell mode needs SHELLB_CELL_SECRET and SHELLB_CELL_FRAME_SECRET (32+ characters each)")
+CELL_SESSION = {"id": "cell", "frame_key": CELL_FRAME_SECRET, "created": 0, "last_seen": 0, "expires": 0, "ip": "", "ua": ""}
 
 
 def init():
@@ -291,6 +302,8 @@ ADMIN_KEY_FILE = db.DATA / "admin.key"
 def is_admin(req: Request) -> bool:
     if is_owner(req):
         return True
+    if CELL:  # the admin key is the host's; inside a cell only the gateway's owner session counts
+        return False
     # headers only: a key in the query string ends up in access logs, browser history and Referer headers
     given = req.headers.get("x-shellb-admin") or req.headers.get("x-admin-key")
     if not given or not ADMIN_KEY_FILE.is_file():
@@ -321,6 +334,8 @@ class AuthMiddleware:
         h, path, method = _headers(scope), scope["path"], scope.get("method", "GET")
         if _bad_path(path):
             return await _deny(scope, receive, send, 400, "bad-path")
+        if CELL:
+            return await _cell_auth(self.app, scope, receive, send, h, path, method)
 
         m = FRAME_PREFIX.match(path)
         if m:
@@ -363,6 +378,30 @@ class AuthMiddleware:
         elif not PUBLIC.match(path):
             return await _deny(scope, receive, send, 401, "login-required")
         return await self.app(scope, receive, send)
+
+
+async def _cell_auth(app, scope, receive, send, h: dict, path: str, method: str):
+    """Cell mode: a frame key signed with the cell's frame secret reaches its own scope; the gateway's header is the
+    owner; nothing else gets in (requests arrive over the gateway's socket, so there is no localhost here)."""
+    m = FRAME_PREFIX.match(path)
+    if m:
+        key, rest = m.groups()
+        km = SCOPED_KEY.match(key)
+        if not km or not hmac.compare_digest(frame_mac(CELL_FRAME_SECRET, km.group(1)), km.group(2)):
+            return await _deny(scope, receive, send, 401, "login-required")
+        if not _frame_allowed(km.group(1), method, rest, scope.get("query_string", b"").decode("latin-1")):
+            return await _deny(scope, receive, send, 403, "outside-frame-scope")
+        scope = {**scope, "path": "/api/" + rest, "raw_path": ("/api/" + rest).encode(),
+                 "shellb_auth": "frame", "shellb_session": None, "shellb_prefix": f"/api/k/{key}"}
+        return await app(scope, receive, send)
+    if not hmac.compare_digest(h.get(CELL_HEADER, "").encode("latin-1"), CELL_SECRET.encode()):
+        return await _deny(scope, receive, send, 401, "login-required")
+    if method in UNSAFE and not _same_origin(h):
+        return await _deny(scope, receive, send, 403, "cross-origin-request")
+    loc = _page_location(CELL_FRAME_SECRET, method, path, h, scope)
+    if loc:
+        return await _redirect(send, loc)
+    return await app({**scope, "shellb_auth": "session", "shellb_session": CELL_SESSION}, receive, send)
 
 
 def _page_location(secret: str, method: str, path: str, h: dict, scope) -> str | None:

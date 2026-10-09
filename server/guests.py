@@ -91,7 +91,7 @@ GUEST_BLURBS = {
 # per guest: (default, lowest, highest); 0 = no limit. Messages and tokens are unlimited unless the owner sets a cap.
 LIMITS = {"turnsPerDay": (0, 0, 100_000), "tokensPerDay": (0, 0, 1_000_000_000),
           "imagesPerDay": (40, 0, 100_000), "audioPerDay": (20, 0, 100_000), "storageMB": (2048, 0, 1_000_000)}
-SETTINGS_DEFAULT = {"models": [], "slots": 1, "ownerWait": 90, "url": ""}
+SETTINGS_DEFAULT = {"models": [], "slots": 1, "ownerWait": 90, "url": "", "cellsMax": 3}
 
 NOTE = """## You are talking with a guest
 This is Shell:B Guest. The person writing is {name}, a friend of the owner (Evie) who has their own space on this
@@ -139,8 +139,10 @@ CREATE TABLE IF NOT EXISTS guest_reports(
                     cfg.update(turnsPerDay=0, tokensPerDay=0)
                     c.execute("UPDATE guests SET config=? WHERE id=?", (json.dumps(cfg), r["id"]))
             c.execute("INSERT OR REPLACE INTO kv(key, value) VALUES('guest_limits_v2', 'true')")
+    import cells
     import guest_accounts
     import guest_notes
+    cells.init()
     guest_accounts.init()
     guest_notes.init()
 
@@ -177,6 +179,8 @@ def save_settings(body: dict) -> dict:
     if "url" in body:
         url = str(body["url"] or "").strip().rstrip("/")
         cur["url"] = url if re.match(r"^https?://[\w.-]+(:\d+)?$", url) else ""
+    if "cellsMax" in body:  # cells.py: guest containers running at once
+        cur["cellsMax"] = _int(body["cellsMax"], 3, 1, 8)
     db.kv_set("guest_settings", cur)
     global _slots
     _slots = None  # rebuilt at the next turn with the new size
@@ -197,6 +201,7 @@ def clean_config(cfg: dict | None) -> dict:
     out = {k: _int(cfg.get(k), d, lo, hi) for k, (d, lo, hi) in LIMITS.items()}
     out["agents"] = [str(a) for a in cfg.get("agents") or [] if isinstance(a, str)][:32]
     out["tools"] = [t for t in cfg.get("tools") or [] if t in GUEST_TOOLS]
+    out["cell"] = bool(cfg.get("cell"))  # their own Shell:B in a container (cells.py) instead of the guest app's chat
     return out
 
 
@@ -328,6 +333,11 @@ def delete_guest(gid: str) -> bool:
     if not get_guest(gid):
         return False
     _stop_turns(gid)
+    import cells
+    with db.conn() as c:
+        had_cell = c.execute("SELECT 1 FROM guest_cells WHERE guest_id=?", (gid,)).fetchone()
+    if had_cell:
+        cells.forget(gid)
     import privacy
     with db.conn() as c:
         convs = [r["id"] for r in c.execute("SELECT id FROM conversations WHERE tenant=?", (gid,))]
@@ -872,9 +882,10 @@ def _summary(g: dict) -> dict:
         codes = {r["kind"]: r["expires"] for r in c.execute(
             "SELECT kind, max(expires) AS expires FROM guest_codes WHERE guest_id=? AND kind IN ('invite', 'reset') "
             "AND expires > ? GROUP BY kind", (g["id"], time.time()))}
+    import cells
     return {**g, "today": usage(g["id"]), "devices": sessions, "chats": chats, "memories": mems,
             "storageBytes": storage_bytes(g["id"]), "busy": busy(g["id"]), "inviteExpires": codes.get("invite"),
-            "resetExpires": codes.get("reset")}
+            "resetExpires": codes.get("reset"), "cellStatus": cells.status(g["id"])}
 
 
 @admin_router.get("")
@@ -934,6 +945,10 @@ async def api_update(gid: str, req: Request):
     g = update_guest(gid, await req.json())
     if not g:
         raise HTTPException(404)
+    if g["disabled"] or not g["config"]["cell"]:
+        import cells
+        if cells.status(gid)["state"] != "stopped":
+            asyncio.get_running_loop().create_task(cells.stop(gid))
     return _summary(g)
 
 

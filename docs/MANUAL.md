@@ -522,6 +522,19 @@ Friends and coworkers can have their own Shell:B on this machine, without access
   the box.
 - **Privacy:** guest chats are incognito on the owner's side (never learned from, searched, summarized or listed),
   but they are stored in this machine's database; the guest app says so.
+- **Own container (beta, server/cells.py, cell_boot.py, cell/):** tick "Own container" on a guest in Tools &
+  Connectors → Guests and their next visit gets the full Shell:B UI running as their own instance in a container
+  (`shellb-cell-<id>`, image `shellb-cell:latest` built from cell/Dockerfile). The container has no network, a
+  read-only root, no capabilities, its own uid (61001+), 3 GB / 4 CPUs / 512 pids, and mounts only the code and UI
+  (read-only), its own data (data/cells/<id>/data), its broker sockets and the offline wiki, maps and law
+  (read-only). Model services are reached only through the host broker, which allows chat and embeddings for the
+  guest models (no pulls, deletes or unloads), Shell:B's own image/3D/cut-out ComfyUI graphs (output under
+  output/cells/<id>), Kokoro speech, transcription, music and sound with clamped lengths, SearXNG and Valhalla.
+  Generation waits behind the owner's turns and shares the guest slots; picture and audio caps count there. The
+  gateway signs the guest in, then proxies to the cell with a per-start gate secret; frames are routed by their
+  key. Cells start on demand (a few seconds), stop after 30 idle minutes, at most "Guest containers running at once"
+  (default 3), and restart by themselves if the container dies. Not in cells yet (Phase 2): the code sandbox, dev
+  servers, Studio/Code previews and web fetching. Deleting the guest removes the container and wipes its data.
 
 ## Login
 

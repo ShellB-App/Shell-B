@@ -171,7 +171,20 @@ stays signed in for 90 days. Replace this with real accounts in `server/guests.p
   two-step setup; device codes need a session that proved the password (via password/signup/reset); TOTP failures
   count toward the same 8-failure lock; recovery codes are 10 chars (`xxxxx-xxxxx`), sha256-hashed. For the cells:
   the account routes are gateway-only (`/api/guest/*`), so the cell proxy must keep handling `/api/guest/*` itself.
-- **Phase 1: not started.**
+- **Phase 1: built 2026-10-09** (cell/Dockerfile, cell/entry.py, cell/requirements.txt, server/cells.py,
+  server/cell_boot.py, auth.py `_cell_auth`, app.py guard/apply/startup hooks, guest_app proxy, per-guest
+  `config.cell` + `cellsMax`, GuestsTab "Own container" switch, tests/cells_test.py with 28 tests). Verified with a
+  real container on a scratch copy: chat, FLUX picture (saved under output/cells/<gid>), Kokoro TTS, web search,
+  /api/status all green through the broker; escape drill: no route to internet/LAN/tailnet/docker0, no DNS, uid
+  61001, CapEff 0, pids 512, memory 3 GB, read-only code/broker dir/root, no docker socket; every forbidden broker
+  call 403 with a reason; a killed container restarts on the next request (~2.5 s). Notes for the next phases:
+  - Opt-in per guest (`config.cell`); the old guest app keeps serving everyone else until Phase 3 retires it.
+  - The cell's `/api/auth/me` is answered by the gateway for cell guests (same frameKey = guests.frame_secret).
+  - The image keeps the venv's exact pins; rebuild after changing the venv (`cell/requirements.txt` header).
+  - Storage quota for cells isn't enforced yet (the data dir belongs to the cell uid; measure with a helper container).
+  - The cell sees host memory totals in /proc/meminfo (no lxcfs); the UI's memory meter shows the host's.
+  - `service_status` now tolerates a missing docker CLI (sandbox shows offline in cells until Phase 2).
+- **Phase 2: not started.**
 
 ## Handoff
 This plan was written in one session and is to be **implemented by another agent**. State when it was written

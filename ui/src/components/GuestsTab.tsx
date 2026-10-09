@@ -14,16 +14,17 @@ const LIMIT_FIELDS = [
   ['audioPerDay', 'Audio clips a day'], ['storageMB', 'Space (MB)'],
 ] as const;
 type LimitKey = typeof LIMIT_FIELDS[number][0];
-type Config = Record<LimitKey, number> & { agents: string[]; tools: string[] };
+type Config = Record<LimitKey, number> & { agents: string[]; tools: string[]; cell: boolean };
 interface Usage { turns: number; tokens: number; images: number; audio: number; reports: number }
 interface Guest {
   id: string; name: string; created: number; disabled: boolean; config: Config; lastSeen: number | null; today: Usage;
   devices: number; chats: number; memories: number; storageBytes: number; busy: boolean; inviteExpires: number | null;
   username: string | null; email: string | null; passwordSet: boolean; twoStep: boolean; lockedUntil: number | null;
   lastSignIn: number | null; resetExpires: number | null;
+  cellStatus: { state: 'starting' | 'running' | 'stopping' | 'stopped'; started: number | null; lastActive: number | null; error: string };
 }
 interface AuthEvent { ts: number; event: string; label: string; ip: string; userAgent: string; detail: string }
-interface GuestSettings { models: string[]; slots: number; ownerWait: number; url: string }
+interface GuestSettings { models: string[]; slots: number; ownerWait: number; url: string; cellsMax: number }
 interface Listing {
   guests: Guest[]; settings: GuestSettings; allowedModels: string[]; tools: string[]; newReports: number;
   agents: { id: string; name: string; title: string; model: string }[];
@@ -129,11 +130,17 @@ export function GuestsTab({ locked }: { locked: boolean }) {
             Agents guests see: {data.agents.filter(a => data.allowedModels.includes(a.model) && !['daedalus', 'magpie'].includes(a.id)).map(a => a.name).join(', ') || 'none'}.
           </p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-3">
           <label className="block text-xs text-[var(--text-secondary)]">
             Guest replies at once
             <select className={btn.input + ' mt-1'} value={data.settings.slots} onChange={e => saveSettings({ slots: Number(e.target.value) })}>
               {[1, 2, 3, 4].map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </label>
+          <label className="block text-xs text-[var(--text-secondary)]">
+            Guest containers running at once
+            <select className={btn.input + ' mt-1'} value={data.settings.cellsMax ?? 3} onChange={e => saveSettings({ cellsMax: Number(e.target.value) })}>
+              {[1, 2, 3, 4, 5, 6, 7, 8].map(n => <option key={n} value={n}>{n}</option>)}
             </select>
           </label>
           <label className="block text-xs text-[var(--text-secondary)]">
@@ -172,6 +179,7 @@ export function GuestsTab({ locked }: { locked: boolean }) {
                     {g.disabled && <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">paused</span>}
                     {g.lockedUntil && <span className="text-[10px] uppercase tracking-wider text-red-400">locked</span>}
                     {g.twoStep && <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">two-step</span>}
+                    {g.config.cell && <span className="text-[10px] uppercase tracking-wider text-[var(--accent-soft)]">container · {g.cellStatus.state}</span>}
                     <ChevronDown className={`w-3.5 h-3.5 text-[var(--text-muted)] transition-transform ${open === g.id ? 'rotate-180' : ''}`} />
                   </div>
                   <div className="text-[11px] text-[var(--text-muted)]">
@@ -211,6 +219,8 @@ export function GuestsTab({ locked }: { locked: boolean }) {
                     </div>
                   )}
                   <Account guest={g} onTwoStepOff={() => act(req(`/api/guests/${g.id}/two-step/off`, { method: 'POST' }), `Two-step sign-in is off for ${g.name}`)} />
+                  <CellSwitch guest={g} onChange={cell => act(req(`/api/guests/${g.id}`, { method: 'PATCH', body: json({ config: { cell } }) }),
+                    cell ? `${g.name} gets their own container on their next visit` : `${g.name} is back on the guest app`)} />
                   <Limits guest={g} onSave={config => act(req(`/api/guests/${g.id}`, { method: 'PATCH', body: json({ config }) }), 'Saved')} />
                 </>
               )}
@@ -267,6 +277,30 @@ function Account({ guest: g, onTwoStepOff }: { guest: Guest; onTwoStepOff: () =>
           </ul>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Phase 1 of docs/plans/guest-cells.md: a guest's own full Shell:B in a container (server/cells.py), opt-in per guest. */
+function CellSwitch({ guest: g, onChange }: { guest: Guest; onChange: (cell: boolean) => void }) {
+  const s = g.cellStatus;
+  return (
+    <div className="mt-3 p-3 rounded-lg bg-[var(--bg-tertiary)] text-xs space-y-1.5">
+      <label className="flex items-start gap-2.5 cursor-pointer">
+        <input type="checkbox" checked={g.config.cell} onChange={e => onChange(e.target.checked)} className="mt-0.5 accent-[var(--accent)]" />
+        <span className="leading-relaxed text-[var(--text-secondary)] max-w-[65ch]">
+          <span className="text-[var(--text-primary)]">Own container (beta).</span> The full Shell:B in a sealed container
+          with no network, reaching the models only through the broker. Chat, pictures, voice and search work; Studio,
+          Code and web pages come in the next phase. Their guest-app chats stay in the guest app.
+        </span>
+      </label>
+      {g.config.cell && (
+        <p className="pl-6 text-[var(--text-muted)]">
+          {s.state === 'running' ? `Running since ${relTime((s.started ?? 0) * 1000)}, last used ${relTime((s.lastActive ?? 0) * 1000)}.`
+            : s.state === 'stopped' ? 'Stopped. It starts on their next visit and stops after 30 idle minutes.' : `${s.state[0].toUpperCase()}${s.state.slice(1)}…`}
+          {s.error && <span className="block text-red-400">Last start failed: {s.error}</span>}
+        </p>
+      )}
     </div>
   );
 }

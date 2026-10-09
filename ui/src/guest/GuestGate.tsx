@@ -27,6 +27,7 @@ export function GuestGate({ children }: { children: (me: GuestMe, refresh: () =>
       const info = await guestApi.authMe();
       if (!info.authenticated) { setFrameKey(null); setMe(null); setState('out'); return; }
       if (info.needsAccount) { setFrameKey(null); setName(info.guest?.name ?? ''); setState('setup'); return; }
+      if (info.cell) { location.replace('/'); return; }  // their own Shell:B: the gateway now serves its full UI
       setFrameKey(info.frameKey);
       setMe(await guestApi.me());
       setState('in');

@@ -28,6 +28,8 @@ export interface GuestAccount {
 }
 export interface GuestAuthMe {
   authenticated: boolean; needsAccount?: boolean; frameKey: string | null;
+  /** this guest has their own Shell:B in a container (server/cells.py): the gateway serves the full UI instead */
+  cell?: { guest: string };
   guest?: { id: string; name: string; username: string | null };
 }
 /** A sign-in step's answer: signed in, or a ticket for the two-step code. */
