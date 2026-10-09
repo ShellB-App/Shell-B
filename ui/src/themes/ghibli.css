@@ -1,0 +1,238 @@
+/* ── Ghibli Autumn theme (light and dark) ────────────────────────────────────────────────────────────────────────
+   Hand-painted countryside in the Studio Ghibli manner. Light is a late autumn afternoon: a high blue sky with towering
+   cumulus drifting by, hills of gold stubble and green, a great round tree on the rise, a cottage with a red roof, and
+   maple leaves spinning down on the breeze (./Ambient.tsx, kind 'leaves'). Dark is the same valley at dusk, the sky
+   gone rose and violet. The UI is cosy paper with hand-drawn edges (uneven corner radii), rounded type (Zen Maru
+   Gothic), maple red for anything you act on and moss green beside it.
+   Reuses the .sf-* hooks Synthfield added to the TSX. Registered in ./index.ts.
+
+   Backdrop stacking, back to front (all position: fixed, behind the app):
+     body background   the painted sky
+     body::before  -3  cumulus, drifting
+     #root::before -2  the hills, tree and cottage
+     body::after   -2  golden-hour light washing over it all
+     .shellb-ambient -1  falling leaves                                                                             */
+
+@font-face { font-family: 'Zen Maru Gothic'; font-weight: 500; font-display: swap; src: url('/fonts/zen-maru-gothic-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Zen Maru Gothic'; font-weight: 700; font-display: swap; src: url('/fonts/zen-maru-gothic-latin-700-normal.woff2') format('woff2'); }
+
+html[data-skin='ghibli'] {
+  --gh-display: 'Zen Maru Gothic', 'Nunito', 'Inter Variable', sans-serif;
+  --gh-sketch: 255px 18px 225px 18px / 18px 225px 18px 255px;   /* a hand-drawn box */
+}
+html.light[data-skin='ghibli'] {
+  --bg-primary: #f6efdf;
+  --bg-secondary: #fcf7ec;
+  --bg-tertiary: #efe5d0;
+  --bg-hover: #e8dbc0;
+  --bg-code: #f8f2e4;
+  --border-subtle: rgba(90, 70, 40, 0.15);
+  --border-strong: rgba(90, 70, 40, 0.28);
+  --text-primary: #2e2a22;
+  --text-secondary: #5b5244;
+  --text-muted: #6f6556;
+  --accent: #c24e29;
+  --accent-fg: #ffffff;
+  --accent-soft: #a8411f;
+  --accent-glow: rgba(194, 78, 41, 0.2);
+  --brand: #5f7a3a;
+  --brand-soft: #4f6a2c;
+  --neon-pink: #c24e29;
+  --neon-cyan: #4f8aa8;
+  --sunset: linear-gradient(100deg, #c24e29, #cf6a2e 60%, #d98a35);
+  --focus-ring: #c24e29;
+  --gh-ink: 46, 42, 34;
+  color-scheme: light;
+}
+html.dark[data-skin='ghibli'] {
+  --bg-primary: #1c1814;
+  --bg-secondary: #24201a;
+  --bg-tertiary: #2e2820;
+  --bg-hover: #3a3226;
+  --bg-code: #16130f;
+  --border-subtle: rgba(255, 235, 200, 0.11);
+  --border-strong: rgba(255, 235, 200, 0.22);
+  --text-primary: #f3ead8;
+  --text-secondary: #cbbda4;
+  --text-muted: #a79a82;
+  --accent: #e8743f;
+  --accent-fg: #1a0d05;
+  --accent-soft: #f2915f;
+  --accent-glow: rgba(232, 116, 63, 0.3);
+  --brand: #a9c27a;
+  --brand-soft: #bcd294;
+  --neon-pink: #e8743f;
+  --neon-cyan: #8fb8c8;
+  --sunset: linear-gradient(100deg, #e0663a, #e8743f 55%, #eda04a);
+  --focus-ring: #f2915f;
+  --gh-ink: 0, 0, 0;
+  color-scheme: dark;
+}
+
+/* ── type ────────────────────────────────────────────────────────────────── */
+html[data-skin='ghibli'] .prose-shellb h1,
+html[data-skin='ghibli'] .prose-shellb h2,
+html[data-skin='ghibli'] .prose-shellb h3 { font-family: var(--gh-display); font-weight: 700; letter-spacing: 0.01em; }
+html[data-skin='ghibli'] .prose-shellb h2 { text-decoration: underline wavy color-mix(in srgb, var(--accent) 55%, transparent); text-decoration-thickness: 1.5px; text-underline-offset: 6px; }
+html[data-skin='ghibli'] .prose-shellb a { color: var(--accent-soft); text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+html[data-skin='ghibli'] .prose-shellb li::marker { color: var(--accent); }
+html[data-skin='ghibli'] .prose-shellb blockquote { border-left: 3px solid var(--brand); border-radius: 0 12px 12px 0; }
+html[data-skin='ghibli'] .prose-shellb pre { border-radius: 12px; }
+html.light[data-skin='ghibli'] ::selection { background: rgba(217, 138, 53, 0.3); }
+html.dark[data-skin='ghibli'] ::selection { background: rgba(232, 116, 63, 0.35); }
+
+/* ── geometry: soft and a little hand-made ───────────────────────────────── */
+html[data-skin='ghibli'] :where([class*='rounded-lg'], [class*='rounded-xl'], [class*='rounded-2xl']) { border-radius: 14px !important; }
+html[data-skin='ghibli'] .shadow-lg, html[data-skin='ghibli'] .shadow-xl, html[data-skin='ghibli'] .shadow-2xl {
+  box-shadow: 0 2px 0 rgba(var(--gh-ink), 0.06), 0 16px 34px -16px rgba(var(--gh-ink), 0.35), 0 0 0 1px var(--border-subtle) !important;
+}
+html[data-skin='ghibli'] [class~='bg-[var(--accent)]'] {
+  background-image: var(--sunset); border-radius: 999px !important; font-family: var(--gh-display); font-weight: 700;
+  box-shadow: 0 2px 0 rgba(var(--gh-ink), 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+html[data-skin='ghibli'] [class~='bg-[var(--accent)]']:disabled { background-image: none; box-shadow: none; }
+
+/* ── backdrop ────────────────────────────────────────────────────────────── */
+html.light[data-skin='ghibli'] body {
+  background:
+    radial-gradient(ellipse 70% 40% at 80% 75%, rgba(255, 214, 140, 0.25), transparent 70%),
+    linear-gradient(180deg, #8fc0e4 0%, #b7d7ec 28%, #dcebf1 52%, #f3ecd9 72%, #f6efdf 100%);
+  background-attachment: fixed;
+}
+html.dark[data-skin='ghibli'] body {
+  background:
+    radial-gradient(1px 1px at 30px 40px, rgba(255, 245, 230, 0.4), transparent 60%) 0 0 / 211px 197px,
+    radial-gradient(ellipse 70% 30% at 70% 72%, rgba(255, 150, 80, 0.28), transparent 70%),
+    linear-gradient(180deg, #1d1b33 0%, #3a2c4a 30%, #7a4a5a 52%, #c0703a 70%, #3a2a20 100%);
+  background-attachment: fixed;
+}
+/* cumulus: towers of soft round puffs, shaded underneath, drifting very slowly */
+html[data-skin='ghibli'] body::before {
+  content: ''; position: fixed; top: 0; left: -10vw; width: 120vw; height: 60vh; pointer-events: none; z-index: -3;
+  --c: 255, 255, 255; --s: 196, 214, 232;
+  background:
+    radial-gradient(circle at 18% 30%, rgba(var(--c), 0.95) 0 6vmin, transparent 6.2vmin),
+    radial-gradient(circle at 23% 24%, rgba(var(--c), 0.95) 0 8vmin, transparent 8.2vmin),
+    radial-gradient(circle at 29% 29%, rgba(var(--c), 0.95) 0 7vmin, transparent 7.2vmin),
+    radial-gradient(circle at 13% 36%, rgba(var(--c), 0.9) 0 5vmin, transparent 5.2vmin),
+    radial-gradient(ellipse 15vmin 4vmin at 22% 39%, rgba(var(--s), 0.9) 0 100%, transparent 101%),
+    radial-gradient(circle at 70% 18%, rgba(var(--c), 0.9) 0 5vmin, transparent 5.2vmin),
+    radial-gradient(circle at 75% 13%, rgba(var(--c), 0.92) 0 7vmin, transparent 7.2vmin),
+    radial-gradient(circle at 81% 17%, rgba(var(--c), 0.9) 0 6vmin, transparent 6.2vmin),
+    radial-gradient(ellipse 13vmin 3vmin at 75% 24%, rgba(var(--s), 0.85) 0 100%, transparent 101%),
+    radial-gradient(circle at 26% 34%, rgba(var(--c), 0.95) 0 5.5vmin, transparent 5.7vmin),
+    radial-gradient(circle at 20% 20%, rgba(var(--c), 0.9) 0 4.5vmin, transparent 4.7vmin),
+    radial-gradient(circle at 78% 21%, rgba(var(--c), 0.9) 0 4.5vmin, transparent 4.7vmin),
+    radial-gradient(circle at 52% 44%, rgba(var(--c), 0.6) 0 3.5vmin, transparent 3.7vmin),
+    radial-gradient(circle at 55% 42%, rgba(var(--c), 0.6) 0 4.5vmin, transparent 4.7vmin);
+  filter: blur(3px); animation: gh-clouds 160s ease-in-out infinite alternate;
+}
+html.dark[data-skin='ghibli'] body::before { --c: 230, 170, 170; --s: 120, 80, 110; opacity: 0.55; }
+/* the valley */
+html[data-skin='ghibli'] #root::before {
+  content: ''; position: fixed; left: 0; right: 0; bottom: 0; height: 46vh; pointer-events: none; z-index: -2;
+  background: url("./scenery/hills.svg") repeat-x center bottom / auto 100%; transition: opacity 0.6s ease;
+}
+html.dark[data-skin='ghibli'] #root::before { filter: brightness(0.42) saturate(0.85) sepia(0.2); }
+/* golden-hour light from the right */
+html[data-skin='ghibli'] body::after {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: -2;
+  background: linear-gradient(250deg, rgba(255, 210, 130, 0.22), transparent 45%);
+}
+html.dark[data-skin='ghibli'] body::after { background: radial-gradient(ellipse 50% 30% at 30% 80%, rgba(255, 190, 110, 0.12), transparent 70%); }
+html[data-skin='ghibli']:not(:has(.sf-hero)) #root::before { opacity: 0.45; }
+html[data-skin='ghibli']:not(:has(.sf-hero)) .shellb-ambient { opacity: 0.6; }
+
+@keyframes gh-clouds { from { transform: translateX(-4vw); } to { transform: translateX(6vw); } }
+@keyframes gh-bob { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-3px) rotate(2deg); } }
+
+/* ── chrome ──────────────────────────────────────────────────────────────── */
+html[data-skin='ghibli'] .sf-sidebar { background: color-mix(in srgb, var(--bg-secondary) 88%, transparent); backdrop-filter: blur(8px); }
+html[data-skin='ghibli'] .sf-brand {
+  font-family: var(--gh-display); font-weight: 700; font-size: 1.15rem; letter-spacing: 0.02em;
+  color: var(--text-primary) !important; display: inline-flex; align-items: center; gap: 0.45rem;
+}
+/* an acorn by the name, bobbing */
+html[data-skin='ghibli'] .sf-brand::before {
+  content: ''; width: 11px; height: 13px; border-radius: 45% 45% 50% 50% / 30% 30% 70% 70%;
+  background: linear-gradient(180deg, #6b4a2c 0 34%, #c98a3e 34%); box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.15);
+  animation: gh-bob 4s ease-in-out infinite;
+}
+html[data-skin='ghibli'] .sf-label { font-family: var(--gh-display); font-weight: 700; font-size: 12px !important; letter-spacing: 0.04em; }
+html[data-skin='ghibli'] .sf-sidebar [class*='bg-[var(--bg-hover)]'][class*='cursor-pointer'] {
+  box-shadow: inset 3px 0 0 var(--brand); background: linear-gradient(90deg, color-mix(in srgb, var(--brand) 12%, transparent), transparent 85%);
+}
+html[data-skin='ghibli'] .sf-topbar, html[data-skin='ghibli'] header.h-12 {
+  background: color-mix(in srgb, var(--bg-primary) 74%, transparent); backdrop-filter: blur(8px); position: relative; z-index: 1;
+}
+html[data-skin='ghibli'] .sf-topbar .text-sm.font-medium,
+html[data-skin='ghibli'] .sf-topbar > div > span.text-sm,
+html[data-skin='ghibli'] header.h-12 > div > span.font-semibold { font-family: var(--gh-display); font-weight: 700; font-size: 15px; }
+html[data-skin='ghibli'] nav [class*='rounded-r-full'] { background: var(--accent) !important; }
+
+/* ── welcome ─────────────────────────────────────────────────────────────── */
+html[data-skin='ghibli'] .sf-hero > :first-child {
+  border-radius: 50% !important; margin-bottom: 1.2rem;
+  box-shadow: 0 0 0 4px var(--bg-secondary), 0 0 0 5.5px var(--border-strong), 0 10px 20px -8px rgba(var(--gh-ink), 0.4) !important;
+}
+html[data-skin='ghibli'] .sf-hero h1 {
+  font-family: var(--gh-display); font-weight: 700; letter-spacing: 0.01em; font-size: clamp(2.1rem, 4.4vw, 3.2rem); line-height: 1.15;
+  padding-bottom: 0; background: none; text-decoration: none;
+}
+html.light[data-skin='ghibli'] .sf-hero h1 { text-shadow: 0 2px 0 rgba(255, 255, 255, 0.7); }
+/* a hand-drawn wavy underline */
+html[data-skin='ghibli'] .sf-hero h1::after {
+  content: '\00a0\00a0\00a0\00a0\00a0\00a0\00a0\00a0\00a0\00a0\00a0\00a0\00a0\00a0'; display: block; font-size: 15px; line-height: 1;
+  margin: 0.3rem auto 0.4rem; width: max-content;
+  text-decoration: underline wavy var(--accent); text-decoration-thickness: 2px; text-underline-offset: 2px;
+}
+html[data-skin='ghibli'] .sf-hero h1 + p > span:first-child { font-family: var(--gh-display); font-weight: 700; color: var(--brand-soft) !important; }
+
+/* quick-start cards: notes on paper with sketched edges, tilting a touch when you reach for one */
+html[data-skin='ghibli'] .sf-hero > div.grid { gap: 14px; }
+html[data-skin='ghibli'] .sf-card {
+  position: relative; padding: 16px 18px 14px !important; border-width: 1.5px !important; border-radius: var(--gh-sketch) !important;
+  background-color: color-mix(in srgb, var(--bg-secondary) 90%, transparent) !important; backdrop-filter: blur(4px);
+  box-shadow: 0 2px 0 rgba(var(--gh-ink), 0.06);
+  transition: transform .25s cubic-bezier(.3, 1.5, .5, 1), box-shadow .25s, border-color .25s;
+}
+html[data-skin='ghibli'] .sf-hero > div.grid > .sf-card:nth-child(even):hover { transform: translateY(-3px) rotate(0.6deg); }
+html[data-skin='ghibli'] .sf-card:hover {
+  transform: translateY(-3px) rotate(-0.6deg); border-color: color-mix(in srgb, var(--accent) 50%, transparent) !important;
+  box-shadow: 0 12px 22px -14px rgba(var(--gh-ink), 0.45);
+}
+html[data-skin='ghibli'] .sf-card > div:first-child { font-family: var(--gh-display); font-weight: 700; font-size: 15px; }
+html[data-skin='ghibli'] .sf-card > div:last-child { font-size: 13px; margin-top: 4px; }
+html[data-skin='ghibli'] .sf-tagline {
+  font-family: var(--gh-display); font-weight: 500; font-size: 12.5px !important; padding: 3px 12px; border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-secondary) 75%, transparent);
+}
+html[data-skin='ghibli'] .sf-tagline::before { content: '❦ '; color: var(--accent); }
+
+/* ── composer: a paper card, sketched ────────────────────────────────────── */
+html[data-skin='ghibli'] .sf-composer {
+  position: relative; z-index: 20; border-width: 1.5px !important; border-radius: 22px 18px 24px 16px / 18px 24px 16px 22px !important;
+  background: color-mix(in srgb, var(--bg-secondary) 94%, transparent) !important; backdrop-filter: blur(10px);
+  box-shadow: 0 3px 0 rgba(var(--gh-ink), 0.07), 0 18px 40px -22px rgba(var(--gh-ink), 0.45);
+}
+html[data-skin='ghibli'] .sf-composer:focus-within { border-color: color-mix(in srgb, var(--accent) 55%, transparent) !important; }
+
+/* ── the other apps ──────────────────────────────────────────────────────── */
+html[data-skin='ghibli'] :where(h1[class*='tracking-tight']:not([class*='text-base'])) {
+  font-family: var(--gh-display); font-weight: 700; letter-spacing: 0.01em;
+  text-decoration: underline wavy color-mix(in srgb, var(--accent) 60%, transparent); text-decoration-thickness: 2px; text-underline-offset: 8px;
+}
+
+/* ── misc ────────────────────────────────────────────────────────────────── */
+html[data-skin='ghibli'] * { scrollbar-width: thin; scrollbar-color: rgba(var(--gh-ink), 0.25) transparent; }
+html.dark[data-skin='ghibli'] * { scrollbar-color: rgba(255, 235, 200, 0.2) transparent; }
+html[data-skin='ghibli'] .caret::after { background: var(--accent); border-radius: 2px; }
+html[data-skin='ghibli'] .think-stream {
+  background: linear-gradient(90deg, transparent 0%, rgba(217, 138, 53, 0.22) 45%, rgba(95, 122, 58, 0.12) 60%, transparent 100%);
+  background-size: 200% 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-skin='ghibli'] body::before, html[data-skin='ghibli'] .sf-brand::before { animation: none; }
+  html[data-skin='ghibli'] .sf-card { transition: none; }
+}

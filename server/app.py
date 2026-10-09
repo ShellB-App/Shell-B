@@ -66,8 +66,10 @@ import selfmod
 import selfreview
 import community
 import ask
+import themes
 import screen
 import public_api
+import guests
 import mcp_server
 import browsing
 import compaction
@@ -75,6 +77,7 @@ import composer
 import planmode
 import sysinfo
 import network
+import changelog
 import memory
 import episodes
 import chatmail
@@ -83,6 +86,7 @@ import feedback
 import reflection
 import suggestions
 import commitments
+import nightshift
 import gibberlink
 import secretary
 import backup
@@ -120,6 +124,7 @@ class _ShortNameRedirect:
 
 
 app.add_middleware(_ShortNameRedirect)
+app.add_middleware(public_api.UsageLog)  # one audit row per /api/v1 request
 db.init()
 activity.init()
 auth.init()
@@ -134,6 +139,7 @@ routing.register()
 planetary.register()
 worldnotes.register()
 ask.register()
+themes.register()
 screen.register()
 browsing.register()
 scrape.register()
@@ -168,18 +174,21 @@ chatmail.init()
 chatmail.register()
 compaction.migrate_legacy()  # after episodes.init: the FTS triggers index the messages it puts back
 feedback.init()
+guests.init()
 cli_agents.cleanup()
 verify.register()
 verify.init()
 codemap.init()
 codex.register()
 commitments.register()
+nightshift.register()
 app.include_router(selfmod.router)
 app.include_router(selfreview.router)
 app.include_router(community.router)
 app.include_router(composer.router)
 app.include_router(sysinfo.router)
 app.include_router(network.router)
+app.include_router(changelog.router)
 app.include_router(asset_libs.router)
 app.include_router(groups.router)
 app.include_router(schedules.router)
@@ -189,8 +198,10 @@ app.include_router(megaplan.router)
 app.include_router(todos.router)
 favorites.init()
 app.include_router(favorites.router)
+app.include_router(themes.router)
 app.include_router(activity.router)
 app.include_router(commitments.router)
+app.include_router(nightshift.router)
 app.include_router(notify.router)
 app.include_router(codex_secrets.router)
 app.include_router(codex.router)
@@ -212,6 +223,7 @@ app.include_router(ask.router)
 app.include_router(screen.router)
 app.include_router(public_api.router)
 app.include_router(public_api.admin_router)
+app.include_router(guests.admin_router)  # owner side of Shell:B Guest; the guests' own app is guest_app.py
 app.include_router(mcp_server.router)
 app.include_router(appstate.router)
 app.include_router(auth.router)
@@ -266,6 +278,9 @@ async def _start_mcp():
     suggestions.start()
     commitments.busy = lambda: bool(ACTIVE)
     commitments.start()
+    nightshift.run_turn, nightshift.abort_turn, nightshift.get_settings = _run_nightshift, _abort_turn, get_settings
+    nightshift.active_convs, nightshift.busy = lambda: list(ACTIVE), _background_busy
+    nightshift.start()
     datasets.start()
     shopping.busy = lambda: bool(ACTIVE)
     shopping.start()
@@ -289,6 +304,7 @@ async def _shutdown():
     reflection.stop()
     suggestions.stop()
     commitments.stop()
+    nightshift.stop()
     datasets.stop()
     watchdog.stop()
     backup.stop_scheduler()
@@ -643,10 +659,14 @@ VOICE_REMINDER = ("\n\n[Spoken aloud by voice: answer in two to four plain spoke
                   "No lists, headings, bold or tables. Offer to go deeper instead of covering everything.]")
 
 
-def begin_turn(conv, body, stream=True, note="", adult_ok=False, interactive=None):
+def begin_turn(conv, body, stream=True, note="", adult_ok=False, interactive=None, api=None):
     """Start an agent turn in the background. Returns (event queue or None, task); the task's result is the final
     assistant message. `note` is appended to the system prompt (scheduled runs say no one is watching). `interactive`
-    (default: same as stream) says someone is watching live; API turns stream to a program, so they pass False."""
+    (default: same as stream) says someone is watching live; API turns stream to a program, so they pass False.
+    `api` = {"mode": "persona", "tools": [...]} seals the turn off from the owner (public_api.py persona keys): no
+    memories recalled or learned, no calendar or contacts in the prompt, and only the listed tools."""
+    sealed = bool(api and api.get("mode") in ("persona", "guest"))
+    guest = api.get("tenant") if sealed and api.get("mode") == "guest" else None  # guests.py: a guest's own turn
     conv_id = conv["id"]
     if body.get("fromMessageId"):
         db.delete_messages_from(conv_id, body["fromMessageId"])
@@ -661,6 +681,12 @@ def begin_turn(conv, body, stream=True, note="", adult_ok=False, interactive=Non
     pick, own = body.get("model"), providers.split(agent.get("model", ""))
     if pick and pick != agent.get("model") and own and (providers.split(pick) or ("",))[0] == own[0]:
         agent = {**agent, "model": pick}  # the composer's model picker: same provider only, so privacy doesn't change
+    if body.get("localModel") and not stream and not providers.is_cloud(agent.get("model", "")):
+        agent = {**agent, "model": body["localModel"], "numCtx": body.get("localNumCtx") or agent.get("numCtx")}  # the night shift's big model
+    if (interactive if interactive is not None else stream) and not sealed:
+        nightshift.touch()  # someone is here: the night shift yields the box
+    if guest and guests.agent_ok(agent):  # cloud, adult or a model not shared with guests: refused here, not just hidden
+        raise RuntimeError(guests.agent_ok(agent))
     effort = body.get("effort") or agent.get("effort", "medium")
     attachments = body.get("attachments") or []
     content = (body.get("content") or "").strip()
@@ -722,6 +748,7 @@ def begin_turn(conv, body, stream=True, note="", adult_ok=False, interactive=Non
         sizing = {}  # num_ctx and the fixed prompt size, for the context meter and the next summary
         try:
             await emit({"type": "start", "userMessage": user_msg, "message": {**live, "blocks": []}})
+            await nightshift.make_room()  # the night model may still be leaving memory
             if summarized:
                 await emit({"type": "summarized", "summary": summarized})
             has_images = any(a.get("kind") == "image" for a in attachments)
@@ -733,15 +760,19 @@ def begin_turn(conv, body, stream=True, note="", adult_ok=False, interactive=Non
                                                                           f"using {turn.model} for this turn"})
                 info = await model_info(turn.model)
             num_ctx = int(agent.get("numCtx") or info["numCtx"] or 32768)
-            memories = [] if conv.get("incognito") else await recall(agent, content, settings)
+            memories = await guests.recall(guest, content, settings) if guest \
+                else [] if conv.get("incognito") or sealed else await recall(agent, content, settings)
+            if sealed:
+                turn.only_tools = set(api.get("tools") or ())
+                turn.tenant = guest
             tool_names = turn.enabled_tools(info)
             system = build_system(agent, tool_names, effort, db.latest_artifacts(conv_id), memories, agents, settings,
                                   project_id=project_id,
                                   group_id=None if project_id else conv.get("groupId"), conv_id=conv_id,
-                                  user_text=content)
+                                  user_text=content, owner_context=not sealed)
             if note:
                 system += "\n\n" + note
-            if conv.get("incognito"):
+            if conv.get("incognito") and not sealed:  # a persona turn's note says it all
                 import privacy
                 system += "\n\n" + privacy.PROMPT_NOTE
             if plan:
@@ -788,7 +819,9 @@ def begin_turn(conv, body, stream=True, note="", adult_ok=False, interactive=Non
                        | ({"error": error} if error else {}), msg_id=asst_id)
         if ACTIVE.get(conv_id, {}).get("abort") is abort:
             ACTIVE.pop(conv_id, None)
-        if stream and status == "complete" and not abort.is_set():
+        if guest:  # tokens against the guest's daily share; their own memory learns from the exchange
+            guests.after_turn(guest, conv_id, content, final, learn=stream and status == "complete" and not abort.is_set())
+        if stream and status == "complete" and not abort.is_set() and not sealed:
             memory.after_turn(conv_id, asst_id, content, final["content"], agent)
             commitments.after_turn(conv_id, asst_id, content, final["content"], agent)
         if sizing and status == "complete":
@@ -850,7 +883,7 @@ def _abort_turn(conv_id):
     return bool(live)
 
 
-public_api.begin_turn, public_api.ACTIVE, public_api.abort_turn = begin_turn, ACTIVE, _abort_turn
+public_api.begin_turn, public_api.ACTIVE, public_api.abort_turn, public_api.OLLAMA = begin_turn, ACTIVE, _abort_turn, OLLAMA
 
 
 async def _run_scheduled(t, on_conv):
@@ -875,6 +908,30 @@ async def _run_todo(item, group, message, note, on_conv):
     on_conv(conv["id"])
     groups.touch(group["id"])
     _, task = begin_turn(conv, {"content": message}, stream=False, note=note)
+    final = await task
+    return conv["id"], final["status"], final.get("error"), final.get("content", "")
+
+
+def _background_busy():
+    """Background work other than chat turns that the night shift must wait for (or yield to), if any."""
+    for name, now in (("a scheduled run", schedules.running_now()), ("a to-do", todos.running_now()),
+                      ("a Mega Plan", megaplan.running_now()), ("an asset scout", asset_libs.running_now()),
+                      ("a notebook job", notebook.running_now()), ("a Generate job", generate.running_now()),
+                      ("a dataset download", datasets.running_now())):
+        if now:
+            return name
+    return None
+
+
+async def _run_nightshift(job, conv_id, message, note, opts, on_conv):
+    """One night-shift job: a new chat titled after it, or the same chat again when it resumes after yielding."""
+    agent, _ = find_agent(job["agentId"])
+    conv = db.get_conversation(conv_id) if conv_id else None
+    if not conv:
+        prefix = "Night shift: " if job["kind"] == "research" else ""
+        conv = db.create_conversation(agent["id"], title=f"{prefix}{job['title']}"[:120])
+    on_conv(conv["id"])
+    _, task = begin_turn(conv, {"content": message, "agentId": agent["id"], **opts}, stream=False, note=note)
     final = await task
     return conv["id"], final["status"], final.get("error"), final.get("content", "")
 
@@ -1274,7 +1331,7 @@ async def status():
     return {"version": VERSION, "services": services, "memory": mem,
             "loaded": [{"name": m["name"].removesuffix(":latest"), "size": m.get("size", 0),
                         "context": m.get("context_length")} for m in loaded],
-            "active": list(ACTIVE), "scheduledRunAt": schedules.last_finished(), "megaPlan": megaplan.running_now(), "todo": todos.running_now(), "assetJob": asset_libs.running_now(),
+            "active": list(ACTIVE), "scheduledRunAt": schedules.last_finished(), "megaPlan": megaplan.running_now(), "todo": todos.running_now(), "assetJob": asset_libs.running_now(), "nightShift": nightshift.running_now(),
             "notebook": notebook.running_now(), "activity": activity.summary(), "memoryPending": memory.pending_count(),
             "dataJob": datasets.running_now(), "downloads": datasets.downloads(), "generate": generate.running_now()}
 

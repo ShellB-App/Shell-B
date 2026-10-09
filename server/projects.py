@@ -109,6 +109,26 @@ KINDS = {
                  "animations at their end state, so make sure the final frame is a strong composition on its own. For ads, "
                  "the frame size is the canvas (e.g. 300×250, 728×90, 1080×1080).",
     },
+    "screensaver": {
+        "label": "Screensaver", "blurb": "Idle-screen animations Shell:B can use as its screensaver", "viewport": [1920, 1080],
+        "guide": "A screensaver for Shell:B: a full-window piece that animates forever with nobody touching it. When the "
+                 "owner picks it (Settings → Appearance, or the Use as screensaver button in the Studio), Shell:B shows "
+                 "index.html full screen in a sandboxed iframe whenever the computer is idle, and any key or mouse movement "
+                 "dismisses it, so build no controls, no UI chrome, no hover states and no cursor. Shell:B may draw its own "
+                 "clock over the lower-left (about 30% wide, 25% tall), so keep that corner calm and don't add a clock. "
+                 "Rules: it fills any aspect ratio (resize handling, no letterboxing, from 4:3 to ultrawide and portrait); "
+                 "<canvas> 2D, SVG or CSS (Canvas 2D preferred, there is no WebGL in the screenshot browser); a "
+                 "requestAnimationFrame loop with dt clamped, devicePixelRatio capped at 2, no growth in memory or object "
+                 "count over hours (reuse particle pools, never append DOM nodes in the loop); calm on the GPU; it must "
+                 "look good dark, since it often runs at night; nothing static and bright, because it may run for hours "
+                 "on an OLED: drift every element slowly; vary over minutes (seasons, palette shifts, new formations) so it "
+                 "never feels looped; no audio, no network (only /vendor and files in the project); respect "
+                 "prefers-reduced-motion by slowing to a gentle drift, not stopping. The first frame must already be a "
+                 "strong composition, since screenshots and covers capture the first second. Keep tuning constants "
+                 "(speeds, counts, palette) together at the top. Ideas: generative flow fields, starfields, aquariums, "
+                 "weather, slow geometry, cellular automata, Lissajous and harmonographs, drifting landscapes.",
+        "starter": {"index.html": '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>Screensaver</title>\n<style>\n  html, body { margin: 0; height: 100%; background: #05060c; overflow: hidden; cursor: none; }\n  canvas { display: block; width: 100vw; height: 100vh; }\n</style>\n</head>\n<body>\n<canvas id="c"></canvas>\n<script>\n// Screensaver skeleton: a full-window canvas, a clamped-dt loop, resize, a reduced-motion slowdown and a pause while\n// hidden. Replace draw() with the piece. Shell:B shows this full screen when the computer is idle.\nconst cv = document.getElementById(\'c\'), g = cv.getContext(\'2d\');\nconst slow = matchMedia(\'(prefers-reduced-motion: reduce)\').matches ? 0.25 : 1;\nlet w = 0, h = 0, t = 0, last = performance.now();\nfunction size() {\n  const dpr = Math.min(2, devicePixelRatio || 1);\n  w = innerWidth; h = innerHeight; cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);\n  g.setTransform(dpr, 0, 0, dpr, 0, 0);\n}\naddEventListener(\'resize\', size); size();\n\nfunction draw(dt) {\n  // a placeholder: three slow, drifting glows\n  g.fillStyle = \'rgba(5, 6, 12, 0.2)\'; g.fillRect(0, 0, w, h);\n  for (let i = 0; i < 3; i++) {\n    const x = w * (0.5 + 0.35 * Math.sin(t * (0.07 + i * 0.03) + i * 2)), y = h * (0.5 + 0.3 * Math.cos(t * (0.05 + i * 0.02) + i));\n    const r = Math.min(w, h) * 0.35, grd = g.createRadialGradient(x, y, 0, x, y, r);\n    grd.addColorStop(0, [\'#3d7bff33\', \'#ff3d7f2e\', \'#ffc23d26\'][i]); grd.addColorStop(1, \'#0000\');\n    g.fillStyle = grd; g.fillRect(x - r, y - r, r * 2, r * 2);\n  }\n}\n\nfunction frame(now) {\n  const dt = Math.min(0.05, (now - last) / 1000) * slow; last = now; t += dt;\n  draw(dt);\n  requestAnimationFrame(frame);\n}\ng.fillStyle = \'#05060c\'; g.fillRect(0, 0, w, h);\nrequestAnimationFrame(frame);\n</script>\n</body>\n</html>\n'},
+    },
     "game": {
         "label": "Game", "blurb": "Playable browser games with keyboard and touch", "viewport": [1280, 720],
         "guide": "A playable browser game. Use index.html plus game.js (split into modules once it grows), rendering to a "

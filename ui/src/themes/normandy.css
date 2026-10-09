@@ -1,0 +1,379 @@
+/* ── Normandy theme (dark only; light mode falls back to Classic light) ───────────────────────────────────────────
+   Mass Effect × fireflies. Shore leave at night: a ringless gas giant hangs in the sky, a blue anamorphic flare
+   streaks off a near star, the galaxy's dust band crosses overhead, and fireflies drift over a dark treeline (the
+   ME3 dream forest, minus the ghosts). The UI is the ship's holographic layer: Alliance blue panels with scanlines and
+   chamfered corners, omni-tool amber for anything you can act on, and galaxy-map orbit rings around the agent.
+   The fireflies are a canvas (./Ambient.tsx, mounted in main.tsx) so each one wanders and blinks on its own.
+   Reuses the .sf-* hooks Synthfield added to the TSX (harmless in other skins). Registered in ./index.ts.
+
+   Backdrop stacking, back to front (all position: fixed, behind the app):
+     body background   base stars, galaxy band, nebula wash
+     body::before  -3  bright stars that twinkle, the flare star
+     #root::before -2  the planet
+     body::after   -2  treeline + horizon glow
+     .shellb-ambient -1  the swarm                                                                               */
+
+html.dark[data-skin='normandy'] {
+  --nm-void: #04070e;
+  --nm-blue: #3aa0ff;      /* Alliance / Paragon */
+  --nm-ice: #8fe4ff;       /* hologram highlight */
+  --nm-amber: #ff9a1f;     /* omni-tool */
+  --nm-red: #ff4a4a;       /* Renegade */
+  --nm-glow: #e3f77a;      /* firefly */
+  --nm-display: 'Barlow Condensed', 'Barlow', 'Inter Variable', sans-serif;
+  --nm-body: 'Barlow', 'Inter Variable', Inter, sans-serif;
+  --nm-mono: 'JetBrains Mono Variable', monospace;
+  --nm-radius: 2px;
+  --nm-chamfer: 10px;
+  --nm-scan: repeating-linear-gradient(0deg, rgba(143, 228, 255, 0.035) 0 1px, transparent 1px 3px);
+
+  --bg-primary: #060a13;
+  --bg-secondary: #0b111f;
+  --bg-tertiary: #121b2e;
+  --bg-hover: #182540;
+  --bg-code: #04070d;
+  --border-subtle: rgba(143, 228, 255, 0.13);
+  --border-strong: rgba(143, 228, 255, 0.34);
+  --text-primary: #e6f0fb;
+  --text-secondary: #a5b6cf;
+  --text-muted: #7486a2;
+  --accent: #ff9a1f;
+  --accent-fg: #160f1c;  /* text on the accent colour: WCAG AA (4.5:1) */
+  --accent-soft: #ffb54d;
+  --accent-glow: rgba(255, 154, 31, 0.38);
+  --brand: #3aa0ff;
+  --brand-soft: #8fe4ff;
+  --neon-pink: #ff4a4a;
+  --neon-cyan: #8fe4ff;
+  --sunset: linear-gradient(100deg, #ff7a1f 0%, #ff9a1f 55%, #ffc24d 100%);
+  --focus-ring: var(--nm-ice);
+  color-scheme: dark;
+}
+
+/* ── type ────────────────────────────────────────────────────────────────── */
+html.dark[data-skin='normandy'] body { font-family: var(--nm-body); font-size: 15px; }
+html.dark[data-skin='normandy'] .prose-shellb { font-size: 1rem; line-height: 1.65; }
+html.dark[data-skin='normandy'] .prose-shellb h1,
+html.dark[data-skin='normandy'] .prose-shellb h2,
+html.dark[data-skin='normandy'] .prose-shellb h3 {
+  font-family: var(--nm-display); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
+}
+html.dark[data-skin='normandy'] .prose-shellb h1 { font-size: 1.6em; text-shadow: 0 0 16px rgba(58, 160, 255, 0.4); }
+html.dark[data-skin='normandy'] .prose-shellb h2 { font-size: 1.35em; padding-bottom: 0.3em; border-bottom: 1px solid var(--border-subtle); position: relative; }
+html.dark[data-skin='normandy'] .prose-shellb h2::after {
+  content: ''; position: absolute; left: 0; bottom: -1px; width: 56px; height: 2px; background: var(--nm-blue); box-shadow: 0 0 8px var(--nm-blue);
+}
+html.dark[data-skin='normandy'] .prose-shellb h3::before { content: '// '; color: var(--nm-blue); letter-spacing: 0; }
+html.dark[data-skin='normandy'] .prose-shellb a { color: var(--nm-ice); text-decoration-color: rgba(143, 228, 255, 0.4); }
+html.dark[data-skin='normandy'] .prose-shellb li::marker { color: var(--nm-amber); }
+html.dark[data-skin='normandy'] .prose-shellb blockquote {
+  border-left: 2px solid var(--nm-blue); box-shadow: -6px 0 14px -8px var(--nm-blue);
+  background: linear-gradient(90deg, rgba(58, 160, 255, 0.07), transparent 70%);
+}
+html.dark[data-skin='normandy'] .prose-shellb th {
+  font-family: var(--nm-display); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.85em;
+}
+html.dark[data-skin='normandy'] .prose-shellb hr { border-color: var(--border-subtle); position: relative; overflow: visible; }
+html.dark[data-skin='normandy'] .prose-shellb pre,
+html.dark[data-skin='normandy'] .prose-shellb :not(pre) > code { border-radius: var(--nm-radius); }
+html.dark[data-skin='normandy'] ::selection { background: rgba(58, 160, 255, 0.42); }
+html.dark[data-skin='normandy'] kbd { font-family: var(--nm-mono); border-radius: 2px; letter-spacing: 0; text-transform: none; }
+
+/* ── geometry: soft cards become hard-edged holo panels ──────────────────── */
+html.dark[data-skin='normandy'] :where([class*='rounded-md'], [class*='rounded-lg'], [class*='rounded-xl'], [class*='rounded-2xl'],
+  [class*='rounded-3xl'], [class*='rounded-[20px]']) { border-radius: var(--nm-radius) !important; }
+html.dark[data-skin='normandy'] .shadow-lg, html.dark[data-skin='normandy'] .shadow-xl, html.dark[data-skin='normandy'] .shadow-2xl {
+  box-shadow: 0 14px 44px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px var(--border-subtle), 0 0 26px -10px rgba(58, 160, 255, 0.4) !important;
+}
+
+/* primary buttons: an omni-tool slab with one chamfered corner. ~= matches the exact class only so tints stay tints */
+html.dark[data-skin='normandy'] [class~='bg-[var(--accent)]'] {
+  background-image: var(--sunset);
+  border-radius: 0 !important;
+  clip-path: polygon(0 0, calc(100% - var(--nm-chamfer)) 0, 100% var(--nm-chamfer), 100% 100%, 0 100%);
+  font-family: var(--nm-display); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  filter: drop-shadow(0 0 9px rgba(255, 154, 31, 0.45));
+}
+html.dark[data-skin='normandy'] [class~='bg-[var(--accent)]'][class*='rounded-full'] { clip-path: none; border-radius: var(--nm-radius) !important; }
+html.dark[data-skin='normandy'] [class~='bg-[var(--accent)]']:disabled {
+  background: var(--bg-tertiary) !important; background-image: none !important; color: var(--text-muted) !important;
+  filter: none !important; opacity: 1 !important; cursor: not-allowed;
+}
+
+/* ── backdrop ────────────────────────────────────────────────────────────── */
+/* the sky: scattered faint stars (three tiled layers so they cover any size), the galaxy's dust band, nebula washes */
+html.dark[data-skin='normandy'] body {
+  background:
+    radial-gradient(1px 1px at 9% 14%, rgba(255,255,255,.75), transparent 60%),
+    radial-gradient(1px 1px at 38% 27%, rgba(255,255,255,.5), transparent 60%),
+    radial-gradient(1.5px 1.5px at 52% 9%, rgba(255,245,225,.75), transparent 60%),
+    radial-gradient(1px 1px at 64% 44%, rgba(190,220,255,.5), transparent 60%),
+    radial-gradient(1px 1px at 91% 52%, rgba(255,255,255,.6), transparent 60%),
+    radial-gradient(1px 1px at 5% 46%, rgba(255,255,255,.45), transparent 60%),
+    radial-gradient(1px 1px at 20px 30px, rgba(255,255,255,.4), transparent 60%) 0 0 / 223px 199px,
+    radial-gradient(1px 1px at 140px 90px, rgba(190,215,255,.32), transparent 60%) 0 0 / 271px 239px,
+    radial-gradient(1px 1px at 70px 160px, rgba(255,235,210,.3), transparent 60%) 0 0 / 313px 281px,
+    radial-gradient(1px 1px at 40px 20px, rgba(255,255,255,.22), transparent 60%) 0 0 / 97px 113px,
+    /* the dust band, crossing from upper left to lower right */
+    linear-gradient(158deg, transparent 18%, rgba(70, 110, 210, 0.07) 32%, rgba(150, 120, 255, 0.09) 40%,
+      rgba(255, 185, 130, 0.06) 46%, rgba(80, 120, 220, 0.06) 54%, transparent 68%),
+    radial-gradient(ellipse 50% 32% at 30% 30%, rgba(120, 90, 255, 0.08), transparent 70%),
+    radial-gradient(ellipse 60% 45% at 12% 6%, rgba(58, 160, 255, 0.13), transparent 70%),
+    radial-gradient(ellipse 80% 30% at 50% 100%, rgba(58, 160, 255, 0.08), transparent 70%),
+    linear-gradient(180deg, #03060c 0%, var(--bg-primary) 55%, #081120 100%);
+  background-attachment: fixed;
+}
+
+/* bright stars twinkling in phase, and one near star with a blue anamorphic lens flare (the series' signature) */
+html.dark[data-skin='normandy'] body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: -3;
+  background:
+    radial-gradient(2.5px 2.5px at 16% 18%, #fff, transparent 70%),
+    radial-gradient(circle 28px at 16% 18%, rgba(143, 228, 255, 0.28), transparent 70%),
+    radial-gradient(28vw 1.4px at 16% 18%, rgba(143, 210, 255, 0.55), transparent 70%),
+    radial-gradient(9vw 4px at 16% 18%, rgba(143, 210, 255, 0.18), transparent 70%),
+    radial-gradient(1.5px 1.5px at 44% 15%, #cfeaff, transparent 60%),
+    radial-gradient(1.5px 1.5px at 68% 52%, #fff, transparent 60%),
+    radial-gradient(1.5px 1.5px at 33% 48%, #ffeed0, transparent 60%),
+    radial-gradient(1.5px 1.5px at 82% 70%, #cfeaff, transparent 60%),
+    radial-gradient(1.5px 1.5px at 7% 64%, #fff, transparent 60%),
+    radial-gradient(1.5px 1.5px at 56% 32%, #fff, transparent 60%);
+  animation: nm-twinkle 6s ease-in-out infinite alternate;
+}
+/* filter, not opacity: the twinkle animates opacity */
+html.dark[data-skin='normandy']:not(:has(.sf-hero)) body::before { filter: opacity(0.4); }
+
+/* the planet: a gas giant rising over the upper right, lit from the lower left, a thin blue atmosphere on the lit limb */
+html.dark[data-skin='normandy'] #root::before {
+  content: ''; position: fixed; pointer-events: none; z-index: -2;
+  width: 84vmin; height: 84vmin; right: -30vmin; top: -40vmin; border-radius: 50%;
+  background:
+    radial-gradient(circle at 14% 86%, transparent 0 22%, rgba(3, 6, 12, 0.6) 44%, rgba(3, 6, 12, 0.97) 64%),
+    linear-gradient(-22deg, transparent 30%, rgba(150, 200, 255, 0.07) 36%, transparent 40%, rgba(255, 160, 90, 0.07) 50%,
+      transparent 55%, rgba(150, 200, 255, 0.05) 62%, transparent 66%, rgba(255, 190, 120, 0.04) 74%, transparent 78%),
+    radial-gradient(circle at 22% 78%, #2f5f96, #142c50 42%, #08132a 78%);
+  box-shadow:
+    inset 16px -14px 28px -14px rgba(160, 225, 255, 0.75),
+    -14px 12px 60px -10px rgba(58, 160, 255, 0.45),
+    0 0 0 1px rgba(143, 228, 255, 0.08);
+  opacity: 0.95;
+  transition: opacity 0.6s ease;
+}
+/* dimmer behind busy screens; full only on the welcome screen */
+html.dark[data-skin='normandy']:not(:has(.sf-hero)) #root::before { opacity: 0.55; }
+
+/* the treeline, with a cold horizon glow behind it */
+html.dark[data-skin='normandy'] body::after {
+  content: ''; position: fixed; left: 0; right: 0; bottom: 0; height: 280px; pointer-events: none; z-index: -2;
+  background:
+    url('./scenery/normandy-treeline.svg') repeat-x left bottom / 1600px 150px,
+    radial-gradient(ellipse 45% 70% at 28% 100%, rgba(227, 247, 122, 0.06), transparent 70%),
+    linear-gradient(to top, rgba(58, 160, 255, 0.13), rgba(58, 160, 255, 0.04) 45%, transparent 75%);
+  transition: opacity 0.6s ease;
+}
+html.dark[data-skin='normandy']:not(:has(.sf-hero)) body::after { opacity: 0.6; }
+
+/* the fireflies (canvas, ./Ambient.tsx) */
+html.dark[data-skin='normandy']:not(:has(.sf-hero)) .shellb-ambient { opacity: 0.75; }
+
+@keyframes nm-twinkle { 0% { opacity: 0.45; } 100% { opacity: 1; } }
+@keyframes nm-pulse { 0%, 100% { opacity: 0.3; } 45% { opacity: 1; } 70% { opacity: 0.6; } }
+@keyframes nm-spin { to { transform: rotate(360deg); } }
+@keyframes nm-spin-back { to { transform: rotate(-360deg); } }
+@keyframes nm-sweep { 0% { background-position: -40% 0; } 100% { background-position: 140% 0; } }
+
+/* ── chrome ──────────────────────────────────────────────────────────────── */
+html.dark[data-skin='normandy'] .sf-sidebar {
+  position: relative; box-shadow: 1px 0 22px -6px rgba(58, 160, 255, 0.24);
+  background: var(--nm-scan), color-mix(in srgb, var(--bg-secondary) 88%, transparent); backdrop-filter: blur(10px);
+}
+html.dark[data-skin='normandy'] .sf-sidebar::before {
+  content: ''; position: absolute; top: 0; right: -1px; width: 2px; height: 96px; z-index: 1;
+  background: linear-gradient(180deg, var(--nm-ice), var(--nm-blue) 60%, transparent); box-shadow: 0 0 8px var(--nm-blue);
+}
+html.dark[data-skin='normandy'] .sf-brand {
+  font-family: var(--nm-display); font-weight: 700; font-size: 1.2rem; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--text-primary) !important; display: inline-flex; align-items: center; gap: 0.5rem;
+}
+/* a firefly lives next to the name */
+html.dark[data-skin='normandy'] .sf-brand::before {
+  content: ''; width: 8px; height: 8px; border-radius: 50%; background: #f6ffd0;
+  box-shadow: 0 0 6px 2px var(--nm-glow), 0 0 16px 4px rgba(227, 247, 122, 0.45);
+  animation: nm-pulse 3.7s ease-in-out infinite;
+}
+html.dark[data-skin='normandy'] .sf-label {
+  font-family: var(--nm-display); font-weight: 600; font-size: 11.5px !important; text-transform: uppercase; letter-spacing: 0.16em;
+  display: flex; align-items: center; gap: 0.4rem;
+}
+html.dark[data-skin='normandy'] div.sf-label::before { content: ''; width: 6px; height: 6px; border: 1px solid var(--nm-blue); transform: rotate(45deg); box-shadow: 0 0 5px var(--nm-blue); }
+html.dark[data-skin='normandy'] div.sf-label::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--border-strong), transparent); margin-left: 0.3rem; }
+
+/* active conversation: a lit blue rail on the left edge */
+html.dark[data-skin='normandy'] .sf-sidebar [class*='bg-[var(--bg-hover)]'][class*='cursor-pointer'] {
+  box-shadow: inset 2px 0 0 var(--nm-blue); background: linear-gradient(90deg, color-mix(in srgb, var(--nm-blue) 18%, transparent), transparent 80%);
+}
+
+/* top bar: glass, with a slow highlight sweeping along its bottom edge */
+html.dark[data-skin='normandy'] .sf-topbar,
+html.dark[data-skin='normandy'] header.h-12 {
+  background: color-mix(in srgb, var(--bg-primary) 66%, transparent); backdrop-filter: blur(8px); position: relative; z-index: 1;
+}
+html.dark[data-skin='normandy'] .sf-topbar::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--nm-ice), transparent) no-repeat; background-size: 22% 100%;
+  animation: nm-sweep 9s ease-in-out infinite; opacity: 0.6;
+}
+html.dark[data-skin='normandy'] .sf-topbar .text-sm.font-medium,
+html.dark[data-skin='normandy'] .sf-topbar > div > span.text-sm,
+html.dark[data-skin='normandy'] header.h-12 > div > span.font-semibold {
+  font-family: var(--nm-display); font-weight: 600; font-size: 15px; letter-spacing: 0.1em; text-transform: uppercase;
+}
+html.dark[data-skin='normandy'] nav [class*='rounded-r-full'] { border-radius: 0 !important; background: var(--nm-amber) !important; width: 3px; box-shadow: 0 0 8px var(--nm-amber); }
+
+/* ── welcome ─────────────────────────────────────────────────────────────── */
+/* the agent sits in a galaxy-map orbit: a dashed ring and a sweeping arc turning opposite ways */
+html.dark[data-skin='normandy'] .sf-hero > :first-child {
+  position: relative; overflow: visible; border-radius: 50% !important; margin-bottom: 1.6rem;
+  box-shadow: 0 0 0 1px var(--border-strong), 0 0 0 6px var(--bg-primary), 0 0 0 7px var(--border-subtle), 0 0 34px 6px rgba(58, 160, 255, 0.35) !important;
+}
+html.dark[data-skin='normandy'] .sf-hero > :first-child::before,
+html.dark[data-skin='normandy'] .sf-hero > :first-child::after { content: ''; position: absolute; border-radius: 50%; pointer-events: none; }
+html.dark[data-skin='normandy'] .sf-hero > :first-child::before {
+  inset: -20px; border: 1px dashed rgba(143, 228, 255, 0.32); animation: nm-spin 60s linear infinite;
+}
+html.dark[data-skin='normandy'] .sf-hero > :first-child::after {
+  inset: -34px;
+  background: conic-gradient(from 0deg, transparent 0 62%, rgba(143, 228, 255, 0.15) 70%, var(--nm-ice) 84%, transparent 84.5% 100%);
+  -webkit-mask: radial-gradient(circle closest-side, transparent calc(100% - 1.5px), #000 calc(100% - 1px));
+  mask: radial-gradient(circle closest-side, transparent calc(100% - 1.5px), #000 calc(100% - 1px));
+  animation: nm-spin-back 14s linear infinite;
+}
+html.dark[data-skin='normandy'] .sf-hero h1 {
+  font-family: var(--nm-display); font-weight: 600; text-transform: uppercase; letter-spacing: 0.16em;
+  font-size: clamp(2rem, 4.2vw, 3.1rem); line-height: 1.05; margin-top: 0.5rem; padding: 0.15em 0.6em 0;
+  text-shadow: 0 0 22px rgba(58, 160, 255, 0.5);
+  /* an anamorphic flare running through the line */
+  background: radial-gradient(ellipse 50% 3px at 50% 52%, rgba(143, 228, 255, 0.45), transparent 100%),
+    radial-gradient(ellipse 22% 20% at 50% 52%, rgba(58, 160, 255, 0.12), transparent 100%);
+}
+html.dark[data-skin='normandy'] .sf-hero h1::after {
+  content: ''; display: block; width: 132px; height: 3px; margin: 0.9rem auto 0.2rem;
+  background: linear-gradient(90deg, transparent, var(--nm-blue) 20% 80%, transparent); box-shadow: 0 0 10px var(--nm-blue);
+  clip-path: polygon(4px 0, calc(100% - 4px) 0, 100% 100%, 0 100%);
+}
+html.dark[data-skin='normandy'] .sf-hero h1 + p { font-size: 14.5px; }
+html.dark[data-skin='normandy'] .sf-hero h1 + p > span:first-child {
+  font-family: var(--nm-display); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; font-size: 1.05em; color: var(--nm-ice) !important;
+}
+
+/* quick-start cards: codex panels. Chamfered top-left and bottom-right (the cut edges redrawn as lines), scanlines,
+   a mission number, and an omni-tool rail that lights on hover */
+html.dark[data-skin='normandy'] .sf-hero > div.grid { counter-reset: nm-mission; gap: 12px; }
+html.dark[data-skin='normandy'] .sf-card {
+  position: relative; counter-increment: nm-mission; padding: 16px 16px 14px 18px !important;
+  border-radius: 0 !important; backdrop-filter: blur(6px);
+  clip-path: polygon(var(--nm-chamfer) 0, 100% 0, 100% calc(100% - var(--nm-chamfer)), calc(100% - var(--nm-chamfer)) 100%, 0 100%, 0 var(--nm-chamfer));
+  background-color: color-mix(in srgb, var(--bg-secondary) 84%, transparent) !important;
+  background-image:
+    linear-gradient(135deg, transparent calc(50% - 0.8px), var(--border-strong) 50%, transparent calc(50% + 0.8px)),
+    linear-gradient(135deg, transparent calc(50% - 0.8px), var(--border-strong) 50%, transparent calc(50% + 0.8px)),
+    var(--nm-scan) !important;
+  background-repeat: no-repeat, no-repeat, repeat !important;
+  background-origin: border-box !important;
+  background-size: var(--nm-chamfer) var(--nm-chamfer), var(--nm-chamfer) var(--nm-chamfer), auto !important;
+  background-position: left top, right bottom, 0 0 !important;
+  transition: border-color .15s, transform .15s, background-color .15s, filter .15s;
+}
+html.dark[data-skin='normandy'] .sf-card::before {
+  content: '0' counter(nm-mission); position: absolute; top: 14px; right: 16px;
+  font-family: var(--nm-mono); font-size: 10px; letter-spacing: 0.1em; color: var(--text-muted);
+}
+html.dark[data-skin='normandy'] .sf-card::after {
+  content: ''; position: absolute; left: 0; top: var(--nm-chamfer); bottom: 0; width: 2px; background: var(--nm-amber); box-shadow: 0 0 8px var(--nm-amber);
+  transform: scaleY(0); transform-origin: top; transition: transform .2s ease;
+}
+html.dark[data-skin='normandy'] .sf-card:hover {
+  transform: translateY(-1px); background-color: color-mix(in srgb, var(--bg-hover) 86%, transparent) !important;
+  filter: drop-shadow(0 0 12px rgba(58, 160, 255, 0.35));
+}
+html.dark[data-skin='normandy'] .sf-card:hover::before { color: var(--nm-amber); }
+html.dark[data-skin='normandy'] .sf-card:hover::after { transform: scaleY(1); }
+html.dark[data-skin='normandy'] .sf-card > div:first-child {
+  font-family: var(--nm-display); font-weight: 600; font-size: 14px; letter-spacing: 0.12em; text-transform: uppercase; padding-right: 28px;
+}
+html.dark[data-skin='normandy'] .sf-card > div:last-child { font-size: 13px; margin-top: 4px; }
+
+html.dark[data-skin='normandy'] .sf-tagline {
+  font-family: var(--nm-mono); font-size: 10.5px !important; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 3px 10px; background: color-mix(in srgb, var(--bg-primary) 78%, transparent);
+}
+html.dark[data-skin='normandy'] .sf-tagline::before { content: '◢ '; color: var(--nm-amber); }
+
+/* ── composer: the omni-tool console. Blue at rest, amber when it's live ─── */
+html.dark[data-skin='normandy'] .sf-composer {
+  /* backdrop-filter makes a stacking context that would trap the agent menu and pop-ups: lift the whole composer */
+  position: relative; z-index: 20; border-radius: 0 !important;
+  background: var(--nm-scan), color-mix(in srgb, var(--bg-secondary) 90%, transparent) !important; backdrop-filter: blur(14px);
+  box-shadow: 0 0 28px -12px rgba(58, 160, 255, 0.55);
+  transition: box-shadow .2s ease, border-color .2s ease;
+}
+html.dark[data-skin='normandy'] .sf-composer:focus-within {
+  border-color: rgba(255, 154, 31, 0.45) !important;
+  box-shadow: 0 0 30px -10px rgba(255, 154, 31, 0.45), inset 0 0 40px -28px rgba(255, 154, 31, 0.6);
+}
+html.dark[data-skin='normandy'] .sf-composer::before {
+  content: ''; position: absolute; left: -1px; top: -1px; width: 64px; height: 2px; background: var(--nm-blue); box-shadow: 0 0 8px var(--nm-blue);
+  transition: width .3s ease, background .2s ease, box-shadow .2s ease;
+}
+html.dark[data-skin='normandy'] .sf-composer:focus-within::before { width: 120px; background: var(--nm-amber); box-shadow: 0 0 10px var(--nm-amber); }
+html.dark[data-skin='normandy'] .sf-composer::after {
+  content: ''; position: absolute; right: -1px; bottom: -1px; width: 12px; height: 12px; pointer-events: none;
+  border-right: 1px solid var(--nm-ice); border-bottom: 1px solid var(--nm-ice);
+}
+html.dark[data-skin='normandy'] .sf-composer:focus-within::after { border-color: var(--nm-amber); }
+html.dark[data-skin='normandy'] .sf-composer textarea { font-family: var(--nm-body); font-size: 15px; }
+
+/* ── the other apps ──────────────────────────────────────────────────────── */
+html.dark[data-skin='normandy'] :where(h1[class*='tracking-tight']:not([class*='text-base'])) {
+  font-family: var(--nm-display); font-weight: 600; font-size: 1.85rem; letter-spacing: 0.1em; text-transform: uppercase;
+  line-height: 1.15; padding-bottom: 10px;
+  background: linear-gradient(90deg, var(--nm-blue), transparent) no-repeat left bottom / 80px 2px;
+}
+html.dark[data-skin='normandy'] [class*='uppercase'][class*='tracking-w']:not(kbd) { font-family: var(--nm-display); font-weight: 600; letter-spacing: 0.16em; }
+html.dark[data-skin='normandy'] h2[class*='uppercase'][class*='tracking-w'] { font-size: 12.5px; }
+
+/* ── motion & misc ───────────────────────────────────────────────────────── */
+html.dark[data-skin='normandy'] * { scrollbar-width: thin; scrollbar-color: rgba(143, 228, 255, 0.22) transparent; }
+html.dark[data-skin='normandy'] ::-webkit-scrollbar-thumb { border-radius: 0; background: rgba(143, 228, 255, 0.22); background-clip: padding-box; }
+html.dark[data-skin='normandy'] ::-webkit-scrollbar-thumb:hover { background: var(--nm-amber); background-clip: padding-box; }
+html.dark[data-skin='normandy'] .caret::after { background: var(--nm-amber); width: 0.55em; box-shadow: 0 0 8px var(--nm-amber); }
+html.dark[data-skin='normandy'] .think-stream {
+  background: linear-gradient(90deg, transparent 0%, rgba(58, 160, 255, 0.16) 40%, rgba(227, 247, 122, 0.1) 60%, transparent 100%);
+  background-size: 200% 100%;
+}
+
+/* syntax colours */
+html.dark[data-skin='normandy'] .hljs { color: #e3eefa; }
+html.dark[data-skin='normandy'] .hljs-comment, html.dark[data-skin='normandy'] .hljs-quote { color: #62748f; }
+html.dark[data-skin='normandy'] .hljs-keyword, html.dark[data-skin='normandy'] .hljs-selector-tag,
+html.dark[data-skin='normandy'] .hljs-literal, html.dark[data-skin='normandy'] .hljs-tag,
+html.dark[data-skin='normandy'] .hljs-name { color: #ffb54d; }
+html.dark[data-skin='normandy'] .hljs-string, html.dark[data-skin='normandy'] .hljs-regexp,
+html.dark[data-skin='normandy'] .hljs-addition { color: #d9f56a; }
+html.dark[data-skin='normandy'] .hljs-number, html.dark[data-skin='normandy'] .hljs-symbol,
+html.dark[data-skin='normandy'] .hljs-bullet { color: #ff8a7a; }
+html.dark[data-skin='normandy'] .hljs-title, html.dark[data-skin='normandy'] .hljs-section,
+html.dark[data-skin='normandy'] .hljs-title.function_ { color: #8fe4ff; }
+html.dark[data-skin='normandy'] .hljs-type, html.dark[data-skin='normandy'] .hljs-built_in,
+html.dark[data-skin='normandy'] .hljs-title.class_ { color: #7ab8ff; }
+html.dark[data-skin='normandy'] .hljs-attr, html.dark[data-skin='normandy'] .hljs-attribute,
+html.dark[data-skin='normandy'] .hljs-variable, html.dark[data-skin='normandy'] .hljs-property { color: #e6f0fb; }
+
+@media (prefers-reduced-motion: reduce) {
+  html.dark[data-skin='normandy'] body::before,
+  html.dark[data-skin='normandy'] .sf-topbar::after,
+  html.dark[data-skin='normandy'] .sf-hero > :first-child::before,
+  html.dark[data-skin='normandy'] .sf-hero > :first-child::after,
+  html.dark[data-skin='normandy'] .sf-brand::before { animation: none; }
+  html.dark[data-skin='normandy'] .sf-card, html.dark[data-skin='normandy'] .sf-card::after { transition: none; }
+}

@@ -24,6 +24,7 @@ const CARDS: Record<string, ComponentType<CardProps>> = {
   mermaid: lazy(() => import('./DiagramCard').then(m => ({ default: m.DiagramCard }))),
   route: lazy(() => import('./RouteCard').then(m => ({ default: m.RouteCard }))),
   basket: lazy(() => import('./BasketCard').then(m => ({ default: m.BasketCard }))),
+  theme: lazy(() => import('./ThemeCard').then(m => ({ default: m.ThemeCard }))),
 };
 
 export const hasCard = (lang: string) => lang.toLowerCase() in CARDS;

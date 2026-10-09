@@ -29,7 +29,10 @@ import { Scheduled, browserTz } from './components/Scheduled';
 import { Activity } from './components/Activity';
 import { Downloads } from './components/Downloads';
 import { VoiceMode } from './components/VoiceMode';
-import { nextTheme, setTheme as applyTheme, themeInfo, type ThemeId } from './themes';
+import { Overlay } from './components/Overlay';
+import { overlaySupported, toggleOverlay } from './overlay';
+import { toast } from './components/toast';
+import { isThemeId, nextTheme, setTheme as applyTheme } from './themes';
 import { foldSummarized } from './summarized';
 import { ContextMeter } from './components/composer/ContextMeter';
 
@@ -169,9 +172,11 @@ export function App() {
     (!location.hash || /^#\/(?:c\/|$)/.test(location.hash))
   );
   const [panel, setPanel] = useState<{ id: string; version?: number } | null>(null);
-  const [modal, setModal] = useState<null | 'agents' | 'tools' | 'settings' | 'palette'>(null);
+  // ?shot&settings=<tab> opens Settings on that tab, for headless screenshots (index.html)
+  const shotSettings = /[?&]shot\b/.test(location.search) ? /[?&]settings=(\w+)/.exec(location.search)?.[1] : undefined;
+  const [modal, setModal] = useState<null | 'agents' | 'tools' | 'settings' | 'palette'>(shotSettings ? 'settings' : null);
   const [formFactorOpen, setFormFactorOpen] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<SettingsTabId>('general');
+  const [settingsTab, setSettingsTab] = useState<SettingsTabId>((shotSettings as SettingsTabId) || 'general');
   const [labAgent, setLabAgent] = useState<string>();
   const [atBottom, setAtBottom] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -228,7 +233,7 @@ export function App() {
     Promise.all([loadAgents(), loadTools(), loadConvs(), api.settings().then(s => {
       setSettings(s); setAgentId(s.defaultAgent);
       // a theme saved on the server follows you from another device
-      if (s.theme && themeInfo(s.theme)) applyTheme(s.theme as ThemeId);
+      if (s.theme && isThemeId(s.theme)) applyTheme(s.theme);
       // agents' clock and scheduled tasks use this machine's users' time zone, not the server's (UTC)
       if (!s.timeZone) api.saveSettings({ timeZone: browserTz() }).then(setSettings).catch(() => {});
     })])
@@ -486,6 +491,7 @@ export function App() {
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === 'k') { e.preventDefault(); setModal(m => (m === 'palette' ? null : 'palette')); }
       else if (mod && e.shiftKey && e.key.toLowerCase() === 'o') { e.preventDefault(); newChat(); }
+      else if (mod && e.shiftKey && e.key.toLowerCase() === 'y' && overlaySupported()) { e.preventDefault(); toggleOverlay().catch(err => toast(String(err), { kind: 'error' })); }
       else if (mod && !e.shiftKey && e.key.toLowerCase() === 'b' && !(e.target instanceof HTMLTextAreaElement)) { e.preventDefault(); setSidebar(s => !s); }
       else if (e.key === 'Escape' && !modal && panel) setPanel(null);
     };
@@ -570,6 +576,8 @@ export function App() {
       <SettingsModal open={modal === 'settings'} onClose={() => setModal(null)} settings={settings} agents={chatAgents} models={models}
         status={status} theme={theme} onTheme={t => t !== theme && toggleTheme()} onSaved={loadSettings} tab={settingsTab} />
       <FormFactorSwitcher open={formFactorOpen} onClose={() => setFormFactorOpen(false)} />
+      <Overlay messages={conv?.messages ?? []} agentName={agent?.name ?? 'Shell:B'} busy={busy || !!conv?.streaming} onStop={stop}
+        onSend={(t, a) => send(t, a)} ensureConversation={ensureConversation} />
     </>
   );
 
@@ -840,7 +848,7 @@ export function App() {
                     </button>
                   ))}
                 </div>
-                <p className="sf-tagline mt-8 text-[11px] text-[var(--text-muted)]">Overthink. Overcomplicate. Overengineer. Nothing you type leaves this machine.</p>
+                <p className="sf-tagline mt-8 text-[11px] text-[var(--text-muted)]">Overthink. Overcomplicate. Overengineer.</p>
               </div>
             ) : (
               <div className="max-w-3xl mx-auto px-4 py-6 space-y-7">

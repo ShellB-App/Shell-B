@@ -11,7 +11,14 @@
     <script>
       try { if (localStorage.getItem('shellb.theme') === 'light') document.documentElement.className = 'light'; } catch {}
       // theme before first paint: mirrors the ids in THEMES and DEFAULT_THEME in src/themes/index.ts (Classic sets no data-skin)
-      (function () { var sk = 'synthfield'; try { sk = localStorage.getItem('shellb.skin') || sk; } catch {} if (['synthfield', 'synthwave'].indexOf(sk) >= 0) document.documentElement.dataset.skin = sk; })();
+      // a custom theme ('custom:<id>', designed by Shell:B) paints from its cached stylesheet (src/themes/index.ts)
+      (function () {
+        var sk = 'synthfield', d = document.documentElement; try { sk = localStorage.getItem('shellb.skin') || sk; } catch {}
+        if (['synthfield', 'synthwave', 'normandy', 'sakura', 'pandora', 'rain', 'abyss', 'arrakis', 'borealis', 'ghibli'].indexOf(sk) >= 0) d.dataset.skin = sk;
+        else if (/^custom:[\w-]{1,40}$/.test(sk)) {
+          try { var css = localStorage.getItem('shellb.customCss'); if (css) { var st = document.createElement('style'); st.id = 'shellb-custom-theme'; st.textContent = css; document.head.appendChild(st); d.dataset.skin = 'custom'; d.dataset.custom = sk.slice(7); } } catch {}
+        }
+      })();
       // UI scale before first paint: mirrors KEY in src/uiScale.ts
       try { var us = parseFloat(localStorage.getItem('shellb.uiscale')); if (us > 0 && us !== 1) document.documentElement.style.zoom = Math.min(2, Math.max(0.75, us)); } catch {}
       // ?shot[=ms]&theme=light — holds the load event so headless `firefox --screenshot` captures a settled page

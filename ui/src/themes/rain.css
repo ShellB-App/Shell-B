@@ -1,0 +1,182 @@
+/* ── Rainy Night theme (dark only; light mode falls back to Classic light) ───────────────────────────────────────
+   A city at night seen through a rain-streaked window: the skyline is out of focus behind the glass, its streetlights
+   and neon swell into bokeh, beads of water sit on the pane and every so often one lets go and slides down, leaving a
+   trail (./Ambient.tsx, kind 'rain'). Condensation fogs the bottom of the glass. The UI is wet glass with neon in it:
+   amber like a sodium lamp, a red-pink sign, headings in a cinematic italic serif (Cormorant Garamond).
+   Reuses the .sf-* hooks Synthfield added to the TSX. Registered in ./index.ts.
+
+   Backdrop stacking, back to front (all position: fixed, behind the app):
+     body background   night, the glow of the city on low cloud, neon spill
+     body::before  -3  the skyline, defocused
+     #root::before -2  condensation on the glass, and the window's vignette
+     .shellb-ambient -1  bokeh, rain, drops on the glass                                                          */
+
+@font-face { font-family: 'Cormorant Garamond'; font-style: italic; font-weight: 500; font-display: swap; src: url('/fonts/cormorant-garamond-latin-500-italic.woff2') format('woff2'); }
+@font-face { font-family: 'Cormorant Garamond'; font-weight: 600; font-display: swap; src: url('/fonts/cormorant-garamond-latin-600-normal.woff2') format('woff2'); }
+
+html.dark[data-skin='rain'] {
+  --rn-amber: #ffb35c;
+  --rn-neon: #ff5f7e;
+  --rn-teal: #5fd4e8;
+  --rn-display: 'Cormorant Garamond', Georgia, serif;
+
+  --bg-primary: #0a0e17;
+  --bg-secondary: #0f1522;
+  --bg-tertiary: #161e2e;
+  --bg-hover: #1d2738;
+  --bg-code: #080b12;
+  --border-subtle: rgba(190, 210, 255, 0.11);
+  --border-strong: rgba(190, 210, 255, 0.22);
+  --text-primary: #ebeff6;
+  --text-secondary: #abb5c7;
+  --text-muted: #8b96a9;
+  --accent: #ffb35c;
+  --accent-fg: #1a1006;
+  --accent-soft: #ffc882;
+  --accent-glow: rgba(255, 179, 92, 0.35);
+  --brand: #ff5f7e;
+  --brand-soft: #ff8aa1;
+  --neon-pink: #ff5f7e;
+  --neon-cyan: #5fd4e8;
+  --sunset: linear-gradient(100deg, #ff9a4a, #ffb35c 55%, #ffd08a);
+  --focus-ring: #ffc882;
+  color-scheme: dark;
+}
+
+/* ── type ────────────────────────────────────────────────────────────────── */
+html.dark[data-skin='rain'] .prose-shellb h1,
+html.dark[data-skin='rain'] .prose-shellb h2,
+html.dark[data-skin='rain'] .prose-shellb h3 { font-family: var(--rn-display); font-style: italic; font-weight: 500; letter-spacing: 0.01em; }
+html.dark[data-skin='rain'] .prose-shellb h1 { font-size: 2.1em; }
+html.dark[data-skin='rain'] .prose-shellb h2 { font-size: 1.65em; }
+html.dark[data-skin='rain'] .prose-shellb h3 { font-size: 1.3em; }
+html.dark[data-skin='rain'] .prose-shellb a { color: var(--accent-soft); text-decoration-color: rgba(255, 179, 92, 0.4); }
+html.dark[data-skin='rain'] .prose-shellb li::marker { color: var(--rn-amber); }
+html.dark[data-skin='rain'] .prose-shellb blockquote { border-left: 2px solid var(--rn-neon); box-shadow: -6px 0 16px -8px var(--rn-neon); font-family: var(--rn-display); font-style: italic; font-size: 1.15em; }
+html.dark[data-skin='rain'] ::selection { background: rgba(255, 95, 126, 0.38); }
+
+/* ── geometry: wet glass ─────────────────────────────────────────────────── */
+html.dark[data-skin='rain'] :where([class*='rounded-lg'], [class*='rounded-xl'], [class*='rounded-2xl']) { border-radius: 10px !important; }
+html.dark[data-skin='rain'] .shadow-lg, html.dark[data-skin='rain'] .shadow-xl, html.dark[data-skin='rain'] .shadow-2xl {
+  box-shadow: 0 18px 50px -16px rgba(0, 0, 0, 0.8), 0 0 0 1px var(--border-subtle), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+html.dark[data-skin='rain'] [class~='bg-[var(--accent)]'] {
+  background-image: var(--sunset); box-shadow: 0 0 18px -4px rgba(255, 179, 92, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+html.dark[data-skin='rain'] [class~='bg-[var(--accent)]']:disabled { background-image: none; box-shadow: none; }
+
+/* ── backdrop ────────────────────────────────────────────────────────────── */
+html.dark[data-skin='rain'] body {
+  background:
+    radial-gradient(ellipse 45% 35% at 12% 88%, rgba(255, 150, 70, 0.16), transparent 70%),
+    radial-gradient(ellipse 35% 30% at 88% 70%, rgba(255, 70, 120, 0.13), transparent 70%),
+    radial-gradient(ellipse 50% 30% at 60% 10%, rgba(80, 140, 220, 0.12), transparent 70%),
+    radial-gradient(ellipse 120% 50% at 50% 100%, rgba(255, 170, 110, 0.1), transparent 70%),
+    linear-gradient(180deg, #070a12 0%, #0b1120 45%, #151a2a 100%);
+  background-attachment: fixed;
+}
+/* the skyline, out of focus behind the glass */
+html.dark[data-skin='rain'] body::before {
+  content: ''; position: fixed; left: -3vw; right: -3vw; bottom: -2vh; height: 52vh; pointer-events: none; z-index: -3;
+  background: url("./scenery/city.svg") repeat-x center bottom / auto 100%;
+  filter: blur(6px) saturate(1.2); opacity: 0.75;
+}
+/* condensation creeping up from the sill, and the darker edges of the window */
+html.dark[data-skin='rain'] #root::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: -2;
+  background:
+    linear-gradient(to top, rgba(190, 205, 230, 0.12), rgba(190, 205, 230, 0.04) 22%, transparent 40%),
+    radial-gradient(ellipse 85% 80% at 50% 45%, transparent 55%, rgba(3, 5, 10, 0.55) 100%);
+}
+html.dark[data-skin='rain']:not(:has(.sf-hero)) body::before { opacity: 0.4; }
+html.dark[data-skin='rain']:not(:has(.sf-hero)) .shellb-ambient { opacity: 0.6; }
+
+@keyframes rn-flicker { 0%, 100% { opacity: 1; } 41% { opacity: 1; } 42% { opacity: 0.35; } 43% { opacity: 1; } 47% { opacity: 0.6; } 48% { opacity: 1; } }
+
+/* ── chrome ──────────────────────────────────────────────────────────────── */
+html.dark[data-skin='rain'] .sf-sidebar { background: color-mix(in srgb, var(--bg-secondary) 80%, transparent); backdrop-filter: blur(14px) saturate(120%); }
+html.dark[data-skin='rain'] .sf-brand {
+  font-family: var(--rn-display); font-style: italic; font-weight: 500; font-size: 1.45rem; letter-spacing: 0.01em;
+  color: var(--text-primary) !important; display: inline-flex; align-items: center; gap: 0.5rem;
+}
+/* a little neon tube by the name, with a faulty flicker */
+html.dark[data-skin='rain'] .sf-brand::before {
+  content: ''; width: 14px; height: 3px; border-radius: 2px; background: var(--rn-neon);
+  box-shadow: 0 0 6px var(--rn-neon), 0 0 14px rgba(255, 95, 126, 0.6); animation: rn-flicker 7s linear infinite;
+}
+html.dark[data-skin='rain'] .sf-label { font-family: var(--rn-display); font-style: italic; font-weight: 500; font-size: 15px !important; letter-spacing: 0.01em; }
+html.dark[data-skin='rain'] .sf-sidebar [class*='bg-[var(--bg-hover)]'][class*='cursor-pointer'] {
+  box-shadow: inset 2px 0 0 var(--rn-amber), inset 0 0 0 1px rgba(255, 179, 92, 0.12);
+  background: linear-gradient(90deg, rgba(255, 179, 92, 0.12), transparent 80%);
+}
+html.dark[data-skin='rain'] .sf-topbar, html.dark[data-skin='rain'] header.h-12 {
+  background: color-mix(in srgb, var(--bg-primary) 60%, transparent); backdrop-filter: blur(12px); position: relative; z-index: 1;
+}
+html.dark[data-skin='rain'] .sf-topbar .text-sm.font-medium,
+html.dark[data-skin='rain'] .sf-topbar > div > span.text-sm,
+html.dark[data-skin='rain'] header.h-12 > div > span.font-semibold { font-family: var(--rn-display); font-style: italic; font-weight: 500; font-size: 19px; }
+html.dark[data-skin='rain'] nav [class*='rounded-r-full'] { background: var(--rn-amber) !important; box-shadow: 0 0 10px var(--rn-amber); }
+
+/* ── welcome ─────────────────────────────────────────────────────────────── */
+html.dark[data-skin='rain'] .sf-hero > :first-child {
+  border-radius: 50% !important; margin-bottom: 1.3rem;
+  box-shadow: 0 0 0 1px rgba(255, 200, 140, 0.4), 0 0 30px 6px rgba(255, 150, 70, 0.28), 0 18px 30px -10px rgba(255, 120, 60, 0.4) !important;
+}
+html.dark[data-skin='rain'] .sf-hero h1 {
+  font-family: var(--rn-display); font-style: italic; font-weight: 500; letter-spacing: 0; line-height: 1.05;
+  font-size: clamp(2.6rem, 5.4vw, 4rem); padding-bottom: 0; background: none;
+  text-shadow: 0 0 24px rgba(255, 179, 92, 0.25), 0 2px 0 rgba(0, 0, 0, 0.4);
+}
+/* a neon tube underline, flickering now and then */
+html.dark[data-skin='rain'] .sf-hero h1::after {
+  content: ''; display: block; width: 110px; height: 3px; margin: 0.6rem auto 0.3rem; border-radius: 3px;
+  background: var(--rn-neon); box-shadow: 0 0 8px var(--rn-neon), 0 0 22px rgba(255, 95, 126, 0.6);
+  animation: rn-flicker 9s linear infinite 2s;
+}
+html.dark[data-skin='rain'] .sf-hero h1 + p > span:first-child { font-family: var(--rn-display); font-style: italic; font-size: 1.3em; color: var(--accent-soft) !important; }
+
+html.dark[data-skin='rain'] .sf-hero > div.grid { gap: 12px; }
+html.dark[data-skin='rain'] .sf-card {
+  position: relative; padding: 16px 18px 14px !important;
+  background-color: color-mix(in srgb, var(--bg-secondary) 62%, transparent) !important; backdrop-filter: blur(16px) saturate(130%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  transition: border-color .2s, transform .2s, background-color .2s, box-shadow .2s;
+}
+html.dark[data-skin='rain'] .sf-card:hover {
+  transform: translateY(-1px); border-color: rgba(255, 179, 92, 0.35) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 26px -10px rgba(255, 179, 92, 0.55);
+}
+html.dark[data-skin='rain'] .sf-card > div:first-child { font-family: var(--rn-display); font-style: italic; font-weight: 500; font-size: 19px; line-height: 1.2; }
+html.dark[data-skin='rain'] .sf-card > div:last-child { font-size: 13px; margin-top: 4px; }
+html.dark[data-skin='rain'] .sf-tagline { font-family: var(--rn-display); font-style: italic; font-size: 15px !important; padding: 2px 12px; }
+
+/* ── composer: a pane of glass, warm when you're typing into it ──────────── */
+html.dark[data-skin='rain'] .sf-composer {
+  position: relative; z-index: 20; border-radius: 14px !important;
+  background: color-mix(in srgb, var(--bg-secondary) 70%, transparent) !important; backdrop-filter: blur(18px) saturate(130%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 20px 50px -20px rgba(0, 0, 0, 0.8);
+  transition: box-shadow .25s ease, border-color .25s ease;
+}
+html.dark[data-skin='rain'] .sf-composer:focus-within {
+  border-color: rgba(255, 179, 92, 0.45) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 34px -12px rgba(255, 179, 92, 0.6), 0 20px 50px -20px rgba(0, 0, 0, 0.8);
+}
+
+/* ── the other apps ──────────────────────────────────────────────────────── */
+html.dark[data-skin='rain'] :where(h1[class*='tracking-tight']:not([class*='text-base'])) {
+  font-family: var(--rn-display); font-style: italic; font-weight: 500; font-size: 2.2rem; letter-spacing: 0; padding-bottom: 8px;
+  background: linear-gradient(90deg, var(--rn-neon), transparent) no-repeat left bottom / 70px 2px;
+}
+
+/* ── misc ────────────────────────────────────────────────────────────────── */
+html.dark[data-skin='rain'] * { scrollbar-width: thin; scrollbar-color: rgba(190, 210, 255, 0.2) transparent; }
+html.dark[data-skin='rain'] .caret::after { background: var(--rn-amber); box-shadow: 0 0 8px var(--rn-amber); }
+html.dark[data-skin='rain'] .think-stream {
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 179, 92, 0.14) 40%, rgba(255, 95, 126, 0.12) 60%, transparent 100%);
+  background-size: 200% 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.dark[data-skin='rain'] .sf-brand::before, html.dark[data-skin='rain'] .sf-hero h1::after { animation: none; }
+  html.dark[data-skin='rain'] .sf-card { transition: none; }
+}

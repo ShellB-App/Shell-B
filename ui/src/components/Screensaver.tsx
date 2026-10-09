@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { PREVIEW_SAVER, ambienceShot, ambienceSuppressed, reducedMotion, useAmbience, type SaverStyle } from '../ambience';
+import { PREVIEW_SAVER, ambienceShot, ambienceSuppressed, reducedMotion, studioSaverId, useAmbience, type SaverStyle } from '../ambience';
+import { frameRawUrl, rawUrl } from '../api';
 import { getFormFactor } from '../formFactor';
 import '../ambience.css';
 
@@ -17,11 +18,13 @@ export function Screensaver() {
   const prefs = useAmbience();
   const shot = ambienceShot().split(':');
   const [on, setOn] = useState(() => !isMobile && shot[0] === 'saver');
+  const [previewStyle, setPreviewStyle] = useState<SaverStyle | null>(null);  // the Studio's Preview button
+  useEffect(() => { if (!on) setPreviewStyle(null); }, [on]);
   const last = useRef(Date.now());
 
   useEffect(() => {
     if (isMobile) return;
-    const preview = () => setOn(true);
+    const preview = (e: Event) => { setPreviewStyle((e as CustomEvent<SaverStyle | undefined>).detail ?? null); setOn(true); };
     window.addEventListener(PREVIEW_SAVER, preview);
     return () => window.removeEventListener(PREVIEW_SAVER, preview);
   }, [isMobile]);
@@ -72,7 +75,7 @@ export function Screensaver() {
   return (
     <div className="sb-saver" onClick={() => { last.current = Date.now(); setOn(false); }}
       onTouchStart={e => { e.preventDefault(); last.current = Date.now(); setOn(false); }}>
-      <SaverCanvas style={(shot[1] as SaverStyle) || prefs.saverStyle} />
+      <SaverScene style={previewStyle || (shot.slice(1).join(':') as SaverStyle) || prefs.saverStyle} />
       {prefs.saverClock && <SaverClock />}
     </div>
   );
@@ -95,6 +98,28 @@ function SaverClock() {
       <div className="sb-saver-date">{now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}</div>
     </div>
   );
+}
+
+/** A built-in style drawn here, or a Studio screensaver run in a sandboxed frame. */
+function SaverScene({ style }: { style: SaverStyle }) {
+  const pid = studioSaverId(style);
+  return pid ? <StudioSaver pid={pid} /> : <SaverCanvas style={style} />;
+}
+
+/** A Screensaver project from the Studio: its index.html in the same sandbox as Studio previews (scripts only, no
+ *  same-origin), and pointer-events off so every movement and key still reaches us and wakes the screen. If the project
+ *  is gone or empty, the synthwave horizon stands in. */
+function StudioSaver({ pid }: { pid: string }) {
+  const [ok, setOk] = useState<boolean | null>(null);
+  useEffect(() => {
+    let live = true;
+    fetch(rawUrl(pid, 'index.html'), { cache: 'no-store' }).then(r => { if (live) setOk(r.ok); }, () => { if (live) setOk(false); });
+    return () => { live = false; };
+  }, [pid]);
+  if (ok === false) return <SaverCanvas style="synthwave" />;
+  if (ok === null) return null;
+  return <iframe src={frameRawUrl(pid, 'index.html')} title="Screensaver" sandbox="allow-scripts" tabIndex={-1} aria-hidden
+    className="sb-saver-canvas" style={{ border: 0, pointerEvents: 'none', background: '#000' }} />;
 }
 
 type Draw = (ctx: CanvasRenderingContext2D, w: number, h: number, t: number, dt: number) => void;

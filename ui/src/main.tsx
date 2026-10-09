@@ -9,6 +9,7 @@ import { useFormFactor } from './formFactor';
 import { AuthGate } from './components/AuthGate';
 import { Splash } from './components/Splash';
 import { Screensaver } from './components/Screensaver';
+import { Ambient } from './themes/Ambient';
 
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Toaster } from './components/toast';
@@ -43,6 +44,7 @@ function ShellRoot() {
         </Suspense>
       </ErrorBoundary>
       <Suspense fallback={null}><SynthDJ /></Suspense>
+      <Ambient />
       <Toaster />
       <ConnectionBanner />
       <ContextMenuHost />

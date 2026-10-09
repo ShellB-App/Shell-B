@@ -45,7 +45,7 @@ import { Secretary } from '../components/Secretary';
 import { MapsApp } from '../maps/MapsApp';
 import { RadioApp } from '../radio/RadioApp';
 import { AgentLab } from '../components/AgentLab';
-import { nextTheme, setTheme as applyTheme, themeInfo, type ThemeId } from '../themes';
+import { isThemeId, nextTheme, setTheme as applyTheme } from '../themes';
 
 import { MobileTopBar } from './MobileTopBar';
 import { MobileBottomNav, type MobileTab } from './MobileBottomNav';
@@ -246,7 +246,7 @@ export function MobileApp() {
       api.settings().then(s => {
         setSettings(s);
         setAgentId(s.defaultAgent);
-        if (s.theme && themeInfo(s.theme)) applyTheme(s.theme as ThemeId);
+        if (s.theme && isThemeId(s.theme)) applyTheme(s.theme);
         if (!s.timeZone) api.saveSettings({ timeZone: browserTz() }).then(setSettings).catch(() => {});
       }),
     ]).catch(e => setLoadError(String(e)));
@@ -890,7 +890,7 @@ export function MobileApp() {
                   </div>
 
                   <p className="mt-6 text-[10px] text-[var(--text-muted)]">
-                    Strictly local. Nothing you type leaves this machine.
+                    Overthink. Overcomplicate. Overengineer.
                   </p>
                 </div>
               ) : (

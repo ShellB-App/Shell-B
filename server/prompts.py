@@ -159,7 +159,9 @@ CODE_TOOLCHAIN = ("Python 3.12 (pytest, hypothesis, ruff, mypy, black, numpy, pa
 
 # ── prompt builders ─────────────────────────────────────────────────────────
 
-def build_system(agent, tool_names, effort, artifacts, memories, agents, settings, project_id=None, group_id=None, conv_id=None, user_text=None):
+def build_system(agent, tool_names, effort, artifacts, memories, agents, settings, project_id=None, group_id=None, conv_id=None, user_text=None,
+                 owner_context=True):
+    """`owner_context=False` (persona API turns) leaves out the owner's calendar and contacts."""
     try:
         now = datetime.now(ZoneInfo(settings.get("timeZone"))) if settings.get("timeZone") else datetime.now().astimezone()
     except (ZoneInfoNotFoundError, ValueError):
@@ -181,13 +183,13 @@ system. Your tools still run on Shell:B's own machine; your reasoning runs on {p
               + ("" if project_id else FILE_LINK)]
 
     try:
-        cal_note = codex.upcoming_schedule_prompt(now, days=14)
+        cal_note = codex.upcoming_schedule_prompt(now, days=14) if owner_context else None
         if cal_note:
             parts.append(cal_note)
     except Exception:
         pass
 
-    if user_text:
+    if user_text and owner_context:
         try:
             contact_note = codex.relevant_contacts_prompt(user_text, settings)
             if contact_note:
@@ -263,6 +265,9 @@ system. Your tools still run on Shell:B's own machine; your reasoning runs on {p
         guide.append(megaplan.GUIDE)
     if "ask_user" in tool_names:
         guide.append(ask.GUIDE)
+    if "design_theme" in tool_names:
+        import themes
+        guide.append(themes.GUIDE)
     if "look_at_screen" in tool_names:
         guide.append(screen.GUIDE + f"\n  Shared now: {screen.describe() or 'nothing'}.")
     if "browser" in tool_names:

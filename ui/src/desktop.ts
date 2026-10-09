@@ -28,6 +28,9 @@ export function takeIncoming(): Incoming | null {
   return p;
 }
 
+/** Start a new chat with this text waiting in the composer (e.g. "Design a theme" in Settings), as a share would. */
+export function startChatWith(text: string) { deliver([], text); }
+
 /** Called when something arrives: the app shell opens a new chat and its composer takes it. Returns the unsubscribe. */
 export function onIncoming(cb: () => void) {
   listeners.add(cb);

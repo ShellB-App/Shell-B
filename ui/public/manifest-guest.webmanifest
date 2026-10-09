@@ -1,0 +1,23 @@
+{
+  "name": "Shell:B",
+  "short_name": "Shell:B",
+  "description": "A private AI on a friend's DGX Spark: chat, pictures, music and code",
+  "id": "/?guest",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0a0d1f",
+  "theme_color": "#0a0d1f",
+  "categories": ["productivity", "utilities"],
+  "launch_handler": { "client_mode": ["focus-existing", "auto"] },
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "New chat", "url": "/#/", "description": "Start a conversation",
+      "icons": [{ "src": "/icons/shortcut-new-chat.png", "sizes": "96x96", "type": "image/png" }] }
+  ]
+}

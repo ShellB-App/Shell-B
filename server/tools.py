@@ -50,6 +50,7 @@ class ToolContext:
     depth: int = 0
     project_id: str | None = None
     user_request: str = ""  # the user's latest message, so reviews can check the render against it
+    tenant: str | None = None  # a guest's id (guests.py): nothing of the owner's is mounted or reachable
 
 
 @dataclass
@@ -207,8 +208,10 @@ async def run_code(args, ctx):
            "--tmpfs", "/tmp:rw,exec,size=512m", "--user", f"{os.getuid()}:{os.getgid()}",
            "-e", "HOME=/tmp", "-e", "MPLBACKEND=Agg", "-e", "PYTHONUNBUFFERED=1",
            "-v", f"{ws}:/work", *(["-v", f"{ws}/.git:/work/.git:ro"] if (ws / ".git").is_dir() else []),
-           "-v", f"{cell}:/cell/main:ro", "-v", f"{db.DATA / 'skills'}:/skills:ro",
-           *(["-v", f"{_group_files(ctx)}:/project:ro"] if _group_files(ctx) else []), *_library_mounts(ctx), *__import__("selfmod").sandbox_mounts(ctx.project_id), "-w", "/work", SANDBOX_IMAGE,
+           "-v", f"{cell}:/cell/main:ro", *([] if ctx.tenant else ["-v", f"{db.DATA / 'skills'}:/skills:ro"]),
+           *(["-v", f"{_group_files(ctx)}:/project:ro"] if _group_files(ctx) else []),
+           *([] if ctx.tenant else _library_mounts(ctx)),  # a guest's sandbox sees its own /work and nothing else
+           *__import__("selfmod").sandbox_mounts(ctx.project_id), "-w", "/work", SANDBOX_IMAGE,
            "python" if language == "python" else "bash", "/cell/main"]
     t0 = time.time()
     proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)

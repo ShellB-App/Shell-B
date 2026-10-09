@@ -73,12 +73,12 @@ def _text(obj, error=False) -> dict:
     return out
 
 
-async def _ask(key: dict, args: dict) -> dict:
+async def _ask(key: dict, args: dict, usage: dict | None = None) -> dict:
     conv_id = args.get("conversation") or None
     conv0 = db.get_conversation(conv_id) if conv_id and api._owns(key, conv_id) else None
     agent = api._agent(key, args.get("agent") or (conv0 or {}).get("agentId"))
     conv = api._conversation(key, conv_id, agent)
-    queue, task = api._start(key, conv, agent, str(args.get("message") or ""), str(args.get("instructions") or ""))
+    queue, task = api._start(key, conv, agent, str(args.get("message") or ""), str(args.get("instructions") or ""), usage)
     drain = asyncio.create_task(api._drain(queue))
     if args.get("wait") is False:
         task.add_done_callback(lambda _: drain)
@@ -86,6 +86,7 @@ async def _ask(key: dict, args: dict) -> dict:
                       "note": "Call shellb_read with this conversation for the reply."})
     final = await asyncio.shield(task)  # a client giving up doesn't cancel the turn
     await asyncio.shield(drain)
+    api._account(usage, final)
     out = api._final_out(conv["id"], final)
     m = out["message"]
     text = m.get("content") or m.get("error") or "(no reply)"
@@ -100,7 +101,7 @@ async def _call(key: dict, name: str, args: dict, req: Request) -> dict:
     if name == "shellb_agents":
         return _text(api.agents(req))
     if name == "shellb_ask":
-        return await _ask(key, args)
+        return await _ask(key, args, api._usage(req))
     if name == "shellb_conversations":
         return _text(api.conversations(req, limit=int(args.get("limit") or 50)))
     if name == "shellb_read":

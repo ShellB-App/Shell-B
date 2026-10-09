@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type 
 import clsx from 'clsx';
 import { LayoutGrid, Pin, PinOff, Search, Settings } from 'lucide-react';
 import type { Status } from '../types';
-import { APPS, DEFAULT_PINS, GROUP_LABEL, PINNABLE, setPins, setRailOrder, shortcutLabel, togglePin, usePins, type AppDef, type AppGroup, type AppId, type AppLive } from './apps';
+import { APPS, DEFAULT_PINS, DOCKED, GROUP_LABEL, PINNABLE, setPins, setRailOrder, shortcutLabel, togglePin, usePins, type AppDef, type AppGroup, type AppId, type AppLive } from './apps';
 import { djLive } from '../dj/live';
 
 interface Props {
@@ -14,7 +14,7 @@ interface Props {
 const ICON = 'w-[18px] h-[18px]';
 // Rail geometry for the overflow maths, matching the classes below: tiles are h-10 with gap-2, dividers h-px my-0.5, nav py-3.
 const ROW = 48;                                       // one pinned tile plus its gap
-const BASE = 24 + 40 + 5 + 40 + 0 + 5 + 40 + 5 * 8;   // padding, Chat, divider, All apps, spacer, divider, gear, and the gaps between them
+const BASE = 24 + 40 + 5 + 40 + 0 + 40 + 5 + 40 + 6 * 8;   // padding, Chat, divider, All apps, spacer, Activity, divider, gear, and the gaps between them
 const VISIT = 1 + 40 + 2 * 8;                         // the short divider and tile for an app on screen that has no pinned tile
 
 const Kbd = ({ children }: { children: ReactNode }) => (
@@ -137,31 +137,33 @@ export function AppRail({ active, status, onOpen }: Props) {
 
   const live = (a: AppDef) => a.live?.(status);
   const pinned = new Set(pins);
-  const [chat, ...rest] = APPS.filter(a => a.group !== 'system');
+  const [chat, ...others] = APPS.filter(a => a.group !== 'system');
+  const docked = others.find(a => a.id === DOCKED)!;
+  const rest = others.filter(a => a !== docked);
   const pinnedApps = rest.filter(a => pinned.has(a.id));
-
-  // If music is playing and Radio is not pinned to the rail, it stays in the rail like an active running app
-  const isRadioRunning = djState.playing && !pinned.has('radio');
+  // Apps doing something in the background (Radio on air, a mega plan or scout running) keep a tile while they run, pinned or not.
+  const running = new Set(rest.filter(a => live(a)?.busy).map(a => a.id));
 
   // Pinned tiles that don't fit the window's height drop into All apps instead of being clipped, last pins first.
+  // Running apps and the one on screen still get a visiting tile, so make room for those first.
   const fit = (extra: number) => navH === null ? Infinity : Math.max(0, Math.floor((navH - BASE - extra) / ROW));
+  const visitsFor = (cap: number) => {
+    const shown = new Set(pinnedApps.slice(0, cap).map(a => a.id));
+    return rest.filter(a => !shown.has(a.id) && (a.id === active || running.has(a.id))).length;
+  };
   let cap = fit(0);
-  const extraVisits = (rest.some(a => a.id === active) && !pinnedApps.slice(0, cap).some(a => a.id === active) ? 1 : 0)
-    + (isRadioRunning && active !== 'radio' ? 1 : 0);
-  if (extraVisits > 0) cap = fit(VISIT * extraVisits);
+  for (let i = 0; i < 3; i++) {
+    const next = fit(VISIT * visitsFor(cap));
+    if (next === cap) break;
+    cap = next;
+  }
   const onRail = pinnedApps.slice(0, cap);
   const overflow = new Set(pinnedApps.slice(cap).map(a => a.id));
   const offRail = rest.filter(a => !onRail.includes(a));
 
-  // Opened from All apps or the palette without a tile, OR actively playing in the background
-  const visitingApps: AppDef[] = [];
-  const activeVisiting = offRail.find(a => a.id === active);
-  if (activeVisiting) visitingApps.push(activeVisiting);
-  if (isRadioRunning && !visitingApps.some(a => a.id === 'radio')) {
-    const radioApp = offRail.find(a => a.id === 'radio');
-    if (radioApp) visitingApps.push(radioApp);
-  }
-  const railIds = [...onRail.map(a => a.id), ...visitingApps.map(a => a.id)];
+  // Opened from All apps or the palette without a tile, or running in the background.
+  const visitingApps = offRail.filter(a => a.id === active || running.has(a.id));
+  const railIds = [...onRail.map(a => a.id), ...visitingApps.map(a => a.id), docked.id];
 
   useLayoutEffect(() => {
     const el = navRef.current!;
@@ -241,8 +243,8 @@ export function AppRail({ active, status, onOpen }: Props) {
     const i = railIds.indexOf(a.id);
     const why = overflow.has(a.id)
       ? 'pinned, but the window is too short for its tile'
-      : a.id === 'radio' && djState.playing && active !== 'radio'
-        ? 'playing on air, right-click to pin'
+      : running.has(a.id) && active !== a.id
+        ? `${a.id === 'radio' && djState.playing ? 'playing on air' : 'running'}, right-click to pin`
         : 'not pinned, right-click to pin';
     return tile(a.id, l?.label ?? a.label, isVisiting ? `${a.hint} · ${why}` : a.hint,
       <AppIcon app={a} live={l} quiet on={active === a.id} />, active === a.id, () => onOpen(a.id), {
@@ -273,6 +275,8 @@ export function AppRail({ active, status, onOpen }: Props) {
         <span className="relative flex" style={{ '--tint': 'var(--accent)' } as CSSProperties}><LayoutGrid className={ICON} /><Badges live={allLive} /></span>,
         false, () => toggle('all'), { button: allBtn, expanded: popup?.kind === 'all' })}
       <div className="flex-1" />
+      {tile(docked.id, live(docked)?.label ?? docked.label, docked.hint, <AppIcon app={docked} live={live(docked)} quiet on={active === docked.id} />,
+        active === docked.id, () => onOpen(docked.id), { keys: railIds.length <= 9 ? shortcutLabel(railIds.length - 1) : undefined })}
       <div className="w-8 h-px bg-[var(--border-subtle)] my-0.5" />
       {tile('system', systemDot ? 'System · needs a look' : 'System', system.map(a => a.label).join(', '),
         <span className="relative flex"><Settings className={ICON} />

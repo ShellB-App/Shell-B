@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import {
-  ArrowLeft, ChevronDown, Download, ExternalLink, FolderTree, History, Loader2, MessageSquare, Moon, PanelLeft, Plus, SquareTerminal, Sun,
+  ArrowLeft, Check, ChevronDown, Download, ExternalLink, FolderTree, History, Loader2, MessageSquare, MonitorCheck, MonitorPlay, Moon, PanelLeft, Plus, SquareTerminal, Sun,
 } from 'lucide-react';
+import { PREVIEW_SAVER, loadAmbience, saveAmbience, useAmbience, type SaverStyle } from '../ambience';
 import type { Agent, Attachment, Effort, ModelInfo, Project, ProjectFile, StreamEvent } from '../types';
 import { api, rawUrl } from '../api';
 import { useChat } from '../useChat';
@@ -181,6 +182,7 @@ export function ProjectView({ projectId, agents, models, theme, onToggleTheme, v
         <span className="hidden sm:inline text-[11px] text-[var(--text-muted)] truncate">· {project.files.length} files · saved {relTime(project.updatedAt)}</span>
         <div className="flex-1" />
         {project.entry.toLowerCase().endsWith('.html') && <a className={clsx(btn.ghost, 'hidden md:inline-flex')} href={`${rawUrl(projectId, project.entry)}`} target="_blank" rel="noreferrer" title="Open the entry page in a new tab"><ExternalLink className="w-3.5 h-3.5" />Open</a>}
+        {project.kind === 'screensaver' && <SaverButtons projectId={projectId} />}
         <a className={clsx(btn.ghost, 'hidden md:inline-flex')} href={`/api/projects/${projectId}/export.zip`} title="Download all files"><Download className="w-3.5 h-3.5" />Export</a>
         {isCode && (
           <button className={clsx(btn.ghost, term && 'text-[var(--text-primary)] bg-[var(--bg-hover)]')} onClick={() => setTerm(v => !v)} title="Terminal (sandbox, no network)">
@@ -307,5 +309,26 @@ export function ProjectView({ projectId, agents, models, theme, onToggleTheme, v
         )}
       </div>
     </div>
+  );
+}
+
+/** A Screensaver project's header buttons: preview it full screen as the screensaver, or make it the screensaver. */
+function SaverButtons({ projectId }: { projectId: string }) {
+  const prefs = useAmbience();
+  const style: SaverStyle = `studio:${projectId}`;
+  const using = prefs.saverStyle === style;
+  return (
+    <>
+      <button className={btn.ghost} title="Show it full screen, the way the screensaver will (move the mouse or press a key to exit)"
+        onClick={() => window.dispatchEvent(new CustomEvent(PREVIEW_SAVER, { detail: style }))}>
+        <MonitorPlay className="w-3.5 h-3.5" /><span className="hidden sm:inline">Preview</span>
+      </button>
+      <button className={clsx(btn.ghost, using && '!text-[var(--accent-soft)]')} disabled={using}
+        title={using ? 'This is your screensaver (change it in Settings → Appearance)' : 'Make this your screensaver (Settings → Appearance)'}
+        onClick={() => saveAmbience({ saverStyle: style, saverMinutes: loadAmbience().saverMinutes || 10 })}>
+        {using ? <Check className="w-3.5 h-3.5" /> : <MonitorCheck className="w-3.5 h-3.5" />}
+        <span className="hidden sm:inline">{using ? 'Your screensaver' : 'Use as screensaver'}</span>
+      </button>
+    </>
   );
 }

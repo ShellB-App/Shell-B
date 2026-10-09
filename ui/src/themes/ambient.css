@@ -1,0 +1,7 @@
+/* The themes' particle canvas (./Ambient.tsx): fixed behind the app, above each theme's scenery (z-index -2/-3).
+   Shell:B FM's visualizer takes over the backdrop while it plays. */
+.shellb-ambient { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; transition: opacity 1.2s ease; }
+html.dj-live .shellb-ambient { opacity: 0 !important; }
+/* "Moving backdrop" off (Settings → Appearance): no particles, and the scenery's own CSS animations hold still */
+html.still-backdrop body::before, html.still-backdrop body::after,
+html.still-backdrop #root::before, html.still-backdrop #root::after { animation: none !important; }

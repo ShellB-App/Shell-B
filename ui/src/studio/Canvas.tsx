@@ -45,7 +45,7 @@ const ARTBOARD = new Set<ProjectKind>(['mobile', 'deck', 'print', 'social', 'mot
 
 const NATIVE_LABEL: Record<ProjectKind, string> = {
   website: 'Desktop', deck: 'Slide 16:9', print: 'US Letter', mobile: 'Phone', dashboard: 'Desktop', 'design-system': 'Desktop',
-  brand: 'Desktop', social: 'Post 4:5', email: 'Email', motion: 'Stage 16:9', game: 'Game 16:9', '3d': 'Desktop',
+  brand: 'Desktop', social: 'Post 4:5', email: 'Email', motion: 'Stage 16:9', screensaver: 'Screen', game: 'Game 16:9', '3d': 'Desktop',
   fullstack: 'Desktop', music: 'Desktop', illustration: 'Desktop', blank: 'Default', code: 'Default',
 };
 

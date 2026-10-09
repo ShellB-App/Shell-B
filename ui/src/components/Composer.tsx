@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import { secureHere } from '../secureUrl';
 import clsx from 'clsx';
-import { ArrowUp, AudioLines, Camera, Loader2, Mic, Paperclip, ScreenShare, ScreenShareOff, Square, Users } from 'lucide-react';
+import { ArrowUp, AudioLines, Camera, Loader2, Mic, Paperclip, PictureInPicture2, ScreenShare, ScreenShareOff, Square, Users } from 'lucide-react';
 import type { Agent, Attachment, Effort, ModelInfo } from '../types';
 import { api } from '../api';
 import { onIncoming, takeIncoming } from '../desktop';
 import { onQuote } from '../quote';
 import { screenSupported, snapshot, startLive, stopLive, useLiveShare } from '../screenShare';
+import { overlaySupported, toggleOverlay, useOverlayWindow } from '../overlay';
 import { openMenuAt } from './ContextMenu';
 import { toast } from './toast';
 import { composerApi } from '../composerApi';
@@ -47,6 +48,8 @@ interface Props {
   onModel?: (name: string) => void;
   /** Takes files and text opened with or shared to the installed app (desktop.ts); only the main chat page's composer. */
   inbox?: boolean;
+  /** Shell:B Guest (ui/src/guest/): no screen sight and no Secretary, which are the owner's */
+  guest?: boolean;
 }
 
 export function Composer({
@@ -72,6 +75,7 @@ export function Composer({
   onModel,
   onVoiceMode,
   inbox,
+  guest,
 }: Props) {
   const [text, setText] = useState('');
   const [atts, setAtts] = useState<Attachment[]>([]);
@@ -139,6 +143,7 @@ export function Composer({
   const canSee = model ? model.capabilities.includes('vision') : true;
   const uploading = atts.some(a => a.uploading);
   const share = useLiveShare();
+  const overlay = useOverlayWindow();
 
   function screenMenu(e: ReactMouseEvent<HTMLButtonElement>) {
     const sec = secureHere();
@@ -158,6 +163,8 @@ export function Composer({
         : { label: 'Share screen live…', icon: ScreenShare, hint: 'agents look when needed',
             onSelect: () => { startLive().then(() => toast(canSee ? `${agent.name} can now look at your screen when it helps.`
               : `Sharing. ${agent.name}'s model can't see images; pick a vision model or agent to use it.`), failed("Couldn't share the screen")); } },
+      ...(inbox && overlaySupported() ? [{ label: overlay ? 'Close the overlay' : 'Overlay: keep Shell:B on top', icon: PictureInPicture2, hint: 'Ctrl+Shift+Y',
+        onSelect: () => { toggleOverlay().catch(failed("Couldn't open the overlay")); } }] : []),
     ]);
   }
 
@@ -336,11 +343,11 @@ export function Composer({
           <button onClick={() => fileRef.current?.click()} className="p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition" title="Attach files or images">
             <Paperclip className="w-4 h-4" />
           </button>
-          <button onClick={screenMenu} aria-haspopup="menu"
+          {!guest && <button onClick={screenMenu} aria-haspopup="menu"
             className={clsx('p-2 rounded-lg transition', share ? 'text-red-400 hover:bg-red-500/10' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]')}
             title={share ? `Sharing ${share.label}: click to stop or attach a screenshot` : 'Screen: attach a screenshot or share live'}>
             <ScreenShare className="w-4 h-4" />
-          </button>
+          </button>}
           <button
             onClick={secure ? () => { location.href = secure; } : toggleMic} disabled={!!micDisabledReason || recording === 'transcribing'}
             title={secure ? 'Voice input needs HTTPS: click to reopen this chat on the secure Tailscale address'
@@ -358,13 +365,13 @@ export function Composer({
               <AudioLines className="w-4 h-4" />
             </button>
           )}
-          <button
+          {!guest && <button
             onClick={() => { location.hash = '#/secretary'; }}
             title="Secretary Mode: listen & transcribe meetings with speaker identification and compile summaries"
             className="p-2 rounded-lg transition text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
           >
             <Users className="w-4 h-4" />
-          </button>
+          </button>}
           {busy ? (
             <button onClick={onStop} className="p-2 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] transition hover:opacity-80" title="Stop">
               <Square className="w-4 h-4 fill-current" />

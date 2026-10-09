@@ -46,7 +46,7 @@ import { MapsApp } from '../maps/MapsApp';
 import { RadioApp } from '../radio/RadioApp';
 import { AgentLab } from '../components/AgentLab';
 import { FormFactorSwitcher } from '../mobile/FormFactorSwitcher';
-import { nextTheme, setTheme as applyTheme, themeInfo, type ThemeId } from '../themes';
+import { isThemeId, nextTheme, setTheme as applyTheme } from '../themes';
 
 import type { KioskWindow } from './types';
 import { WindowFrame } from './WindowFrame';
@@ -141,7 +141,7 @@ export function KioskApp() {
   const [settingsTab, setSettingsTab] = useState<SettingsTabId>(() => {
     if (typeof window !== 'undefined') {
       const t = new URLSearchParams(window.location.search).get('tab');
-      if (t && ['general', 'speech', 'network', 'memory', 'shortcuts', 'system', 'backups', 'account'].includes(t)) {
+      if (t && ['general', 'appearance', 'speech', 'network', 'memory', 'shortcuts', 'system', 'backups', 'account'].includes(t)) {
         return t as SettingsTabId;
       }
     }
@@ -311,7 +311,7 @@ export function KioskApp() {
       api.settings().then(s => {
         setSettings(s);
         setAgentId(s.defaultAgent);
-        if (s.theme && themeInfo(s.theme)) applyTheme(s.theme as ThemeId);
+        if (s.theme && isThemeId(s.theme)) applyTheme(s.theme);
         if (!s.timeZone) api.saveSettings({ timeZone: browserTz() }).then(setSettings).catch(() => {});
       }),
     ]).catch(e => setLoadError(String(e)));

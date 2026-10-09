@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react';
 import clsx from 'clsx';
 import {
-  ArrowLeft, Blocks, Box, Brush, Clapperboard, CodeXml, FileText, Gamepad2, LayoutDashboard, Loader2, Mail, Monitor, MoreHorizontal, Music, Palette, PenTool, Plus,
+  ArrowLeft, Blocks, Box, Brush, Clapperboard, CodeXml, FileText, Gamepad2, LayoutDashboard, Loader2, Mail, Monitor, MonitorPlay, MoreHorizontal, Music, Palette, PenTool, Plus,
   Server,
   Presentation, Share2, Smartphone, Sparkles, Sun, Moon, Upload, X,
 } from 'lucide-react';
@@ -17,12 +17,12 @@ import { workspaceMenu } from '../components/projectMenu';
 
 export const KIND_ICON: Record<ProjectKind, typeof Monitor> = {
   website: Monitor, deck: Presentation, print: FileText, mobile: Smartphone, dashboard: LayoutDashboard,
-  'design-system': Blocks, brand: PenTool, social: Share2, email: Mail, motion: Clapperboard, game: Gamepad2, '3d': Box,
+  'design-system': Blocks, brand: PenTool, social: Share2, email: Mail, motion: Clapperboard, screensaver: MonitorPlay, game: Gamepad2, '3d': Box,
   fullstack: Server, music: Music, illustration: Brush, blank: Sparkles, code: CodeXml,
 };
 
 const KIND_ORDER: ProjectKind[] = [
-  'website', 'deck', 'print', 'mobile', 'dashboard', 'design-system', 'brand', 'social', 'email', 'motion', 'game', '3d', 'fullstack', 'music', 'illustration', 'blank',
+  'website', 'deck', 'print', 'mobile', 'dashboard', 'design-system', 'brand', 'social', 'email', 'motion', 'screensaver', 'game', '3d', 'fullstack', 'music', 'illustration', 'blank',
 ];
 
 interface Props {

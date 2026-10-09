@@ -6,6 +6,7 @@ import {
   AudioLines,
   ChevronDown,
   Crosshair,
+  Flag,
   GitFork,
   ListChecks,
   Loader2,
@@ -130,6 +131,9 @@ interface Props {
   verifiers?: Agent[];
   onVerify?: (agentId: string) => void;
   onFork?: (messageId: string) => void;
+  /** Shell:B Guest (ui/src/guest/): no thumbs, memory or follow-up notes (those are the owner's), and a Report button */
+  guest?: boolean;
+  onReport?: () => void;
 }
 
 export const MessageView = memo(function MessageView({
@@ -148,6 +152,8 @@ export const MessageView = memo(function MessageView({
   verifiers = [],
   onVerify,
   onFork,
+  guest,
+  onReport,
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(message.content);
@@ -373,7 +379,8 @@ export const MessageView = memo(function MessageView({
           <div className="flex items-center gap-0.5 mt-1.5 opacity-60 group-hover:opacity-100 transition">
             {text && <CopyButton text={text} />}
             {text && <SpeakButton text={text} />}
-            {feedback.buttons}
+            {!guest && feedback.buttons}
+            {onReport && <button className={btn.icon} title="Report a problem with this reply to Evie" onClick={onReport}><Flag className="w-3.5 h-3.5" /></button>}
             {isLast && <button className={btn.icon} title="Regenerate" disabled={busy} onClick={onRegenerate}><RotateCcw className="w-3.5 h-3.5" /></button>}
             {onFork && (
               <button className={btn.icon} title="Fork conversation from here" onClick={() => onFork(message.id)}>
@@ -387,10 +394,10 @@ export const MessageView = memo(function MessageView({
             </span>
           </div>
         )}
-        {!streaming && feedback.box}
-        {!streaming && <RecalledNote message={message} />}
-        {!streaming && <LearnedNote message={message} fresh={isLast} />}
-        {!streaming && <FollowUpNote message={message} fresh={isLast} />}
+        {!streaming && !guest && feedback.box}
+        {!streaming && !guest && <RecalledNote message={message} />}
+        {!streaming && !guest && <LearnedNote message={message} fresh={isLast} />}
+        {!streaming && !guest && <FollowUpNote message={message} fresh={isLast} />}
       </div>
     </LinkContext.Provider>
   );

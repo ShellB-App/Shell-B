@@ -485,7 +485,7 @@ export interface DownloadItem {
   done: number; total: number; rate: number | null; note?: string | null; started?: number; link: string;
 }
 
-export type ActivitySource = 'schedule' | 'todo' | 'plan' | 'scout' | 'notebook' | 'deploy' | 'codex' | 'memory' | 'data' | 'brief' | 'health' | 'shopping';
+export type ActivitySource = 'schedule' | 'todo' | 'plan' | 'scout' | 'notebook' | 'deploy' | 'codex' | 'memory' | 'data' | 'brief' | 'health' | 'shopping' | 'nightshift';
 
 /** Unread events, how many of them need the owner, and approvals agents are waiting on right now. */
 export interface ActivitySummary { unread: number; attention: number; pending: number }
@@ -708,7 +708,7 @@ export type StreamEvent =
   | { type: 'done'; message: Message };
 
 export type ProjectKind = 'website' | 'deck' | 'print' | 'mobile' | 'dashboard' | 'design-system' | 'brand' | 'social' | 'email'
-  | 'motion' | 'game' | '3d' | 'fullstack' | 'music' | 'illustration' | 'blank' | 'code';
+  | 'motion' | 'screensaver' | 'game' | '3d' | 'fullstack' | 'music' | 'illustration' | 'blank' | 'code';
 
 export interface ProjectFile { path: string; size: number; mtime: number; kind: 'html' | 'image' | 'svg' | 'font' | 'pdf' | 'markdown' | 'video' | 'audio' | 'model' | 'text' | 'binary' }
 
@@ -927,4 +927,6 @@ export interface BackupRestoreResult {
   safetyBackup?: BackupInfo;
 }
 
-export type SettingsTabId = 'general' | 'speech' | 'network' | 'memory' | 'shortcuts' | 'system' | 'backups' | 'account' | 'apikeys' | 'notifications';
+export type SettingsTabId = 'general' | 'appearance' | 'speech' | 'network' | 'memory' | 'shortcuts' | 'system' | 'backups' | 'account' | 'apikeys' | 'notifications' | 'changelog';
+
+export interface ChangelogEntry { date: string; area: string; title: string; summary: string }

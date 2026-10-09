@@ -69,6 +69,8 @@ def init():
             c.execute("ALTER TABLE conversations ADD COLUMN group_id TEXT")
         if "incognito" not in cols:  # privacy.py: never remembered, learned from or searched; deleted after a while
             c.execute("ALTER TABLE conversations ADD COLUMN incognito INTEGER DEFAULT 0")
+        if "tenant" not in cols:  # guests.py: a guest's chat (always incognito too); never in the owner's lists
+            c.execute("ALTER TABLE conversations ADD COLUMN tenant TEXT")
         c.executescript("""
 CREATE TABLE IF NOT EXISTS groups(
   id TEXT PRIMARY KEY, name TEXT, description TEXT, instructions TEXT, emoji TEXT, color TEXT,
@@ -110,7 +112,7 @@ def list_conversations(project_id=None, group_id=None):
         elif project_id:
             rows = c.execute("SELECT * FROM conversations WHERE project_id=? ORDER BY updated DESC", (project_id,)).fetchall()
         else:
-            rows = c.execute("SELECT * FROM conversations WHERE project_id IS NULL ORDER BY updated DESC").fetchall()
+            rows = c.execute("SELECT * FROM conversations WHERE project_id IS NULL AND tenant IS NULL ORDER BY updated DESC").fetchall()
     return [_conv(r) for r in rows]
 
 

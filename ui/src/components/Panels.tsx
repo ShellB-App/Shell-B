@@ -2,17 +2,21 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import {
   Archive, AudioLines, Bell, BookMarked, Boxes, Brain, EyeOff, Inbox, Sparkles, Cpu, Monitor, Moon, Plus, Search, Settings as SettingsIcon, SlidersHorizontal, SquarePen, Star, Sun, Trash2, BrainCircuit, MessageSquare, KeyRound, Hash, Network, ShieldCheck, MonitorDown,
+  PictureInPicture2, History, Palette, MonitorPlay,
 } from 'lucide-react';
 import type { Agent, ChatHit, ConversationSummary, Memory, ModelInfo, Settings, SettingsTabId, Status, ToolInfo } from '../types';
 import { api, fmtBytes } from '../api';
 import { AgentAvatar, Modal, Toggle, btn, relTime, toolIcon, Snippet } from './common';
 import { jumpToMessage } from '../jump';
+import { overlaySupported, toggleOverlay } from '../overlay';
+import { toast } from './toast';
 import { FAV_LABEL, useFavorites } from '../favorites';
 import { FavIcon } from './Favorites';
 import { APPS, shortcutLabel, useRailOrder, type AppId } from './apps';
 import { searchIcon, searchedList, useEverythingSearch } from './SearchResults';
 import { AccountTab } from './Account';
 import { ApiKeysSettings } from './ApiKeysSettings';
+import { ChangelogTab } from './ChangelogTab';
 import { BackupsTab } from './BackupsTab';
 import { NotificationsTab } from './NotificationsSettings';
 import { MemoryManager } from './MemoryManager';
@@ -23,7 +27,7 @@ import { promptInstall, useInstallState } from '../desktop';
 import { SystemInfoPanel } from './SystemInfo';
 import { NetworkSettings } from './NetworkSettings';
 import { ThemePicker } from './ThemePicker';
-import { THEMES, currentTheme, setTheme } from '../themes';
+import { THEMES, currentTheme, setAmbientOn, setTheme, useAmbientOn } from '../themes';
 import { PREVIEW_SAVER, PREVIEW_SPLASH, SAVER_MINUTES, SAVER_STYLES, saveAmbience, useAmbience, type SaverStyle, type SplashMode } from '../ambience';
 
 const SERVICE_INFO: Record<string, [string, string]> = {
@@ -89,6 +93,7 @@ export function SettingsContent(p: SettingsProps) {
   useEffect(() => { if (p.tab) setTab(p.tab); }, [p.tab]);
   const tabs = [
     { id: 'general', label: 'General', icon: SlidersHorizontal },
+    { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'apikeys', label: 'API Keys', icon: KeyRound },
     { id: 'speech', label: 'Speech', icon: AudioLines },
     { id: 'network', label: 'Network', icon: Network },
@@ -97,6 +102,7 @@ export function SettingsContent(p: SettingsProps) {
     { id: 'system', label: 'System', icon: Cpu },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'backups', label: 'Backups', icon: Archive },
+    { id: 'changelog', label: 'Changelog', icon: History },
     { id: 'account', label: 'Account', icon: ShieldCheck },
   ] as const;
 
@@ -112,6 +118,7 @@ export function SettingsContent(p: SettingsProps) {
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5">
         {tab === 'general' && <General {...p} onOpenTab={setTab} />}
+        {tab === 'appearance' && <Appearance {...p} />}
         {tab === 'apikeys' && <ApiKeysSettings settings={p.settings} onSaved={p.onSaved} />}
         {tab === 'speech' && <SpeechTab settings={p.settings} onSaved={p.onSaved} />}
         {tab === 'network' && <NetworkSettings />}
@@ -120,6 +127,7 @@ export function SettingsContent(p: SettingsProps) {
         {tab === 'system' && <SystemTab status={p.status} models={p.models} onOpenTab={setTab} />}
         {tab === 'notifications' && <NotificationsTab />}
         {tab === 'backups' && <BackupsTab />}
+        {tab === 'changelog' && <ChangelogTab />}
         {tab === 'account' && <AccountTab />}
       </div>
     </div>
@@ -146,16 +154,28 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
   );
 }
 
-function General({ settings, agents, models, theme, onTheme, onSaved, onOpenTab }: SettingsProps) {
+/** Settings → Appearance: the theme (and Shell:B-designed ones), the living backdrop, scale, startup animation, screensaver. */
+function Appearance({ settings, theme, onTheme, onClose }: SettingsProps) {
+  const ambient = useAmbientOn();
+  return (
+    <div>
+      <ThemePicker settings={settings} mode={theme} onMode={onTheme} onDone={onClose} />
+      <Row label="Moving backdrop" hint="The particles and scenery motion some themes have (fireflies, rain, aurora…). Saved in this browser">
+        <Toggle on={ambient} onChange={setAmbientOn} label="Moving backdrop" />
+      </Row>
+      <ScaleRow />
+      <DisplayRows onDone={onClose} />
+    </div>
+  );
+}
+
+function General({ settings, agents, models, onSaved, onOpenTab }: SettingsProps) {
   if (!settings) return null;
   const save = async (patch: Partial<Settings>) => { await api.saveSettings(patch); onSaved(); };
   const vision = models.filter(m => m.capabilities.includes('vision'));
   const embedders = models.filter(m => m.capabilities.includes('embedding') || /embed/i.test(m.name));
   return (
     <div>
-      <ThemePicker settings={settings} mode={theme} onMode={onTheme} />
-      <ScaleRow />
-      <DisplayRows />
       <InstallRow />
       <Row label="Default agent" hint="Used for new chats">
         <select className={btn.input} value={settings.defaultAgent} onChange={e => save({ defaultAgent: e.target.value })}>
@@ -245,9 +265,22 @@ function InstallRow() {
   );
 }
 
-function DisplayRows() {
+function DisplayRows({ onDone }: { onDone?: () => void }) {
   const amb = useAmbience();
   const preview = (ev: string) => window.dispatchEvent(new Event(ev));
+  // screensavers made in the Studio (Screensaver projects) join the built-in styles
+  const [made, setMade] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => { api.projects().then(ps => setMade(ps.filter(p => p.kind === 'screensaver').map(p => ({ id: p.id, name: p.name }))), () => {}); }, []);
+  const [creating, setCreating] = useState(false);
+  const makeOne = async () => {
+    setCreating(true);
+    try {
+      const p = await api.createProject({ name: 'Screensaver', kind: 'screensaver', brief: '' });
+      onDone?.();
+      location.hash = `#/studio/${p.id}`;
+    } catch (e) { toast(`Couldn't create the project: ${e}`, { kind: 'error' }); } finally { setCreating(false); }
+  };
+  const missing = amb.saverStyle.startsWith('studio:') && !made.some(m => `studio:${m.id}` === amb.saverStyle);
   return (
     <>
       <Row label="Startup animation" hint="Plays when Shell:B opens; click or press a key to skip">
@@ -271,8 +304,20 @@ function DisplayRows() {
       <Row label="Screensaver style">
         <div className="flex items-center gap-3">
           <select className={btn.input} value={amb.saverStyle} onChange={e => saveAmbience({ saverStyle: e.target.value as SaverStyle })}>
-            {SAVER_STYLES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+            <optgroup label="Built in">
+              {SAVER_STYLES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+            </optgroup>
+            {(made.length > 0 || missing) && (
+              <optgroup label="Made in the Studio">
+                {made.map(m => <option key={m.id} value={`studio:${m.id}`}>{m.name}</option>)}
+                {missing && <option value={amb.saverStyle}>(deleted project)</option>}
+              </optgroup>
+            )}
           </select>
+          <button className={btn.subtle} disabled={creating} onClick={makeOne}
+            title="Start a Screensaver project in the Studio and describe what you'd like; Shell:B builds it">
+            <MonitorPlay className="w-3.5 h-3.5" />Make one in the Studio
+          </button>
           <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] whitespace-nowrap">
             <Toggle on={amb.saverClock} onChange={v => saveAmbience({ saverClock: v })} label="Show clock" />Clock
           </label>
@@ -414,6 +459,8 @@ export function CommandPalette({ open, onClose, agents, conversations, theme, ac
       { id: 'theme', label: `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`, icon: theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />, run: actions.toggleTheme },
       ...THEMES.map(t => ({ id: `theme-${t.id}`, label: `Theme: ${t.label}`, hint: t.id === currentTheme() ? 'current' : undefined, search: `skin look style ${t.blurb}`,
         icon: <Sparkles className="w-4 h-4 text-fuchsia-400" />, run: () => setTheme(t.id) })),
+      ...(overlaySupported() ? [{ id: 'overlay', label: 'Overlay: a small Shell:B window that stays on top', hint: 'Ctrl+Shift+Y', search: 'picture in picture pip float always on top screen',
+        icon: <PictureInPicture2 className="w-4 h-4 text-sky-400" />, run: () => { toggleOverlay().catch(e => toast(String(e), { kind: 'error' })); } }] : []),
       { id: 'skin', label: 'Next theme', search: 'cycle skin', icon: <Sparkles className="w-4 h-4 text-fuchsia-400" />, run: actions.toggleSkin },
       { id: 'dj', label: 'Shell:B FM: play / pause the AI DJ', icon: <Sparkles className="w-4 h-4 text-pink-400" />, run: () => dispatchEvent(new CustomEvent('shellb:dj', { detail: 'toggle' })) },
       { id: 'dj-skip', label: 'Shell:B FM: next song', icon: <Sparkles className="w-4 h-4 text-pink-400" />, run: () => dispatchEvent(new CustomEvent('shellb:dj', { detail: 'skip' })) },
@@ -424,6 +471,7 @@ export function CommandPalette({ open, onClose, agents, conversations, theme, ac
       }),
       { id: 'media', label: 'Open Media (generated pictures, music, sounds, 3D)', icon: <Boxes className="w-4 h-4 text-pink-400" />, run: () => { location.hash = '#/library/media'; } },
       { id: 'favorites', label: 'Open Favorites', icon: <Star className="w-4 h-4 text-amber-400" />, run: () => { location.hash = '#/library/favorites'; } },
+      { id: 'appearance', label: 'Appearance & themes', search: 'theme skin look style colors design custom scale screensaver', icon: <Palette className="w-4 h-4 text-fuchsia-400" />, run: () => actions.openSettings('appearance') },
       { id: 'memory', label: 'Manage memory', icon: <Brain className="w-4 h-4" />, run: () => actions.openSettings('memory') },
       { id: 'network', label: 'Network status', icon: <Network className="w-4 h-4" />, run: () => actions.openSettings('network') },
       { id: 'system', label: 'System status', icon: <Monitor className="w-4 h-4" />, run: () => actions.openSettings('system') },

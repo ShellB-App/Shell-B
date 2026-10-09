@@ -6,7 +6,7 @@ import type {
   ScheduledTask, ScheduledRun, ScheduleDraft, ResearchBoard, ResearchBoardDetail, ResearchItem, NotebookMessage, NotebookCitation, DiscoverHit, StudioType, MegaPlan, MegaPlanDetail, ProjectTodo, ProjectTodoList, SshHost,
   ActivityItem, ActivitySummary, AskAnswer, PendingApproval, CodexCollection, CodexEntry, CodexIndex,
   CliAgent, TtsVoice, Meeting, MeetingSpeaker, MeetingUtterance, MeetingSummaryData, MeetingSummaryItem,
-  BackupInfo, BackupCreateRequest, BackupRestoreResult,
+  BackupInfo, ChangelogEntry, BackupCreateRequest, BackupRestoreResult,
   ChatHit,
 } from './types';
 
@@ -79,6 +79,7 @@ export const api = {
   authSessions: () => req<AuthSession[]>('/api/auth/sessions'),
   changePassword: (current: string, password: string) => req('/api/auth/password', { method: 'POST', body: json({ current, password }) }),
   authRateLimitStatus: () => req<{ ip: string; recentIpFailures: number; maxIpFailuresBeforeLock: number; recentGlobalFailures: number; globalLockActive: boolean }>('/api/auth/status'),
+  changelog: () => req<{ entries: ChangelogEntry[]; error: string }>('/api/changelog'),
   backups: () => req<BackupInfo[]>('/api/backup'),
   createBackup: (b?: BackupCreateRequest) => req<BackupInfo>('/api/backup', { method: 'POST', body: json(b ?? {}) }),
   restoreBackup: (id: string) => req<BackupRestoreResult>(`/api/backup/${encodeURIComponent(id)}/restore`, { method: 'POST' }),

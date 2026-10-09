@@ -452,6 +452,12 @@ DEFAULT_SETTINGS = {
     "morningBrief": True,      # daily brief in Activity: follow-ups due, calendar, overnight work, waiting approvals
     "morningBriefTime": "07:30",  # local HH:MM; only if the owner was around in the last few days
     "briefWeatherPlace": "",   # town for the brief's weather line (Open-Meteo); "" = no weather
+    "nightShift": True,        # heavy jobs (queued research, 👎 redrafts) for the big model while nobody is around (nightshift.py)
+    "nightShiftModel": "ShellB-Titan",  # the quality model the night shift runs on (gpt-oss-120b); the fast one is unloaded meanwhile
+    "nightShiftContext": 65536,  # its context window; 131072 leaves only ~2 GB free next to the services (2026-10-09)
+    "nightShiftIdleMinutes": 20,  # start only after this long with no chat from the owner
+    "nightShiftWindow": "",    # "HH:MM-HH:MM" local hours it may start a job (may wrap midnight); "" = any time
+    "nightShiftRedrafts": True,  # rewrite replies rated 👎 in the last two weeks, in a new chat
     "incognitoHours": 24,      # incognito chats are deleted this long after their last message (privacy.py sweep)
     "promptSuggestions": True,  # predict the next message as ghost text in the composer (utility model; composer.py)
     "suggestionsRefresh": True, # rewrite the empty-chat starter cards every few hours (utility model; suggestions.py)

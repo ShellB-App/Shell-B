@@ -38,6 +38,7 @@ This directory (`~/shellb/web`) houses the web frontend, agent runtime server, d
    - No service restart required for static UI changes, but reload browser.
 
 3. **Rules for Agents**:
+   - **Shipping a user-visible feature? Add an entry (newest first) to `docs/changelog.json`** — it feeds Settings → Changelog.
    - **Do not create Node.js backend files.**
    - **Do not create untyped `.jsx` files.**
    - **Files written to `/work` in sandbox do not affect the web application.**

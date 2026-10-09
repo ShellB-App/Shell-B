@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { BookMarked, Brain, CalendarClock, Check, CheckCheck, ChevronDown, HardDrive, Inbox, ListTodo, Loader2, Mail, MessageSquare, Rocket, Shapes, ShieldQuestion,
-  Sunrise, Telescope, Trash2, Workflow, XCircle, HeartPulse, ShoppingCart } from 'lucide-react';
+  Sunrise, Telescope, Trash2, Workflow, XCircle, HeartPulse, ShoppingCart, Moon } from 'lucide-react';
 import { api } from '../api';
 import type { ActivityItem, ActivitySource, ActivitySummary, PendingApproval } from '../types';
 import { btn, relTime } from './common';
 import { BriefNowButton, BriefRow, FollowUpsPanel, useFollowUpCounts } from './FollowUps';
 import { FindingsPanel } from './Findings';
+import { NightShiftPanel } from './NightShift';
 
 const SOURCES: Record<ActivitySource, { label: string; icon: typeof Inbox; color: string }> = {
   schedule: { label: 'Scheduled', icon: CalendarClock, color: 'text-emerald-400' },
@@ -21,6 +22,7 @@ const SOURCES: Record<ActivitySource, { label: string; icon: typeof Inbox; color
   brief: { label: 'Briefs', icon: Sunrise, color: 'text-orange-400' },
   health: { label: 'Health', icon: HeartPulse, color: 'text-red-400' },
   shopping: { label: 'Price watch', icon: ShoppingCart, color: 'text-emerald-400' },
+  nightshift: { label: 'Night shift', icon: Moon, color: 'text-indigo-300' },
 };
 
 const STATUS: Record<string, [string, string]> = {
@@ -135,8 +137,9 @@ export function Activity({ live }: { live?: ActivitySummary }) {
   const [error, setError] = useState('');
   // #/activity/follow-ups opens the Follow-ups tab (server/commitments.py); briefs link there
   const readTab = () => (/^#\/activity\/follow-ups/.test(location.hash) ? 'follow-ups'
-    : /^#\/activity\/findings/.test(location.hash) ? 'findings' : 'feed');
-  const [tab, setTab] = useState<'feed' | 'follow-ups' | 'findings'>(readTab);
+    : /^#\/activity\/findings/.test(location.hash) ? 'findings'
+    : /^#\/activity\/night-shift/.test(location.hash) ? 'night-shift' : 'feed');
+  const [tab, setTab] = useState<'feed' | 'follow-ups' | 'findings' | 'night-shift'>(readTab);
   useEffect(() => { const f = () => setTab(readTab()); window.addEventListener('hashchange', f); return () => window.removeEventListener('hashchange', f); }, []);
   const [fuTick, setFuTick] = useState(0);
   const fuCounts = useFollowUpCounts(fuTick);
@@ -209,7 +212,7 @@ export function Activity({ live }: { live?: ActivitySummary }) {
         {error && <div className="mb-4 text-xs text-red-500 dark:text-red-400">{error}</div>}
         <div role="tablist" className="flex gap-4 mb-5 border-b border-[var(--border-subtle)]">
           {([['feed', 'Feed', counts.unread], ['follow-ups', 'Follow-ups', fuCounts ? fuCounts.overdue + fuCounts.today || fuCounts.open : 0],
-             ['findings', 'Self-review', 0]] as const).map(([id, label, n]) => (
+             ['night-shift', 'Night shift', 0], ['findings', 'Self-review', 0]] as const).map(([id, label, n]) => (
             <button key={id} role="tab" aria-selected={tab === id}
               onClick={() => { location.hash = id === 'feed' ? '#/activity' : `#/activity/${id}`; setTab(id); }}
               className={clsx('-mb-px pb-2 text-sm border-b-2 transition flex items-center gap-1.5 focus-visible:outline-none focus-visible:text-[var(--text-primary)]',
@@ -229,7 +232,7 @@ export function Activity({ live }: { live?: ActivitySummary }) {
           </section>
         )}
 
-        {tab === 'findings' ? <FindingsPanel /> : tab === 'follow-ups' ? <FollowUpsPanel onChange={() => setFuTick(t => t + 1)} /> : (<>
+        {tab === 'findings' ? <FindingsPanel /> : tab === 'night-shift' ? <NightShiftPanel /> : tab === 'follow-ups' ? <FollowUpsPanel onChange={() => setFuTick(t => t + 1)} /> : (<>
         <div className="flex flex-wrap gap-1.5 mb-2">
           {chip(filter === 'all', 'All', () => setFilter('all'))}
           {chip(filter === 'attention', 'Needs you', () => setFilter('attention'), counts.attention)}

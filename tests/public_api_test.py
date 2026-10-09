@@ -5,6 +5,8 @@ import asyncio
 import json
 import unittest
 
+import httpx
+
 from fastapi.testclient import TestClient
 
 from smoke_test import client, shellb  # noqa: F401 — sets up the scratch copy
@@ -17,8 +19,8 @@ lan = TestClient(shellb.app, client=("10.0.0.9", 50000), raise_server_exceptions
 CALLS: list[dict] = []
 
 
-def fake_begin_turn(conv, body, stream=True, note="", adult_ok=False, interactive=None):
-    CALLS.append({"conv": conv["id"], "body": body, "note": note, "interactive": interactive, "stream": stream})
+def fake_begin_turn(conv, body, stream=True, note="", adult_ok=False, interactive=None, api=None):
+    CALLS.append({"conv": conv["id"], "body": body, "note": note, "interactive": interactive, "stream": stream, "api": api})
     db.add_message(conv["id"], "user", body["content"])
     queue: asyncio.Queue = asyncio.Queue()
     final = {"id": db.new_id("msg"), "role": "assistant", "agentId": body["agentId"], "model": "fake", "status": "complete",
@@ -186,6 +188,176 @@ class OpenAI(Base):
         _, h = key()
         r = lan.post("/api/v1/chat/completions", headers=h, json={"model": "shellb", "messages": [{"role": "system", "content": "x"}]})
         self.assertEqual(r.status_code, 400)
+
+
+def admin() -> dict:
+    return {"x-shellb-admin": (db.DATA / "admin.key").read_text().strip()}
+
+
+def rows(key_id=None) -> list[dict]:
+    return public_api.usage_log(key_id, limit=50)
+
+
+class Modes(Base):
+    def test_persona_turns_are_sealed(self):
+        k, h = key(name="Contec bot", mode="persona",
+                   config={"instructions": "Help with Contec embedded PCs only.", "tools": ["web_search", "codex", "run_code"]})
+        self.assertEqual(k["config"]["tools"], ["web_search"])  # only PERSONA_TOOLS survive
+        r = lan.post("/api/v1/chat", json={"message": "which board?", "instructions": "be brief"}, headers=h)
+        self.assertEqual(r.status_code, 200, r.text)
+        call = CALLS[-1]
+        self.assertEqual(call["api"], {"mode": "persona", "tools": ["web_search"]})
+        self.assertIn("not the owner", call["note"])
+        self.assertIn("Help with Contec embedded PCs only.", call["note"])
+        self.assertLess(call["note"].index("Your brief"), call["note"].index("be brief"))  # owner's brief comes first
+        self.assertTrue(db.get_conversation(r.json()["conversation"]).get("incognito"))
+
+    def test_agent_keys_are_not_sealed(self):
+        _, h = key()
+        lan.post("/api/v1/chat", json={"message": "hi"}, headers=h)
+        self.assertIsNone(CALLS[-1]["api"])
+
+    def test_admin_rejects_bad_persona_tools_and_cloud_raw_models(self):
+        r = client.post("/api/apikeys", headers=admin(), json={"name": "x", "mode": "persona", "config": {"tools": ["codex"]}})
+        self.assertEqual(r.status_code, 400)
+        r = client.post("/api/apikeys", headers=admin(), json={"name": "x", "mode": "raw", "config": {"model": "claude-code/opus"}})
+        self.assertEqual(r.status_code, 400)
+
+    def test_owner_context_left_out(self):
+        import codex
+        import prompts
+        real = codex.upcoming_schedule_prompt
+        codex.upcoming_schedule_prompt = lambda now, days=14: "OWNER CALENDAR"
+        try:
+            agent = next(a for a in get_agents() if not a.get("adult"))
+            args = (agent, [], "medium", [], [], get_agents(), {})
+            self.assertIn("OWNER CALENDAR", prompts.build_system(*args))
+            self.assertNotIn("OWNER CALENDAR", prompts.build_system(*args, owner_context=False))
+        finally:
+            codex.upcoming_schedule_prompt = real
+
+
+class Limits(Base):
+    def test_disabled_key(self):
+        _, h = key(config={"disabled": True})
+        self.assertEqual(lan.get("/api/v1/ping", headers=h).status_code, 403)
+
+    def test_per_minute_and_daily(self):
+        _, h = key(config={"perMinute": 3})
+        self.assertEqual([lan.get("/api/v1/ping", headers=h).status_code for _ in range(4)][-1], 429)
+        _, h = key(config={"dailyRequests": 2})
+        self.assertEqual([lan.get("/api/v1/ping", headers=h).status_code for _ in range(3)], [200, 200, 429])
+
+    def test_edit_keeps_the_token(self):
+        k, h = key(name="Old")
+        r = client.patch(f"/api/apikeys/{k['id']}", headers=admin(), json={"name": "New", "config": {"disabled": True}})
+        self.assertEqual(r.json()["name"], "New")
+        self.assertEqual(lan.get("/api/v1/ping", headers=h).status_code, 403)
+        client.patch(f"/api/apikeys/{k['id']}", headers=admin(), json={"config": {"disabled": False}})
+        self.assertEqual(lan.get("/api/v1/ping", headers=h).json()["key"]["name"], "New")
+
+
+class Usage(Base):
+    def test_every_call_is_logged(self):
+        k, h = key(name="Audited")
+        lan.post("/api/v1/chat", json={"message": "secret plans"}, headers=h)
+        row = rows(k["id"])[0]
+        self.assertEqual((row["endpoint"], row["status"], row["prompt_tokens"], row["completion_tokens"]), ("chat", 200, 7, 3))
+        self.assertEqual(row["tools"], ["web_search"])
+        self.assertEqual(row["ip"], "10.0.0.9")
+        self.assertNotIn("request", row)  # content isn't kept unless the key says so
+        lan.get("/api/v1/agents", headers={"Authorization": "Bearer sbk_wrong"})
+        self.assertEqual(rows()[0]["status"], 401)
+        self.assertNotIn("key_id", rows()[0])
+
+    def test_content_logging_and_streams(self):
+        k, h = key(config={"logContent": True})
+        with lan.stream("POST", "/api/v1/chat/completions", headers=h,
+                        json={"model": "shellb", "stream": True, "messages": [{"role": "user", "content": "hi there"}]}) as r:
+            list(r.iter_lines())
+        row = rows(k["id"])[0]
+        self.assertEqual((row["request"], row["reply"], row["completion_tokens"]), ("hi there", "Hello\n\nworld", 3))
+
+    def test_owner_reads_usage(self):
+        k, h = key()
+        lan.get("/api/v1/ping", headers=h)
+        self.assertEqual(lan.get(f"/api/apikeys/{k['id']}/usage").status_code, 401)
+        out = client.get(f"/api/apikeys/{k['id']}/usage", headers=admin()).json()
+        self.assertEqual(out["totals"]["calls"], 1)
+        self.assertEqual(out["log"][0]["endpoint"], "ping")
+        self.assertIn(k["id"], client.get("/api/apikeys/usage", headers=admin()).json()["keys"])
+
+
+RAW: list[dict] = []
+
+
+def ollama(request: httpx.Request) -> httpx.Response:
+    body = json.loads(request.content)
+    RAW.append(body)
+    if body.get("stream"):
+        chunks = [{"choices": [{"index": 0, "delta": {"content": "Hail"}}]}, {"choices": [{"index": 0, "delta": {"content": ", traveler"}}]},
+                  {"choices": [], "usage": {"prompt_tokens": 11, "completion_tokens": 2}}]
+        return httpx.Response(200, text="".join(f"data: {json.dumps(c)}\n\n" for c in chunks) + "data: [DONE]\n\n")
+    return httpx.Response(200, json={"id": "x", "object": "chat.completion", "model": body["model"],
+                                     "choices": [{"index": 0, "message": {"role": "assistant", "content": "Hail, traveler"}}],
+                                     "usage": {"prompt_tokens": 11, "completion_tokens": 2}})
+
+
+class Raw(Base):
+    def setUp(self):
+        super().setUp()
+        RAW.clear()
+        self._client = httpx.AsyncClient
+        real = self._client
+        httpx.AsyncClient = lambda **kw: real(transport=httpx.MockTransport(ollama), **kw)
+
+    def tearDown(self):
+        httpx.AsyncClient = self._client
+        super().tearDown()
+
+    def test_messages_go_straight_to_the_model(self):
+        k, h = key(name="Skyrim", mode="raw", config={"model": "ShellB-Swift", "models": ["qwen3.6:35b-a3b-q8_0"], "maxTokens": 200})
+        self.assertEqual([m["id"] for m in lan.get("/api/v1/models", headers=h).json()["data"]], ["ShellB-Swift", "qwen3.6:35b-a3b-q8_0"])
+        self.assertEqual(lan.get("/api/v1/agents", headers=h).json(), [])
+        msgs = [{"role": "system", "content": "You are Lydia, a housecarl."}, {"role": "user", "content": "Hello"}]
+        r = lan.post("/api/v1/chat/completions", headers=h,
+                     json={"model": "gpt-4o", "messages": msgs, "max_tokens": 5000, "temperature": 0.9, "keep_alive": -1})
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertEqual(r.json()["choices"][0]["message"]["content"], "Hail, traveler")
+        sent = RAW[-1]
+        self.assertEqual(sent["messages"], msgs)  # nothing of Shell:B added
+        self.assertEqual(sent["model"], "ShellB-Swift")  # unknown model → the key's default
+        self.assertEqual(sent["max_tokens"], 200)  # capped
+        self.assertNotIn("keep_alive", sent)  # only known fields pass
+        self.assertEqual(sent["reasoning_effort"], "none")  # thinking off unless the key says otherwise
+        self.assertEqual(CALLS, [])  # no agent turn
+        lan.post("/api/v1/chat/completions", headers=h, json={"model": "qwen3.6:35b-a3b-q8_0", "messages": msgs})
+        self.assertEqual(RAW[-1]["model"], "qwen3.6:35b-a3b-q8_0")
+        row = rows(k["id"])[0]
+        self.assertEqual((row["mode"], row["target"], row["prompt_tokens"]), ("raw", "qwen3.6:35b-a3b-q8_0", 11))
+
+    def test_thinking_left_to_the_caller(self):
+        _, h = key(mode="raw", config={"model": "ShellB-Swift", "thinking": "caller"})
+        lan.post("/api/v1/chat/completions", headers=h, json={"messages": [{"role": "user", "content": "hi"}], "reasoning_effort": "high"})
+        self.assertEqual(RAW[-1]["reasoning_effort"], "high")
+
+    def test_streaming_hides_the_usage_chunk(self):
+        k, h = key(mode="raw", config={"model": "ShellB-Swift"})
+        with lan.stream("POST", "/api/v1/chat/completions", headers=h,
+                        json={"stream": True, "messages": [{"role": "user", "content": "hi"}]}) as r:
+            lines = [x[6:] for x in r.iter_lines() if x.startswith("data: ")]
+        self.assertEqual(lines[-1], "[DONE]")
+        chunks = [json.loads(x) for x in lines[:-1]]
+        self.assertTrue(all(c["choices"] for c in chunks))  # naive clients read choices[0]
+        self.assertEqual(rows(k["id"])[0]["completion_tokens"], 2)
+
+    def test_raw_keys_have_no_agents(self):
+        _, h = key(mode="raw", config={"model": "ShellB-Swift"})
+        r = lan.post("/api/v1/chat", json={"message": "hi", "instructions": "Be a guard."}, headers=h)
+        self.assertEqual(r.json()["message"]["content"], "Hail, traveler")
+        self.assertEqual(RAW[-1]["messages"][0], {"role": "system", "content": "Be a guard."})
+        self.assertEqual(lan.post("/api/v1/mcp", headers=h, json={"jsonrpc": "2.0", "id": 1, "method": "tools/call",
+                         "params": {"name": "shellb_ask", "arguments": {"message": "hi"}}}).json()["result"].get("isError"), True)
 
 
 if __name__ == "__main__":

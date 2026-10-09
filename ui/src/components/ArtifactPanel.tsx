@@ -20,7 +20,7 @@ export const artifactScope = (convId: string, artId: string) => `art:${convId}:$
 /** A sandboxed frame gets no cookie, so /api file URLs in its content go through its frame key (server/auth.py), which
  *  reaches this chat's /work and the asset libraries only. */
 const viaFrameKey = (content: string, api: string) => api === '/api' ? content
-  : content.replace(/(["'(=\s])\/api\/(workspace|assets\/file)\//g, `$1${api}/$2/`);
+  : content.replace(/(["'(=\s])\/api\/(workspace|assets\/file|files)\//g, `$1${api}/$2/`);
 
 /** `scope` gives the page a localStorage saved on the server (read-only with `ro`); without it, one that forgets.
  *  With `convId`, relative URLs (fonts, images, data) resolve against that chat's /work folder. */
@@ -60,9 +60,11 @@ interface Props {
   onSelect: (id: string, version?: number) => void;
   onClose: () => void;
   convId?: string; // for the Favorites star
+  /** Shell:B Guest has no Favorites */
+  noFavorite?: boolean;
 }
 
-export function ArtifactPanel({ groups, activeId, version, dark, onSelect, onClose, convId }: Props) {
+export function ArtifactPanel({ groups, activeId, version, dark, onSelect, onClose, convId, noFavorite }: Props) {
   const group = groups.find(g => g.id === activeId) ?? groups[groups.length - 1];
   const [tab, setTab] = useState<'preview' | 'code'>('preview');
   const [full, setFull] = useState(false);
@@ -99,7 +101,7 @@ export function ArtifactPanel({ groups, activeId, version, dark, onSelect, onClo
             <span className="w-6 h-6 rounded-lg bg-[var(--accent)]/15 text-[var(--accent)] flex items-center justify-center shrink-0"><Boxes className="w-3.5 h-3.5" /></span>
             <span className="text-sm font-semibold truncate">{current.title}</span>
             {groups.length > 1 && <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" />}
-            {convId && <FavoriteStar nested kind="artifact" id={convId} sub={current.id} title={current.title} />}
+            {convId && !noFavorite && <FavoriteStar nested kind="artifact" id={convId} sub={current.id} title={current.title} />}
           </button>
           {picker && (
             <>

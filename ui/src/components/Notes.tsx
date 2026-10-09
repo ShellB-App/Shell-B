@@ -442,7 +442,8 @@ const DISCUSS_DEFAULT = 'Brainstorm with me on this note. Push the ideas further
 
 // ── page ────────────────────────────────────────────────────────────────────
 
-export function Notes({ sub, onDiscuss }: { sub: string; onDiscuss?: (prompt: string, note: File) => Promise<void> }) {
+/** `guest`: Shell:B Guest, where notes are the guest's own (server/guest_notes.py), not the owner's Codex. */
+export function Notes({ sub, onDiscuss, guest }: { sub: string; onDiscuss?: (prompt: string, note: File) => Promise<void>; guest?: boolean }) {
   const [items, setItems] = useState<CodexEntry[]>([]);
   const [index, setIndex] = useState<CodexIndex | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -588,7 +589,8 @@ export function Notes({ sub, onDiscuss }: { sub: string; onDiscuss?: (prompt: st
           <StickyNote className="w-10 h-10 opacity-40" />
           <p className="text-sm">Pick a note, or start a new one.</p>
           <button className={btn.subtle} onClick={() => pick('new')}><Plus className="w-3.5 h-3.5" />New note<kbd className="ml-1 text-[10px] font-mono opacity-70">Alt+N</kbd></button>
-          <p className="text-[11px] max-w-xs">Notes live in your Codex, so agents can search them too. Press / to search.</p>
+          <p className="text-[11px] max-w-xs">{guest ? 'Your notes are yours alone, saved on this machine. Press / to search.'
+            : 'Notes live in your Codex, so agents can search them too. Press / to search.'}</p>
         </div>
       )}
     </div>

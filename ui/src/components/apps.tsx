@@ -11,7 +11,9 @@ export type AppGroup = 'chat' | 'make' | 'know' | 'run' | 'system';
 export const GROUP_LABEL: Record<AppGroup, string> = { chat: 'Chat', make: 'Make', know: 'Know', run: 'Run', system: 'System' };
 
 /** Pinned to the rail until you change it in All apps. */
-export const DEFAULT_PINS: AppId[] = ['studio', 'code', 'library', 'radio', 'notes', 'codex', 'memory', 'plans', 'activity'];
+export const DEFAULT_PINS: AppId[] = ['studio', 'code', 'library', 'radio', 'notes', 'codex', 'memory', 'plans'];
+/** Docked at the foot of the rail, just above the gear, so it is never pinned, unpinned or pushed off by overflow. */
+export const DOCKED: AppId = 'activity';
 
 export interface AppLive {
   label?: string;            // replaces the label while something is going on ("Mega plans · running")
@@ -120,7 +122,7 @@ export const appForHash = (hash: string): AppId => APPS.find(a => a.route?.test(
 // Which apps get a rail tile. Per browser (localStorage), shared by the rail, the All apps launcher and the command palette.
 
 const PINS_KEY = 'shellb.rail.pins';
-export const PINNABLE = new Set(APPS.filter(a => a.group !== 'chat' && a.group !== 'system').map(a => a.id));
+export const PINNABLE = new Set(APPS.filter(a => a.group !== 'chat' && a.group !== 'system' && a.id !== DOCKED).map(a => a.id));
 const pinListeners = new Set<() => void>();
 
 function readPins(): AppId[] {

@@ -68,11 +68,13 @@ KINDS = [
     ("data", "Offline data", "A dataset download finished or failed", "attention"),
     ("shopping", "Price watch", "A watched item hit your target price, dropped or came back in stock", "all"),
     ("health", "System health", "A service went down or came back, a crash loop, low disk or memory", "all"),
+    ("guest", "Guest reports", "A guest used Report to Evie (guests.py)", "all"),
 ]
 KIND_IDS = {k[0] for k in KINDS}
 NOUN = {"approval": "Approval", "question": "Question", "schedule": "Scheduled task", "plan": "Mega Plan",
         "todo": "To-do", "deploy": "Self-deploy", "scout": "Asset scout", "notebook": "Notebook", "codex": "Codex draft",
-        "memory": "Memory", "data": "Offline data", "health": "System health", "shopping": "Price watch"}
+        "memory": "Memory", "data": "Offline data", "health": "System health", "shopping": "Price watch",
+        "guest": "Guest report"}
 VERB = {"done": "finished", "complete": "finished", "failed": "failed", "blocked": "is blocked", "paused": "paused",
         "interrupted": "was interrupted", "rolled-back": "rolled back", "restart-pending": "is waiting for a restart",
         "review": "needs your review", "waiting": "is waiting for you", "warning": "needs attention",

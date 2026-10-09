@@ -19,6 +19,7 @@ READ_ACTIONS = {
     "library": {"list", "search", "browse", "read", "view"},
     "codex": {"search", "read", "list", "collections"},
     "follow_ups": {"list"},
+    "night_shift": {"list"},
     "asset_library": {"libraries", "search", "list", "info", "view", "jobs"},
     "research_board": {"view", "list", "open", "search"},
     "project_todos": {"list"},

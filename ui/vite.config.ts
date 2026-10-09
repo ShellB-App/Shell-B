@@ -21,5 +21,6 @@ function maplibreWorker(): Plugin {
 export default defineConfig({
   plugins: [react(), maplibreWorker()],
   server: { host: true, port: 5173, proxy: { '/api': { target: 'http://localhost:8200', changeOrigin: true, xfwd: true } } },
-  build: { chunkSizeWarningLimit: 2000 },
+  // two pages: the owner's app (index.html) and Shell:B Guest (guest.html, served by server/guest_app.py on the guest port)
+  build: { chunkSizeWarningLimit: 2000, rollupOptions: { input: { main: 'index.html', guest: 'guest.html' } } },
 })

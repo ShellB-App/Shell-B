@@ -462,6 +462,38 @@ Open **Tools & Connectors** in the sidebar.
   tarball at a pinned commit and indexed into `community_items`, so browsing works offline. Agents get
   `find_capability` (search, details, propose); a proposal is an approval card, never a silent install.
 
+## Shell:B Guest
+
+Friends and coworkers can have their own Shell:B on this machine, without access to anything of the owner's
+(server/guests.py, server/guest_app.py, ui/src/guest/).
+
+- **Where:** the same process listens on `SHELLB_GUEST_PORT` (8220, loopback and docker0 like :8200). Connections
+  on that port reach a separate app that mounts only guest routes; the owner's routes, cookie, localhost trust and
+  admin key don't exist there. Publish it through the Cloudflare tunnel as its own hostname, with no Access policy
+  (the invite is the login).
+- **Invites:** Tools & Connectors → Guests → Make invite gives a one-time link (7 days) that signs in the device that
+  opens it. A signed-in guest makes 10-minute device codes for their other devices. Pause, sign out or delete a guest
+  there; deleting removes their chats, files and memories.
+- **What guests get:** an installable app (guest.html) with chats, local agents whose model is on the guest model
+  list (default: the default agent's), web search, offline wiki and law, maps and sky tools, pictures, music, sound,
+  Kokoro voices, the code sandbox, artifacts, file uploads and voice mode. Each guest has their own memory
+  (guest_memories), learned from their chats and editable in "What Shell:B remembers".
+- **Apps:** Notes (their own Markdown notes with [[links]], server/guest_notes.py answering the Codex paths the
+  Notes page uses), Wiki and Worlds (the machine's offline Wikipedia, maps, sky and weather; read-only, so the
+  owner's Worlds notes show but can't be edited: guest_app shares only the GET routes of those routers), and
+  Radio / DJ (runs in the browser; the DJ voice uses Kokoro).
+- **What they don't:** cloud agents, Aphrodite, Studio/Code, Generate, the owner's memory, Codex, calendar, contacts, Library,
+  skills, MCP connectors, schedules, plans, SSH, self-edit, screen and browser. Their sandbox mounts only their own
+  /work. Nothing they do asks the owner for approval.
+- **Fair use:** one guest reply at a time (configurable), started after the owner's own turns or `ownerWait` seconds;
+  daily caps on pictures and audio and a storage quota per guest. Messages and tokens are unlimited unless the owner
+  sets a cap (0 = no limit).
+- **Reports:** "Report to Evie" (header, and the flag under each reply) lands in Tools & Connectors → Guests →
+  Reports and in Activity (kind `guest`, pushed to the owner's devices). The chat is attached only if the guest ticks
+  the box.
+- **Privacy:** guest chats are incognito on the owner's side (never learned from, searched, summarized or listed),
+  but they are stored in this machine's database; the guest app says so.
+
 ## Login
 
 One owner password guards the app (`server/auth.py`, `ui/src/components/AuthGate.tsx`).

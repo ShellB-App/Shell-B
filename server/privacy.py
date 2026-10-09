@@ -54,7 +54,9 @@ def hours(settings: dict | None = None) -> float:
 def expired(now: float | None = None, settings: dict | None = None) -> list[str]:
     cutoff = (now or time.time()) - hours(settings) * 3600
     with db.conn() as c:
-        return [r["id"] for r in c.execute("SELECT id FROM conversations WHERE incognito=1 AND updated < ?", (cutoff,))]
+        # guests' chats (guests.py) are incognito to the owner's side but kept until the guest deletes them
+        return [r["id"] for r in c.execute("SELECT id FROM conversations WHERE incognito=1 AND tenant IS NULL AND updated < ?",
+                                           (cutoff,))]
 
 
 def forget_conversation(conv_id: str):

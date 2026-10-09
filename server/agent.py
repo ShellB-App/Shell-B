@@ -23,6 +23,7 @@ import megaplan
 import library
 import codex
 import commitments
+import nightshift
 import media
 import assets as asset_libs
 import scrape
@@ -275,7 +276,7 @@ WRITE_TOOLS = {
     "write_file", "edit_file", "delete_file", "rename_file",
     "create_artifact", "memory_save", "memory_forget",
     "save_skill", "schedule_task", "dev_server",
-    "project_save_file", "library", "codex", "follow_ups",
+    "project_save_file", "library", "codex", "follow_ups", "night_shift",
 }
 
 
@@ -427,11 +428,23 @@ class Turn:
         self.mcp_specs: dict = {}
         self.remote = bool(remote.config(project_id))  # a remote (SSH) workspace: file and code tools run there
         self.interactive = False  # someone is watching the chat live (begin_turn sets it), so ask_user can reach them
+        self.only_tools = None  # a persona API turn's allowlist (public_api.py): nothing outside it is offered
+        self.tenant = None  # a guest's id (guests.py): their memory and files, never the owner's
         self.plan = False  # plan mode (planmode.py): read-only research, then a plan for the owner to approve
         self.loop_guard = LoopGuard(settings)
         self._current_round = 0
 
     def enabled_tools(self, info):
+        names = self._enabled_tools(info)
+        if self.only_tools is not None:
+            names = [t for t in names if t in self.only_tools]
+            self.mcp_specs = {k: v for k, v in self.mcp_specs.items() if k in self.only_tools}
+        if self.tenant:
+            import guests
+            names = guests.with_memory(self.agent, names, self.only_tools)
+        return names
+
+    def _enabled_tools(self, info):
         if "tools" not in info["capabilities"]:
             return []
         switches = db.kv_get("tool_switches", {})
@@ -445,6 +458,8 @@ class Turn:
             names.append("codex")  # the owner's long-term reference shelf (codex.py), searched on demand
         if switches.get("follow_ups", True) and "follow_ups" in TOOLS and commitments.tool_allowed(self.agent, self.settings):
             names.append("follow_ups")  # the owner's to-dos and reminders (commitments.py)
+        if switches.get("night_shift", True) and "night_shift" in TOOLS and nightshift.tool_allowed(self.agent, self.settings):
+            names.append("night_shift")  # queue deep research for the big model while the owner is away (nightshift.py)
         if switches.get("asset_library", True) and library.allowed(self.agent, self.settings):
             names.append("asset_library")  # reusable asset libraries (assets.py), shared by every chat and project
         if switches.get("wiki", True) and "wiki" in TOOLS and wiki.available():
@@ -481,6 +496,8 @@ class Turn:
             names.append("mega_plan")  # whoever orchestrates a plan needs the tool to review and edit it
         if self.depth == 0 and self.interactive and "ask_user" in TOOLS and switches.get("ask_user", True):
             names.append("ask_user")  # unattended runs (schedules, plans, scouts) have nobody to ask
+        if self.depth == 0 and self.interactive and "design_theme" in TOOLS and switches.get("design_theme", True):
+            names.append("design_theme")  # themes.py: a custom UI theme, applied from a card in the chat
         if self.depth == 0 and self.interactive and "look_at_screen" in TOOLS and switches.get("look_at_screen", True) \
                 and "vision" in info["capabilities"] and screen.available() \
                 and (not providers.is_cloud(self.model) or self.settings.get("cloudScreen", False)):
@@ -874,7 +891,7 @@ class Turn:
             t0 = time.time()
             ctx = ToolContext(self.conv_id, self.message_id, self.agent, self.settings, self.emit,
                               run_subagent=self._subagent_runner(sink, idx), depth=self.depth, project_id=self.project_id,
-                              user_request=self.user_request)
+                              user_request=self.user_request, tenant=self.tenant)
             try:
                 loop_err = self.loop_guard.check_pre_call(name, args) if hasattr(self, "loop_guard") else None
                 if loop_err:
@@ -886,6 +903,8 @@ class Turn:
                         res = ToolResult("The tool input was cut off (output limit reached). Send a smaller input.", error=True)
                     elif getattr(self, "offered", None) is not None and name not in self.offered:
                         res = ToolResult(f"{name!r} isn't one of your tools in this chat.", error=True)
+                    elif self.tenant:  # a guest's turn: its own memory, questions and caps (guests.py)
+                        res = await self._guest_tool(name, args, ctx, sink, idx)
                     elif self.plan and not planmode.allowed(name, args):
                         res = ToolResult(planmode.refusal(name, args), error=True)
                     elif self.remote and name in remote.TOOLS:
@@ -920,6 +939,9 @@ class Turn:
                 research.auto_capture(self.conv_id, name, args, res)
             except Exception:
                 pass
+            if self.tenant:
+                import guests
+                guests.after_tool(self.tenant, self.conv_id, name, res)
             try:
                 if res.display and not res.error:  # generated pictures, sounds and models go into Library → Media
                     media.record(name, res.display, self.conv_id, self.agent.get("id"), self.project_id)
@@ -943,6 +965,23 @@ class Turn:
                 await sink.update(idx)
             out.append(r)
         return out
+
+    async def _guest_tool(self, name, args, ctx, sink: Sink, idx):
+        """A tool call in a guest's turn. Only tools that need nothing of the owner's are offered (guests.GUEST_TOOLS);
+        memory and questions go to the guest's own, and no call ever waits for the owner's approval."""
+        import guests
+        why = guests.before_tool(self.tenant, name, args)
+        if why:
+            return ToolResult(why, error=True)
+        if name in guests.MEMORY_TOOLS:
+            return await guests.memory_tool(self.tenant, self.conv_id, name, args, self.settings)
+        if name == "ask_user":
+            if not (self.interactive and self.depth == 0):
+                return ToolResult("ask_user only works in a live chat with the user.", error=True)
+            return await guests.ask_user(self.tenant, args, self.conv_id, self.abort, sink, idx)
+        if name not in guests.GUEST_TOOLS or name not in TOOLS:
+            return ToolResult(f"{name!r} isn't available here.", error=True)
+        return await TOOLS[name]["fn"](args, ctx)
 
     async def _remote_tool(self, name, args, ctx, sink: Sink, idx):
         """Run a tool in the remote workspace, first asking the owner when it changes something (remote.GATED)."""

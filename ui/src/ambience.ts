@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 // Per-browser display extras (startup animation, screensaver). Like the theme and skin they live in
 // localStorage, so a phone and a desktop can differ.
 export type SplashMode = 'off' | 'session' | 'always';
-export type SaverStyle = 'synthwave' | 'starfield' | 'bounce';
+/** A built-in style, or `studio:<project id>` for a screensaver made in the Studio (a Screensaver project's index.html). */
+export type SaverStyle = 'synthwave' | 'starfield' | 'bounce' | `studio:${string}`;
 
 export interface AmbiencePrefs {
   splash: SplashMode;
@@ -24,6 +25,8 @@ export const SAVER_STYLES: { id: SaverStyle; label: string }[] = [
   { id: 'bounce', label: 'Bouncing logo' },
 ];
 export const SAVER_MINUTES = [0, 1, 2, 5, 10, 15, 30, 60];
+/** The Studio project behind a screensaver style, or null for a built-in one. */
+export const studioSaverId = (style: string) => (/^studio:[\w-]+$/.test(style) ? style.slice(7) : null);
 
 export function loadAmbience(): AmbiencePrefs {
   try { return { ...AMBIENCE_DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { return AMBIENCE_DEFAULTS; }
@@ -48,7 +51,8 @@ export function useAmbience(): AmbiencePrefs {
 }
 
 // Headless screenshots (?shot) and the standalone artifact viewer get neither extra.
-// For screenshots of the extras themselves: ?shot&ambience=splash, or ?shot&ambience=saver[:style].
+// For screenshots of the extras themselves: ?shot&ambience=splash, or ?shot&ambience=saver[:style] (style may be studio:<id>).
+// PREVIEW_SAVER can carry a style in its detail to preview that one instead of the saved one (the Studio's Preview button).
 export const ambienceShot = () => /[?&]ambience=([\w:]+)/.exec(location.search)?.[1] ?? '';
 export const ambienceSuppressed = () => /[?&]shot\b/.test(location.search) || /^#\/view\//.test(location.hash);
 export const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
