@@ -36,6 +36,7 @@ import app as owner
 import appstate
 import auth
 import cells
+import circles
 import db
 import flights
 import guest_accounts
@@ -638,6 +639,32 @@ async def voices(req: Request):
 # ── shared apps: Wiki, Worlds (read-only) and Notes (the guest's own) ───────────────────────
 
 guest_app.include_router(guest_notes.router)
+guest_app.include_router(circles.make_router(lambda req: guests.require(req)["id"]))  # the guest's circles
+
+
+def _my_pins(g: dict) -> dict:
+    return {k: v for k, v in circles.pins().items() if k.startswith("c:") and guests.owns(g, k[2:])}
+
+
+@guest_app.get("/api/circle-pins")
+def circle_pins(req: Request):
+    return _my_pins(guests.require(req))
+
+
+@guest_app.put("/api/circle-pins/c/{conv_id}")
+async def circle_pin(conv_id: str, req: Request):
+    """A guest pins their own chat to one of their circles (the pins live in the shared kv, keyed by chat id)."""
+    g = guests.require(req)
+    if not guests.owns(g, conv_id):
+        raise HTTPException(404)
+    cid = (await _body(req)).get("circle") or None
+    try:
+        if cid:
+            circles.circle(g["id"], cid)
+        circles.set_pin("c", conv_id, cid)
+    except (LookupError, ValueError):
+        raise HTTPException(404, "No such circle")
+    return _my_pins(g)
 for _r in SHARED_READS:
     for _route in _r.routes:
         if isinstance(_route, APIRoute) and _route.methods <= {"GET", "HEAD"}:

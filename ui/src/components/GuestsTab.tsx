@@ -3,6 +3,7 @@ import { Check, ChevronDown, Copy, Flag, KeyRound, Link2, Loader2, LockOpen, Log
 import { fmtBytes, req } from '../api';
 import { btn, relTime } from './common';
 import { toast } from './toast';
+import { circlesApi, type Circle } from '../circlesApi';
 
 /** Settings → Tools & Connectors → Guests: friends' own Shell:B on this machine (server/guests.py, guest_app.py).
  *  A one-time invite link lets a guest make an account (username and password, optional two-step codes;
@@ -54,6 +55,9 @@ export function GuestsTab({ locked }: { locked: boolean }) {
   const [data, setData] = useState<Listing | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
   const [name, setName] = useState('');
+  const [circles, setCircles] = useState<Circle[]>([]);
+  const [inviteCircles, setInviteCircles] = useState<string[]>([]);
+  const [memberOf, setMemberOf] = useState<Record<string, string[]>>({});
   const [fresh, setFresh] = useState<{ id: string; link: string; kind: 'invite' | 'reset' } | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -61,6 +65,8 @@ export function GuestsTab({ locked }: { locked: boolean }) {
   const load = useCallback(() => {
     req<Listing>('/api/guests').then(setData).catch(() => {});
     req<Report[]>('/api/guests/reports').then(setReports).catch(() => {});
+    circlesApi.index().then(i => setCircles(i.circles)).catch(() => {});
+    circlesApi.people().then(r => setMemberOf(Object.fromEntries(r.people.map(p => [p.person, p.circles])))).catch(() => {});
   }, []);
   useEffect(() => { if (!locked) load(); }, [locked, load]);
   if (locked) return null;
@@ -73,8 +79,10 @@ export function GuestsTab({ locked }: { locked: boolean }) {
     setBusy(true);
     try {
       const r = await req<{ guest: Guest; code: string; link: string }>('/api/guests', { method: 'POST', body: json({ name: name.trim() || 'Guest' }) });
+      if (inviteCircles.length) await circlesApi.setPerson(r.guest.id, { circles: inviteCircles });
       setFresh({ id: r.guest.id, link: linkFor(url, r.code), kind: 'invite' });
       setName('');
+      setInviteCircles([]);
       load();
     } catch (e) { toast(errText(e), { kind: 'error' }); }
     setBusy(false);
@@ -157,6 +165,8 @@ export function GuestsTab({ locked }: { locked: boolean }) {
           <input className={btn.input} placeholder="Their name, e.g. Robin" value={name} maxLength={60} onChange={e => setName(e.target.value)} />
           <button className={btn.primary} disabled={busy}>{busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}Make invite</button>
         </form>
+        <CircleChips circles={circles} picked={inviteCircles} label="Joins"
+          onToggle={id => setInviteCircles(c => c.includes(id) ? c.filter(x => x !== id) : [...c, id])} />
         {fresh?.kind === 'invite' && (
           <div className="space-y-1.5">
             <CopyLink link={fresh.link} />
@@ -218,6 +228,15 @@ export function GuestsTab({ locked }: { locked: boolean }) {
                       <p className="text-[11px] text-[var(--text-muted)]">Shown once. It works one time, within 24 hours, and sets a new password. Pass it on yourself: Shell:B doesn't send email.</p>
                     </div>
                   )}
+                  <div className="mt-3">
+                    <CircleChips circles={circles} picked={memberOf[g.id] ?? []} label="Circles"
+                      onToggle={id => {
+                        const now = memberOf[g.id] ?? [];
+                        const next = now.includes(id) ? now.filter(x => x !== id) : [...now, id];
+                        circlesApi.setPerson(g.id, { circles: next }).then(p => setMemberOf(m => ({ ...m, [g.id]: p.circles })))
+                          .catch(e => toast(errText(e), { kind: 'error' }));
+                      }} />
+                  </div>
                   <Account guest={g} onTwoStepOff={() => act(req(`/api/guests/${g.id}/two-step/off`, { method: 'POST' }), `Two-step sign-in is off for ${g.name}`)} />
                   <CellSwitch guest={g} onChange={cell => act(req(`/api/guests/${g.id}`, { method: 'PATCH', body: json({ config: { cell } }) }),
                     cell ? `${g.name} gets their own container on their next visit` : `${g.name} is back on the guest app`)} />
@@ -354,5 +373,27 @@ function ReportRow({ r, onStatus, onDelete }: { r: Report; onStatus: (s: Report[
       )}
       {!r.transcript && r.convId && <p className="mt-1 text-[11px] text-[var(--text-muted)]">They chose not to share the chat.</p>}
     </li>
+  );
+}
+
+/** Which circles a guest is in (circles.py): they see only these circles' notes and members. */
+function CircleChips({ circles, picked, label, onToggle }: { circles: Circle[]; picked: string[]; label: string; onToggle: (id: string) => void }) {
+  if (!circles.length) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={label}>
+      <span className="text-[11px] text-[var(--text-muted)] mr-1">{label}</span>
+      {circles.map(c => {
+        const on = picked.includes(c.id);
+        return (
+          <button key={c.id} type="button" aria-pressed={on} onClick={() => onToggle(c.id)}
+            className={`px-2 py-0.5 rounded-full text-[11px] border transition ${on
+              ? 'border-[color:var(--accent)] text-[var(--text-primary)] bg-[var(--bg-tertiary)]'
+              : 'border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}>
+            {on && <Check className="inline w-3 h-3 mr-0.5 -mt-px" />}{c.emoji} {c.name}
+          </button>
+        );
+      })}
+      <span className="text-[11px] text-[var(--text-muted)] ml-1">{picked.length ? '' : 'none: they won’t see any circle'}</span>
+    </div>
   );
 }

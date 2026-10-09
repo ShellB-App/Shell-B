@@ -60,6 +60,7 @@ import { foldSummarized } from '../summarized';
 
 const Studio = lazy(() => import('../studio/Studio'));
 const Code = lazy(() => import('../code/Code'));
+const Circles = lazy(() => import('../components/Circles').then(m => ({ default: m.Circles })));
 
 const QUICK: Record<string, { title: string; prompt: string }[]> = {
   shellb: [
@@ -118,6 +119,7 @@ const readScheduled = () => /^#\/scheduled\b/.test(location.hash);
 const readActivity = () => /^#\/activity\b/.test(location.hash);
 const readModels = () => /^#\/models\b/.test(location.hash);
 const readGenerate = () => /^#\/generate\b/.test(location.hash);
+const readCircles = () => /^#\/circles\b/.test(location.hash);
 const readSecretary = () => /^#\/secretary\b/.test(location.hash);
 const readGibberlink = () => /^#\/gibberlink\b/.test(location.hash);
 const readMaps = () => /^#\/(worlds|maps)\b/.test(location.hash);
@@ -154,6 +156,7 @@ export function MobileApp() {
   const [codexRoute, setCodexRoute] = useState(readCodex);
   const [modelsRoute, setModelsRoute] = useState(readModels);
   const [generateRoute, setGenerateRoute] = useState(readGenerate);
+  const [circlesRoute, setCirclesRoute] = useState(readCircles);
   const [secretaryRoute, setSecretaryRoute] = useState(readSecretary);
   const [gibberlinkRoute, setGibberlinkRoute] = useState(readGibberlink);
   const [radioRoute, setRadioRoute] = useState(readRadio);
@@ -303,6 +306,7 @@ export function MobileApp() {
       setCodexRoute(readCodex());
       setModelsRoute(readModels());
       setGenerateRoute(readGenerate());
+      setCirclesRoute(readCircles());
       setSecretaryRoute(readSecretary());
       setGibberlinkRoute(readGibberlink());
       setRadioRoute(readRadio());
@@ -522,6 +526,7 @@ export function MobileApp() {
     research ||
     modelsRoute ||
     generateRoute ||
+    circlesRoute ||
     codexRoute !== null ||
     activity ||
     scheduled ||
@@ -540,6 +545,7 @@ export function MobileApp() {
   else if (research) currentAppTitle = 'Research';
   else if (modelsRoute) currentAppTitle = 'Models';
   else if (generateRoute) currentAppTitle = 'Generate';
+  else if (circlesRoute) currentAppTitle = 'Circles';
   else if (codexRoute !== null) currentAppTitle = /^me\b/.test(codexRoute) ? 'Me' : /^notes\b/.test(codexRoute) ? 'Notes' : 'Codex';
   else if (activity) currentAppTitle = 'Activity';
   else if (scheduled) currentAppTitle = 'Scheduled';
@@ -720,6 +726,10 @@ export function MobileApp() {
         ) : generateRoute ? (
           <div className="flex-1 min-h-0">
             <Generate />
+          </div>
+        ) : circlesRoute ? (
+          <div className="flex-1 min-h-0">
+            <Circles />
           </div>
         ) : codexRoute !== null ? (
           <div className="flex-1 min-h-0 overflow-y-auto">

@@ -206,6 +206,7 @@ export interface ToolDisplay {
   shot?: { path: string; width: number; height: number };
   board?: { id: string; title: string; counts: ResearchCounts; added?: number; started?: boolean; synthesized?: boolean };
   plan?: { id: string; title: string; status: PlanStatus; counts: StepCounts; created?: boolean; added?: number; reviewed?: number; finished?: boolean };
+  circleNote?: import('./circlesApi').CircleNote;  // circles.py: an agent's draft, published from its card
 }
 
 export interface AskQuestion {
@@ -273,6 +274,8 @@ export interface Message {
   /** memories the reply was given (server/memory.py recalled_view): `relevant` ones were picked for this message,
    *  the rest are the core profile that goes in every prompt */
   recalled?: RecalledMemory[];
+  /** other people's circle notes this reply was given (server/circles.py), as labelled background */
+  circleNotes?: { id: string; circle: string; circleName: string; author: { handle: string; name: string; emoji: string }; kind: string; text: string; link: string }[];
   /** spoken in hands-free voice mode and transcribed (components/VoiceMode.tsx) */
   voice?: boolean;
   /** the owner's rating of this reply (server/feedback.py) */

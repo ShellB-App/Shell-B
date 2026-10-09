@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
-import { AppWindow, Edit2, EyeOff, FolderInput, FolderKanban, GitFork, Link2, Loader2, MessageSquare, PanelLeftClose, Pin, PinOff, Plus, Search, Settings, SquarePen, Star, StarOff, Trash2, X } from 'lucide-react';
+import { AppWindow, Edit2, EyeOff, FolderInput, FolderKanban, GitFork, Link2, Loader2, MessageSquare, PanelLeftClose, Pin, PinOff, Plus, Search, Settings, SquarePen, Star, StarOff, Trash2, UsersRound, X } from 'lucide-react';
 import type { Agent, ChatHit, ChatProject, ConversationSummary, Status } from '../types';
 import { ProjectGlyph } from './Projects';
 import { fmtBytes } from '../api';
@@ -10,6 +10,7 @@ import { openContextMenu, type MenuEntry } from './ContextMenu';
 import { chatProjectMenu } from './projectMenu';
 import { copyText } from '../quote';
 import { shellbLink } from '../links';
+import { circlePinEntry, primeCirclePins } from './CircleCards';
 import { FavIcon, FavoriteStar } from './Favorites';
 import { req } from '../api';
 import { jumpToMessage } from '../jump';
@@ -68,6 +69,7 @@ export function Sidebar(p: Props) {
 
   const favs = useFavorites();
   useEffect(() => { refreshFavorites(); }, [p.conversations, p.groups]); // pick up renames and deletions
+  useEffect(() => { primeCirclePins(); }, []);  // the chat menu's "Circle notes from" needs them synchronously
   const favList = favs.filter(f => `${f.title} ${f.subtitle}`.toLowerCase().includes(q.toLowerCase()));
   const activeHref = typeof location !== 'undefined' ? location.hash : '';
 
@@ -105,6 +107,7 @@ export function Sidebar(p: Props) {
         c.groupId && { label: 'Remove from project', icon: X, onSelect: () => p.onMoveToGroup(c.id, null) },
         { label: 'New project…', icon: Plus, onSelect: p.onNewGroup },
       ] },
+      !c.incognito && circlePinEntry('c', c.id, UsersRound),
       'sep',
       { label: 'Copy link', icon: Link2, onSelect: () => copyText(`${location.origin}/#/c/${c.id}`, 'Link copied') },
       { label: 'Copy Shell:B link', icon: Link2, onSelect: () => copyText(shellbLink(`#/c/${c.id}`), 'Shell:B link copied') },

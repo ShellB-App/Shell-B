@@ -2,7 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type
 import clsx from 'clsx';
 import {
   BookOpen, Brain, ChevronDown, Flag, Globe2, Info, Laptop, Loader2, LogOut, Menu, MessageSquare, Moon, Palette, Pencil,
-  Plus, Radio, StickyNote, Sun, Trash2, UserRound, X, type LucideIcon,
+  Plus, Radio, StickyNote, Sun, Trash2, UserRound, UsersRound, X, type LucideIcon,
 } from 'lucide-react';
 import { api } from '../api';
 import { useChat } from '../useChat';
@@ -30,15 +30,17 @@ const Notes = lazy(() => import('../components/Notes').then(m => ({ default: m.N
 const Wiki = lazy(() => import('../components/Wiki').then(m => ({ default: m.Wiki })));
 const MapsApp = lazy(() => import('../maps/MapsApp').then(m => ({ default: m.MapsApp })));
 const RadioApp = lazy(() => import('../radio/RadioApp').then(m => ({ default: m.RadioApp })));
-type View = 'chat' | 'notes' | 'wiki' | 'worlds' | 'radio';
+const Circles = lazy(() => import('../components/Circles').then(m => ({ default: m.Circles })));
+type View = 'chat' | 'notes' | 'circles' | 'wiki' | 'worlds' | 'radio';
 const VIEWS: { id: View; label: string; icon: LucideIcon; hash: string }[] = [
   { id: 'chat', label: 'Chat', icon: MessageSquare, hash: '#/' },
   { id: 'notes', label: 'Notes', icon: StickyNote, hash: '#/codex/notes' },
+  { id: 'circles', label: 'Circles', icon: UsersRound, hash: '#/circles' },
   { id: 'wiki', label: 'Wiki', icon: BookOpen, hash: '#/wiki' },
   { id: 'worlds', label: 'Worlds', icon: Globe2, hash: '#/worlds' },
   { id: 'radio', label: 'Radio', icon: Radio, hash: '#/radio' },
 ];
-const viewFromHash = (h = location.hash): View => /^#\/codex\/notes\b/.test(h) ? 'notes' : /^#\/wiki\b/.test(h) ? 'wiki'
+const viewFromHash = (h = location.hash): View => /^#\/codex\/notes\b/.test(h) ? 'notes' : /^#\/circles\b/.test(h) ? 'circles' : /^#\/wiki\b/.test(h) ? 'wiki'
   : /^#\/(worlds|maps)\b/.test(h) ? 'worlds' : /^#\/(radio|dj|fm)\b/.test(h) ? 'radio' : 'chat';
 
 const STARTERS = [
@@ -232,6 +234,7 @@ export function GuestApp({ me, refresh }: { me: GuestMe; refresh: () => void }) 
           <div className="flex-1 min-h-0">
             <Suspense fallback={<div className="h-full grid place-items-center"><Loader2 className="w-5 h-5 animate-spin text-[var(--text-muted)]" /></div>}>
               {view === 'notes' && <Notes sub={/^#\/codex\/(.*)$/.exec(hash)?.[1] ?? 'notes'} onDiscuss={discussNote} guest />}
+              {view === 'circles' && <Circles />}
               {view === 'wiki' && <Wiki route={/^#\/wiki(\/.*)?$/.exec(hash)?.[1] ?? ''} />}
               {view === 'worlds' && <MapsApp />}
               {view === 'radio' && <RadioApp />}

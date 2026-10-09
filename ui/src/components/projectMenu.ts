@@ -1,10 +1,13 @@
-import { AppWindow, Copy, Download, FolderOpen, Link2, Pencil, Pin, PinOff, Rocket, Smile, Star, StarOff, Trash2 } from 'lucide-react';
+import { AppWindow, Copy, Download, FolderOpen, Link2, Pencil, Pin, PinOff, Rocket, Smile, Star, StarOff, Trash2, UsersRound } from 'lucide-react';
 import type { ChatProject, ProjectSummary } from '../types';
 import { api, rawUrl } from '../api';
 import { isFavorite, setFavorite } from '../favorites';
 import { copyText } from '../quote';
 import { toast } from './toast';
 import type { MenuEntry } from './ContextMenu';
+import { circlePinEntry, primeCirclePins } from './CircleCards';
+
+primeCirclePins();  // menus are built synchronously on right-click
 
 /** Icons offered for a chat project (here and the project page's ⋯ menu). */
 export const PROJECT_EMOJIS = ['📁', '🧪', '📐', '🛠️', '📊', '🧾', '🚀', '🎯', '🧠', '📦', '🔌', '🏭'];
@@ -40,6 +43,7 @@ export function workspaceMenu(pr: ProjectSummary, { onOpen, reload }: { onOpen: 
       a.download = '';
       a.click();
     } },
+    circlePinEntry('p', pr.id, UsersRound),
     { label: 'Copy link', icon: Link2, onSelect: () => copyText(`${location.origin}/${route}`, 'Link copied') },
     'sep',
     { label: pr.remote ? 'Remove…' : 'Delete…', icon: Trash2, danger: true, onSelect: async () => {
@@ -67,6 +71,7 @@ export function chatProjectMenu(p: ChatProject, { onOpen, onChanged }: { onOpen:
     { label: 'Icon', icon: Smile, items: PROJECT_EMOJIS.map(e => ({ label: e, checked: p.emoji === e, onSelect: () => patch({ emoji: e }, 'change the icon') })) },
     { label: p.pinned ? 'Unpin' : 'Pin to top', icon: p.pinned ? PinOff : Pin, onSelect: () => patch({ pinned: !p.pinned }, p.pinned ? 'unpin it' : 'pin it') },
     { label: fav ? 'Remove from Favorites' : 'Add to Favorites', icon: fav ? StarOff : Star, onSelect: () => { setFavorite('group', p.id, '', !fav, p.name); } },
+    circlePinEntry('g', p.id, UsersRound),
     { label: 'Copy link', icon: Link2, onSelect: () => copyText(`${location.origin}/#/p/${p.id}`, 'Link copied') },
     'sep',
     { label: 'Delete…', icon: Trash2, danger: true, onSelect: async () => {

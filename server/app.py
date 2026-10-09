@@ -72,6 +72,7 @@ import themes
 import screen
 import public_api
 import cells
+import circles
 import guest_accounts
 import guests
 import mcp_server
@@ -181,6 +182,8 @@ chatmail.register()
 compaction.migrate_legacy()  # after episodes.init: the FTS triggers index the messages it puts back
 feedback.init()
 guests.init()
+circles.init()
+circles.register()
 cli_agents.cleanup()
 verify.register()
 verify.init()
@@ -218,6 +221,8 @@ app.include_router(reflection.router)  # before memory.router, whose /{mid}/{act
 app.include_router(memory.router)
 app.include_router(episodes.router)
 app.include_router(chatmail.router)
+app.include_router(circles.owner_router())  # in a cell: a pass-through to the broker
+app.include_router(circles.pins_router)
 app.include_router(me.router)
 app.include_router(feedback.router)
 app.include_router(modelhub.router)
@@ -789,6 +794,18 @@ def begin_turn(conv, body, stream=True, note="", adult_ok=False, interactive=Non
                                   user_text=content, owner_context=not sealed)
             if note:
                 system += "\n\n" + note
+            if "circles" in tool_names:
+                system += "\n\n" + circles.GUIDE
+            # other people's circle notes, as labelled data: live chats only, never persona API turns or incognito
+            if turn.interactive and (guest or not sealed) and (guest or not conv.get("incognito")) \
+                    and circles.tool_allowed(agent):
+                block, used = await circles.turn_block(guest, content, conv_id=conv_id, project_id=project_id,
+                                                       group_id=None if project_id else conv.get("groupId"),
+                                                       cloud=providers.is_cloud(turn.model))
+                if block:
+                    system += "\n\n" + block
+                    live["circleNotes"] = [{k: n[k] for k in ("id", "circle", "circleName", "author", "kind", "text", "link")}
+                                           for n in used]
             if conv.get("incognito") and not sealed:  # a persona turn's note says it all
                 import privacy
                 system += "\n\n" + privacy.PROMPT_NOTE

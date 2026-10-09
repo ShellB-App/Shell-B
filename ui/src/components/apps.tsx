@@ -1,9 +1,9 @@
-import { AudioLines, BookMarked, BookOpen, Brain, BrainCircuit, Boxes, CalendarClock, CodeXml, Cpu, HardDrive, ImagePlus, Inbox, LibraryBig, Map as MapIcon, MessageSquare, NotebookPen, Palette, Radio, RadioTower, Settings, Shapes, ShoppingCart, Telescope, UserRound, Workflow, type LucideIcon } from 'lucide-react';
+import { AudioLines, BookMarked, BookOpen, Brain, BrainCircuit, Boxes, CalendarClock, CodeXml, Cpu, HardDrive, ImagePlus, Inbox, LibraryBig, Map as MapIcon, MessageSquare, NotebookPen, Palette, Radio, RadioTower, Settings, Shapes, ShoppingCart, Telescope, UserRound, UsersRound, Workflow, type LucideIcon } from 'lucide-react';
 import { useSyncExternalStore } from 'react';
 import type { Status } from '../types';
 import { djLive } from '../dj/live';
 
-export type AppId = 'chat' | 'studio' | 'code' | 'library' | 'maps' | 'wiki' | 'me' | 'notes' | 'codex' | 'memory' | 'research' | 'plans' | 'assets' | 'scheduled' | 'activity'
+export type AppId = 'chat' | 'studio' | 'code' | 'library' | 'maps' | 'wiki' | 'me' | 'notes' | 'codex' | 'memory' | 'circles' | 'research' | 'plans' | 'assets' | 'scheduled' | 'activity'
   | 'secretary' | 'shop' | 'gibberlink' | 'radio' | 'generate' | 'models' | 'data' | 'agents' | 'tools' | 'settings';
 
 export type AppGroup = 'chat' | 'make' | 'know' | 'run' | 'system';
@@ -72,6 +72,8 @@ export const APPS: AppDef[] = [
   { id: 'memory', label: 'Memory', hint: 'What Shell:B knows about you, and what it has learned lately', icon: Brain, tint: '#f59e0b', group: 'know',
     keywords: 'remember forget profile about me learn',
     live: s => s?.memoryPending ? { label: `Memory · ${s.memoryPending} to review`, badge: s.memoryPending, urgent: true } : undefined },
+  { id: 'circles', label: 'Circles', hint: 'Family, Friends, Work: notes you share with the people in each circle', icon: UsersRound, tint: '#60a5fa', group: 'know',
+    hash: '#/circles', route: /^#\/circles\b/, keywords: 'people family friends work coworkers group share community social notes' },
   { id: 'research', label: 'Research', hint: 'Sources, findings and syntheses gathered by Minerva', icon: Telescope, tint: '#2dd4bf', group: 'know',
     hash: '#/research', route: /^#\/research\b/, keywords: 'boards sources' },
   { id: 'plans', label: 'Mega plans', hint: 'Big jobs broken into steps that agents carry out one by one', icon: Workflow, tint: '#a78bfa', group: 'run',

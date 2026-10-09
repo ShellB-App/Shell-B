@@ -21,6 +21,7 @@ import skills
 import research
 import megaplan
 import library
+import circles
 import codex
 import commitments
 import nightshift
@@ -457,6 +458,8 @@ class Turn:
             names.append("library")  # every agent, wherever it works, can reach everything Shell:B has made
         if switches.get("codex", True) and codex.allowed(self.agent, self.settings):
             names.append("codex")  # the owner's long-term reference shelf (codex.py), searched on demand
+        if switches.get("circles", True) and "circles" in TOOLS and circles.tool_allowed(self.agent):
+            names.append("circles")  # the user's circles and the notes members shared (circles.py)
         if switches.get("follow_ups", True) and "follow_ups" in TOOLS and commitments.tool_allowed(self.agent, self.settings):
             names.append("follow_ups")  # the owner's to-dos and reminders (commitments.py)
         if switches.get("night_shift", True) and "night_shift" in TOOLS and nightshift.tool_allowed(self.agent, self.settings):

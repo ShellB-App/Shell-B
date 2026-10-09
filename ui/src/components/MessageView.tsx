@@ -21,6 +21,7 @@ import { ProcessCard } from './ProcessCard';
 import { QuestionCard } from './QuestionCard';
 import { AgentAvatar, btn, relTime } from './common';
 import { LearnedNote, RecalledNote } from './MemoryManager';
+import { CircleNotesUsed } from './CircleCards';
 import { FollowUpNote } from './FollowUps';
 import { useFeedback } from './Feedback';
 
@@ -69,7 +70,8 @@ function segment(blocks: Block[]): Segment[] {
           b.display.file ||
           b.display.downloads?.length ||
           b.display.board ||
-          b.display.plan)
+          b.display.plan ||
+          b.display.circleNote)
       ) {
         prev.outputs.push(b.display);
       }
@@ -397,6 +399,7 @@ export const MessageView = memo(function MessageView({
         )}
         {!streaming && !guest && feedback.box}
         {!streaming && !guest && <RecalledNote message={message} />}
+        {!streaming && <CircleNotesUsed message={message} />}
         {!streaming && !guest && <LearnedNote message={message} fresh={isLast} />}
         {!streaming && !guest && <FollowUpNote message={message} fresh={isLast} />}
       </div>

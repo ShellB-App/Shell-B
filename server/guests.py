@@ -71,7 +71,7 @@ GUEST_TOOLS = (
     "generate_image", "generate_music", "generate_sfx", "generate_voice", "generate_sprite", "generate_texture",
     "generate_3d",
     "run_code", "create_artifact", "read_document", "view_document", "ocr",
-    "memory_save", "memory_search", "memory_forget", "ask_user")
+    "memory_save", "memory_search", "memory_forget", "ask_user", "circles")
 MEMORY_TOOLS = ("memory_save", "memory_search", "memory_forget")
 MEDIA = {"generate_image": "images", "generate_sprite": "images", "generate_texture": "images", "generate_3d": "images",
          "generate_music": "audio", "generate_sfx": "audio", "generate_voice": "audio"}
@@ -344,6 +344,10 @@ def delete_guest(gid: str) -> bool:
         files = [r["name"] for r in c.execute("SELECT name FROM guest_files WHERE guest_id=?", (gid,))]
     for cid in convs:
         privacy.forget_conversation(cid)
+    import circles
+    circles.forget_person(gid)  # memberships, notes, endorsements, flags, profile
+    for cid in convs:
+        circles.set_pin("c", cid, None)
     for name in files:
         _unlink_file(name)
     with db.conn() as c:
@@ -595,7 +599,12 @@ def with_memory(agent: dict, names: list[str], only) -> list[str]:
     """Guest chats are incognito, which takes the memory tools away. A guest gets them back, pointed at their own
     memory, if the agent remembers things and the guest may use them."""
     have = set(agent.get("tools", []))
-    return names + [t for t in MEMORY_TOOLS if t in have and t not in names and (only is None or t in only)]
+    out = names + [t for t in MEMORY_TOOLS if t in have and t not in names and (only is None or t in only)]
+    import circles
+    from tools import TOOLS
+    if "circles" in TOOLS and "circles" not in out and circles.tool_allowed(agent) and (only is None or "circles" in only):
+        out.append("circles")  # the guest's own circles (circles.py), which incognito would otherwise take away
+    return out
 
 
 def before_tool(gid: str, name: str, args) -> str | None:

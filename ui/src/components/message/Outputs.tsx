@@ -5,6 +5,7 @@ import { AudioCard } from '../AudioCard';
 import { BoardCard } from '../Research';
 import { PlanCard } from '../MegaPlans';
 import { ArtifactCard, DownloadChip } from './ArtifactCard';
+import { CircleDraftCard } from '../CircleCards';
 
 export function Outputs({
   outputs,
@@ -45,8 +46,11 @@ export function Outputs({
     ).values(),
   ];
 
+  const circleNotes = [...new Map(outputs.filter(o => o.circleNote).map(o => [o.circleNote!.id, o.circleNote!])).values()];
+
   return (
     <>
+      {circleNotes.map(n => <CircleDraftCard key={n.id} note={n} />)}
       {images.length > 0 && (
         <div className={clsx('my-2 grid gap-2', images.length > 1 ? 'grid-cols-2' : 'grid-cols-1')}>
           {images.map(src => (

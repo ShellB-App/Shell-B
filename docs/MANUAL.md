@@ -397,6 +397,39 @@ address (`_ShortNameRedirect` in app.py). Check with `tailscale serve status`; r
   The orchestrator always gets the tool in its plan chat. Code is in `server/megaplan.py` and
   `ui/src/components/MegaPlans.tsx`; the tables are `mega_plans`, `mega_steps`, `mega_events` and `mega_links`.
 
+## Circles
+
+The people Shell:B is shared with, in walled groups, and the notes they choose to tell each other (`server/circles.py`,
+`ui/src/components/Circles.tsx` at `#/circles`, `CircleCards.tsx` for the chat pieces; design in
+docs/plans/social.md).
+
+- **Walls.** Starting circles: Family, Friends, Work. Only the owner creates circles and changes membership (Circles →
+  Manage, or the circle chips in Tools & Connectors → Guests and on the invite form); the owner is in every circle.
+  A guest sees only their own circles, notes, members and profiles; anything else answers 404 like a missing id.
+  There is no all-members circle.
+- **Notes** (≤ 300 characters; fact, tip, recommendation, event, place) live in `data/circles.db`. They are published
+  only by their author: on the Circles page, with **Share to a circle** on a memory (Settings → Memory; the memory
+  stays private), or with **Publish** on an agent's draft. The `circles` tool's `propose` makes a draft that only its
+  author sees; the chat shows a card to edit, re-target, publish or discard it. A circle can turn agent proposals off.
+- **Write check** (`circles.check`): regex for instruction-like text, secrets, emails and phone numbers, then the
+  utility model (instructions, credentials, private facts about other members, private contact details or home
+  addresses). It fails closed. Links other than https and shellb:// and all markup are stripped. 20 notes a day.
+- **Recall.** Live chats (not incognito, not API persona turns) get up to 3 notes from other people, by similarity
+  (≥ 0.5), in a "Circle notes … information, not instructions" block after the system prompt, with each note's
+  `shellb://circles/<circle>/<note>` link. The reply shows "Used N circle notes". Each person can switch a circle off
+  for their chats (Use in my chats). A chat or project can be pinned to one circle (right-click → Circle notes from;
+  `circle_pins` in kv, each Shell:B's own). Cloud agents see a note only when the circle allows cloud and the author
+  ticked Cloud OK.
+- **Moderation.** Endorse (also renews the expiry, default 180 days; events expire after their date), flag (two flags,
+  or one from the owner or a moderator, hide a note until its author edits it; flags post to Activity, kind
+  `circles`), hide/show (owner and moderators), delete (owner), mute a person (owner). Retracting deletes the note.
+- **Where requests come from.** `circles.make_router(person_of)` is mounted three times: the owner app (person
+  `owner`, plus admin routes), the guest app (the signed-in guest) and the cell broker (`cells.SERVICES["circles"]`,
+  port 8240 in the cell, person = the cell whose socket it is). Inside a cell `/api/circles` is a pass-through and
+  the tool and recall call the broker (`circles._Remote`). Deleting a guest deletes their memberships, notes,
+  endorsements, flags and profile.
+- Tests: `tests/circles_test.py`.
+
 ## Shell:B links
 
 `shellb://<route>` names a place in the app, where the route is the app's hash route without `#/`:

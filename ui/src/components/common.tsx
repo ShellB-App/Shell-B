@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import {
   BookMarked, BookOpen,
   Boxes, Brain, BrainCircuit, CalendarClock, History, Camera, FileSearch, FolderSearch, GitCompare, TextSearch, ScanEye, ScanText, Sparkles, WandSparkles, Eye, FilePen, FilePlus, FileSymlink, FileText, FolderTree, GitFork, Globe, Image, Library, ListChecks, ListTodo, MessageCircleQuestion, Music,
-  ScanFace, Search, Shapes, Download, Telescope, Terminal, Trash2, Workflow, Wrench, X, type LucideIcon,
+  ScanFace, Search, Shapes, Download, Telescope, Terminal, Trash2, UsersRound, Workflow, Wrench, X, type LucideIcon,
 } from 'lucide-react';
 import type { Agent } from '../types';
 
@@ -15,7 +15,7 @@ export const TOOL_ICONS: Record<string, LucideIcon> = {
   search_files: TextSearch, find_files: FolderSearch, project_diff: GitCompare,
   read_document: FileSearch, view_document: ScanEye, ocr: ScanText,
   use_skill: Sparkles, read_skill_file: FileText, save_skill: WandSparkles, schedule_task: CalendarClock, project_todos: ListChecks,
-  research_board: Telescope, mega_plan: Workflow, library: Library, codex: BookMarked, follow_ups: ListTodo, asset_library: Shapes, scrape: Download,
+  research_board: Telescope, mega_plan: Workflow, library: Library, codex: BookMarked, circles: UsersRound, follow_ups: ListTodo, asset_library: Shapes, scrape: Download,
   shellb_self: ScanFace, ask_user: MessageCircleQuestion, wiki: BookOpen, look_at_screen: Camera, browser: Globe,
 };
 export const toolIcon = (name: string) => TOOL_ICONS[name] ?? Wrench;

@@ -118,6 +118,20 @@ circle with its owner (`shellb://u/<handle>`).
   Shared with you. The composer's share sheet and context menus get "Share…" and "Share to a circle…". A chat or
   project header shows its pinned circle.
 
+## Progress
+- **Phase 1 built and deployed 2026-10-09.** `server/circles.py` (store, write check, recall, `circles` tool, one router
+  mounted for owner app / guest app / cell broker), hooks in app.py (recall block), agent.py (tool), guests.py
+  (`circles` in GUEST_TOOLS, `with_memory`, delete), guest_app.py (routes, chat pins), cells.py (`circles` broker
+  service), privacy.py (incognito drops the tool), activity/notify (`circles`). UI: `Circles.tsx` (`#/circles`, owner
+  Manage), `CircleCards.tsx` (draft card, "Used N circle notes", Share to a circle, pin menus), Guests tab circle chips.
+  Tests: `tests/circles_test.py` (20). Differences from the plan: one `circles` tool with actions `circles`/`search`/
+  `propose` instead of two tools; agent proposals are **drafts with a Publish card** (works the same for the owner,
+  guests and cells, no owner approval queue); retracting deletes the note; profile avatars are an emoji or initial.
+  Verified live: the write check against the utility model (passes a plain note; refuses injection, gossip about a
+  person, a home address) and a real ShellB-Swift turn proposing a Work note with the card shown.
+  Cells pick up the new broker port (8240) when they next start.
+- **Phase 2 (shares, person mail) and 3 (shared Codex collections): not started.**
+
 ## Phases
 1. **Profiles, circles and circle memories.** `circles.py` with circles and membership (invites name circles),
    notes, the write check, the scoped recall block in `agent.build_system`, chat/project circle pinning,

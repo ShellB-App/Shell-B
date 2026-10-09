@@ -69,7 +69,8 @@ LIMITS = ["--memory", "3g", "--memory-swap", "3g", "--cpus", "4", "--pids-limit"
 # service → (port inside the cell, upstream on the host)
 SERVICES = {"ollama": (11434, OLLAMA), "hermes": (8001, HERMES), "orpheus": (8002, ORPHEUS),
             "stableaudio": (8003, STABLE_AUDIO), "comfy": (8188, COMFY), "searxng": (8080, SEARXNG),
-            "valhalla": (8230, VALHALLA)}
+            "valhalla": (8230, VALHALLA),
+            "circles": (8240, None)}  # circles.py's store: answered here (circles.broker_app), for this cell's guest only
 MAX_BODY = 48 * 2**20  # chat with images, uploads
 MAX_JSON = 8 * 2**20
 SEARCHES_PER_MINUTE = 30
@@ -992,6 +993,9 @@ async def broker(scope, receive, send):
     if not where:
         return await JSONResponse({"error": "unknown socket"}, status_code=404)(scope, receive, send)
     gid, svc = where
+    if svc == "circles":  # the person is the cell the socket belongs to; nothing the cell sends can change it
+        import circles
+        return await circles.broker_app({**scope, "shellb_person": gid}, receive, send)
     req = Request(scope, receive)
     try:
         resp = await POLICIES[svc](req, gid)

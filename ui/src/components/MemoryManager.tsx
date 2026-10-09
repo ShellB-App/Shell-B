@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import {
   BookMarked, Brain, Check, ChevronDown, ChevronRight, Eye, History, Loader2, Lock, LockOpen, Moon, MessageSquare, Pencil, Pin, PinOff, Plus, RotateCcw, Search,
-  Sparkles, Trash2, Undo2, X,
+  Sparkles, Trash2, Undo2, UsersRound, X,
 } from 'lucide-react';
 import { api, req } from '../api';
 import type { LearnedItem, Message, RecalledMemory } from '../types';
@@ -10,6 +10,7 @@ import { btn, relTime } from './common';
 import { BriefSettingsRow } from './FollowUps';
 import { IncognitoSettingsRow } from './Incognito';
 import { HistoryImport } from './HistoryImport';
+import { ShareToCircle } from './CircleCards';
 
 // Long-term memory v2 (server/memory.py): the Settings → Memory tab and the "learned" note under chat replies.
 
@@ -268,6 +269,7 @@ interface RowProps { categories: Category[]; onRun: (p: Promise<Overview>) => vo
 function MemoryItem({ m, categories, onRun }: { m: MemoryRow } & RowProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(m.text);
+  const [sharing, setSharing] = useState(false);
   const ref = useRef<HTMLTextAreaElement>(null);
   useEffect(() => { if (editing) ref.current?.focus(); }, [editing]);
   const save = () => { setEditing(false); if (draft.trim() && draft.trim() !== m.text) onRun(mem.patch(m.id, { text: draft.trim() })); else setDraft(m.text); };
@@ -305,6 +307,11 @@ function MemoryItem({ m, categories, onRun }: { m: MemoryRow } & RowProps) {
           {m.pinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
         </button>
       )}
+      <button className={clsx(btn.icon, 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-sky-400')} title="Share to a circle… (the memory stays private; a copy goes to one circle as a note from you)"
+        aria-label="Share to a circle" onClick={() => setSharing(true)}>
+        <UsersRound className="w-3.5 h-3.5" />
+      </button>
+      {sharing && <ShareToCircle text={m.text} onClose={() => setSharing(false)} />}
       <button className={clsx(btn.icon, 'opacity-0 group-hover:opacity-100 hover:text-indigo-400')} title="Move to the Codex (stops automatic recall)"
         onClick={async () => { await api.memoryToCodex(m.id); onRun(mem.list()); }}>
         <BookMarked className="w-3.5 h-3.5" />
