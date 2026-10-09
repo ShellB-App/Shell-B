@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
-import { Brain, Flag, Info, Laptop, Loader2, Plus, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useId, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { Brain, Check, Copy, Download, Flag, Info, Laptop, Loader2, Plus, ShieldCheck, Trash2, UserRound } from 'lucide-react';
 import { fmtBytes } from '../api';
 import { Modal, btn, relTime } from '../components/common';
 import { toast } from '../components/toast';
-import { guestApi, type GuestMe, type GuestMemory } from './guestApi';
+import { errText, guestApi, type GuestAccount, type GuestAuthEvent, type GuestMe, type GuestMemory } from './guestApi';
+import { qrMatrix } from './qr';
 
 const CATEGORY: Record<string, string> = {
   identity: 'About you', work: 'Work', preference: 'Preference', person: 'Person', project: 'Project',
@@ -68,6 +69,11 @@ function deviceName(ua: string) {
   return app ? `${app} on ${os}` : os;
 }
 
+const VIA: Record<string, string> = {
+  password: 'with your password', signup: 'when you made the account', reset: 'with a reset link',
+  device: 'with a device code', invite: 'with an invite',
+};
+
 export function DevicesPanel({ me, onClose, onChanged }: { me: GuestMe; onClose: () => void; onChanged: () => void }) {
   const [code, setCode] = useState<{ code: string; until: number } | null>(null);
   const [now, setNow] = useState(Date.now());
@@ -101,7 +107,7 @@ export function DevicesPanel({ me, onClose, onChanged }: { me: GuestMe; onClose:
             <li key={d.id} className="flex items-center gap-3 py-2.5">
               <div className="flex-1 min-w-0">
                 <div className="text-sm">{deviceName(d.userAgent)}{d.current && <span className="ml-2 text-[10px] uppercase tracking-wider text-[var(--accent-soft)]">this device</span>}</div>
-                <div className="text-[11px] text-[var(--text-muted)]">Signed in {relTime(d.created * 1000)} · last used {relTime(d.lastUsed * 1000)}</div>
+                <div className="text-[11px] text-[var(--text-muted)]">Signed in {relTime(d.created * 1000)} {VIA[d.via] ?? ''} · last used {relTime(d.lastUsed * 1000)}</div>
               </div>
               {!d.current && <button className={btn.ghost} onClick={() => drop(d.id)}>Sign out</button>}
             </li>
@@ -114,7 +120,12 @@ export function DevicesPanel({ me, onClose, onChanged }: { me: GuestMe; onClose:
             Make a code here, then open <span className="font-mono">{location.host}</span> on the other device and enter
             it. A code works once and expires after 10 minutes.
           </p>
-          {code && left > 0 ? (
+          {!me.deviceCodes ? (
+            <p className="mt-4 text-xs leading-relaxed text-[var(--text-muted)] max-w-[60ch]">
+              Device codes can only be made on a device where you signed in with your password. Sign in on the other
+              device with your username and password instead.
+            </p>
+          ) : code && left > 0 ? (
             <div className="mt-4 flex items-baseline gap-4">
               <span className="font-mono text-3xl tracking-[0.15em] select-all">{code.code}</span>
               <span className="text-xs text-[var(--text-muted)] tabular-nums">{Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')} left</span>
@@ -212,6 +223,263 @@ export function AboutPanel({ me, onClose }: { me: GuestMe; onClose: () => void }
           <Meter label="Space used (MB)" used={Math.round(me.storageBytes / 2 ** 20)} cap={l.storageMB} />
           <p className="text-[11px] text-[var(--text-muted)]">Daily limits reset at midnight, Evie's time. Space used: {fmtBytes(me.storageBytes)}.</p>
         </section>
+      </div>
+    </Modal>
+  );
+}
+
+// ── account and security ────────────────────────────────────────────────────
+
+function Row({ label, hint, children }: { label: string; hint?: string; children: (id: string) => ReactNode }) {
+  const id = useId();
+  return (
+    <div>
+      <label htmlFor={id} className="block text-xs text-[var(--text-secondary)]">{label}</label>
+      <div className="mt-1">{children(id)}</div>
+      {hint && <p className="mt-1 text-[11px] leading-relaxed text-[var(--text-muted)]">{hint}</p>}
+    </div>
+  );
+}
+
+const Section = ({ title, children }: { title: string; children: ReactNode }) => (
+  <section className="space-y-3">
+    <h3 className="text-xs uppercase tracking-wider text-[var(--text-muted)]">{title}</h3>
+    {children}
+  </section>
+);
+
+/** An otpauth:// link as a scannable code: black on white whatever the theme, with the 4-module quiet zone. */
+function QrCode({ text }: { text: string }) {
+  const { path, n } = useMemo(() => {
+    const m = qrMatrix(text);
+    let d = '';
+    m.forEach((row, y) => row.forEach((on, x) => { if (on) d += `M${x + 4} ${y + 4}h1v1h-1z`; }));
+    return { path: d, n: m.length + 8 };
+  }, [text]);
+  return (
+    <svg viewBox={`0 0 ${n} ${n}`} className="w-44 h-44 rounded-lg shrink-0" role="img" shapeRendering="crispEdges"
+      aria-label="QR code to scan with your authenticator app">
+      <rect width={n} height={n} fill="#fff" /><path d={path} fill="#000" />
+    </svg>
+  );
+}
+
+function RecoveryCodes({ codes, onDone }: { codes: string[]; onDone: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const text = `Shell:B Guest recovery codes (${location.host})\nEach code works once, in place of a two-step code.\n\n${codes.join('\n')}\n`;
+  const download = () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+    a.download = 'shellb-guest-recovery-codes.txt';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+  return (
+    <div className="p-4 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/[0.06] space-y-3">
+      <p className="text-xs leading-relaxed text-[var(--text-secondary)] max-w-[60ch]">
+        Save these somewhere safe, like a password manager. If you lose your phone, each one signs you in once instead
+        of a code. They're shown only now.
+      </p>
+      <ul className="grid grid-cols-2 gap-x-6 gap-y-1 font-mono text-sm select-all">{codes.map(c => <li key={c}>{c}</li>)}</ul>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className={btn.subtle} onClick={() => { navigator.clipboard.writeText(text); setCopied(true); }}>
+          {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}Copy
+        </button>
+        <button type="button" className={btn.subtle} onClick={download}><Download className="w-3.5 h-3.5" />Download</button>
+        <button type="button" className={`${btn.primary} ml-auto`} onClick={onDone}>I've saved them</button>
+      </div>
+    </div>
+  );
+}
+
+function PasswordField({ id, value, onChange, fresh }: { id: string; value: string; onChange: (v: string) => void; fresh?: boolean }) {
+  return <input id={id} type="password" value={value} onChange={e => onChange(e.target.value)} required maxLength={256}
+    autoComplete={fresh ? 'new-password' : 'current-password'} className={btn.input} />;
+}
+
+function TwoStepSection({ acc, reload }: { acc: GuestAccount; reload: () => void }) {
+  const [stage, setStage] = useState<'idle' | 'confirm' | 'scan' | 'codes' | 'off' | 'renew'>('idle');
+  const [password, setPassword] = useState('');
+  const [setup, setSetup] = useState<{ secret: string; uri: string } | null>(null);
+  const [code, setCode] = useState('');
+  const [codes, setCodes] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const run = async (fn: () => Promise<void>) => {
+    setBusy(true);
+    setError('');
+    try { await fn(); } catch (e) { setError(errText(e)); }
+    setBusy(false);
+  };
+  const reset = () => { setStage('idle'); setPassword(''); setCode(''); setSetup(null); setError(''); };
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    if (stage === 'confirm') run(async () => { setSetup(await guestApi.twoStepSetup(password)); setPassword(''); setStage('scan'); });
+    else if (stage === 'scan') run(async () => { setCodes((await guestApi.twoStepEnable(code)).recoveryCodes); setStage('codes'); });
+    else if (stage === 'off') run(async () => { await guestApi.twoStepDisable(password); toast('Two-step sign-in is off'); reset(); reload(); });
+    else if (stage === 'renew') run(async () => { setCodes((await guestApi.recoveryCodes(password)).recoveryCodes); setPassword(''); setStage('codes'); });
+  };
+
+  return (
+    <Section title="Two-step sign-in">
+      <p className="text-xs leading-relaxed text-[var(--text-secondary)] max-w-[60ch]">
+        {acc.twoStep || stage === 'codes'
+          ? <>On. Signing in asks for a code from your authenticator app after your password. {stage === 'codes' ? '' : `${acc.recoveryLeft} recovery code${acc.recoveryLeft === 1 ? '' : 's'} left.`}</>
+          : 'Off. Turn it on to need a code from an authenticator app (like Google Authenticator, 1Password or Aegis) as well as your password.'}
+      </p>
+      {stage === 'codes' && <RecoveryCodes codes={codes} onDone={() => { reset(); reload(); }} />}
+      {stage === 'idle' && (
+        <div className="flex flex-wrap gap-2">
+          {!acc.twoStep && <button type="button" className={btn.subtle} onClick={() => setStage('confirm')}><ShieldCheck className="w-3.5 h-3.5" />Set up two-step sign-in</button>}
+          {acc.twoStep && <button type="button" className={btn.subtle} onClick={() => setStage('renew')}>New recovery codes</button>}
+          {acc.twoStep && <button type="button" className={`${btn.ghost} text-red-400 hover:text-red-300`} onClick={() => setStage('off')}>Turn off</button>}
+        </div>
+      )}
+      {(stage === 'confirm' || stage === 'off' || stage === 'renew' || stage === 'scan') && (
+        <form className="space-y-3" onSubmit={submit}>
+          {stage === 'scan' && setup ? (
+            <>
+              <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
+                <QrCode text={setup.uri} />
+                <div className="space-y-2 text-xs leading-relaxed text-[var(--text-secondary)]">
+                  <p>Scan this with your authenticator app, or type in the key:</p>
+                  <p className="font-mono text-sm text-[var(--text-primary)] break-all select-all">{setup.secret.match(/.{1,4}/g)?.join(' ')}</p>
+                </div>
+              </div>
+              <Row label="The 6-digit code the app shows">
+                {id => <input id={id} value={code} onChange={e => setCode(e.target.value)} inputMode="numeric" autoComplete="one-time-code"
+                  maxLength={7} required autoFocus className={`${btn.input} font-mono tracking-[0.2em] max-w-[12rem]`} />}
+              </Row>
+            </>
+          ) : (
+            <Row label="Your password" hint={stage === 'off' ? 'Turning it off makes your password the only thing needed to sign in.'
+              : stage === 'renew' ? 'New codes replace the old ones, which stop working.' : undefined}>
+              {id => <PasswordField id={id} value={password} onChange={setPassword} />}
+            </Row>
+          )}
+          {error && <p role="alert" className="text-xs text-red-400">{error}</p>}
+          <div className="flex gap-2">
+            <button type="submit" className={btn.primary} disabled={busy}>
+              {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              {stage === 'confirm' ? 'Continue' : stage === 'scan' ? 'Turn on' : stage === 'off' ? 'Turn off two-step' : 'Make new codes'}
+            </button>
+            <button type="button" className={btn.ghost} onClick={reset}>Cancel</button>
+          </div>
+        </form>
+      )}
+    </Section>
+  );
+}
+
+function ChangePassword({ onChanged }: { onChanged: () => void }) {
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      await guestApi.changePassword(current, next);
+      setCurrent('');
+      setNext('');
+      toast('Password changed. Your other devices are signed out.');
+      onChanged();
+    } catch (err) { setError(errText(err)); }
+    setBusy(false);
+  };
+  return (
+    <Section title="Password">
+      <form className="space-y-3 max-w-sm" onSubmit={submit}>
+        <Row label="Current password">{id => <PasswordField id={id} value={current} onChange={setCurrent} />}</Row>
+        <Row label="New password" hint="At least 10 characters. Changing it signs you out everywhere except here.">
+          {id => <PasswordField id={id} value={next} onChange={setNext} fresh />}
+        </Row>
+        {error && <p role="alert" className="text-xs text-red-400">{error}</p>}
+        <button type="submit" className={btn.subtle} disabled={busy || !current || next.length < 10}>
+          {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}Change password
+        </button>
+      </form>
+    </Section>
+  );
+}
+
+function Profile({ acc, onSaved }: { acc: GuestAccount; onSaved: (a: GuestAccount) => void }) {
+  const [name, setName] = useState(acc.name);
+  const [email, setEmail] = useState(acc.email ?? '');
+  const [busy, setBusy] = useState(false);
+  const dirty = name.trim() !== acc.name || email.trim() !== (acc.email ?? '');
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      onSaved(await guestApi.updateAccount({ name: name.trim(), email: email.trim() }));
+      toast('Saved');
+    } catch (err) { toast(errText(err), { kind: 'error' }); }
+    setBusy(false);
+  };
+  return (
+    <Section title="You">
+      <form className="grid gap-3 sm:grid-cols-2" onSubmit={submit}>
+        <div className="sm:col-span-2 text-xs text-[var(--text-secondary)]">
+          Username <span className="ml-1 font-mono text-sm text-[var(--text-primary)]">{acc.username}</span>
+        </div>
+        <Row label="Name" hint="What Shell:B calls you.">
+          {id => <input id={id} value={name} onChange={e => setName(e.target.value)} maxLength={60} required className={btn.input} />}
+        </Row>
+        <Row label="Email (optional)" hint="Only Evie sees it.">
+          {id => <input id={id} type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" className={btn.input} />}
+        </Row>
+        <div className="sm:col-span-2">
+          <button type="submit" className={btn.subtle} disabled={busy || !dirty || !name.trim()}>
+            {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}Save
+          </button>
+        </div>
+      </form>
+    </Section>
+  );
+}
+
+function SignInLog({ log }: { log: GuestAuthEvent[] }) {
+  const bad = (e: string) => /failed|locked/.test(e);
+  return (
+    <Section title="Recent sign-in activity">
+      {log.length === 0 ? <p className="text-xs text-[var(--text-muted)]">Nothing yet.</p> : (
+        <ul className="divide-y divide-[var(--border-subtle)] border-y border-[var(--border-subtle)]">
+          {log.map((e, i) => (
+            <li key={i} className="flex items-baseline gap-3 py-2 text-xs">
+              <span className={`flex-1 ${bad(e.event) ? 'text-red-400' : ''}`}>{e.label}</span>
+              <span className="text-[var(--text-muted)] truncate max-w-[45%]">{[e.userAgent && deviceName(e.userAgent), e.ip].filter(Boolean).join(' · ')}</span>
+              <span className="shrink-0 tabular-nums text-[var(--text-muted)]">{relTime(e.ts * 1000)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="text-[11px] text-[var(--text-muted)]">Kept 90 days. If something here wasn't you, change your password and tell Evie.</p>
+    </Section>
+  );
+}
+
+export function AccountPanel({ onClose, onChanged }: { onClose: () => void; onChanged: () => void }) {
+  const [acc, setAcc] = useState<GuestAccount | null>(null);
+  const [error, setError] = useState('');
+  const load = useCallback(() => { guestApi.account().then(setAcc, e => setError(errText(e))); }, []);
+  useEffect(() => { load(); }, [load]);
+  return (
+    <Modal open onClose={onClose} title="Account and security" icon={<UserRound className="w-4 h-4 text-[var(--accent)]" />}>
+      <div className="flex-1 overflow-y-auto p-5 space-y-8">
+        {error && <p className="text-xs text-red-400">{error}</p>}
+        {!acc && !error && <div className="space-y-2">{[0, 1, 2].map(i => <div key={i} className="h-10 rounded-lg bg-[var(--bg-tertiary)] animate-pulse" />)}</div>}
+        {acc && (
+          <>
+            <Profile acc={acc} onSaved={a => { setAcc(a); onChanged(); }} />
+            <ChangePassword onChanged={() => { load(); onChanged(); }} />
+            <TwoStepSection acc={acc} reload={load} />
+            <SignInLog log={acc.log} />
+          </>
+        )}
       </div>
     </Modal>
   );

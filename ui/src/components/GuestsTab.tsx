@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Check, ChevronDown, Copy, Flag, Link2, Loader2, LogOut, Pause, Play, Plus, Trash2, Users } from 'lucide-react';
+import { Check, ChevronDown, Copy, Flag, KeyRound, Link2, Loader2, LockOpen, LogOut, Pause, Play, Plus, ShieldOff, Trash2, Users } from 'lucide-react';
 import { fmtBytes, req } from '../api';
 import { btn, relTime } from './common';
 import { toast } from './toast';
 
 /** Settings → Tools & Connectors → Guests: friends' own Shell:B on this machine (server/guests.py, guest_app.py).
- *  A guest signs in with a one-time invite link and gets their own chats, files and memory, local agents only, and
- *  daily limits. Nothing of yours is reachable from the guest address. Reports from "Report to Evie" land here. */
+ *  A one-time invite link lets a guest make an account (username and password, optional two-step codes;
+ *  guest_accounts.py). They get their own chats, files and memory, local agents only, and daily limits. Nothing of
+ *  yours is reachable from the guest address. Reports from "Report to Evie" land here, and so do lockouts. */
 
 const LIMIT_FIELDS = [
   ['turnsPerDay', 'Messages a day'], ['tokensPerDay', 'Tokens a day'], ['imagesPerDay', 'Pictures a day'],
@@ -18,7 +19,10 @@ interface Usage { turns: number; tokens: number; images: number; audio: number; 
 interface Guest {
   id: string; name: string; created: number; disabled: boolean; config: Config; lastSeen: number | null; today: Usage;
   devices: number; chats: number; memories: number; storageBytes: number; busy: boolean; inviteExpires: number | null;
+  username: string | null; email: string | null; passwordSet: boolean; twoStep: boolean; lockedUntil: number | null;
+  lastSignIn: number | null; resetExpires: number | null;
 }
+interface AuthEvent { ts: number; event: string; label: string; ip: string; userAgent: string; detail: string }
 interface GuestSettings { models: string[]; slots: number; ownerWait: number; url: string }
 interface Listing {
   guests: Guest[]; settings: GuestSettings; allowedModels: string[]; tools: string[]; newReports: number;
@@ -49,7 +53,7 @@ export function GuestsTab({ locked }: { locked: boolean }) {
   const [data, setData] = useState<Listing | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
   const [name, setName] = useState('');
-  const [fresh, setFresh] = useState<{ id: string; link: string } | null>(null);
+  const [fresh, setFresh] = useState<{ id: string; link: string; kind: 'invite' | 'reset' } | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -68,7 +72,7 @@ export function GuestsTab({ locked }: { locked: boolean }) {
     setBusy(true);
     try {
       const r = await req<{ guest: Guest; code: string; link: string }>('/api/guests', { method: 'POST', body: json({ name: name.trim() || 'Guest' }) });
-      setFresh({ id: r.guest.id, link: linkFor(url, r.code) });
+      setFresh({ id: r.guest.id, link: linkFor(url, r.code), kind: 'invite' });
       setName('');
       load();
     } catch (e) { toast(errText(e), { kind: 'error' }); }
@@ -76,7 +80,12 @@ export function GuestsTab({ locked }: { locked: boolean }) {
   }
   async function reinvite(g: Guest) {
     const r = await req<{ code: string }>(`/api/guests/${g.id}/invite`, { method: 'POST' }).catch(e => { toast(errText(e), { kind: 'error' }); return null; });
-    if (r) { setFresh({ id: g.id, link: linkFor(url, r.code) }); load(); }
+    if (r) { setFresh({ id: g.id, link: linkFor(url, r.code), kind: 'invite' }); load(); }
+  }
+  async function resetLink(g: Guest) {
+    if (!confirm(`Make a reset link for ${g.name}? It signs them out on every device until they use it.`)) return;
+    const r = await req<{ link: string }>(`/api/guests/${g.id}/reset`, { method: 'POST' }).catch(e => { toast(errText(e), { kind: 'error' }); return null; });
+    if (r) { setFresh({ id: g.id, link: r.link, kind: 'reset' }); setOpen(g.id); load(); }
   }
   const saveSettings = (patch: Partial<GuestSettings>) => act(req('/api/guests/settings', { method: 'PUT', body: json(patch) }));
   const models = Array.from(new Set([...data.allowedModels, ...data.agents.map(a => a.model)]));
@@ -88,7 +97,7 @@ export function GuestsTab({ locked }: { locked: boolean }) {
         <h3 className="flex items-center gap-2 text-sm font-semibold"><Users className="w-4 h-4 text-[var(--accent)]" />Shell:B Guest</h3>
         <p className="text-xs leading-relaxed text-[var(--text-secondary)] max-w-[70ch]">
           Friends get their own Shell:B at the guest address: their own chats, files and memory, the local agents below,
-          and daily limits. They can't reach anything of yours: the guest address only serves guest routes, cloud agents
+          and daily limits. Your invite link lets them choose a username and password; there's no other way to sign up. They can't reach anything of yours: the guest address only serves guest routes, cloud agents
           and Aphrodite are off, and their sandbox mounts none of your files. Their chats are stored here, on this machine.
         </p>
       </section>
@@ -141,10 +150,10 @@ export function GuestsTab({ locked }: { locked: boolean }) {
           <input className={btn.input} placeholder="Their name, e.g. Robin" value={name} maxLength={60} onChange={e => setName(e.target.value)} />
           <button className={btn.primary} disabled={busy}>{busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}Make invite</button>
         </form>
-        {fresh && (
+        {fresh?.kind === 'invite' && (
           <div className="space-y-1.5">
             <CopyLink link={fresh.link} />
-            <p className="text-[11px] text-[var(--text-muted)]">Shown once. It works one time, within 7 days, and signs in the device that opens it.{!url && ' Set the guest address above to get a full link.'}</p>
+            <p className="text-[11px] text-[var(--text-muted)]">Shown once. It works one time, within 7 days: they choose a username and password with it.{!url && ' Set the guest address above to get a full link.'}</p>
           </div>
         )}
       </section>
@@ -161,15 +170,26 @@ export function GuestsTab({ locked }: { locked: boolean }) {
                     <span className={g.disabled ? 'line-through text-[var(--text-muted)]' : ''}>{g.name}</span>
                     {g.busy && <span className="text-[10px] uppercase tracking-wider text-[var(--accent-soft)]">replying</span>}
                     {g.disabled && <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">paused</span>}
+                    {g.lockedUntil && <span className="text-[10px] uppercase tracking-wider text-red-400">locked</span>}
+                    {g.twoStep && <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">two-step</span>}
                     <ChevronDown className={`w-3.5 h-3.5 text-[var(--text-muted)] transition-transform ${open === g.id ? 'rotate-180' : ''}`} />
                   </div>
                   <div className="text-[11px] text-[var(--text-muted)]">
+                    {g.username ? `@${g.username} · ` : g.lastSeen ? 'no password yet · ' : ''}
                     {g.lastSeen ? `seen ${relTime(g.lastSeen * 1000)}` : g.inviteExpires ? 'invited, not joined yet' : 'never joined'}
                     {' · '}today {g.today.turns}{g.config.turnsPerDay ? `/${g.config.turnsPerDay}` : ''} messages, {g.today.images} pictures, {g.today.audio} audio
                     {' · '}{g.chats} chats · {fmtBytes(g.storageBytes)} · {g.devices} device{g.devices === 1 ? '' : 's'}
                   </div>
                 </button>
-                <button className={btn.icon} title="New invite link" onClick={() => reinvite(g)}><Link2 className="w-3.5 h-3.5" /></button>
+                {g.lockedUntil && (
+                  <button className={btn.icon} title="Unlock (locked after too many wrong passwords)"
+                    onClick={() => act(req(`/api/guests/${g.id}/unlock`, { method: 'POST' }), `${g.name} is unlocked`)}>
+                    <LockOpen className="w-3.5 h-3.5 text-red-400" />
+                  </button>
+                )}
+                {g.passwordSet
+                  ? <button className={btn.icon} title="Make a password reset link" onClick={() => resetLink(g)}><KeyRound className="w-3.5 h-3.5" /></button>
+                  : <button className={btn.icon} title="New invite link" onClick={() => reinvite(g)}><Link2 className="w-3.5 h-3.5" /></button>}
                 <button className={btn.icon} title={g.disabled ? 'Resume' : 'Pause (signs out every device)'}
                   onClick={() => act(req(`/api/guests/${g.id}`, { method: 'PATCH', body: json({ disabled: !g.disabled }) }))}>
                   {g.disabled ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
@@ -182,7 +202,18 @@ export function GuestsTab({ locked }: { locked: boolean }) {
                     act(req(`/api/guests/${g.id}`, { method: 'DELETE' }), `${g.name} deleted`);
                 }}><Trash2 className="w-3.5 h-3.5" /></button>
               </div>
-              {open === g.id && <Limits guest={g} onSave={config => act(req(`/api/guests/${g.id}`, { method: 'PATCH', body: json({ config }) }), 'Saved')} />}
+              {open === g.id && (
+                <>
+                  {fresh?.kind === 'reset' && fresh.id === g.id && (
+                    <div className="mt-3 space-y-1.5">
+                      <CopyLink link={fresh.link} />
+                      <p className="text-[11px] text-[var(--text-muted)]">Shown once. It works one time, within 24 hours, and sets a new password. Pass it on yourself: Shell:B doesn't send email.</p>
+                    </div>
+                  )}
+                  <Account guest={g} onTwoStepOff={() => act(req(`/api/guests/${g.id}/two-step/off`, { method: 'POST' }), `Two-step sign-in is off for ${g.name}`)} />
+                  <Limits guest={g} onSave={config => act(req(`/api/guests/${g.id}`, { method: 'PATCH', body: json({ config }) }), 'Saved')} />
+                </>
+              )}
             </li>
           ))}
         </ul>
@@ -198,6 +229,44 @@ export function GuestsTab({ locked }: { locked: boolean }) {
             onDelete={() => act(req(`/api/guests/reports/${r.id}`, { method: 'DELETE' }))} />)}
         </ul>
       </section>
+    </div>
+  );
+}
+
+function Account({ guest: g, onTwoStepOff }: { guest: Guest; onTwoStepOff: () => void }) {
+  const [log, setLog] = useState<AuthEvent[] | null>(null);
+  useEffect(() => { req<AuthEvent[]>(`/api/guests/${g.id}/log`).then(setLog, () => setLog([])); }, [g.id, g.lastSignIn, g.lockedUntil, g.twoStep]);
+  return (
+    <div className="mt-3 p-3 rounded-lg bg-[var(--bg-tertiary)] space-y-3 text-xs">
+      <dl className="grid gap-x-6 gap-y-1.5 grid-cols-[auto_1fr] text-[var(--text-secondary)]">
+        <dt className="text-[var(--text-muted)]">Username</dt><dd className="font-mono">{g.username ?? 'none yet: they sign in with an invite only'}</dd>
+        <dt className="text-[var(--text-muted)]">Email</dt><dd>{g.email ?? '—'}</dd>
+        <dt className="text-[var(--text-muted)]">Last sign-in</dt><dd>{g.lastSignIn ? relTime(g.lastSignIn * 1000) : '—'}</dd>
+        <dt className="text-[var(--text-muted)]">Two-step</dt>
+        <dd className="flex items-center gap-2">{g.twoStep ? 'on' : 'off'}
+          {g.twoStep && (
+            <button className={`${btn.ghost} -my-1`} onClick={() => confirm(`Turn off two-step sign-in for ${g.name}? Do this if they lost their phone and their recovery codes.`) && onTwoStepOff()}>
+              <ShieldOff className="w-3.5 h-3.5" />Turn off
+            </button>
+          )}
+        </dd>
+        {g.lockedUntil && <><dt className="text-[var(--text-muted)]">Locked</dt><dd className="text-red-400">until {new Date(g.lockedUntil * 1000).toLocaleTimeString()}</dd></>}
+        {g.resetExpires && <><dt className="text-[var(--text-muted)]">Reset link</dt><dd>unused, expires {new Date(g.resetExpires * 1000).toLocaleString()}</dd></>}
+      </dl>
+      <div>
+        <div className="text-[11px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Sign-in log · 90 days</div>
+        {!log ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--text-muted)]" /> : log.length === 0 ? <p className="text-[var(--text-muted)]">Nothing yet.</p> : (
+          <ul className="max-h-48 overflow-y-auto divide-y divide-[var(--border-subtle)]">
+            {log.map((e, i) => (
+              <li key={i} className="flex items-baseline gap-3 py-1">
+                <span className={`flex-1 ${/failed|locked/.test(e.event) ? 'text-red-400' : ''}`}>{e.label}</span>
+                <span className="font-mono text-[11px] text-[var(--text-muted)]">{e.ip}</span>
+                <span className="shrink-0 tabular-nums text-[var(--text-muted)]" title={new Date(e.ts * 1000).toLocaleString()}>{relTime(e.ts * 1000)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

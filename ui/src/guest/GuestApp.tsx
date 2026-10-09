@@ -2,7 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type
 import clsx from 'clsx';
 import {
   BookOpen, Brain, ChevronDown, Flag, Globe2, Info, Laptop, Loader2, LogOut, Menu, MessageSquare, Moon, Palette, Pencil,
-  Plus, Radio, StickyNote, Sun, Trash2, X, type LucideIcon,
+  Plus, Radio, StickyNote, Sun, Trash2, UserRound, X, type LucideIcon,
 } from 'lucide-react';
 import { api } from '../api';
 import { useChat } from '../useChat';
@@ -17,7 +17,7 @@ import { toast } from '../components/toast';
 import { THEMES, setTheme, useTheme } from '../themes';
 import type { Agent, Attachment, ConversationSummary, Effort } from '../types';
 import { guestApi, type GuestMe } from './guestApi';
-import { AboutPanel, DevicesPanel, MemoryPanel, ReportPanel } from './panels';
+import { AboutPanel, AccountPanel, DevicesPanel, MemoryPanel, ReportPanel } from './panels';
 
 // Shell:B Guest: a friend's own Shell:B (server/guests.py). The chat is the owner's components (useChat, MessageView,
 // Composer, ArtifactPanel) on the guest server, which answers the same paths but only with this guest's things.
@@ -48,7 +48,7 @@ const STARTERS = [
   { title: 'Look something up', prompt: "What's the best time to see the Milky Way this month where I live? Ask me where that is." },
 ];
 
-type Panel = null | 'memory' | 'devices' | 'about' | { report: { convId?: string; msgId?: string } };
+type Panel = null | 'account' | 'memory' | 'devices' | 'about' | { report: { convId?: string; msgId?: string } };
 
 export function GuestApp({ me, refresh }: { me: GuestMe; refresh: () => void }) {
   const agents = me.agents;
@@ -190,8 +190,9 @@ export function GuestApp({ me, refresh }: { me: GuestMe; refresh: () => void }) 
   };
   const theme = useTheme();
   const accountMenu = (e: ReactMouseEvent<HTMLButtonElement>) => openMenuAt(e, [
+    { label: 'Account and security', icon: UserRound, onSelect: () => setPanel('account') },
     { label: 'What Shell:B remembers', icon: Brain, onSelect: () => setPanel('memory') },
-    { label: 'Your devices', icon: Laptop, onSelect: () => setPanel('devices') },
+    { label: 'Your devices', icon: Laptop, onSelect: () => { refresh(); setPanel('devices'); } },
     { label: 'Theme', icon: Palette, items: THEMES.map(t => ({ label: t.label, checked: t.id === theme, onSelect: () => setTheme(t.id) })) },
     { label: dark ? 'Light mode' : 'Dark mode', icon: dark ? Sun : Moon, onSelect: toggleMode },
     'sep',
@@ -310,6 +311,7 @@ export function GuestApp({ me, refresh }: { me: GuestMe; refresh: () => void }) 
         </div>
       </main>
 
+      {panel === 'account' && <AccountPanel onClose={() => setPanel(null)} onChanged={refresh} />}
       {panel === 'memory' && <MemoryPanel onClose={() => setPanel(null)} />}
       {panel === 'devices' && <DevicesPanel me={me} onClose={() => setPanel(null)} onChanged={refresh} />}
       {panel === 'about' && <AboutPanel me={me} onClose={() => setPanel(null)} />}

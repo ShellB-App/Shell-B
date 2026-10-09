@@ -4,6 +4,7 @@ memories or approvals; no cloud or adult agents). Turns are faked like in public
 for one that answers at once."""
 import asyncio
 import json
+import secrets
 import unittest
 
 from fastapi.testclient import TestClient
@@ -21,6 +22,7 @@ from roster import get_agents, get_settings
 ADMIN = {"x-shellb-admin": (db.DATA / "admin.key").read_text().strip()}
 lan = TestClient(shellb.app, client=("10.0.0.9", 50000), raise_server_exceptions=False)
 CALLS: list[dict] = []
+PASSWORD = "copper kettle on the hill"
 (shellb.UI_DIST / "guest.html").write_text("<!doctype html><title>guest</title>")
 
 
@@ -47,11 +49,12 @@ def local_model() -> str:
 
 
 def make_guest(name="Sam", **config) -> tuple[dict, TestClient]:
+    """A guest who took their invite: an account made and this client signed in (guest_accounts_test has the rest)."""
     g, code = guests.create_guest(name, config or None)
     c = gclient()
-    r = c.post("/api/guest/redeem", json={"code": code})
+    r = c.post("/api/guest/signup", json={"code": code, "username": f"u{secrets.token_hex(5)}", "password": PASSWORD})
     assert r.status_code == 200, r.text
-    return g, c
+    return guests.get_guest(g["id"]), c
 
 
 class Base(unittest.TestCase):
@@ -115,11 +118,13 @@ class SignIn(Base):
         c = gclient()
         self.assertFalse(c.get("/api/auth/me").json()["authenticated"])
         self.assertEqual(c.get("/api/conversations").status_code, 401)
-        self.assertEqual(c.post("/api/guest/redeem", json={"code": code}).status_code, 200)
+        self.assertEqual(c.post("/api/guest/redeem", json={"code": code}).status_code, 409)  # not a device code
+        self.assertEqual(c.post("/api/guest/signup", json={"code": code, "username": "ana-k", "password": PASSWORD}).status_code, 200)
         me = c.get("/api/auth/me").json()
         self.assertTrue(me["authenticated"])
         self.assertEqual(me["guest"]["name"], "Ana")
-        self.assertEqual(gclient().post("/api/guest/redeem", json={"code": code}).status_code, 401)
+        again = gclient().post("/api/guest/signup", json={"code": code, "username": "ana-k2", "password": PASSWORD})
+        self.assertEqual(again.status_code, 401)
 
     def test_bad_codes_are_throttled_apart_from_the_owner_login(self):
         c = gclient()

@@ -470,10 +470,21 @@ Friends and coworkers can have their own Shell:B on this machine, without access
 - **Where:** the same process listens on `SHELLB_GUEST_PORT` (8220, loopback and docker0 like :8200). Connections
   on that port reach a separate app that mounts only guest routes; the owner's routes, cookie, localhost trust and
   admin key don't exist there. Publish it through the Cloudflare tunnel as its own hostname, with no Access policy
-  (the invite is the login).
-- **Invites:** Tools & Connectors → Guests → Make invite gives a one-time link (7 days) that signs in the device that
-  opens it. A signed-in guest makes 10-minute device codes for their other devices. Pause, sign out or delete a guest
-  there; deleting removes their chats, files and memories.
+  (guests sign in to Shell:B itself).
+- **Invites and accounts** (server/guest_accounts.py): Tools & Connectors → Guests → Make invite gives a one-time
+  link (7 days). The guest opens it and chooses a username (case-insensitive), a password (10+ characters, common and
+  guessable ones refused, scrypt-hashed) and optionally an email; that spends the invite. There's no open
+  registration. Sessions last 30 days from last use with "Remember me", 12 hours idle without. A device that signed
+  in with the password can make a 10-minute device code for another device. Pause, sign out or delete a guest there;
+  deleting removes their chats, files, memories and sign-in history.
+- **Two-step and lockouts:** guests can turn on authenticator-app codes (TOTP) with 10 one-time recovery codes under
+  Account and security, where they also change their password (other devices are signed out) and see their sign-in
+  history. 10 wrong tries per address per 15 minutes are throttled, and an account locks for 15 minutes after 8
+  wrong passwords or codes in a row, which posts "Guest account locked" to Activity. The guest's row in Settings
+  shows username, last sign-in, two-step, lock state and a 90-day sign-in log, with Unlock, Turn off two-step (for a
+  lost phone) and Make reset link (one-time, 24 h, signs them out everywhere; pass it on yourself, nothing is
+  emailed). Guests who joined by invite before accounts existed keep their devices but must choose a username and
+  password before anything else works.
 - **What guests get:** an installable app (guest.html) with chats, local agents whose model is on the guest model
   list (default: the default agent's), web search, offline wiki and law, maps and sky tools, pictures, music, sound,
   Kokoro voices, the code sandbox, artifacts, file uploads and voice mode. Each guest has their own memory

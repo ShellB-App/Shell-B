@@ -5,9 +5,10 @@ How guests are kept apart
   the Cloudflare tunnel publishes it as the guest address). That app mounts only guest routes. None of the owner's
   routers exist there, and the owner's cookie, localhost trust, the admin key and frame keys mean nothing to it.
   The owner app has no use for a guest cookie either.
-- A guest signs in by redeeming a one-time invite code the owner made (Settings → Guests). The device gets a
-  `shellb_guest` cookie (HttpOnly, SameSite=Strict, 90 days from last use). Another device needs another invite, or a
-  short device code made from a device that is already signed in.
+- A guest has an account: a username and password, optionally two-step codes (guest_accounts.py). The owner's
+  one-time invite link (Settings → Guests) is the only way to make one. Signing in gives the device a `shellb_guest`
+  cookie (HttpOnly, SameSite=Strict): 30 days from last use with "Remember me", 12 hours idle without. A device that
+  signed in with the password can make a short device code for another device.
 - Guest chats are rows in the shared conversations table with `tenant` = the guest's id and `incognito` = 1, so every
   owner-side rule for incognito chats applies (no memory learning, episodes, search, Library or Media, and they stay
   out of the stats). db.list_conversations keeps them out of the owner's sidebar. privacy.sweep leaves them alone
@@ -52,7 +53,8 @@ from tools import FILES, WORKSPACES, ToolResult
 admin_router = APIRouter(prefix="/api/guests")
 
 COOKIE = "shellb_guest"
-SESSION_TTL = 90 * 86400
+SESSION_TTL = 30 * 86400  # "Remember me": from last use
+IDLE_TTL = 12 * 3600  # without it
 INVITE_TTL = 7 * 86400
 DEVICE_TTL = 10 * 60
 DEVICE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"  # no 0/O, 1/I/L
@@ -137,7 +139,9 @@ CREATE TABLE IF NOT EXISTS guest_reports(
                     cfg.update(turnsPerDay=0, tokensPerDay=0)
                     c.execute("UPDATE guests SET config=? WHERE id=?", (json.dumps(cfg), r["id"]))
             c.execute("INSERT OR REPLACE INTO kv(key, value) VALUES('guest_limits_v2', 'true')")
+    import guest_accounts
     import guest_notes
+    guest_accounts.init()
     guest_notes.init()
 
 
@@ -197,8 +201,12 @@ def clean_config(cfg: dict | None) -> dict:
 
 
 def _guest(r) -> dict:
+    """A guest as the app may show it: account facts, never the password or two-step secrets."""
+    locked = r["locked_until"] or 0
     return {"id": r["id"], "name": r["name"], "created": r["created"], "disabled": bool(r["disabled"]),
-            "config": clean_config(json.loads(r["config"] or "{}")), "lastSeen": r["last_seen"]}
+            "config": clean_config(json.loads(r["config"] or "{}")), "lastSeen": r["last_seen"],
+            "username": r["username"], "email": r["email"], "passwordSet": bool(r["pw_set"]), "twoStep": bool(r["totp_on"]),
+            "lockedUntil": locked if locked > time.time() else None, "lastSignIn": r["last_signin"]}
 
 
 def get_guest(gid: str) -> dict | None:
@@ -329,7 +337,8 @@ def delete_guest(gid: str) -> bool:
     for name in files:
         _unlink_file(name)
     with db.conn() as c:
-        for table in ("guest_codes", "guest_sessions", "guest_files", "guest_usage", "guest_memories", "guest_notes"):
+        for table in ("guest_codes", "guest_sessions", "guest_files", "guest_usage", "guest_memories", "guest_notes",
+                      "guest_recovery", "guest_auth_log"):
             c.execute(f"DELETE FROM {table} WHERE guest_id=?", (gid,))
         c.execute("DELETE FROM guests WHERE id=?", (gid,))
     return True
@@ -352,30 +361,37 @@ def _throttle(ip: str):
 
 
 async def redeem(code: str, req: Request) -> tuple[str, dict]:
-    """Trade an invite or device code for a session token. Codes work once."""
+    """Trade a device code for a session token. Codes work once. Invites and reset links make or reset an account
+    instead (guest_accounts.signup / reset), so here they only get a pointer to their link."""
     ip = auth._client_ip(req.scope)
     _throttle(ip)
     code = re.sub(r"[\s-]+", "", str(code or "")) if len(str(code or "")) <= 12 else str(code or "").strip()
     with db.conn() as c:
         r = c.execute("SELECT * FROM guest_codes WHERE hash IN (?,?) AND expires > ?",
                       (_sha(code), _sha(code.upper()), time.time())).fetchone()
-        if r:
+        if r and r["kind"] == "device":
             c.execute("DELETE FROM guest_codes WHERE hash=?", (r["hash"],))
+    if r and r["kind"] != "device":
+        raise HTTPException(409, "That's the code from a link Evie sent. Open the whole link to set your password.")
     g = get_guest(r["guest_id"]) if r else None
     if not g or g["disabled"]:
         _codes_tried.setdefault(ip, []).append(time.time())
         await asyncio.sleep(0.5)
-        raise HTTPException(401, "That code didn't work. It may have expired or been used already: ask Evie for a new one.")
+        raise HTTPException(401, "That code didn't work. It may have expired or been used already: make a new one on "
+                                 "a device that's signed in.")
     _codes_tried.pop(ip, None)
-    return new_session(g["id"], req), g
+    import guest_accounts
+    return guest_accounts._signed_in(guest_accounts._row(g["id"]), req, "device", True)["token"], g
 
 
-def new_session(gid: str, req: Request) -> str:
+def new_session(gid: str, req: Request, via: str = "password", remember: bool = True) -> str:
+    """`via`: how the device signed in (password, signup, reset, device). guest_accounts makes these."""
     token = "sgs_" + secrets.token_urlsafe(32)
     now = time.time()
     with db.conn() as c:
-        c.execute("INSERT INTO guest_sessions VALUES(?,?,?,?,?,?)",
-                  (_sha(token), gid, now, now, (req.headers.get("user-agent") or "")[:200], auth._client_ip(req.scope)))
+        c.execute("INSERT INTO guest_sessions(id, guest_id, created, last_used, ua, ip, via, remember) VALUES(?,?,?,?,?,?,?,?)",
+                  (_sha(token), gid, now, now, (req.headers.get("user-agent") or "")[:200], auth._client_ip(req.scope),
+                   via, int(bool(remember))))
         c.execute("UPDATE guests SET last_seen=? WHERE id=?", (now, gid))
     return token
 
@@ -396,7 +412,7 @@ def session_of(req: Request) -> tuple[dict, dict] | None:
     now = time.time()
     with db.conn() as c:
         s = c.execute("SELECT * FROM guest_sessions WHERE id=?", (_sha(token),)).fetchone()
-        if not s or now - s["last_used"] > SESSION_TTL:
+        if not s or now - s["last_used"] > (SESSION_TTL if s["remember"] else IDLE_TTL):
             return None
         if now - s["last_used"] > 300:
             c.execute("UPDATE guest_sessions SET last_used=? WHERE id=?", (now, s["id"]))
@@ -416,7 +432,7 @@ def devices(gid: str, current: str | None = None) -> list[dict]:
     with db.conn() as c:
         rows = c.execute("SELECT * FROM guest_sessions WHERE guest_id=? ORDER BY last_used DESC", (gid,)).fetchall()
     return [{"id": r["id"][:16], "created": r["created"], "lastUsed": r["last_used"], "userAgent": r["ua"],
-             "current": r["id"] == current} for r in rows]
+             "via": r["via"], "current": r["id"] == current} for r in rows]
 
 
 def drop_device(gid: str, short_id: str) -> bool:
@@ -853,10 +869,12 @@ def _summary(g: dict) -> dict:
         sessions = c.execute("SELECT count(*) FROM guest_sessions WHERE guest_id=?", (g["id"],)).fetchone()[0]
         chats = c.execute("SELECT count(*) FROM conversations WHERE tenant=?", (g["id"],)).fetchone()[0]
         mems = c.execute("SELECT count(*) FROM guest_memories WHERE guest_id=?", (g["id"],)).fetchone()[0]
-        inv = c.execute("SELECT expires FROM guest_codes WHERE guest_id=? AND kind='invite' AND expires > ?",
-                        (g["id"], time.time())).fetchone()
+        codes = {r["kind"]: r["expires"] for r in c.execute(
+            "SELECT kind, max(expires) AS expires FROM guest_codes WHERE guest_id=? AND kind IN ('invite', 'reset') "
+            "AND expires > ? GROUP BY kind", (g["id"], time.time()))}
     return {**g, "today": usage(g["id"]), "devices": sessions, "chats": chats, "memories": mems,
-            "storageBytes": storage_bytes(g["id"]), "busy": busy(g["id"]), "inviteExpires": inv["expires"] if inv else None}
+            "storageBytes": storage_bytes(g["id"]), "busy": busy(g["id"]), "inviteExpires": codes.get("invite"),
+            "resetExpires": codes.get("reset")}
 
 
 @admin_router.get("")
@@ -922,8 +940,11 @@ async def api_update(gid: str, req: Request):
 @admin_router.post("/{gid}/invite")
 def api_invite(gid: str, req: Request):
     auth.require_admin(req)
-    if not get_guest(gid):
+    g = get_guest(gid)
+    if not g:
         raise HTTPException(404)
+    if g["passwordSet"]:  # an invite makes an account; one that exists gets a reset link (guest_accounts.py)
+        raise HTTPException(409, f"{g['name']} already has an account. Make a reset link instead.")
     code = new_invite(gid)
     return {"code": code, "link": invite_link(code)}
 

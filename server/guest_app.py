@@ -11,6 +11,10 @@ The routes copy the paths the chat UI already uses (/api/conversations/…, /api
 first checks that the chat or file belongs to the signed-in guest, then calls the owner app's own function for the
 work.
 
+Sign-in (guest_accounts.py): username and password, then a two-step code if the guest turned that on. Invite and
+reset links set a password; device codes sign in another device. A guest with no password yet (invite-only, from
+before accounts) reaches nothing but SETUP_OPEN until they choose one.
+
 Frame keys (sandboxed artifacts, which carry no cookie): `/api/k/w-<conv>.<mac>/…` with mac = HMAC(the guest's frame
 secret, scope), as in auth.py. The frame secret is derived per guest (guests.frame_secret) and reaches only that
 guest's chats, files and artifact state.
@@ -33,6 +37,7 @@ import appstate
 import auth
 import db
 import flights
+import guest_accounts
 import guest_notes
 import guests
 import maps
@@ -53,7 +58,10 @@ UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
 STATIC_DIRS = ("assets", "fonts", "icons", "vendor")
 STATIC_FILES = ("favicon.svg", "guest.html", "manifest-guest.webmanifest", "guest-sw.js")
 # the only /api paths that answer without a guest session (every handler checks again; this is the outer wall)
-OPEN = ("/api/auth/me", "/api/guest/redeem", "/api/guest/logout", "/api/_hold")
+OPEN = ("/api/auth/me", "/api/guest/login", "/api/guest/login/two-step", "/api/guest/code", "/api/guest/signup",
+        "/api/guest/reset", "/api/guest/redeem", "/api/guest/logout", "/api/_hold")
+# what a session of a guest with no password yet (invite-only, from before accounts) may reach: choosing one
+SETUP_OPEN = ("/api/guest/account/create",)
 # owner routers whose GET routes guests share as they are: offline Wikipedia, maps, sky, weather, routes, flights,
 # and the Worlds notes (read-only here: their POST/DELETE stay owner-only)
 SHARED_READS = (wiki.router, maps.router, weather.router, routing.router, sky.router, planetary.router, flights.router,
@@ -85,8 +93,13 @@ async def guard(req: Request, call_next):
     framed = path.startswith("/api/k/")
     if req.method in UNSAFE and not framed and not _origin_ok(req):
         return JSONResponse({"detail": "Cross-site request refused"}, status_code=403)
-    if path.startswith("/api/") and not framed and path not in OPEN and not guests.session_of(req):
-        return JSONResponse({"detail": "Not signed in"}, status_code=401)
+    if path.startswith("/api/") and not framed and path not in OPEN:
+        got = guests.session_of(req)
+        if not got:
+            return JSONResponse({"detail": "Not signed in"}, status_code=401)
+        if not got[0]["passwordSet"] and path not in SETUP_OPEN:
+            return JSONResponse({"detail": "Choose a username and password first", "code": "account_required"},
+                                status_code=403)
     if path.startswith("/api/") and not framed:
         token = req.cookies.get(guests.COOKIE) or auth._client_ip(req.scope)
         now = time.time()
@@ -107,9 +120,35 @@ async def guard(req: Request, call_next):
     return resp
 
 
-def _set_cookie(resp: Response, req: Request, token: str):
+def _set_cookie(resp: Response, req: Request, token: str, remember: bool = True):
+    """Without "Remember me" the cookie ends with the browser session (and the server drops it after IDLE_TTL)."""
     secure = req.url.scheme == "https" or req.headers.get("x-forwarded-proto") == "https"
-    resp.set_cookie(guests.COOKIE, token, max_age=guests.SESSION_TTL, httponly=True, samesite="strict", secure=secure, path="/")
+    resp.set_cookie(guests.COOKIE, token, max_age=guests.SESSION_TTL if remember else None, httponly=True,
+                    samesite="strict", secure=secure, path="/")
+
+
+async def _body(req: Request) -> dict:
+    try:
+        body = await req.json()
+    except ValueError:
+        raise HTTPException(400, "Send JSON")
+    return body if isinstance(body, dict) else {}
+
+
+def _signed_in(got: dict, req: Request) -> JSONResponse:
+    """A sign-in step's answer: the cookie, or a ticket for the two-step code."""
+    if "ticket" in got:
+        return JSONResponse({"twoStep": True, "ticket": got["ticket"]})
+    resp = JSONResponse({"ok": True, "name": got["guest"]["name"]})
+    _set_cookie(resp, req, got["token"], got["remember"])
+    return resp
+
+
+def _session(req: Request) -> tuple[dict, dict]:
+    got = guests.session_of(req)
+    if not got:
+        raise HTTPException(401, "Not signed in")
+    return got
 
 
 def _agent(g: dict, agent_id: str | None) -> dict:
@@ -130,7 +169,9 @@ def _me(g: dict, sess: dict) -> dict:
     return {"id": g["id"], "name": g["name"], "today": guests.usage(g["id"]),
             "limits": {k: cfg[k] for k in guests.LIMITS}, "storageBytes": guests.storage_bytes(g["id"]),
             "agents": [guests.public_agent(a, g) for a in guests.agents_for(g)],
-            "defaultAgent": get_settings().get("defaultAgent"), "devices": guests.devices(g["id"], sess["id"])}
+            "defaultAgent": get_settings().get("defaultAgent"), "devices": guests.devices(g["id"], sess["id"]),
+            "username": g["username"], "twoStep": g["twoStep"],
+            "deviceCodes": sess.get("via") in guest_accounts.PASSWORD_VIAS}
 
 
 # ── sign-in ─────────────────────────────────────────────────────────────────
@@ -140,13 +181,50 @@ def auth_me(req: Request):
     got = guests.session_of(req)
     if not got:
         return {"authenticated": False, "via": None, "passwordSet": True, "frameKey": None}
-    return {"authenticated": True, "via": "guest", "passwordSet": True, "frameKey": guests.frame_secret(got[0]["id"]),
-            "guest": {"id": got[0]["id"], "name": got[0]["name"]}}
+    g = got[0]
+    return {"authenticated": True, "via": "guest", "passwordSet": True, "needsAccount": not g["passwordSet"],
+            "frameKey": guests.frame_secret(g["id"]) if g["passwordSet"] else None,
+            "guest": {"id": g["id"], "name": g["name"], "username": g["username"]}}
+
+
+@guest_app.post("/api/guest/login")
+async def login(req: Request):
+    body = await _body(req)
+    got = await guest_accounts.sign_in(req, body.get("username"), body.get("password"), body.get("remember") is not False)
+    return _signed_in(got, req)
+
+
+@guest_app.post("/api/guest/login/two-step")
+async def login_two_step(req: Request):
+    body = await _body(req)
+    return _signed_in(await guest_accounts.second_step(req, body.get("ticket"), body.get("code")), req)
+
+
+@guest_app.post("/api/guest/code")
+async def code_info(req: Request):
+    """What an invite or reset link is for: the forms greet the guest by name before anything is spent."""
+    return await guest_accounts.code_info(req, (await _body(req)).get("code"))
+
+
+@guest_app.post("/api/guest/signup")
+async def signup(req: Request):
+    body = await _body(req)
+    got = await guest_accounts.signup(req, body.get("code"), body.get("username"), body.get("password"), body.get("email"),
+                                      body.get("remember") is not False)
+    return _signed_in(got, req)
+
+
+@guest_app.post("/api/guest/reset")
+async def reset(req: Request):
+    body = await _body(req)
+    got = await guest_accounts.reset(req, body.get("code"), body.get("password"), body.get("remember") is not False)
+    return _signed_in(got, req)
 
 
 @guest_app.post("/api/guest/redeem")
 async def redeem(req: Request):
-    body = await req.json()
+    """A device code from another signed-in device."""
+    body = await _body(req)
     token, g = await guests.redeem(str(body.get("code") or ""), req)
     resp = JSONResponse({"ok": True, "name": g["name"]})
     _set_cookie(resp, req, token)
@@ -173,8 +251,67 @@ def me(req: Request):
 
 @guest_app.post("/api/guest/device-code")
 def device_code(req: Request):
-    g = guests.require(req)
+    g, sess = _session(req)
+    if sess.get("via") not in guest_accounts.PASSWORD_VIAS:
+        raise HTTPException(403, "Device codes can only be made on a device where you signed in with your password.")
+    guest_accounts.log(g["id"], "device_code", req)
     return {"code": guests.device_code(g["id"]), "expiresIn": guests.DEVICE_TTL}
+
+
+# ── the guest's account ─────────────────────────────────────────────────────
+
+@guest_app.get("/api/guest/account")
+def account(req: Request):
+    return guest_accounts.account(*_session(req))
+
+
+@guest_app.patch("/api/guest/account")
+async def update_account(req: Request):
+    g, sess = _session(req)
+    guest_accounts.update_profile(g, await _body(req))
+    return guest_accounts.account(*_session(req))
+
+
+@guest_app.post("/api/guest/account/create")
+async def create_account(req: Request):
+    """A guest who joined by invite before accounts existed chooses a username and password."""
+    g, sess = _session(req)
+    body = await _body(req)
+    await guest_accounts.create_for_session(req, g, sess, body.get("username"), body.get("password"), body.get("email"))
+    return {"ok": True}
+
+
+@guest_app.post("/api/guest/account/password")
+async def change_password(req: Request):
+    g, sess = _session(req)
+    body = await _body(req)
+    await guest_accounts.change_password(req, g, sess, body.get("current"), body.get("password"))
+    return {"ok": True}
+
+
+@guest_app.post("/api/guest/account/two-step/setup")
+async def two_step_setup(req: Request):
+    g, _sess = _session(req)
+    return await guest_accounts.two_step_begin(req, g, (await _body(req)).get("password"))
+
+
+@guest_app.post("/api/guest/account/two-step")
+async def two_step_on(req: Request):
+    g, _sess = _session(req)
+    return {"recoveryCodes": guest_accounts.two_step_enable(req, g, (await _body(req)).get("code"))}
+
+
+@guest_app.post("/api/guest/account/two-step/off")
+async def two_step_off(req: Request):
+    g, _sess = _session(req)
+    await guest_accounts.two_step_disable(req, g, (await _body(req)).get("password"))
+    return {"ok": True}
+
+
+@guest_app.post("/api/guest/account/recovery-codes")
+async def recovery_codes(req: Request):
+    g, _sess = _session(req)
+    return {"recoveryCodes": await guest_accounts.new_recovery_codes(req, g, (await _body(req)).get("password"))}
 
 
 @guest_app.delete("/api/guest/devices/{short_id}")

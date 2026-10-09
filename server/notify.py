@@ -68,7 +68,7 @@ KINDS = [
     ("data", "Offline data", "A dataset download finished or failed", "attention"),
     ("shopping", "Price watch", "A watched item hit your target price, dropped or came back in stock", "all"),
     ("health", "System health", "A service went down or came back, a crash loop, low disk or memory", "all"),
-    ("guest", "Guest reports", "A guest used Report to Evie (guests.py)", "all"),
+    ("guest", "Guests", "A guest used Report to Evie, or a guest account locked after wrong passwords", "all"),
 ]
 KIND_IDS = {k[0] for k in KINDS}
 NOUN = {"approval": "Approval", "question": "Question", "schedule": "Scheduled task", "plan": "Mega Plan",
@@ -193,6 +193,8 @@ def _message(kind: str, status: str, title: str, route: str, tag: str, noun: str
     head = f"{noun or NOUN.get(kind, 'Shell:B')} {VERB.get(status, status)}"
     if kind == "health" and title:  # watchdog titles hold no private content and are the whole message
         head, title = title[:90], ""
+    elif kind == "guest" and status == "warning":  # guest_accounts.py: a lockout, not a report
+        head = "Guest account locked"
     elif kind == "shopping":  # the item and price stay in the body, which follows the "details" preference
         head = "Price alert" if status in ATTENTION else "Price drop"
     msg = {"t": head, "r": route if route.startswith("#/") else "#/activity", "tag": tag,

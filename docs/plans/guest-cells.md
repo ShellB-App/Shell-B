@@ -161,11 +161,23 @@ stays signed in for 90 days. Replace this with real accounts in `server/guests.p
   - device code needs a password session
   - nothing about accounts is reachable from inside a cell
 
+## Progress
+- **Guest accounts: built 2026-10-09** (not deployed until shellb-web restarts with a fresh UI build).
+  `server/guest_accounts.py` (accounts, TOTP, lockout, reset links, sign-in log, owner routes under /api/guests/{gid}/),
+  session changes in `guests.py` (`via`, `remember`, 30 d / 12 h idle), gateway routes in `guest_app.py` (OPEN /
+  SETUP_OPEN wall), `ui/src/guest/GuestGate.tsx` (sign-in, two-step, create account, reset, device code, choose a
+  password), `panels.tsx` AccountPanel, `qr.ts` (dependency-free QR encoder, verified with OpenCV), GuestsTab account
+  controls, `tests/guest_accounts_test.py` (24). Differences from the plan: the password is also needed to start
+  two-step setup; device codes need a session that proved the password (via password/signup/reset); TOTP failures
+  count toward the same 8-failure lock; recovery codes are 10 chars (`xxxxx-xxxxx`), sha256-hashed. For the cells:
+  the account routes are gateway-only (`/api/guest/*`), so the cell proxy must keep handling `/api/guest/*` itself.
+- **Phase 1: not started.**
+
 ## Handoff
 This plan was written in one session and is to be **implemented by another agent**. State when it was written
 (2026-10-09, ~20:30):
 
-- **Live today (uncommitted in ~/shellb/web, mixed with other sessions' work):** the in-process guest system.
+- **Live today (committed since, in c60b3d2):** the in-process guest system.
   - `server/guests.py`, `guest_app.py`, `guest_notes.py`
   - `ui/src/guest/*`, `ui/src/components/GuestsTab.tsx`
   - hooks in `app.py` (begin_turn guest mode), `agent.py` (`Turn.tenant`, `_guest_tool`), `db.py` (`tenant`

@@ -69,6 +69,7 @@ import ask
 import themes
 import screen
 import public_api
+import guest_accounts
 import guests
 import mcp_server
 import browsing
@@ -224,6 +225,7 @@ app.include_router(screen.router)
 app.include_router(public_api.router)
 app.include_router(public_api.admin_router)
 app.include_router(guests.admin_router)  # owner side of Shell:B Guest; the guests' own app is guest_app.py
+app.include_router(guest_accounts.admin_router)  # guests' accounts: unlock, reset links, two-step off, sign-in log
 app.include_router(mcp_server.router)
 app.include_router(appstate.router)
 app.include_router(auth.router)
