@@ -206,7 +206,7 @@ def _run_args(cell: Cell, guest: dict) -> list[str]:
               (WEB / "ui" / "public" / "studio-inspector.js", "/app/ui/public/studio-inspector.js", "ro"),
               (WEB / "docs" / "changelog.json", "/app/docs/changelog.json", "ro"),
               (d / "data", "/app/data", "rw"), (d / "sock", "/run/shellb", "ro"), (d / "web", "/run/web", "rw")]
-    mounts += [(SHELLB / x, f"/home/cell/shellb/{x}", "ro") for x in ("wiki", "maps", "legal") if (SHELLB / x).is_dir()]
+    mounts += [(SHELLB / x, f"/home/cell/shellb/{x}", "ro") for x in ("wiki", "maps", "legal", "shelf") if (SHELLB / x).is_dir()]
     args = ["run", "-d", "--name", name(cell.gid), "--label", f"shellb.cell={cell.gid}", "--network", "none",
             "--read-only", "--cap-drop", "ALL", "--user", f"{cell.uid}:{cell.uid}", *LIMITS,
             "--tmpfs", "/tmp:rw,nosuid,nodev,size=512m",

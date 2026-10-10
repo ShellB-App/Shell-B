@@ -331,6 +331,12 @@ async def _start_mcp():
     asset_libs.runner, asset_libs.abort_turn = _run_asset_job, _abort_turn
     asset_libs.start()
     codex.start()
+    if cell_boot.CELL:  # the owner's shared shelf (~/shellb/shelf, mounted read-only) into this guest's Codex
+        import shelf
+        try:
+            shelf.sync()
+        except Exception as e:  # noqa: BLE001
+            print(f"shelf sync: {type(e).__name__}: {e}")
     episodes.busy = lambda: bool(ACTIVE)
     episodes.start()
     reflection.busy = lambda: bool(ACTIVE)
