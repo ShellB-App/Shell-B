@@ -43,9 +43,10 @@ export interface AppDef {
 
 /**
  * Every app in Shell:B, in rail order. The rail, the gear menu, the command palette and App.tsx's routing all read this list,
- * so a new app is one entry here (plus its page in App.tsx).
+ * so a new app is one entry here (plus its page in App.tsx). `APPS` is this list, minus the host-only apps when the UI is a
+ * guest's cell (setCellMode, below).
  */
-export const APPS: AppDef[] = [
+const ALL_APPS: AppDef[] = [
   { id: 'chat', label: 'Chat', hint: 'Talk to your agents', icon: MessageSquare, tint: 'var(--text-secondary)', group: 'chat' },
   { id: 'studio', label: 'Studio', hint: 'Design projects', icon: Palette, tint: '#fb7185', group: 'make',
     hash: '#/studio', route: /^#\/studio\b/, keywords: 'design projects' },
@@ -117,7 +118,15 @@ export const APPS: AppDef[] = [
     live: s => Object.values(s?.services ?? {}).some(v => !v.ok) ? { label: 'Settings · some services are offline', dot: true } : undefined },
 ];
 
-export const appById = (id: AppId) => APPS.find(a => a.id === id)!;
+/** Apps that are the host machine's own, not a guest's: their routers never load in a cell (server/cell_boot.py). */
+const HOST_APPS = new Set<AppId>(['models', 'data', 'secretary', 'gibberlink', 'feeds']);
+export let APPS: AppDef[] = ALL_APPS;  // eslint-disable-line import/no-mutable-exports — a live binding, set once before the app mounts
+/** cell.ts: this UI is a guest's own Shell:B in a container; the host-only apps leave every list. */
+export function setCellMode(on: boolean) {
+  APPS = on ? ALL_APPS.filter(a => !HOST_APPS.has(a.id)) : ALL_APPS;
+}
+
+export const appById = (id: AppId) => ALL_APPS.find(a => a.id === id)!;
 
 /** The app on screen for a hash. Anything no app claims (chats, projects) belongs to Chat. */
 export const appForHash = (hash: string): AppId => APPS.find(a => a.route?.test(hash))?.id ?? 'chat';
@@ -126,7 +135,7 @@ export const appForHash = (hash: string): AppId => APPS.find(a => a.route?.test(
 // Which apps get a rail tile. Per browser (localStorage), shared by the rail, the All apps launcher and the command palette.
 
 const PINS_KEY = 'shellb.rail.pins';
-export const PINNABLE = new Set(APPS.filter(a => a.group !== 'chat' && a.group !== 'system' && a.id !== DOCKED).map(a => a.id));
+export const PINNABLE = new Set(ALL_APPS.filter(a => a.group !== 'chat' && a.group !== 'system' && a.id !== DOCKED).map(a => a.id));
 const pinListeners = new Set<() => void>();
 
 function readPins(): AppId[] {
@@ -149,7 +158,7 @@ if (typeof window !== 'undefined') addEventListener('storage', e => {
 /** Replaces the pin list (null = back to the defaults). Kept in APPS order so the rail order is stable. */
 export function setPins(next: AppId[] | null) {
   const want = new Set(next ?? DEFAULT_PINS);
-  pins = APPS.map(a => a.id).filter(id => want.has(id) && PINNABLE.has(id));
+  pins = ALL_APPS.map(a => a.id).filter(id => want.has(id) && PINNABLE.has(id));
   try { if (next) localStorage.setItem(PINS_KEY, JSON.stringify(pins)); else localStorage.removeItem(PINS_KEY); } catch { /* private mode */ }
   pinListeners.forEach(f => f());
 }

@@ -31,6 +31,8 @@ import { NetworkSettings } from './NetworkSettings';
 import { ThemePicker } from './ThemePicker';
 import { THEMES, currentTheme, setAmbientOn, setTheme, useAmbientOn } from '../themes';
 import { PREVIEW_SAVER, PREVIEW_SPLASH, SAVER_MINUTES, SAVER_STYLES, saveAmbience, useAmbience, type SaverStyle, type SplashMode } from '../ambience';
+import { isCell, type GuestPanel } from '../cell';
+import { CellAccountTab, GUEST_ENTRIES, toPanel } from './CellGuest';
 
 const SERVICE_INFO: Record<string, [string, string]> = {
   ollama: ['Ollama', 'Language models · :11434'],
@@ -88,12 +90,18 @@ interface SettingsProps {
   onSaved: () => void;
   tab?: SettingsTabId;
   onOpenTab?: (tab: SettingsTabId) => void;
+  /** a guest's own Shell:B (cell.ts): Account opens the gateway's panels instead of the owner's password and sessions */
+  onGuest?: (panel: GuestPanel) => void;
 }
 
+// In a guest's cell the host's tabs don't exist: API keys, the network, host stats, backups and the owner's account.
+const CELL_SETTINGS = new Set<SettingsTabId>(['general', 'appearance', 'speech', 'memory', 'shortcuts', 'notifications', 'changelog', 'account', 'usage']);
+const settingsTab = (t?: SettingsTabId): SettingsTabId => (t && (!isCell() || CELL_SETTINGS.has(t)) ? t : 'general');
+
 export function SettingsContent(p: SettingsProps) {
-  const [tab, setTab] = useState<SettingsTabId>(p.tab ?? 'general');
-  useEffect(() => { if (p.tab) setTab(p.tab); }, [p.tab]);
-  const tabs = [
+  const [tab, setTab] = useState<SettingsTabId>(() => settingsTab(p.tab));
+  useEffect(() => { if (p.tab) setTab(settingsTab(p.tab)); }, [p.tab]);
+  const tabs = ([
     { id: 'general', label: 'General', icon: SlidersHorizontal },
     { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'apikeys', label: 'API Keys', icon: KeyRound },
@@ -107,7 +115,7 @@ export function SettingsContent(p: SettingsProps) {
     { id: 'changelog', label: 'Changelog', icon: History },
     { id: 'account', label: 'Account', icon: ShieldCheck },
     { id: 'usage', label: 'Usage', icon: BarChart3 },
-  ] as const;
+  ] as const).filter(t => !isCell() || CELL_SETTINGS.has(t.id));
 
   return (
     <div className="flex-1 min-h-0 flex flex-col sm:flex-row h-full">
@@ -131,7 +139,7 @@ export function SettingsContent(p: SettingsProps) {
         {tab === 'notifications' && <NotificationsTab />}
         {tab === 'backups' && <BackupsTab />}
         {tab === 'changelog' && <ChangelogTab />}
-        {tab === 'account' && <AccountTab />}
+        {tab === 'account' && (isCell() ? <CellAccountTab onGuest={p.onGuest} /> : <AccountTab />)}
         {tab === 'usage' && <UsageTab models={p.models} />}
       </div>
     </div>
@@ -210,15 +218,19 @@ function General({ settings, agents, models, onSaved, onOpenTab }: SettingsProps
       <Row label="Fresh starter cards" hint="Every 12 hours, while nobody is chatting, the utility model writes new suggestions for the empty-chat screen">
         <Toggle on={settings.suggestionsRefresh ?? true} onChange={v => save({ suggestionsRefresh: v })} label="Fresh starter cards" />
       </Row>
-      <Row label="API Keys" hint="Credentials for external services and cloud AI providers">
-        <button className={btn.subtle} onClick={() => onOpenTab?.('apikeys')}><KeyRound className="w-3.5 h-3.5 text-rose-400" />API keys & external services</button>
-      </Row>
+      {!isCell() && (
+        <Row label="API Keys" hint="Credentials for external services and cloud AI providers">
+          <button className={btn.subtle} onClick={() => onOpenTab?.('apikeys')}><KeyRound className="w-3.5 h-3.5 text-rose-400" />API keys & external services</button>
+        </Row>
+      )}
       <Row label="Voice" hint="Reading voice, speed, and the voice library">
         <button className={btn.subtle} onClick={() => onOpenTab?.('speech')}><AudioLines className="w-3.5 h-3.5" />Speech settings</button>
       </Row>
-      <Row label="Network" hint="Wi-Fi, Ethernet, and active VPN tunnels">
-        <button className={btn.subtle} onClick={() => onOpenTab?.('network')}><Network className="w-3.5 h-3.5" />Network settings</button>
-      </Row>
+      {!isCell() && (
+        <Row label="Network" hint="Wi-Fi, Ethernet, and active VPN tunnels">
+          <button className={btn.subtle} onClick={() => onOpenTab?.('network')}><Network className="w-3.5 h-3.5" />Network settings</button>
+        </Row>
+      )}
       <Row label="Max tool rounds" hint="Safety cap on tool calls per reply; the loop guard may extend it up to the hard cap">
         <div className="flex items-center gap-2">
           <input type="number" min={1} max={50} className={clsx(btn.input, 'w-24')} value={settings.maxToolRounds}
@@ -442,10 +454,16 @@ interface PaletteProps {
     openApp: (app: AppId) => void; openSettings: (tab?: SettingsTabId) => void;
     /** Tools & Connectors on a given tab (desktop only; the kiosk opens the modal on its default tab) */
     openTools?: (tab?: ToolsTab) => void;
+    /** a guest's own Shell:B (cell.ts): the gateway's account, limits and Report to Evie panels */
+    openGuest?: (panel: GuestPanel) => void;
   };
   /** for entries that exist only when a feature is on (Aphrodite's tab) */
   settings?: Settings;
 }
+
+// palette commands that are the host's own (server/cell_boot.py skips their routers in a guest's cell)
+const CELL_HIDDEN = new Set(['network', 'system', 'apikeys', 'codex-secrets', 'backups', 'account', 'tools-discover', 'tools-servers',
+  'tools-api', 'tools-guests', 'tools-screen', 'tools-cloud', 'tools-adult', 'nightshift', 'findings', 'model-store', 'model-updates', 'fleet']);
 
 export function CommandPalette({ open, onClose, agents, conversations, theme, actions, settings }: PaletteProps) {
   const [q, setQ] = useState('');
@@ -522,7 +540,9 @@ export function CommandPalette({ open, onClose, agents, conversations, theme, ac
       { id: 'model-store', label: 'Model Store', search: 'download models ollama hugging face', icon: <Store className="w-4 h-4 text-cyan-400" />, run: () => { location.hash = '#/models/store'; } },
       { id: 'model-updates', label: 'Model updates', search: 'newer model versions', icon: <RefreshCw className="w-4 h-4 text-cyan-400" />, run: () => { location.hash = '#/models/updates'; } },
       { id: 'fleet', label: 'Fleet: other machines running models', search: 'nodes machines spread overflow', icon: <Workflow className="w-4 h-4 text-cyan-400" />, run: () => { location.hash = '#/models/fleet'; } },
-    ] as Item[]).filter(c => `${c.label} ${c.search ?? ''}`.toLowerCase().includes(ql));
+      ...(actions.openGuest ? GUEST_ENTRIES.map(e => ({ id: `guest-${e.id}`, label: e.label, hint: e.hint, search: 'guest evie', icon: <e.icon className="w-4 h-4 text-[var(--accent)]" />,
+        run: () => actions.openGuest!(toPanel(e.id)) })) : []),
+    ] as Item[]).filter(c => !(isCell() && CELL_HIDDEN.has(c.id)) && `${c.label} ${c.search ?? ''}`.toLowerCase().includes(ql));
     const stars: Item[] = favs.filter(f => `${f.title} ${f.subtitle}`.toLowerCase().includes(ql)).slice(0, q ? 12 : 8)
       .map(f => ({ id: `fav-${f.kind}-${f.ref}-${f.sub}`, label: f.title, hint: `★ ${FAV_LABEL[f.kind]}`, icon: <FavIcon f={f} agents={agents} />, run: () => { location.hash = f.href; } }));
     const starred = new Set(favs.filter(f => f.kind === 'chat').map(f => f.ref));

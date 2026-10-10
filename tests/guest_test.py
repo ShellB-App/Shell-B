@@ -49,8 +49,9 @@ def local_model() -> str:
 
 
 def make_guest(name="Sam", **config) -> tuple[dict, TestClient]:
-    """A guest who took their invite: an account made and this client signed in (guest_accounts_test has the rest)."""
-    g, code = guests.create_guest(name, config or None)
+    """A guest who took their invite: an account made and this client signed in (guest_accounts_test has the rest).
+    On the guest app, not in a cell (the default since 2026-10-10): these tests are the in-process guest's."""
+    g, code = guests.create_guest(name, {"cell": False, **config})
     c = gclient()
     r = c.post("/api/guest/signup", json={"code": code, "username": f"u{secrets.token_hex(5)}", "password": PASSWORD})
     assert r.status_code == 200, r.text

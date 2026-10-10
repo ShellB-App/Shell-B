@@ -1400,17 +1400,22 @@ async def service_status():
             embed_ok = any(m["name"] == settings["embeddingModel"] for m in tags)
         except Exception:
             embed_ok = False
-    try:
-        proc = await asyncio.create_subprocess_exec("docker", "image", "inspect", SANDBOX_IMAGE,
-                                                    stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
-        sandbox_ok = (await proc.wait()) == 0
-    except OSError:  # no docker CLI here (a guest's cell: its sandbox goes through the host broker)
-        sandbox_ok = False
+    if cell_boot.CELL:  # a guest's cell has no Docker: its sandbox is the host broker (cells._sandbox), asked directly
+        async with httpx.AsyncClient(trust_env=False) as c:
+            sandbox_ok = (await _probe(c, f"{cell_boot.SANDBOX_URL}/healthz", ok=lambda r: r.status_code == 200))["ok"]
+    else:
+        try:
+            proc = await asyncio.create_subprocess_exec("docker", "image", "inspect", SANDBOX_IMAGE,
+                                                        stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
+            sandbox_ok = (await proc.wait()) == 0
+        except OSError:
+            sandbox_ok = False
     names = ["ollama", "searxng", "nyx", "orpheus", "hermes", "stableaudio"]
     status = dict(zip(names, results))
     status["embeddings"] = {"ok": embed_ok}
     status["sandbox"] = {"ok": sandbox_ok}
-    status["studio"] = {"ok": Path(projects.FIREFOX).exists()}
+    if not cell_boot.CELL:  # screenshots need the host's Firefox; a cell has none and shouldn't look "offline" for it
+        status["studio"] = {"ok": Path(projects.FIREFOX).exists()}
     _status_cache = (time.time(), status)
     return status
 
@@ -1465,6 +1470,10 @@ def share_target():
     """Share → Shell:B (manifest share_target) is answered by the service worker (ui/public/sw.js). This only runs when
     it isn't installed yet, so open the app rather than fail: the shared content can't be recovered here."""
     return Response(status_code=303, headers={"Location": "/#/"})
+
+
+if cell_boot.CELL:  # a guest's container: host-only /api paths answer 404 as JSON, never the UI page below
+    cell_boot.finish(app)
 
 
 @app.get("/{path:path}")

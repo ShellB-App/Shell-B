@@ -186,8 +186,8 @@ def _me(g: dict, sess: dict) -> dict:
 @guest_app.get("/api/auth/me")
 def auth_me(req: Request):
     got = guests.session_of(req)
-    if not got:
-        return {"authenticated": False, "via": None, "passwordSet": True, "frameKey": None}
+    if not got:  # gateway: the full UI (AuthGate.tsx) reloads to this gateway's own sign-in page instead of the owner's login
+        return {"authenticated": False, "via": None, "passwordSet": True, "frameKey": None, "gateway": True}
     g = got[0]
     if g["passwordSet"] and cells.enabled(g):  # what the full Shell:B UI asks first (cell_boot.auth_me answers the same)
         return {"authenticated": True, "via": "session", "passwordSet": True, "needsAccount": False,
@@ -263,6 +263,33 @@ def me(req: Request):
     if not got:
         raise HTTPException(401, "Not signed in")
     return _me(*got)
+
+
+@guest_app.get("/api/guest/cell")
+def cell_state(req: Request):
+    """The full UI's start screen (AuthGate.tsx) polls this while the guest's container boots: state, and the last
+    start error if it failed. Starting is the gateway's job (cells.proxy on the first proxied request, or POST below)."""
+    g = guests.require(req)
+    if not cells.enabled(g):
+        return {"state": "none", "error": ""}
+    return cells.status(g["id"])
+
+
+@guest_app.post("/api/guest/cell")
+async def cell_start(req: Request):
+    """Start the guest's container in the background (the start screen's Retry); answers at once with the state."""
+    g = guests.require(req)
+    if not cells.enabled(g):
+        return {"state": "none", "error": ""}
+    if cells.status(g["id"])["state"] == "stopped":
+        async def go():
+            try:
+                await cells.ensure(g)
+            except Exception as e:  # noqa: BLE001  cells.status carries the message
+                print(f"cell {g['id']}: start failed: {type(e).__name__}: {e}")
+        asyncio.get_running_loop().create_task(go())
+        await asyncio.sleep(0.2)
+    return cells.status(g["id"])
 
 
 @guest_app.post("/api/guest/device-code")

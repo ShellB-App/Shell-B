@@ -690,17 +690,30 @@ Friends and coworkers can have their own Shell:B on this machine, without access
   lost phone) and Make reset link (one-time, 24 h, signs them out everywhere; pass it on yourself, nothing is
   emailed). Guests who joined by invite before accounts existed keep their devices but must choose a username and
   password before anything else works.
-- **What guests get:** an installable app (guest.html) with chats, local agents whose model is on the guest model
-  list (default: the default agent's), web search, offline wiki and law, maps and sky tools, pictures, music, sound,
-  Kokoro voices, the code sandbox, artifacts, file uploads and voice mode. Each guest has their own memory
-  (guest_memories), learned from their chats and editable in "What Shell:B remembers".
-- **Apps:** Notes (their own Markdown notes with [[links]], server/guest_notes.py answering the Codex paths the
-  Notes page uses), Wiki and Worlds (the machine's offline Wikipedia, maps, sky and weather; read-only, so the
-  owner's Worlds notes show but can't be edited: guest_app shares only the GET routes of those routers), and
-  Radio / DJ (runs in the browser; the DJ voice uses Kokoro).
-- **What they don't:** cloud agents, Aphrodite, Studio/Code, Generate, the owner's memory, Codex, calendar, contacts, Library,
-  skills, MCP connectors, schedules, plans, SSH, self-edit, screen and browser. Their sandbox mounts only their own
-  /work. Nothing they do asks the owner for approval.
+- **What guests get (default since 2026-10-10): their own full Shell:B.** Every guest's visit opens the complete
+  Shell:B UI running as their own instance in a sealed container (**Own container**, below): chat with the local agents
+  whose model is on the guest model list, Studio, Code, Codex (notes, links, snippets, files, contacts, calendar),
+  Library, Favorites, Generate, Research, Shopping, Circles, Assets, Mega plans, Scheduled, Activity, Wiki, Worlds,
+  Radio, their own memory, Agent Lab, themes and screensavers, pictures, music, sound, Kokoro voices, the code sandbox
+  and web reading. In a cell the UI knows it is one (`cell` on `/api/auth/me`, `ui/src/cell.ts`): the host's apps
+  (Models, Offline data, Secretary, Gibberlink, Feeds) and tabs (API keys, Network, System, Backups, MCP connectors,
+  Discover, Cloud AI, Screen, API, Guests, Aphrodite) are not shown, the gear menu, Settings → Account and the command
+  palette carry the gateway's own panels (Account and security, Your devices, About and limits, Report to Evie, Sign
+  out), each reply has a Report flag, and the sidebar shows whose Shell:B it is. While the container boots, the sign-in
+  screen says "Starting your Shell:B…" (`GET/POST /api/guest/cell` on the gateway) and offers Try again if it fails.
+  Inside a cell, host-only `/api` paths answer a JSON 404, dev servers and screenshots say they aren't available there
+  yet, and the status probe asks the broker for the sandbox instead of Docker.
+- **The lighter guest app** (untick *Their own Shell:B* on a guest's row; also what guests had before): an installable
+  app (guest.html) with chats, web search, offline wiki and law, maps and sky tools, pictures, music, sound, Kokoro
+  voices, the code sandbox, artifacts, file uploads and voice mode, plus Notes (their own Markdown notes with
+  [[links]], server/guest_notes.py answering the Codex paths the Notes page uses), Circles, Wiki and Worlds (the
+  machine's offline Wikipedia, maps, sky and weather; read-only, so the owner's Worlds notes show but can't be edited:
+  guest_app shares only the GET routes of those routers), and Radio / DJ. Each guest has their own memory
+  (guest_memories), learned from their chats and editable in "What Shell:B remembers". Chats made in one mode don't
+  show in the other (the cell keeps its own database).
+- **What neither gets:** cloud agents, Aphrodite, the owner's memory, Codex, Library or projects, MCP connectors,
+  Discover, SSH, self-edit, screen and browser, model downloads. Their sandbox mounts only their own /work. Nothing
+  they do asks the owner for approval.
 - **Fair use:** one guest reply at a time (configurable), started after the owner's own turns or `ownerWait` seconds;
   daily caps on pictures and audio and a storage quota per guest. Messages and tokens are unlimited unless the owner
   sets a cap (0 = no limit).
@@ -709,8 +722,9 @@ Friends and coworkers can have their own Shell:B on this machine, without access
   the box.
 - **Privacy:** guest chats are incognito on the owner's side (never learned from, searched, summarized or listed),
   but they are stored in this machine's database; the guest app says so.
-- **Own container (beta, server/cells.py, cell_boot.py, cell/):** tick "Own container" on a guest in Tools &
-  Connectors → Guests and their next visit gets the full Shell:B UI running as their own instance in a container
+- **Own container (server/cells.py, cell_boot.py, cell/):** on for every guest unless the owner unticks "Their own
+  Shell:B" on their row in Tools & Connectors → Guests (new guests and all existing ones were moved to it on
+  2026-10-10, kv `guest_cells_default`); their visit gets the full Shell:B UI running as their own instance in a container
   (`shellb-cell-<id>`, image `shellb-cell:latest` built from cell/Dockerfile). The container has no network, a
   read-only root, no capabilities, its own uid (61001+), 3 GB / 4 CPUs / 512 pids, and mounts only the code and UI
   (read-only), its own data (data/cells/<id>/data), its broker sockets and the offline wiki, maps and law
@@ -724,8 +738,9 @@ Friends and coworkers can have their own Shell:B on this machine, without access
   uid with only that chat's or project's folder mounted; one run at a time per cell), and web access goes through a
   filtered proxy on the host (`cells._Egress`: public addresses only, ports 80/443, per-cell caps), so web reading, Research
   sources, Shopping, Codex snapshots and `git clone` work; the cell reports each turn so `turnsPerDay`/`tokensPerDay`
-  apply. Not in cells yet (Phase 2b): dev
-  servers, Studio/Code previews and web fetching. Deleting the guest removes the container and wipes its data.
+  apply. Not in cells yet (Phase 2b): live dev
+  servers and agent screenshots (no Docker or Firefox in the container; static previews work). Deleting the guest
+  removes the container and wipes its data.
 
 ## Login
 

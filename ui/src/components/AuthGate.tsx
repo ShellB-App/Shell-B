@@ -3,6 +3,8 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { KeyRound, Loader2, LockKeyhole, RefreshCw, WifiOff } from 'lucide-react';
 import { AUTH_LOST, api, setFrameKey, type AuthInfo } from '../api';
+import { isCell, setCell } from '../cell';
+import { guestApi, type CellState } from '../guest/guestApi';
 import { loginWithPasskey, passkeysSupported } from '../webauthn';
 import { btn } from './common';
 import { reducedMotion } from '../ambience';
@@ -15,16 +17,22 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [failed, setFailed] = useState('');
   const [lost, setLost] = useState(false);
   const [mounted, setMounted] = useState(false);
+  // a guest's own Shell:B (cell.ts): their container boots on the first visit of the day; the app mounts once it answers
+  const [cell, setCellState] = useState<CellState | null>(null);
 
   const accept = useCallback((i: AuthInfo) => {
     setInfo(i);
     if (i.authenticated) {
       setFrameKey(i.frameKey);
+      setCell(i.cell ? { id: i.guest?.id, name: i.cell.guest, username: i.guest?.username } : null);
       setLost(false);
-      setMounted(true);
+      if (i.cell) setCellState(c => c ?? { state: 'stopped' });
+      else setMounted(true);
       if (i.via === 'session') {
         try { localStorage.setItem('shellb.kiosk.password_authenticated', 'true'); } catch {}
       }
+    } else if (i.gateway) {
+      location.reload();  // the guest gateway serves its own sign-in page to a signed-out visitor
     }
   }, []);
 
@@ -37,6 +45,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
     // a 401 from any call: confirm, then show the login over the app (so an unsent draft survives)
     const onLost = () => api.authMe().then(i => {
       if (!i.authenticated) {
+        if (isCell() || i.gateway) { location.reload(); return; }  // back to the gateway's sign-in page
         setInfo(i);
         setLost(true);
         try { localStorage.removeItem('shellb.kiosk.password_authenticated'); } catch {}
@@ -55,6 +64,20 @@ export function AuthGate({ children }: { children: ReactNode }) {
     return () => { window.clearInterval(t); window.removeEventListener('online', retry); };
   }, [failed, retry]);
 
+  // cell start: ask the gateway to start the container, then poll until it runs (or fails, with a Retry)
+  const startCell = useCallback(() => {
+    setCellState({ state: 'starting' });
+    guestApi.startCell().then(setCellState).catch(e => setCellState({ state: 'stopped', error: errText(e) }));
+  }, []);
+  useEffect(() => {
+    if (!cell || mounted) return;
+    if (cell.state === 'running') { setMounted(true); return; }
+    if (cell.state === 'stopped' && !cell.error) { startCell(); return; }
+    if (cell.state === 'stopped') return;  // failed: wait for Retry
+    const t = window.setTimeout(() => guestApi.cell().then(setCellState).catch(() => {}), 1500);
+    return () => window.clearTimeout(t);
+  }, [cell, mounted, startCell]);
+
   if (failed) return (
     <Screen>
       <div className="flex items-start gap-3">
@@ -72,6 +95,23 @@ export function AuthGate({ children }: { children: ReactNode }) {
     </Screen>
   );
   if (!info) return <div className="h-dvh flex items-center justify-center"><LoginBackdrop /><Loader2 className="relative w-5 h-5 animate-spin text-white/60" /></div>;
+  if (info.authenticated && info.cell && !mounted) {
+    const err = cell?.state === 'stopped' ? cell.error : '';
+    return (
+      <Screen>
+        <div className="flex items-start gap-3">
+          {err ? <WifiOff className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" /> : <Loader2 className="w-4 h-4 animate-spin text-[var(--accent)] shrink-0 mt-0.5" />}
+          <div className="space-y-1.5">
+            <p className="text-sm font-medium text-[var(--text-primary)]">{err ? "Your Shell:B couldn't start" : 'Starting your Shell:B…'}</p>
+            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+              {err ? err : `Hi ${info.cell.guest}. Your own Shell:B runs in its own container on Evie's machine; it takes a few seconds to wake up.`}
+            </p>
+          </div>
+        </div>
+        {err && <button className={clsx(btn.subtle, 'mt-4 w-full justify-center')} onClick={startCell}><RefreshCw className="w-3.5 h-3.5" />Try again</button>}
+      </Screen>
+    );
+  }
   const form = (!info.authenticated || lost) && <Screen overlay={mounted}><LoginForm setup={!info.passwordSet} onDone={accept} /></Screen>;
   return <>{mounted && children}{form}</>;
 }

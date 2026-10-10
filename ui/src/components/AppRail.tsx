@@ -1,14 +1,18 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type ReactNode, type RefObject } from 'react';
 import clsx from 'clsx';
-import { LayoutGrid, Pin, PinOff, Search, Settings } from 'lucide-react';
+import { LayoutGrid, LogOut, Pin, PinOff, Search, Settings } from 'lucide-react';
 import type { Status } from '../types';
 import { APPS, DEFAULT_PINS, DOCKED, GROUP_LABEL, PINNABLE, setPins, setRailOrder, shortcutLabel, togglePin, usePins, type AppDef, type AppGroup, type AppId, type AppLive } from './apps';
 import { djLive } from '../dj/live';
+import { cellGuest, type GuestPanel } from '../cell';
+import { GUEST_ENTRIES, signOutGuest, toPanel } from './CellGuest';
 
 interface Props {
   active: AppId;
   status?: Status;
   onOpen: (app: AppId) => void;
+  /** a guest's own Shell:B (cell.ts): the gateway's account, limits and Report to Evie panels join the gear menu */
+  onGuest?: (panel: GuestPanel) => void;
 }
 
 const ICON = 'w-[18px] h-[18px]';
@@ -123,7 +127,7 @@ function AppRow({ app, live, current, pinned, note, onOpen, onPin }: {
 
 /** The always-visible app switcher down the far left edge, Discord-style: one icon per app, a pill marks the current one.
  *  Only pinned apps get a tile; the rest are one click away in All apps, and the `system` ones share the gear menu. */
-export function AppRail({ active, status, onOpen }: Props) {
+export function AppRail({ active, status, onOpen, onGuest }: Props) {
   const pins = usePins();
   const [navH, setNavH] = useState<number | null>(null);
   const navRef = useRef<HTMLElement>(null);
@@ -286,6 +290,26 @@ export function AppRail({ active, status, onOpen }: Props) {
       {popup?.kind === 'system' && (
         <Popover anchor={popup.anchor} owner={gearBtn.current} label="System" className="w-64 p-1.5 overflow-y-auto" onClose={close}>
           {system.map(a => <AppRow key={a.id} app={a} live={live(a)} current={active === a.id} onOpen={() => open(a.id)} />)}
+          {onGuest && cellGuest() && (
+            <>
+              <div className="mx-2.5 my-1.5 h-px bg-[var(--border-subtle)]" />
+              <div className="px-2.5 pt-1 pb-0.5 text-[10px] uppercase tracking-wider text-[var(--text-muted)] truncate">{cellGuest()!.name}</div>
+              {GUEST_ENTRIES.map(e => (
+                <button key={e.id} data-nav onClick={() => { close(); onGuest(toPanel(e.id)); }}
+                  className="w-full flex items-start gap-2.5 px-2.5 py-2 rounded-lg text-left hover:bg-[var(--bg-hover)] focus:outline-none focus-visible:bg-[var(--bg-hover)]">
+                  <e.icon className={clsx(ICON, 'mt-0.5 shrink-0 text-[var(--text-muted)]')} />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-[var(--text-primary)]">{e.label}</span>
+                    <span className="block text-[11px] text-[var(--text-secondary)] leading-snug">{e.hint}</span>
+                  </span>
+                </button>
+              ))}
+              <button data-nav onClick={() => { close(); signOutGuest(); }}
+                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left text-sm text-red-400 hover:bg-[var(--bg-hover)] focus:outline-none focus-visible:bg-[var(--bg-hover)]">
+                <LogOut className={ICON} />Sign out of this device
+              </button>
+            </>
+          )}
         </Popover>
       )}
 

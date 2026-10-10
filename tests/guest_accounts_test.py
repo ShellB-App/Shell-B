@@ -33,7 +33,7 @@ def gclient(ip: str | None = None) -> TestClient:
 
 
 def account(name="Robin", username=None, password=PASSWORD) -> tuple[dict, TestClient, str]:
-    g, code = guests.create_guest(name)
+    g, code = guests.create_guest(name, {"cell": False})  # on the guest app: no container to proxy to in tests
     username = username or f"r{secrets.token_hex(5)}"
     c = gclient()
     r = c.post("/api/guest/signup", json={"code": code, "username": username, "password": password})
@@ -239,7 +239,7 @@ class Resets(Base):
         self.assertEqual(gclient().post("/api/guest/reset", json={"code": code, "password": "a brand new phrase"}).status_code, 200)
 
     def test_no_reset_before_an_account(self):
-        g, _ = guests.create_guest("Pending")
+        g, _ = guests.create_guest("Pending", {"cell": False})
         self.assertEqual(owner.post(f"/api/guests/{g['id']}/reset", headers=ADMIN).status_code, 409)
 
 
@@ -267,7 +267,7 @@ class Devices(Base):
 class InviteOnlyGuests(Base):
     """Guests who joined before accounts existed keep their device but must choose a username and password first."""
     def test_must_choose_a_password(self):
-        g, _ = guests.create_guest("Early")
+        g, _ = guests.create_guest("Early", {"cell": False})
         c = gclient()
         c.cookies.set(guests.COOKIE, guests.new_session(g["id"], _req(), via="invite"))
         me = c.get("/api/auth/me").json()

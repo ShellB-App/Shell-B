@@ -254,6 +254,14 @@ Guest accounts (the section above) can be built first or alongside Phase 1, sinc
 Host operations needing approval at deploy: `docker build` of shellb-cell, creating `data/cells`, restarting
 shellb-web.
 
+## Status (2026-10-10)
+Phases 1 and 2 shipped. On 2026-10-10 cells became the default for every guest (`guests.clean_config`, one-time move
+in `guests.init`), the full UI learned cell mode (`ui/src/cell.ts`: host apps and tabs hidden, the gateway's panels in
+the gear menu, Settings → Account and the palette, Report flags on replies, a start screen fed by `GET/POST
+/api/guest/cell`), cell-mode `/api` strays answer a JSON 404 (`cell_boot.finish`), and dev servers and screenshots say
+they aren't available. The in-process guest app stays as the per-guest fallback (untick "Their own Shell:B").
+Still open (2b): live dev servers and screenshots through the broker.
+
 ## Verification
 - **Unit tests (`tests/cells_test.py`):**
   - Ollama pull, delete and create are refused, as are non-allowlisted models and keep_alive 0

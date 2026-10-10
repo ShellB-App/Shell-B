@@ -111,13 +111,25 @@ async def _docker(*args, timeout=60) -> tuple[int, str]:
 
 
 async def running(pid: str) -> bool:
+    if _in_cell():
+        return False
     rc, out = await _docker("inspect", "-f", "{{.State.Running}}", _name(pid))
     return rc == 0 and out.strip() == "true"
 
 
 async def logs(pid: str, n: int = 200) -> str:
+    if _in_cell():
+        return ""
     rc, out = await _docker("logs", "--tail", str(n), _name(pid))
     return out if rc == 0 else ""
+
+
+CELL_NOTE = "Live dev servers aren't part of your Shell:B yet: they need Docker on the host (static previews work)."
+
+
+def _in_cell() -> bool:
+    import cell_boot
+    return cell_boot.CELL
 
 
 async def status(pid: str) -> dict:
@@ -125,6 +137,9 @@ async def status(pid: str) -> dict:
         cfg, err = config(pid), None
     except ValueError as e:
         cfg, err = None, str(e)
+    if _in_cell():  # a guest's container has no Docker (cells.py); the canvas shows the note instead of a start button
+        return {"configured": cfg is not None, "error": err or (CELL_NOTE if cfg else None), "running": False, "port": None,
+                "preview": None, "ticket": None, "command": cfg and cfg["command"], "idleStopsIn": None, "unavailable": True}
     up = await running(pid)
     port = port_for(pid, assign=False)
     base = preview_base(pid)
@@ -135,6 +150,8 @@ async def status(pid: str) -> dict:
 
 
 async def stop(pid: str):
+    if _in_cell():
+        return
     await _docker("rm", "-f", _name(pid))
     _last_use.pop(pid, None)
     _sock(pid).unlink(missing_ok=True)
@@ -150,6 +167,8 @@ async def _probe(pid: str) -> int | None:
 
 async def start(pid: str) -> dict:
     """(Re)start the project's server and wait until it answers HTTP. Returns status plus a log tail."""
+    if _in_cell():
+        raise RuntimeError(CELL_NOTE)
     cfg = config(pid)
     if not cfg:
         raise ValueError(f"No {CONFIG} in the project. Write one first, e.g. "

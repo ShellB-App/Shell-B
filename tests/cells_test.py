@@ -298,6 +298,9 @@ out = {"paths": paths, "tools": sorted(TOOLS), "remote": sorted(remote.TOOLS), "
          "frame_out": local.get(f"/api/k/{key}/settings").status_code,
          "frame_bad": local.get("/api/k/w-conv1." + "0" * 32 + "/workspace/conv1/x.txt").status_code,
          "cross": local.put("/api/settings", json={}, headers={**gate, "origin": "https://evil.example", "host": "guest.example"}).status_code,
+         "gone": [(r := local.get(p, headers=gate)).status_code for p in ("/api/selfmod", "/api/guests", "/api/mcp/servers", "/api/sysinfo")] + [r.headers.get("content-type", "")],
+         "dev": local.get("/api/projects/proj-000000000000/dev", headers=gate).status_code,
+         "status": sorted(local.get("/api/status", headers=gate).json()["services"]),
        }}
 print("CELLOUT" + json.dumps(out))
 '''
@@ -354,6 +357,18 @@ print("CELLOUT" + json.dumps(out))
         c = self.out["codes"]
         self.assertEqual(c["frame_ok"], 404)  # allowed through to the route; the file just doesn't exist
         self.assertEqual((c["frame_out"], c["frame_bad"]), (403, 401))
+
+    def test_host_paths_answer_404_as_json(self):
+        """Not the UI page: the full UI's fetches read the error instead of choking on HTML (cell_boot.finish)."""
+        *codes, ctype = self.out["codes"]["gone"]
+        self.assertEqual(codes, [404] * 4)
+        self.assertIn("application/json", ctype)
+        self.assertEqual(self.out["codes"]["dev"], 404)  # the project route exists (404 = no such project), not the catch-all's HTML
+
+    def test_status_probes_fit_a_cell(self):
+        """No Firefox probe (screenshots are the host's) and the sandbox probe asks the broker, not Docker."""
+        self.assertNotIn("studio", self.out["codes"]["status"])
+        self.assertIn("sandbox", self.out["codes"]["status"])
 
 
 def fake_cell_app(seen: list):
@@ -456,6 +471,33 @@ class Gateway(unittest.TestCase):
         guests.update_guest(self.g["id"], {"config": {"cell": False}})
         self.assertEqual(self.c.get("/api/conversations").status_code, 200)  # the guest app answers again
         self.assertEqual(self.seen, [])
+
+    def test_cell_state_is_the_gateways(self):
+        """The full UI's start screen (AuthGate.tsx) asks the gateway, never the cell, how the container is doing."""
+        self.assertEqual(self.c.get("/api/guest/cell").json()["state"], "running")
+        self.assertEqual(self.c.post("/api/guest/cell").json()["state"], "running")  # running already: nothing to start
+        self.assertEqual(self.seen, [])
+        me = self.c.get("/api/auth/me").json()
+        self.assertNotIn("gateway", me)  # signed in: the full UI stays
+        anon = TestClient(guest_app.root, base_url=f"http://testserver:{guest_app.GUEST_PORT}", client=("127.0.0.1", 40003))
+        self.assertTrue(anon.get("/api/auth/me").json()["gateway"])  # signed out: the UI reloads to the gateway's sign-in page
+
+
+class Defaults(unittest.TestCase):
+    """Since 2026-10-10 a new guest gets their own Shell:B unless the owner unticks it (guests.clean_config)."""
+
+    def test_new_guests_get_a_cell(self):
+        g, _ = guests.create_guest("Cella")
+        lite, _ = guests.create_guest("Lite", {"cell": False})
+        try:
+            self.assertTrue(g["config"]["cell"])
+            self.assertFalse(lite["config"]["cell"])
+            self.assertTrue(db.kv_get("guest_cells_default"))  # the one-time move of existing guests ran at init
+        finally:
+            for x in (g, lite):
+                with db.conn() as c:
+                    c.execute("DELETE FROM guest_cells WHERE guest_id=?", (x["id"],))
+                guests.delete_guest(x["id"])
 
 
 class CellSocket(unittest.IsolatedAsyncioTestCase):

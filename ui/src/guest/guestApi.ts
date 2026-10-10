@@ -39,6 +39,8 @@ export type SignInResult = { ok: true; name: string } | { twoStep: true; ticket:
 /** What an invite or reset link is for. `signin`: an invite whose account already exists. */
 export interface CodeInfo { kind: 'invite' | 'reset' | 'signin'; name: string; username: string | null }
 export interface GuestMemory { id: string; text: string; category: string; createdAt: number; origin: string }
+/** The guest's container (server/cells.py): `none` when they are on the guest app instead. */
+export interface CellState { state: 'none' | 'starting' | 'running' | 'stopping' | 'stopped'; error?: string }
 
 const json = (b: unknown) => JSON.stringify(b);
 /** The server leaves out system prompts; the chat components only need the type's shape. */
@@ -79,6 +81,8 @@ export const guestApi = {
   forgetAll: () => req('/api/guest/memories', { method: 'DELETE' }),
   report: (b: { text: string; convId?: string; msgId?: string; includeChat: boolean }) =>
     req<{ id: string }>('/api/guest/report', { method: 'POST', body: json(b) }),
+  cell: () => req<CellState>('/api/guest/cell'),
+  startCell: () => req<CellState>('/api/guest/cell', { method: 'POST' }),
 };
 
 /** An error's message without the "Error: 401: " the request helper puts in front. */

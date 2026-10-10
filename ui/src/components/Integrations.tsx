@@ -12,6 +12,7 @@ import { Discover } from './Discover';
 import { ScreenTab } from './ScreenTab';
 import { ApiTab } from './ApiTab';
 import { GuestsTab } from './GuestsTab';
+import { isCell } from '../cell';
 
 const ICONS: Record<string, LucideIcon> = {
   FolderOpen, Database, Workflow, Github: GitBranch, NotebookText, Share2, ListOrdered, Link, SquareTerminal, Plug, Compass,
@@ -35,8 +36,12 @@ interface Props {
   tab?: Tab;
 }
 
+// a guest's cell (cell.ts) has no connectors, MCP, cloud, screen, API keys, guests or Aphrodite: those are the host's
+const CELL_TABS = new Set<Tab>(['skills', 'tools']);
+const startTab = (t?: Tab): Tab => (isCell() ? (t && CELL_TABS.has(t) ? t : 'tools') : t ?? 'connectors');
+
 export function IntegrationsModal({ open, onClose, tools, settings, onChanged, tab: initial }: Props) {
-  const [tab, setTab] = useState<Tab>(initial ?? 'connectors');
+  const [tab, setTab] = useState<Tab>(() => startTab(initial));
   const [servers, setServers] = useState<McpServer[]>([]);
   const [connectors, setConnectors] = useState<Connector[]>([]);
   const [editing, setEditing] = useState<{ connector: Connector; server?: McpServer } | null>(null);
@@ -45,8 +50,9 @@ export function IntegrationsModal({ open, onClose, tools, settings, onChanged, t
   const load = useCallback(() => api.mcpServers().then(setServers).catch(() => {}), []);
   useEffect(() => {
     if (!open) return;
-    setTab(initial ?? 'connectors');
+    setTab(startTab(initial));
     setEditing(null);
+    if (isCell()) { setAdmin(false); return; }
     load();
     api.connectors().then(setConnectors).catch(() => {});
     api.adminCheck().then(r => setAdmin(r.ok)).catch(() => setAdmin(false));
@@ -58,7 +64,7 @@ export function IntegrationsModal({ open, onClose, tools, settings, onChanged, t
     return () => clearTimeout(t);
   }, [open, servers, load, onChanged]);
 
-  const tabs = [
+  const tabs = ([
     { id: 'connectors', label: 'Connectors', icon: Plug },
     { id: 'servers', label: `MCP servers${servers.length ? ` · ${servers.length}` : ''}`, icon: Workflow },
     { id: 'skills', label: 'Skills', icon: Sparkles },
@@ -69,7 +75,7 @@ export function IntegrationsModal({ open, onClose, tools, settings, onChanged, t
     { id: 'api', label: 'API', icon: KeyRound },
     { id: 'guests', label: 'Guests', icon: Users },
     { id: 'adult', label: 'Aphrodite', icon: Heart },
-  ] as const;
+  ] as const).filter(t => !isCell() || CELL_TABS.has(t.id));
 
   return (
     <Modal open={open} onClose={onClose} title="Tools & Connectors" icon={<Plug className="w-4 h-4 text-sky-400" />} wide>

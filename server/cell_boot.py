@@ -29,7 +29,8 @@ HOST_ROUTERS = frozenset({
     "modelhub", "modelstore", "network", "nightshift", "public_api", "remote", "screen", "secretary", "selfmod", "shares",
     "selfreview", "sysinfo", "watchdog",
 })
-HOST_TOOL_MODULES = frozenset({"adult", "browsing", "community", "feeds", "inbox", "nightshift", "screen", "selfmod", "selfreview"})
+HOST_TOOL_MODULES = frozenset({"adult", "browsing", "community", "devserver", "feeds", "inbox", "nightshift", "screen", "selfmod",
+                               "selfreview"})  # devserver: live dev servers need Docker on the host (phase 2b)
 HOST_PATHS = ("/api/cli-agents", "/api/cli-bridge/", "/api/adult/")
 # settings re-applied at every boot, because a cell can't do these whatever the guest sets
 FORCED = {"cloudEnabled": False, "nightShift": False, "adultEnabled": False}
@@ -64,6 +65,19 @@ def auth_me():
     """What the UI asks first: signed in (the gateway only forwards signed-in guests), and the frame key."""
     return {"authenticated": True, "via": "session", "passwordSet": True, "frameKey": FRAME_SECRET,
             "cell": {"guest": GUEST}}
+
+
+def not_here(rest: str):
+    """A host-only API path inside a cell: a JSON 404, not the UI page the SPA catch-all would send."""
+    from fastapi import HTTPException
+    raise HTTPException(404, "That isn't part of your Shell:B")
+
+
+def finish(app):
+    """Called by app.py just before its SPA catch-all, once every route exists: whatever /api path is left unanswered
+    belongs to the host (the routers `guard` skipped), and the UI gets a 404 it can read instead of index.html."""
+    app.router.add_api_route("/api/{rest:path}", not_here, methods=["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"],
+                             include_in_schema=False)
 
 
 def guard(app):

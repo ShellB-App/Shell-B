@@ -12,6 +12,7 @@ import { copyText } from '../quote';
 import { shellbLink } from '../links';
 import { shareLink } from '../shareLink';
 import { circlePinEntry, openShareToCircle, primeCirclePins } from './CircleCards';
+import { cellGuest } from '../cell';
 import { FavIcon, FavoriteStar } from './Favorites';
 import { req } from '../api';
 import { jumpToMessage } from '../jump';
@@ -214,6 +215,7 @@ export function Sidebar(p: Props) {
           <div className="flex items-center justify-between h-7">
             <div className="flex items-center gap-2">
               <span className="sf-brand font-semibold tracking-tight text-[var(--brand-soft)]">Shell:B</span>
+              {cellGuest() && <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)] truncate max-w-[9rem]" title={`${cellGuest()!.name}'s own Shell:B`}>{cellGuest()!.name}</span>}
             </div>
             <button onClick={p.onClose} className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" title="Hide sidebar (Ctrl+B)">
               <PanelLeftClose className="w-4 h-4" />

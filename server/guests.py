@@ -139,6 +139,13 @@ CREATE TABLE IF NOT EXISTS guest_reports(
                     cfg.update(turnsPerDay=0, tokensPerDay=0)
                     c.execute("UPDATE guests SET config=? WHERE id=?", (json.dumps(cfg), r["id"]))
             c.execute("INSERT OR REPLACE INTO kv(key, value) VALUES('guest_limits_v2', 'true')")
+        if not db.kv_get("guest_cells_default"):  # 2026-10-10: every guest moves to their own full Shell:B (cells.py)
+            for r in c.execute("SELECT id, config FROM guests").fetchall():
+                cfg = json.loads(r["config"] or "{}")
+                if not cfg.get("cell"):
+                    cfg["cell"] = True
+                    c.execute("UPDATE guests SET config=? WHERE id=?", (json.dumps(cfg), r["id"]))
+            c.execute("INSERT OR REPLACE INTO kv(key, value) VALUES('guest_cells_default', 'true')")
     import cells
     import guest_accounts
     import guest_notes
@@ -201,7 +208,8 @@ def clean_config(cfg: dict | None) -> dict:
     out = {k: _int(cfg.get(k), d, lo, hi) for k, (d, lo, hi) in LIMITS.items()}
     out["agents"] = [str(a) for a in cfg.get("agents") or [] if isinstance(a, str)][:32]
     out["tools"] = [t for t in cfg.get("tools") or [] if t in GUEST_TOOLS]
-    out["cell"] = bool(cfg.get("cell"))  # their own Shell:B in a container (cells.py) instead of the guest app's chat
+    # their own full Shell:B in a container (cells.py), the default since 2026-10-10; off = the lighter guest app (guest_app.py)
+    out["cell"] = bool(cfg.get("cell", True))
     return out
 
 

@@ -37,6 +37,8 @@ import { toast } from './components/toast';
 import { isThemeId, nextTheme, setTheme as applyTheme } from './themes';
 import { foldSummarized } from './summarized';
 import { ContextMeter } from './components/composer/ContextMeter';
+import { isCell, type GuestPanel } from './cell';
+import { GuestPanelHost } from './components/CellGuest';
 
 const Studio = lazy(() => import('./studio/Studio'));
 // the apps load when first opened, not with the chat (the main bundle was 2.7 MB)
@@ -186,6 +188,7 @@ export function App() {
   const [formFactorOpen, setFormFactorOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsTabId>((shotSettings as SettingsTabId) || 'general');
   const [labAgent, setLabAgent] = useState<string>();
+  const [guestPanel, setGuestPanel] = useState<GuestPanel | null>(null);  // a guest's cell: the gateway's panels (CellGuest.tsx)
   const [atBottom, setAtBottom] = useState(true);
   const [loadError, setLoadError] = useState('');
 
@@ -566,6 +569,7 @@ export function App() {
     openSettings: (tab: SettingsTabId = 'general') => { setSettingsTab(tab); setModal('settings'); },
     openTools: (tab?: ToolsTab) => { setToolsTab(tab); setModal('tools'); },
     openFormFactor: () => setFormFactorOpen(true),
+    openGuest: isCell() ? (p: GuestPanel) => setGuestPanel(p) : undefined,
   }), [newChat, openConversation, toggleTheme, toggleSkin, openApp]);
 
   if (view) return <ArtifactViewer convId={view.convId} artifactId={view.artifactId} dark={theme === 'dark'} />;
@@ -588,7 +592,9 @@ export function App() {
       <NewProjectDialog open={newProject} onClose={() => setNewProject(false)}
         onCreated={g => { setNewProject(false); loadGroups(); openGroup(g.id); }} />
       <SettingsModal open={modal === 'settings'} onClose={() => setModal(null)} settings={settings} agents={chatAgents} models={models}
-        status={status} theme={theme} onTheme={t => t !== theme && toggleTheme()} onSaved={loadSettings} tab={settingsTab} />
+        status={status} theme={theme} onTheme={t => t !== theme && toggleTheme()} onSaved={loadSettings} tab={settingsTab}
+        onGuest={isCell() ? p => { setModal(null); setGuestPanel(p); } : undefined} />
+      <GuestPanelHost panel={guestPanel} onClose={() => setGuestPanel(null)} />
       <FormFactorSwitcher open={formFactorOpen} onClose={() => setFormFactorOpen(false)} />
       <CircleShareHost />
       <Overlay messages={conv?.messages ?? []} agentName={agent?.name ?? 'Shell:B'} busy={busy || !!conv?.streaming} onStop={stop}
@@ -597,7 +603,7 @@ export function App() {
   );
 
   const railApp = appForHash(location.hash);
-  const rail = <AppRail active={railApp} status={status} onOpen={openApp} />;
+  const rail = <AppRail active={railApp} status={status} onOpen={openApp} onGuest={isCell() ? setGuestPanel : undefined} />;
 
   if (code) {
     return (
@@ -882,6 +888,7 @@ export function App() {
                     onEdit={text => send(text, m.attachments ?? [], m.id, undefined, m.mode)} onPlan={onPlan}
                     artifacts={artifacts} onAsk={text => send(text, [])}
                     verifiers={verifiers}
+                    onReport={isCell() && m.role === 'assistant' ? () => setGuestPanel({ report: { convId: conv?.id, msgId: m.id } }) : undefined}
                     onVerify={vid => {
                       const n = messages.indexOf(m) + 1;
                       const what = m.status === 'error' ? `Reply #${n} failed: find out why and how to fix it.`
@@ -917,7 +924,7 @@ export function App() {
               onAgent={selectAgent} busy={busy || !!conv?.streaming} onSend={(t, a, o) => send(t, a, undefined, o?.agentId, o?.mode)} onStop={stop}
               convId={conv?.id} onCommand={c => newChat(undefined, c === 'incognito')} planMode={planMode} onPlanMode={setPlanMode}
               ensureConversation={ensureConversation} voiceOk={voiceOk} focusKey={`${conv?.id ?? 'new'}:${focusTick}`}
-              onVoiceMode={voiceMode ? undefined : () => setVoiceMode(true)} inbox
+              onVoiceMode={voiceMode ? undefined : () => setVoiceMode(true)} inbox guest={isCell()}
             />
             {incognito && <IncognitoNote hours={settings?.incognitoHours} />}
             <div className="text-center text-[10px] text-[var(--text-muted)] mt-1.5">

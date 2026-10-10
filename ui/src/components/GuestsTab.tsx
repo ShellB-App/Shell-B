@@ -201,7 +201,8 @@ export function GuestsTab({ locked }: { locked: boolean }) {
                     {g.disabled && <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">paused</span>}
                     {g.lockedUntil && <span className="text-[10px] uppercase tracking-wider text-red-400">locked</span>}
                     {g.twoStep && <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">two-step</span>}
-                    {g.config.cell && <span className="text-[10px] uppercase tracking-wider text-[var(--accent-soft)]">container · {g.cellStatus.state}</span>}
+                    {g.config.cell ? <span className="text-[10px] uppercase tracking-wider text-[var(--accent-soft)]">own Shell:B · {g.cellStatus.state}</span>
+                      : <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">guest app</span>}
                     <ChevronDown className={`w-3.5 h-3.5 text-[var(--text-muted)] transition-transform ${open === g.id ? 'rotate-180' : ''}`} />
                   </div>
                   <div className="text-[11px] text-[var(--text-muted)]">
@@ -256,7 +257,7 @@ export function GuestsTab({ locked }: { locked: boolean }) {
                   </div>
                   <Account guest={g} onTwoStepOff={() => act(req(`/api/guests/${g.id}/two-step/off`, { method: 'POST' }), `Two-step sign-in is off for ${g.name}`)} />
                   <CellSwitch guest={g} onChange={cell => act(req(`/api/guests/${g.id}`, { method: 'PATCH', body: json({ config: { cell } }) }),
-                    cell ? `${g.name} gets their own container on their next visit` : `${g.name} is back on the guest app`)} />
+                    cell ? `${g.name} gets their own Shell:B on their next visit` : `${g.name} is back on the lighter guest app`)} />
                   <Limits guest={g} onSave={config => act(req(`/api/guests/${g.id}`, { method: 'PATCH', body: json({ config }) }), 'Saved')} />
                 </>
               )}
@@ -317,7 +318,7 @@ function Account({ guest: g, onTwoStepOff }: { guest: Guest; onTwoStepOff: () =>
   );
 }
 
-/** Phase 1 of docs/plans/guest-cells.md: a guest's own full Shell:B in a container (server/cells.py), opt-in per guest. */
+/** docs/plans/guest-cells.md: a guest's own full Shell:B in a container (server/cells.py), the default since 2026-10-10. */
 function CellSwitch({ guest: g, onChange }: { guest: Guest; onChange: (cell: boolean) => void }) {
   const s = g.cellStatus;
   return (
@@ -325,10 +326,11 @@ function CellSwitch({ guest: g, onChange }: { guest: Guest; onChange: (cell: boo
       <label className="flex items-start gap-2.5 cursor-pointer">
         <input type="checkbox" checked={g.config.cell} onChange={e => onChange(e.target.checked)} className="mt-0.5 accent-[var(--accent)]" />
         <span className="leading-relaxed text-[var(--text-secondary)] max-w-[65ch]">
-          <span className="text-[var(--text-primary)]">Own container (beta).</span> The full Shell:B in a sealed container,
-          reaching the models only through the broker. Chat, pictures, voice, search, the code sandbox, Studio and Code,
-          research and web reading work (web traffic goes through a filtered proxy on this machine); live dev-server
-          previews come later. Their guest-app chats stay in the guest app.
+          <span className="text-[var(--text-primary)]">Their own Shell:B.</span> The full app, running as their own instance in
+          a sealed container that reaches the models only through the broker: chat, Studio, Code, Codex, Library, Research,
+          Shopping, Circles, pictures, voice, search and the code sandbox, with their own agents, memory and themes. Not yet:
+          live dev servers and screenshots (no Docker or Firefox in there). Untick for the lighter guest app (chat, Notes,
+          Circles, Wiki, Worlds, Radio); chats made in one don't show in the other.
         </span>
       </label>
       {g.config.cell && (

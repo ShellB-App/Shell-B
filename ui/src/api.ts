@@ -18,7 +18,11 @@ export const adminKey = {
 /** Login (server/auth.py). `frameKey` lets sandboxed frames, which get no cookie, reach their own content and saved state. */
 export interface AuthInfo { authenticated: boolean; via: 'session' | 'local' | null; passwordSet: boolean; frameKey: string | null;
   /** two-step verification: the password was right, a code is still due for this login ticket */
-  needsCode?: boolean; pending?: string }
+  needsCode?: boolean; pending?: string;
+  /** from the guest gateway (server/guest_app.py): this UI is a guest's own Shell:B in a container (cell.ts) */
+  cell?: { guest: string }; guest?: { id: string; name: string; username: string | null };
+  /** the guest gateway answered: a signed-out visitor gets its sign-in page, not the owner's login */
+  gateway?: boolean }
 export interface TwoStepStatus { on: boolean; recoveryLeft: number; since: number | null }
 export interface Passkey { id: string; label: string; rpId: string; created: number; lastUsed: number | null }
 export interface AuthSession { created: number; lastSeen: number; ip: string; userAgent: string; current: boolean }

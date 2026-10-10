@@ -1,6 +1,12 @@
 [
  {
   "date": "2026-10-10",
+  "area": "Guests",
+  "title": "Guests get their own full Shell:B",
+  "summary": "Every guest now opens the complete Shell:B as their own instance in a sealed container: Studio, Code, Codex, Library, Research, Shopping, Circles, their own agents, memory and themes. The UI knows it is a guest's (no host apps or tabs; Account and security, Your devices, About and limits and Report to Evie in the gear menu, Settings and the palette; a Report flag on every reply) and shows “Starting your Shell:B…” while the container boots. The lighter guest app stays one untick away per guest in Tools & Connectors → Guests."
+ },
+ {
+  "date": "2026-10-10",
   "area": "Security",
   "title": "Passkeys for the owner login",
   "summary": "Settings → Account → Passkeys: sign in with your device's screen lock or a security key instead of the password. A passkey is tied to the address you make it at and counts as its own second step."

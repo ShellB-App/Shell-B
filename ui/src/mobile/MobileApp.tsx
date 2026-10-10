@@ -46,6 +46,8 @@ import { MapsApp } from '../maps/MapsApp';
 import { RadioApp } from '../radio/RadioApp';
 import { AgentLab } from '../components/AgentLab';
 import { isThemeId, nextTheme, setTheme as applyTheme } from '../themes';
+import { isCell, type GuestPanel } from '../cell';
+import { GuestPanelHost } from '../components/CellGuest';
 
 import { MobileTopBar } from './MobileTopBar';
 import { MobileBottomNav, type MobileTab } from './MobileBottomNav';
@@ -190,6 +192,7 @@ export function MobileApp() {
   const [artifactSheetOpen, setArtifactSheetOpen] = useState(false);
   const [activeArtifact, setActiveArtifact] = useState<{ id: string; version?: number } | null>(null);
   const [modal, setModal] = useState<null | 'agents' | 'tools' | 'settings' | 'palette'>(null);
+  const [guestPanel, setGuestPanel] = useState<GuestPanel | null>(null);  // a guest's cell: the gateway's panels (CellGuest.tsx)
   const [settingsTab, setSettingsTab] = useState<SettingsTabId>('general');
   const [labAgent, setLabAgent] = useState<string>();
 
@@ -948,6 +951,7 @@ export function MobileApp() {
                       artifacts={artifacts}
                       onAsk={text => send(text, [])}
                       verifiers={verifiers}
+                      onReport={isCell() && m.role === 'assistant' ? () => setGuestPanel({ report: { convId: conv?.id, msgId: m.id } }) : undefined}
                       onVerify={vid => {
                         const n = messages.indexOf(m) + 1;
                         const what =
@@ -1142,6 +1146,7 @@ export function MobileApp() {
             setSettingsTab(tab ?? 'general');
             setModal('settings');
           },
+          openGuest: isCell() ? p => setGuestPanel(p) : undefined,
         }}
       />
 
@@ -1187,7 +1192,9 @@ export function MobileApp() {
         onTheme={t => t !== theme && toggleTheme()}
         onSaved={loadSettings}
         tab={settingsTab}
+        onGuest={isCell() ? p => { setModal(null); setGuestPanel(p); } : undefined}
       />
+      <GuestPanelHost panel={guestPanel} onClose={() => setGuestPanel(null)} />
     </div>
   );
 }
