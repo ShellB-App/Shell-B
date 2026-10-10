@@ -1083,7 +1083,7 @@ def settings_get():
 @app.put("/api/settings")
 async def settings_put(req: Request):
     body = await req.json()
-    if any(k.startswith(("cloud", "adult")) and body[k] != get_settings().get(k) for k in body):
+    if any(k.startswith(("cloud", "adult", "preview")) and body[k] != get_settings().get(k) for k in body):
         require_admin(req)
     old = get_settings()
     merged = {**old, **{k: v for k, v in body.items() if k in DEFAULT_SETTINGS}}

@@ -12,7 +12,7 @@ osacompile -o "$app" -e 'on open location u
   end if
 end open location'
 plist="$app/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c 'Add :CFBundleIdentifier string net.eviemi.shellb-link' "$plist" 2>/dev/null || true
+/usr/libexec/PlistBuddy -c 'Add :CFBundleIdentifier string app.shellb.link' "$plist" 2>/dev/null || true
 /usr/libexec/PlistBuddy -c 'Add :LSUIElement bool true' "$plist"
 /usr/libexec/PlistBuddy -c 'Add :CFBundleURLTypes array' \
   -c 'Add :CFBundleURLTypes:0 dict' -c 'Add :CFBundleURLTypes:0:CFBundleURLName string Shell:B link' \

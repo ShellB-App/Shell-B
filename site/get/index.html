@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Get Shell:B</title>
+<meta name="description" content="Install the Shell:B app, its desktop helpers, and connect to the Shell:B API.">
+<meta name="color-scheme" content="dark light">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="hero">
+  <img src="icon-192.png" alt="" width="72" height="72">
+  <h1>Get Shell:B</h1>
+  <p class="lede">A private AI workspace that runs on your own hardware. Install the app, add the helpers you want, or run your own.</p>
+  <a class="button" href="https://ai.shellb.app/">Open Shell:B</a>
+</header>
+
+<main>
+  <section id="app">
+    <h2>Install the app</h2>
+    <p>Shell:B installs straight from the browser and then runs in its own window, with notifications, file sharing and <code>shellb://</code> links.</p>
+    <div class="grid">
+      <div class="card"><h3>Chrome or Edge</h3><p>Open <a href="https://ai.shellb.app/">ai.shellb.app</a>, sign in, then choose the install icon at the right of the address bar (or Settings → General → Install).</p></div>
+      <div class="card"><h3>Safari on a Mac</h3><p>Open <a href="https://ai.shellb.app/">ai.shellb.app</a>, then File → Add to Dock.</p></div>
+      <div class="card"><h3>iPhone and iPad</h3><p>Open it in Safari, tap Share, then Add to Home Screen.</p></div>
+      <div class="card"><h3>Android</h3><p>Open it in Chrome, tap ⋮, then Install app.</p></div>
+    </div>
+  </section>
+
+  <section id="helpers">
+    <h2>Desktop helpers</h2>
+    <p>Small optional programs for your own computers. They talk to Shell:B over your private network (Tailscale), not through this site.</p>
+
+    <div class="item">
+      <div><h3>Screen</h3><p>Lets Shell:B look at this computer's screen and use a browser window on it, only when an agent asks and only while it runs. The easiest copy comes from Settings → Tools &amp; Connectors → Screen → <em>Pair a computer</em>, with the address and token already filled in.</p>
+      <pre><code>pip install mss pillow playwright
+python shellb_screen.py --url https://&lt;device&gt;.&lt;tailnet&gt;.ts.net:8443 --token sbs_…</code></pre></div>
+      <a class="button ghost" href="clients/shellb_screen.py" download>shellb_screen.py</a>
+    </div>
+
+    <div class="item">
+      <div><h3>Fleet node</h3><p>Lets Shell:B run its models on this machine's Ollama too, so the load spreads. Get a token from Models → Fleet → Add a machine. Python 3.9+, no other packages.</p>
+      <pre><code>python3 shellb_node.py --token &lt;token&gt; --install-service</code></pre></div>
+      <a class="button ghost" href="clients/shellb_node.py" download>shellb_node.py</a>
+    </div>
+
+    <div class="item">
+      <div><h3><code>shellb://</code> links</h3><p>Makes <code>shellb://</code> links open in the installed app. Install the app first.</p>
+      <p class="os">Linux</p>
+      <pre><code>mkdir -p shellb-link &amp;&amp; cd shellb-link
+for f in shellb-link shellb-link.desktop install-linux.sh; do curl -fsSLO https://get.shellb.app/clients/shellb-link/$f; done
+sh install-linux.sh</code></pre>
+      <p class="os">macOS</p>
+      <pre><code>curl -fsSLO https://get.shellb.app/clients/shellb-link/install-macos.sh &amp;&amp; sh install-macos.sh</code></pre>
+      <p class="os">Windows</p>
+      <p>Download <a href="clients/shellb-link/shellb-link.reg" download>shellb-link.reg</a> and double-click it (per-user, no admin).</p></div>
+    </div>
+  </section>
+
+  <section id="api">
+    <h2>API and MCP</h2>
+    <p>Create a key in Settings → Tools &amp; Connectors → API, then choose which agents it may use.</p>
+    <dl class="kv">
+      <dt>REST and OpenAI-compatible</dt><dd><code>https://api.shellb.app/api/v1</code></dd>
+      <dt>MCP (streamable HTTP)</dt><dd><code>https://api.shellb.app/mcp</code></dd>
+      <dt>Auth</dt><dd><code>Authorization: Bearer sbk_…</code></dd>
+    </dl>
+    <pre><code>curl https://api.shellb.app/api/v1/chat/completions \
+  -H "Authorization: Bearer sbk_…" -H "Content-Type: application/json" \
+  -d '{"model": "shellb", "messages": [{"role": "user", "content": "Hello"}]}'</code></pre>
+    <p><a href="https://github.com/EveAeternam/Shell-B/blob/public-release/docs/API.md">Full API reference</a></p>
+  </section>
+
+  <section id="self-host">
+    <h2>Run your own</h2>
+    <p>Shell:B is open source: FastAPI and React, with local models through Ollama. It's built for an NVIDIA DGX Spark but runs on any Linux machine with a capable GPU.</p>
+    <a class="button ghost" href="https://github.com/EveAeternam/Shell-B">Shell:B on GitHub</a>
+  </section>
+</main>
+
+<footer><p>Shell:B · <a href="https://ai.shellb.app/">ai.shellb.app</a> · <a href="https://github.com/EveAeternam/Shell-B">GitHub</a></p></footer>
+</body>
+</html>

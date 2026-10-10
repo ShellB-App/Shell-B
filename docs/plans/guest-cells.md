@@ -1,7 +1,7 @@
 # Shell:B Guest cells: each guest gets a full, sandboxed Shell:B
 
 ## Context
-Shell:B Guest is live at guest.eviemi.net. Guest turns currently run inside the owner's Shell:B process, fenced off
+Shell:B Guest is live at guest.shellb.app. Guest turns currently run inside the owner's Shell:B process, fenced off
 tool by tool, and phase 2 added Notes, Wiki, Worlds and Radio the same way.
 
 Evie now wants guests to have Studio, Research, Shopping, Code and Codex too, with one rule: nothing guests do can
@@ -16,7 +16,7 @@ sandbox.
 
 ## Architecture
 ```
-browser ── guest.eviemi.net ── gateway (guest_app, host :8220: sign-in, reports, limits)
+browser ── guest.shellb.app ── gateway (guest_app, host :8220: sign-in, reports, limits)
                                    │ unix socket data/cells/<gid>/run/web.sock (+ gate secret header)
                                    ▼
             ┌──────────── cell container "shellb-cell-<gid>" ───────────────┐
@@ -126,7 +126,7 @@ stays signed in for 90 days. Replace this with real accounts in `server/guests.p
     submit the code is consumed and a session starts.
   - Existing invite-only guests ("Evie (test)") get "Set a password" on next sign-in.
   - No open registration.
-- **Sign-in:** a username + password form at guest.eviemi.net. Then a TOTP code if two-step is on. Then the cell
+- **Sign-in:** a username + password form at guest.shellb.app. Then a TOTP code if two-step is on. Then the cell
   starts.
 - **Sessions.**
   - Keep `guest_sessions` (HttpOnly, Secure, SameSite=Strict).
@@ -197,7 +197,7 @@ This plan was written in one session and is to be **implemented by another agent
     column), `privacy.py`, `notify.py`, `tools.py` (`ctx.tenant` mounts), `serve.py` (guest port 8220)
   - tests: `tests/guest_test.py` (31)
   - Memory note: `shellb-guest.md`.
-- **Deployment:** `guest.eviemi.net` → cloudflared → `host.docker.internal:8220`, no Access policy; guest address
+- **Deployment:** `guest.shellb.app` → cloudflared → `host.docker.internal:8220`, no Access policy; guest address
   setting already set. Restart only when `/api/status` is idle (memory note `shellb-restart-etiquette`).
 - **Service and host-touchpoint facts:** this plan's tables come from three surveys. Key facts:
   - ComfyUI `/prompt` accepts any graph
@@ -260,7 +260,7 @@ shellb-web.
   - can't read `/home`, the Docker socket or the owner's data
   - run_code sees only its own `/work`
   - memory and pid limits hold
-- **End to end through guest.eviemi.net with a test guest:** invite → cell starts → chat, image, Studio project with a
+- **End to end through guest.shellb.app with a test guest:** invite → cell starts → chat, image, Studio project with a
   dev server preview, Code workspace with git clone, Research board, Shopping search, Codex link snapshot, theme and
   screensaver generated and applied.
 - **Checks:** owner's sidebar, Codex and memory untouched; cell idles out and restarts cleanly; `scripts/check.sh`

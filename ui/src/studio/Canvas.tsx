@@ -49,7 +49,8 @@ const NATIVE_LABEL: Record<ProjectKind, string> = {
   fullstack: 'Desktop', music: 'Desktop', illustration: 'Desktop', blank: 'Default', code: 'Default',
 };
 
-interface DevStatus { configured: boolean; error: string | null; running: boolean; port: number | null; command: string | null }
+interface DevStatus { configured: boolean; error: string | null; running: boolean; port: number | null; command: string | null;
+  preview?: string | null; ticket?: string | null }
 
 interface Props {
   projectId: string;
@@ -123,10 +124,12 @@ export function Canvas({ projectId, kind, file, pages, entry, viewport, version,
     setDevLogs(r.ok ? ((await r.json()).logs || '(no output yet)') : 'Could not read the logs.');
   };
   const showLive = live && !!dev?.running && !!dev.port && (!file || file.kind === 'html');
-  // over HTTPS (tailscale serve) each preview port 82xx is published as https on 84xx, since 82xx is taken on all interfaces
+  // a preview host of its own when the server has one (setting previewHost: https://previewN.<host>, signed in with the
+  // ticket); otherwise this host's port, which over HTTPS (tailscale serve) is published as https on 84xx for 82xx
   const livePort = dev?.port ? (window.location.protocol === 'https:' ? dev.port + 200 : dev.port) : 0;
-  const liveBase = livePort ? `${window.location.protocol}//${window.location.hostname}:${livePort}` : '';
+  const liveBase = dev?.preview || (livePort ? `${window.location.protocol}//${window.location.hostname}:${livePort}` : '');
   const liveUrl = `${liveBase}${livePath.startsWith('/') ? livePath : `/${livePath}`}`;
+  const ticketed = (u: string) => dev?.preview && dev.ticket ? `${u}${u.includes('?') ? '&' : '?'}__pt=${dev.ticket}` : u;
 
   // a stylesheet or script has no preview of its own; in split view it previews the last page you looked at
   const lastPage = useRef<string | undefined>(undefined);
@@ -205,9 +208,9 @@ export function Canvas({ projectId, kind, file, pages, entry, viewport, version,
     );
   }
 
-  const src = showLive ? `${liveUrl}${liveUrl.includes('?') ? '&' : '?'}__inspect=1`
+  const src = showLive ? ticketed(`${liveUrl}${liveUrl.includes('?') ? '&' : '?'}__inspect=1`)
     : `${toDraft(frameRawUrl(projectId, view!.path))}?__inspect=1&v=${version}-${reloadKey}-${draftRev}`;
-  const plainSrc = showLive ? liveUrl : `${toDraft(rawUrl(projectId, view!.path))}?v=${version}-${reloadKey}-${draftRev}`;
+  const plainSrc = showLive ? ticketed(liveUrl) : `${toDraft(rawUrl(projectId, view!.path))}?v=${version}-${reloadKey}-${draftRev}`;
 
   return (
     <div className="flex-1 min-w-0 min-h-0 flex flex-col bg-[var(--bg-primary)]">

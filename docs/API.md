@@ -53,7 +53,7 @@ Authorization: Bearer sbk_…
 | The Spark itself | `http://127.0.0.1:8200/api/v1` |
 | Docker containers on the Spark (n8n, etc.) | `http://172.17.0.1:8200/api/v1` |
 | Your tailnet | `https://<spark tailscale name>:8443/api/v1` |
-| The internet (`ai.eviemi.net`) | Behind Cloudflare Access: add a Service Token policy in Cloudflare and send its `CF-Access-Client-Id` / `CF-Access-Client-Secret` headers as well as the Shell:B key |
+| The internet | `https://api.shellb.app/api/v1` (only `/api/v1/*` is reachable there, no Cloudflare Access; the key is the only credential). MCP: `https://api.shellb.app/mcp` |
 
 ## Limits and safety
 

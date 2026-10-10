@@ -7,8 +7,9 @@ How it is contained:
   pids, read-only root, the project at /work with .git read-only), and it stops after IDLE_S without traffic.
 - The preview is served by a proxy on its own port per project (PORTS), so the app gets its own browser origin: it can't
   script the Shell:B UI or read its API (no CORS), cookie-authenticated writes from it fail auth.py's Origin check, and
-  projects can't read each other's storage. The proxy needs the owner's session (or localhost, like the main app),
-  strips the shellb_session cookie before forwarding and drops any Set-Cookie that tries to overwrite it.
+  projects can't read each other's storage. The proxy needs the owner's session, a preview ticket (preview hosts, below)
+  or localhost, like the main app; it strips both cookies before forwarding and drops any Set-Cookie that tries to
+  overwrite the session.
 
 Config: devserver.json in the project root: {"command": "uvicorn server.main:app --port 8000", "port": 8000,
 "env": {...}}. The command runs with bash in /work; $PORT is set to the port.
@@ -16,12 +17,15 @@ API: GET/POST /api/projects/<pid>/dev (status / {action: start|stop|restart}), G
 Agent tools (project scope): dev_server, http_request; screenshot(server=true) renders through the proxy.
 """
 import asyncio
+import hmac
 import json
 import os
 import re
 import shlex
+import secrets
 import socket
 import time
+from http.cookies import SimpleCookie
 from pathlib import Path
 from urllib.parse import urlencode, parse_qsl
 
@@ -122,7 +126,10 @@ async def status(pid: str) -> dict:
     except ValueError as e:
         cfg, err = None, str(e)
     up = await running(pid)
-    return {"configured": cfg is not None, "error": err, "running": up, "port": port_for(pid, assign=False),
+    port = port_for(pid, assign=False)
+    base = preview_base(port)
+    return {"configured": cfg is not None, "error": err, "running": up, "port": port,
+            "preview": base, "ticket": preview_ticket(pid) if base else None,
             "command": cfg and cfg["command"], "idleStopsIn": max(0, int(IDLE_S - (time.time() - _last_use.get(pid, time.time()))))
             if up else None}
 
@@ -211,8 +218,42 @@ INSPECTOR_JS = Path(__file__).resolve().parent.parent / "ui" / "public" / "studi
 
 
 def _strip_cookie(raw: str) -> str:
-    keep = [c for c in (p.strip() for p in raw.split(";")) if c and not c.startswith(auth.COOKIE + "=")]
+    keep = [c for c in (p.strip() for p in raw.split(";")) if c and not c.startswith((auth.COOKIE + "=", PREVIEW_COOKIE))]
     return "; ".join(keep)
+
+
+# Preview hosts (setting previewHost, e.g. "shellb.app" → https://preview0.shellb.app for slot 8210): a host of its own
+# never gets the shellb_session cookie, so the Canvas hands the frame a signed ticket (?__pt=, from GET .../dev). The proxy
+# swaps it for a cookie on that preview host alone, bound to the project, so a recycled port doesn't inherit access.
+PREVIEW_COOKIE = "shellb_preview_"
+PREVIEW_TTL = 12 * 3600
+
+
+def _preview_secret() -> str:
+    s = db.kv_get("preview_secret")
+    if not s:
+        s = secrets.token_hex(24)
+        db.kv_set("preview_secret", s)
+    return s
+
+
+def preview_base(port: int | None) -> str | None:
+    import roster
+    host = (roster.get_settings().get("previewHost") or "").strip().strip(".")
+    return f"https://preview{port - PORTS[0]}.{host}" if host and port in PORTS else None
+
+
+def preview_ticket(pid: str) -> str:
+    # whole 6-hour steps, so the Canvas's frame URL (which carries it) doesn't change, and reload, on every status poll
+    exp = (int(time.time()) + PREVIEW_TTL) // 21600 * 21600 + 21600
+    return f"{exp}.{auth.frame_mac(_preview_secret(), f'preview:{pid}:{exp}')}"
+
+
+def _ticket_ok(pid: str, t: str | None) -> bool:
+    exp, _, mac = (t or "").partition(".")
+    if not exp.isdigit() or int(exp) < time.time():
+        return False
+    return hmac.compare_digest(auth.frame_mac(_preview_secret(), f"preview:{pid}:{exp}"), mac)
 
 
 async def _send(send, status: int, body: bytes, ctype: str = "text/plain; charset=utf-8", extra: list | None = None):
@@ -231,15 +272,30 @@ async def proxy_app(scope, receive, send):
             elif msg["type"] == "lifespan.shutdown":
                 return await send({"type": "lifespan.shutdown.complete"})
     h = auth._headers(scope)
-    if not (auth._session(auth._cookie(h)) or auth._is_local(scope, h)):
+    port = (scope.get("server") or ("", 0))[1]
+    pid = pid_for_port(port)
+    path, qs = scope["path"], scope.get("query_string", b"").decode("latin-1")
+    jar = SimpleCookie()
+    try:
+        jar.load(h.get("cookie", ""))
+    except Exception:
+        pass
+    given = dict(parse_qsl(qs)).get("__pt")
+    fresh = bool(pid and given and _ticket_ok(pid, given))
+    held = jar.get(f"{PREVIEW_COOKIE}{port}")
+    if not (fresh or (pid and held and _ticket_ok(pid, held.value))
+            or auth._session(auth._cookie(h)) or auth._is_local(scope, h)):
         if scope["type"] == "websocket":
             return await send({"type": "websocket.close", "code": 4401})
         return await _send(send, 401, b"<!doctype html><title>Login needed</title><p style='font:16px system-ui;margin:2em'>"
                            b"Log in to Shell:B first, then reload this preview.</p>", "text/html; charset=utf-8")
-    pid = pid_for_port((scope.get("server") or ("", 0))[1])
     if not pid:
         return await _send(send, 404, b"No project uses this preview port.")
-    path, qs = scope["path"], scope.get("query_string", b"").decode("latin-1")
+    set_cookie = None
+    if fresh:
+        secure = "; Secure" if h.get("x-forwarded-proto") == "https" else ""
+        set_cookie = (b"set-cookie", f"{PREVIEW_COOKIE}{port}={given}; Path=/; Max-Age={int(given.split(".")[0]) - int(time.time())}; HttpOnly; "
+                                     f"SameSite=Lax{secure}".encode())
     # screenshot helpers the injected snippet calls on this origin (see projects.screenshot)
     if path.startswith("/api/projects/_shotinfo/"):
         import projects
@@ -267,16 +323,17 @@ async def proxy_app(scope, receive, send):
     _last_use[pid] = time.time()
     if scope["type"] == "websocket":
         return await _proxy_ws(pid, scope, receive, send)
-    await _proxy_http(pid, scope, receive, send, h, path, qs)
+    await _proxy_http(pid, scope, receive, send, h, path, qs, set_cookie)
 
 
-async def _proxy_http(pid, scope, receive, send, h, path, qs):
+async def _proxy_http(pid, scope, receive, send, h, path, qs, set_cookie=None):
     import projects
     q = dict(parse_qsl(qs, keep_blank_values=True))
     shot = q.pop("__shot", None)
     shot_y, hold = q.pop("__y", "0"), q.pop("__hold", "900")
     inspect = q.pop("__inspect", None) is not None
-    fwd_qs = urlencode(q) if (shot or inspect) else qs
+    ticket = q.pop("__pt", None)
+    fwd_qs = urlencode(q) if (shot or inspect or ticket) else qs
     body = b""
     while True:
         m = await receive()
@@ -306,6 +363,8 @@ async def _proxy_http(pid, scope, receive, send, h, path, qs):
                 if lk == "set-cookie" and v.strip().startswith(auth.COOKIE + "="):
                     continue
                 out_h.append((lk.encode("latin-1"), v.encode("latin-1")))
+            if set_cookie:
+                out_h.append(set_cookie)
             html = "text/html" in r.headers.get("content-type", "")
             if html and (shot or inspect):
                 text = (await r.aread()).decode(errors="replace")
@@ -368,16 +427,20 @@ async def serve_proxy():
     global _proxy_server, _reaper_task, _proxy_task, _proxy_sockets
     import uvicorn
     socks = []
+    # the same addresses as the main app (serve.py SHELLB_HOSTS): loopback for tailscale serve, the docker0 gateway for
+    # the hub's edge proxy (previewN.<previewHost>); never the LAN
+    hosts = [h.strip() for h in os.environ.get("SHELLB_HOSTS", "127.0.0.1").split(",") if h.strip()]
     for p in PORTS:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        try:
-            s.bind(("0.0.0.0", p))
-        except OSError:
-            s.close()
-            continue
-        s.listen(128)
-        socks.append(s)
+        for host in hosts:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            try:
+                s.bind((host, p))
+            except OSError:
+                s.close()
+                continue
+            s.listen(128)
+            socks.append(s)
     _proxy_sockets = socks
 
     class Quiet(uvicorn.Server):

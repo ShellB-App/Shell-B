@@ -672,4 +672,4 @@ switches theme, `&peek=N` opens the Nth rich-link popover, and `&modal=agents|to
 - An artifact that hard-codes `/api/workspace/<conv>/…` (rather than going through the frame-key prefix) can't load
   that file inside its sandboxed preview, because no cookie is sent from there.
 - The microphone needs HTTPS (browser rule), so dictation works only over HTTPS: the Tailscale `https://` URL or the
-  Cloudflare tunnel (`ai.eviemi.net`, behind Cloudflare Access).
+  Cloudflare tunnel (`ai.shellb.app`, behind Cloudflare Access).
