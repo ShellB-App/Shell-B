@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AlertTriangle, Globe, Loader2, Tag, X } from 'lucide-react';
 import type { CodexEntry } from '../../types';
+import { t as tx } from '../../i18n';
 
 export function IndexState({ e }: { e: CodexEntry }) {
   const snap = e.meta.snapshot;
@@ -8,7 +9,7 @@ export function IndexState({ e }: { e: CodexEntry }) {
     return (
       <span className="flex items-center gap-1">
         <Loader2 className="w-3 h-3 animate-spin" />
-        Saving a copy of the page…
+        {tx('Saving a copy of the page…')}
       </span>
     );
   }
@@ -16,7 +17,7 @@ export function IndexState({ e }: { e: CodexEntry }) {
     return (
       <span className="flex items-center gap-1">
         <Loader2 className="w-3 h-3 animate-spin" />
-        Indexing…
+        {tx('Indexing…')}
       </span>
     );
   }
@@ -24,13 +25,13 @@ export function IndexState({ e }: { e: CodexEntry }) {
     return (
       <span className="flex items-center gap-1 text-red-400" title={e.meta.indexError}>
         <AlertTriangle className="w-3 h-3" />
-        Not searchable: {e.meta.indexError}
+        {tx('Not searchable:')} {e.meta.indexError}
       </span>
     );
   }
   return (
     <span>
-      Searchable · {e.meta.chunks ?? 0} passage{e.meta.chunks === 1 ? '' : 's'}
+      {tx('Searchable ·')} {e.meta.chunks ?? 0} passage{e.meta.chunks === 1 ? '' : 's'}
     </span>
   );
 }
@@ -51,7 +52,7 @@ export function TagInput({ value, onChange, all }: { value: string[]; onChange: 
           <button
             className="p-0.5 hover:text-red-400"
             onClick={() => onChange(value.filter(x => x !== t))}
-            aria-label={`Remove ${t}`}
+            aria-label={tx('Remove {t}', { t: t })}
           >
             <X className="w-3 h-3" />
           </button>
@@ -61,7 +62,7 @@ export function TagInput({ value, onChange, all }: { value: string[]; onChange: 
         className="flex-1 min-w-[80px] bg-transparent text-sm focus:outline-none"
         value={text}
         list="codex-tags"
-        placeholder={value.length ? '' : 'Add tags'}
+        placeholder={value.length ? '' : tx('Add tags')}
         onChange={e => {
           if (e.target.value.endsWith(',')) add(e.target.value.slice(0, -1));
           else setText(e.target.value);
@@ -111,7 +112,7 @@ export function HostInput({ value, onChange }: { value: string[]; onChange: (h: 
           <button
             className="p-0.5 hover:text-red-400"
             onClick={() => onChange(value.filter(x => x !== h))}
-            aria-label={`Remove ${h}`}
+            aria-label={tx('Remove {h}', { h: h })}
           >
             <X className="w-3 h-3" />
           </button>
@@ -120,7 +121,7 @@ export function HostInput({ value, onChange }: { value: string[]; onChange: (h: 
       <input
         className="flex-1 min-w-[140px] bg-transparent text-sm focus:outline-none"
         value={text}
-        placeholder={value.length ? '' : 'api.github.com, *.example.com'}
+        placeholder={value.length ? '' : tx('api.github.com, *.example.com')}
         onChange={e => {
           if (/[\s,]$/.test(e.target.value)) add(e.target.value);
           else setText(e.target.value);

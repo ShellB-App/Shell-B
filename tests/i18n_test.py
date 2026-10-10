@@ -12,7 +12,7 @@ from pathlib import Path
 UI = Path(__file__).resolve().parent.parent / "ui" / "src"
 CATALOG = UI / "i18n" / "fr.json"
 STR = r"""(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)")"""
-T_CALL = re.compile(r"(?<![\w.])t\(\s*" + STR)
+T_CALL = re.compile(r"(?<![\w.])tx?\(\s*" + STR)  # t(), or tx() where a file has its own `t` and imports the alias
 TN_CALL = re.compile(r"(?<![\w.])tn\([^,()]+,\s*" + STR + r"\s*,\s*" + STR)
 PLACEHOLDER = re.compile(r"\{(\w+)\}")
 
@@ -63,7 +63,7 @@ class French(unittest.TestCase):
 
     def test_no_untranslated_copies(self):
         """A value equal to its key is fine for names (Wiki, Radio…) but a long one means a forgotten translation."""
-        same_in_french = {"Conversations", "Notifications"}
+        same_in_french = {"Conversations", "Notifications", "Cloudflare Email Sending", "Contacts ({v0})", "{gateway} via {interface}", "Active · …{keyTail}{v0}", "MusicGen · :8002"}
         same = [k for k, v in self.cat.items() if isinstance(v, str) and v == k and len(k) > 12 and k not in same_in_french]
         self.assertEqual(same, [], same)
 

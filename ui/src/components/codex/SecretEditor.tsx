@@ -9,6 +9,7 @@ import type { CodexEntry, CodexIndex } from '../../types';
 import { Toggle, btn, relTime } from '../common';
 import { Draft, ownerOnly } from './types';
 import { HostInput, TagInput } from './Inputs';
+import { t as tx } from '../../i18n';
 
 /** A secret: agents see its name and use it through codex action=request; the value only comes back to the owner. */
 export function SecretEditor({ start, index, agentNames, onClose, onSaved, onDeleted }: {
@@ -78,66 +79,65 @@ export function SecretEditor({ start, index, agentNames, onClose, onSaved, onDel
     <div className="fixed inset-0 z-40 md:static md:z-auto md:w-[min(46vw,640px)] md:shrink-0 md:border-l border-[var(--border-subtle)] bg-[var(--bg-primary)] flex flex-col min-h-0">
       <div className="flex items-center gap-2 px-4 h-12 border-b border-[var(--border-subtle)] shrink-0">
         <KeyRound className="w-4 h-4 text-rose-400" />
-        <span className="text-xs text-[var(--text-secondary)] flex-1">{isNew ? 'New secret' : 'Secret'}{dirty && ' · unsaved'}</span>
-        <button className={btn.icon} onClick={() => { if (!dirty || confirm('Discard your changes?')) onClose(); }} aria-label="Close"><X className="w-4 h-4" /></button>
+        <span className="text-xs text-[var(--text-secondary)] flex-1">{isNew ? tx('New secret') : tx('Secret')}{dirty && tx(' · unsaved')}</span>
+        <button className={btn.icon} onClick={() => { if (!dirty || confirm(tx('Discard your changes?'))) onClose(); }} aria-label={tx('Close')}><X className="w-4 h-4" /></button>
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4">
         <div className="flex items-start gap-2 p-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[11px] text-[var(--text-secondary)]">
           <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-          <span>Agents see only the name. They use it by writing <code className="font-mono text-[var(--text-primary)]">{placeholder}</code> in an API request,
-            and Shell:B fills in the value only for the hosts below, blanks it out of the response, and logs every use. The value is encrypted on disk.</span>
+          <span>{tx('Agents see only the name. They use it by writing')} <code className="font-mono text-[var(--text-primary)]">{placeholder}</code> {tx('in an API request, and Shell:B fills in the value only for the hosts below, blanks it out of the response, and logs every use. The value is encrypted on disk.')}</span>
         </div>
         <label className="block space-y-1">
-          <span className="text-xs text-[var(--text-secondary)]">Name</span>
+          <span className="text-xs text-[var(--text-secondary)]">{tx('Name')}</span>
           <input className={clsx(btn.input, 'font-mono uppercase')} value={name} placeholder="GITHUB_TOKEN" autoFocus={isNew}
             onChange={e => touch(setName)(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, '_'))} />
         </label>
         <label className="block space-y-1">
-          <span className="text-xs text-[var(--text-secondary)]">What it is and what it's for (agents read this)</span>
+          <span className="text-xs text-[var(--text-secondary)]">{tx('What it is and what it\'s for (agents read this)')}</span>
           <textarea className="w-full px-3 py-2 text-sm rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] focus:outline-none focus:border-[var(--accent)]/70 min-h-[70px] resize-y"
-            value={desc} placeholder="Fine-grained GitHub token for the shellb repos: read issues, open pull requests" onChange={e => touch(setDesc)(e.target.value)} />
+            value={desc} placeholder={tx('Fine-grained GitHub token for the shellb repos: read issues, open pull requests')} onChange={e => touch(setDesc)(e.target.value)} />
         </label>
         <div className="space-y-1">
-          <span className="text-xs text-[var(--text-secondary)]">Value</span>
+          <span className="text-xs text-[var(--text-secondary)]">{tx('Value')}</span>
           {!isNew && sec?.set && !value && (
             <div className="flex flex-wrap items-center gap-2">
               <code className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg bg-[var(--bg-code)] border border-[var(--border-subtle)] text-sm font-mono break-all select-all">
                 {revealed ?? '••••••••••••••••'}</code>
               {revealed ? (<>
-                <button className={btn.ghost} onClick={() => copy(revealed)}>{copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}{copied ? 'Copied' : 'Copy'}</button>
-                <button className={btn.ghost} onClick={() => setRevealed(null)}><EyeOff className="w-3.5 h-3.5" />Hide</button>
-              </>) : <button className={btn.ghost} onClick={reveal}><Eye className="w-3.5 h-3.5" />Reveal</button>}
+                <button className={btn.ghost} onClick={() => copy(revealed)}>{copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}{copied ? tx('Copied') : tx('Copy')}</button>
+                <button className={btn.ghost} onClick={() => setRevealed(null)}><EyeOff className="w-3.5 h-3.5" />{tx('Hide')}</button>
+              </>) : <button className={btn.ghost} onClick={reveal}><Eye className="w-3.5 h-3.5" />{tx('Reveal')}</button>}
             </div>
           )}
           <div className="relative">
             <input className={clsx(btn.input, 'font-mono pr-9')} type={show ? 'text' : 'password'} autoComplete="new-password" value={value}
-              placeholder={isNew ? 'Paste the key, token or password' : 'Paste a new value to replace it'} onChange={e => touch(setValue)(e.target.value)} />
+              placeholder={isNew ? tx('Paste the key, token or password') : tx('Paste a new value to replace it')} onChange={e => touch(setValue)(e.target.value)} />
             <button className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)]" onClick={() => setShow(!show)}
-              aria-label={show ? 'Hide value' : 'Show value'}>{show ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}</button>
+              aria-label={show ? tx('Hide value') : tx('Show value')}>{show ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}</button>
           </div>
-          {revealed && <p className="text-[11px] text-[var(--text-muted)]">Hides itself after 30 seconds. Revealing is logged.</p>}
+          {revealed && <p className="text-[11px] text-[var(--text-muted)]">{tx('Hides itself after 30 seconds. Revealing is logged.')}</p>}
         </div>
         <div className="space-y-1">
-          <span className="text-xs text-[var(--text-secondary)]">May be sent to (https only; *.example.com covers subdomains)</span>
+          <span className="text-xs text-[var(--text-secondary)]">{tx('May be sent to (https only; *.example.com covers subdomains)')}</span>
           <HostInput value={hosts} onChange={touch(setHosts)} />
-          {!hosts.length && <p className="text-[11px] text-amber-500">With no hosts, agents can see this secret exists but can't use it.</p>}
+          {!hosts.length && <p className="text-[11px] text-amber-500">{tx('With no hosts, agents can see this secret exists but can\'t use it.')}</p>}
         </div>
         <label className="flex items-center justify-between gap-3">
-          <span className="text-sm">Ask me before each use
-            <span className="block text-[11px] text-[var(--text-muted)]">The request waits in the chat and the Activity inbox until you approve it. Turn off only for low-risk, read-only keys.</span>
+          <span className="text-sm">{tx('Ask me before each use')}
+            <span className="block text-[11px] text-[var(--text-muted)]">{tx('The request waits in the chat and the Activity inbox until you approve it. Turn off only for low-risk, read-only keys.')}</span>
           </span>
-          <Toggle on={ask} onChange={touch(setAsk)} label="Ask before each use" />
+          <Toggle on={ask} onChange={touch(setAsk)} label={tx('Ask before each use')} />
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,180px)_1fr] gap-2">
-          <select className={btn.input} value={collectionId ?? ''} onChange={ev => touch(setCollectionId)(ev.target.value || null)} aria-label="Collection">
-            <option value="">Unfiled</option>
+          <select className={btn.input} value={collectionId ?? ''} onChange={ev => touch(setCollectionId)(ev.target.value || null)} aria-label={tx('Collection')}>
+            <option value="">{tx('Unfiled')}</option>
             {index?.collections.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           <TagInput value={tags} onChange={touch(setTags)} all={(index?.tags ?? []).map(([t]) => t)} />
         </div>
         {sec && (
           <div className="space-y-1.5">
-            <span className="text-xs text-[var(--text-secondary)]">Used {sec.uses} time{sec.uses === 1 ? '' : 's'}{sec.lastUsed ? `, last ${relTime(sec.lastUsed)}` : ''}</span>
+            <span className="text-xs text-[var(--text-secondary)]">{tx('Used')} {sec.uses} time{sec.uses === 1 ? '' : 's'}{sec.lastUsed ? tx(', last {v0}', { v0: relTime(sec.lastUsed) }) : ''}</span>
             {sec.recent.length > 0 && (
               <div className="rounded-lg border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] text-[11px]">
                 {sec.recent.map((u, i) => (
@@ -156,13 +156,13 @@ export function SecretEditor({ start, index, agentNames, onClose, onSaved, onDel
         {error && <div className="text-xs text-red-400">{error}</div>}
       </div>
       <div className="flex flex-wrap items-center gap-2 pl-4 pr-4 md:pr-16 py-2.5 border-t border-[var(--border-subtle)] shrink-0 text-[11px] text-[var(--text-muted)]">
-        <span className="flex-1 min-w-[160px]">{full ? <>Added {relTime(full.createdAt)} · edited {relTime(full.updatedAt)}</> : 'Only the signed-in owner can save, reveal or re-scope secrets.'}</span>
+        <span className="flex-1 min-w-[160px]">{full ? <>{tx('Added')} {relTime(full.createdAt)} {tx('· edited')} {relTime(full.updatedAt)}</> : tx('Only the signed-in owner can save, reveal or re-scope secrets.')}</span>
         {!isNew && (confirmDel ? (<>
-          <button className="px-2 py-1 rounded text-[11px] bg-red-500/20 text-red-600 dark:text-red-300 hover:bg-red-500/30" onClick={async () => { await api.deleteCodexEntry(start.id!); onDeleted(start.id!); }}>Delete</button>
-          <button className="px-2 py-1 rounded text-[11px] hover:bg-[var(--bg-hover)]" onClick={() => setConfirmDel(false)}>Keep</button>
-        </>) : <button className={clsx(btn.icon, 'hover:text-red-400')} title="Delete" onClick={() => setConfirmDel(true)}><Trash2 className="w-4 h-4" /></button>)}
+          <button className="px-2 py-1 rounded text-[11px] bg-red-500/20 text-red-600 dark:text-red-300 hover:bg-red-500/30" onClick={async () => { await api.deleteCodexEntry(start.id!); onDeleted(start.id!); }}>{tx('Delete')}</button>
+          <button className="px-2 py-1 rounded text-[11px] hover:bg-[var(--bg-hover)]" onClick={() => setConfirmDel(false)}>{tx('Keep')}</button>
+        </>) : <button className={clsx(btn.icon, 'hover:text-red-400')} title={tx('Delete')} onClick={() => setConfirmDel(true)}><Trash2 className="w-4 h-4" /></button>)}
         <button className={btn.primary} disabled={busy || !dirty || name.length < 2 || (isNew && !value)} onClick={save}>
-          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}{isNew ? 'Add secret' : 'Save'}
+          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}{isNew ? tx('Add secret') : tx('Save')}
         </button>
       </div>
     </div>

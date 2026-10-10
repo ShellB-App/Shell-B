@@ -11,6 +11,7 @@ import { BriefSettingsRow } from './FollowUps';
 import { IncognitoSettingsRow } from './Incognito';
 import { HistoryImport } from './HistoryImport';
 import { ShareToCircle } from './CircleCards';
+import { t as tx } from '../i18n';
 
 // Long-term memory v2 (server/memory.py): the Settings → Memory tab and the "learned" note under chat replies.
 
@@ -79,7 +80,7 @@ export function MemoryManager() {
     setData(d => (d ? { ...d, mode } : d));
   };
 
-  if (!data) return <div className="text-xs text-[var(--text-muted)] py-6 text-center">{err || 'Loading…'}</div>;
+  if (!data) return <div className="text-xs text-[var(--text-muted)] py-6 text-center">{err || tx('Loading…')}</div>;
   const match = (m: MemoryRow) => !q || `${m.text} ${m.category}`.toLowerCase().includes(q.toLowerCase());
   const active = data.memories.filter(m => m.status === 'active' && match(m));
   const pending = data.memories.filter(m => m.status === 'pending');
@@ -93,9 +94,7 @@ export function MemoryManager() {
   return (
     <div className="space-y-4">
       <p className="text-xs text-[var(--text-muted)]">
-        What Shell:B knows about you, stored only on this machine. <b className="text-[var(--text-secondary)]">Always known</b> facts go into
-        every conversation; the rest are recalled when a message is about them. Longer reference material belongs in
-        the <a href="#/codex" className="underline hover:text-[var(--text-primary)]">Codex</a>.
+        {tx('What Shell:B knows about you, stored only on this machine.')} <b className="text-[var(--text-secondary)]">{tx('Always known')}</b> {tx('facts go into every conversation; the rest are recalled when a message is about them. Longer reference material belongs in the')} <a href="#/codex" className="underline hover:text-[var(--text-primary)]">{tx('Codex')}</a>.
       </p>
 
       <div>
@@ -103,20 +102,20 @@ export function MemoryManager() {
           {MODES.map(m => (
             <button key={m.id} onClick={() => setMode(m.id)}
               className={clsx('px-2.5 py-1 rounded-md text-xs transition', data.mode === m.id ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]')}>
-              {m.label}
+              {tx(m.label)}
             </button>
           ))}
         </div>
-        <div className="mt-1 text-[11px] text-[var(--text-muted)]">{MODES.find(m => m.id === data.mode)?.hint}</div>
+        <div className="mt-1 text-[11px] text-[var(--text-muted)]">{tx(MODES.find(m => m.id === data.mode)?.hint ?? '')}</div>
       </div>
 
       <div className="flex gap-2">
-        <input className={btn.input} value={text} onChange={e => setText(e.target.value)} placeholder="Tell Shell:B something, e.g. “I prefer metric units”"
+        <input className={btn.input} value={text} onChange={e => setText(e.target.value)} placeholder={tx('Tell Shell:B something, e.g. “I prefer metric units”')}
           onKeyDown={e => { if (e.key === 'Enter') add(); }} />
-        <select className={clsx(btn.input, 'w-36')} value={cat} onChange={e => setCat(e.target.value)} title="Category">
-          {data.categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+        <select className={clsx(btn.input, 'w-36')} value={cat} onChange={e => setCat(e.target.value)} title={tx('Category')}>
+          {data.categories.map(c => <option key={c.id} value={c.id}>{tx(c.label)}</option>)}
         </select>
-        <button className={btn.primary} disabled={!text.trim()} onClick={add}><Plus className="w-3.5 h-3.5" />Add</button>
+        <button className={btn.primary} disabled={!text.trim()} onClick={add}><Plus className="w-3.5 h-3.5" />{tx('Add')}</button>
       </div>
       {(msg || err) && <div className={clsx('text-[11px]', err ? 'text-red-400' : 'text-[var(--text-muted)]')}>{err || msg}</div>}
 
@@ -124,8 +123,8 @@ export function MemoryManager() {
         <section className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-3 space-y-2">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-amber-400" />
-            <h3 className="text-sm font-medium flex-1">Waiting for your OK <span className="text-[var(--text-muted)] font-normal">· {pending.length}</span></h3>
-            <button className={btn.subtle} onClick={() => run(mem.acceptAll())}><Check className="w-3.5 h-3.5" />Keep all</button>
+            <h3 className="text-sm font-medium flex-1">{tx('Waiting for your OK')} <span className="text-[var(--text-muted)] font-normal">· {pending.length}</span></h3>
+            <button className={btn.subtle} onClick={() => run(mem.acceptAll())}><Check className="w-3.5 h-3.5" />{tx('Keep all')}</button>
           </div>
           {pending.map(m => <PendingRow key={m.id} m={m} all={data.memories} {...rowProps} />)}
         </section>
@@ -133,15 +132,15 @@ export function MemoryManager() {
 
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <button className={btn.subtle} disabled={bf.running || bf.remaining === 0} onClick={() => run(mem.backfill())}
-          title="Reads your earlier chats and proposes memories for you to review">
+          title={tx('Reads your earlier chats and proposes memories for you to review')}>
           {bf.running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <History className="w-3.5 h-3.5" />}
-          {bf.running ? `Reading past chats… ${bf.done}/${bf.total}` : 'Learn from past chats'}
+          {bf.running ? tx('Reading past chats… {done}/{total}', { done: bf.done, total: bf.total }) : tx('Learn from past chats')}
         </button>
         <span className="text-[11px] text-[var(--text-muted)]">
-          {bf.running ? `${bf.found} found so far` : bf.remaining ? `${bf.remaining} chat${bf.remaining > 1 ? 's' : ''} not read yet` : 'Every chat has been read.'}
+          {bf.running ? tx('{found} found so far', { found: bf.found }) : bf.remaining ? tx('{remaining} chat{v0} not read yet', { remaining: bf.remaining, v0: bf.remaining > 1 ? 's' : '' }) : tx('Every chat has been read.')}
           {bf.error && <span className="text-red-400"> · {bf.error}</span>}
         </span>
-        {!bf.running && bf.remaining === 0 && <button className={btn.ghost} onClick={() => run(mem.backfillReset())}>Read them again</button>}
+        {!bf.running && bf.remaining === 0 && <button className={btn.ghost} onClick={() => run(mem.backfillReset())}>{tx('Read them again')}</button>}
       </div>
       <ReflectionRow onDone={load} />
       <BriefSettingsRow compact />
@@ -149,37 +148,37 @@ export function MemoryManager() {
 
       <div className="relative">
         <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-        <input className={clsx(btn.input, 'pl-8')} value={q} onChange={e => setQ(e.target.value)} placeholder={`Filter ${active.length} memories`} />
+        <input className={clsx(btn.input, 'pl-8')} value={q} onChange={e => setQ(e.target.value)} placeholder={tx('Filter {length} memories', { length: active.length })} />
       </div>
 
-      <Section title="Always known" hint="In every conversation: who you are, your work, how you like things, and anything you pin.">
-        {byCat(core).map(({ c, items }) => <Group key={c.id} label={c.label}>{items.map(m => <MemoryItem key={m.id} m={m} {...rowProps} />)}</Group>)}
-        {!core.length && <Empty>Nothing yet. Tell Shell:B about yourself, or let it learn from your chats.</Empty>}
+      <Section title={tx('Always known')} hint={tx('In every conversation: who you are, your work, how you like things, and anything you pin.')}>
+        {byCat(core).map(({ c, items }) => <Group key={c.id} label={tx(c.label)}>{items.map(m => <MemoryItem key={m.id} m={m} {...rowProps} />)}</Group>)}
+        {!core.length && <Empty>{tx('Nothing yet. Tell Shell:B about yourself, or let it learn from your chats.')}</Empty>}
       </Section>
 
-      <Section title="Recalled when relevant" hint="Brought in when a message is about them: people, projects, interests, routines.">
-        {byCat(rest).map(({ c, items }) => <Group key={c.id} label={c.label}>{items.map(m => <MemoryItem key={m.id} m={m} {...rowProps} />)}</Group>)}
-        {!rest.length && <Empty>Nothing here yet.</Empty>}
+      <Section title={tx('Recalled when relevant')} hint={tx('Brought in when a message is about them: people, projects, interests, routines.')}>
+        {byCat(rest).map(({ c, items }) => <Group key={c.id} label={tx(c.label)}>{items.map(m => <MemoryItem key={m.id} m={m} {...rowProps} />)}</Group>)}
+        {!rest.length && <Empty>{tx('Nothing here yet.')}</Empty>}
       </Section>
 
       <div className="border-t border-[var(--border-subtle)] pt-3 space-y-2">
         <button className={btn.ghost} onClick={() => setShowRetired(v => !v)}>
-          {showRetired ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}Forgotten and replaced · {retired.length}
+          {showRetired ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}{tx('Forgotten and replaced ·')} {retired.length}
         </button>
         {showRetired && retired.map(m => (
           <div key={m.id} className="group flex items-start gap-2 px-2.5 py-2 rounded-lg border border-[var(--border-subtle)] opacity-75 hover:opacity-100">
             <div className="flex-1 min-w-0">
-              <div className="text-sm line-through decoration-[var(--text-muted)]/60">{m.text}</div>
-              <div className="text-[10px] text-[var(--text-muted)] mt-0.5">{m.note || 'Forgotten'} · {relTime(m.updatedAt)}</div>
+              <div className="text-sm line-through decoration-[var(--text-muted)]/60">{tx(m.text)}</div>
+              <div className="text-[10px] text-[var(--text-muted)] mt-0.5">{m.note || tx('Forgotten')} · {relTime(m.updatedAt)}</div>
             </div>
-            <button className={btn.icon} title="Restore" onClick={() => run(mem.act(m.id, 'restore'))}><RotateCcw className="w-3.5 h-3.5" /></button>
-            <button className={clsx(btn.icon, 'hover:text-red-400')} title="Delete for good" onClick={async () => { await api.deleteMemory(m.id); load(); }}>
+            <button className={btn.icon} title={tx('Restore')} onClick={() => run(mem.act(m.id, 'restore'))}><RotateCcw className="w-3.5 h-3.5" /></button>
+            <button className={clsx(btn.icon, 'hover:text-red-400')} title={tx('Delete for good')} onClick={async () => { await api.deleteMemory(m.id); load(); }}>
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           </div>
         ))}
         <button className={btn.ghost} onClick={() => setShowProfile(v => !v)}>
-          {showProfile ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}<Eye className="w-3.5 h-3.5" />What agents see
+          {showProfile ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}<Eye className="w-3.5 h-3.5" />{tx('What agents see')}
         </button>
         {showProfile && (
           <pre className="text-[11px] leading-relaxed whitespace-pre-wrap p-3 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] text-[var(--text-secondary)] max-h-80 overflow-y-auto">
@@ -221,17 +220,17 @@ function ReflectionRow({ onDone }: { onDone: () => void }) {
   return (
     <div className="flex flex-wrap items-center gap-2 text-xs">
       <button className={btn.subtle} disabled={info.running} onClick={async () => setInfo(await req<ReflectionInfo>('/api/memory/reflection/run', { method: 'POST' }))}
-        title="Rewords, merges duplicates and asks about facts that may be out of date">
-        {info.running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Moon className="w-3.5 h-3.5" />}{info.running ? 'Tidying up…' : 'Tidy up now'}
+        title={tx('Rewords, merges duplicates and asks about facts that may be out of date')}>
+        {info.running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Moon className="w-3.5 h-3.5" />}{info.running ? tx('Tidying up…') : tx('Tidy up now')}
       </button>
       <span className="text-[11px] text-[var(--text-muted)]">
-        {info.lastRun ? `Last ${relTime(info.lastRun)}${did ? `: ${did}` : ': nothing to change'}` : 'Never run yet'}
+        {info.lastRun ? tx('Last {v0}{v1}', { v0: relTime(info.lastRun), v1: did ? `: ${did}` : ': nothing to change' }) : tx('Never run yet')}
         {l?.error && <span className="text-red-400"> · {l.error}</span>}
       </span>
       <span className="flex-1" />
       <label className="flex items-center gap-1.5 text-[11px] text-[var(--text-secondary)]">
         <input type="checkbox" className="accent-[var(--accent)]" checked={info.enabled} onChange={e => save({ memoryReflection: e.target.checked })} />
-        Every night at
+        {tx('Every night at')}
       </label>
       <select className="bg-transparent text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)]" value={info.hour} disabled={!info.enabled}
         onChange={e => save({ memoryReflectionHour: Number(e.target.value) })}>
@@ -256,7 +255,7 @@ function Section({ title, hint, children }: { title: string; hint: string; child
 function Group({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1">
-      <div className="text-[11px] font-medium text-[var(--text-secondary)] pl-0.5">{label}</div>
+      <div className="text-[11px] font-medium text-[var(--text-secondary)] pl-0.5">{tx(label)}</div>
       {children}
     </div>
   );
@@ -282,41 +281,41 @@ function MemoryItem({ m, categories, onRun }: { m: MemoryRow } & RowProps) {
           <textarea ref={ref} rows={2} className={clsx(btn.input, 'resize-none')} value={draft} onChange={e => setDraft(e.target.value)} onBlur={save}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); save(); } if (e.key === 'Escape') { setDraft(m.text); setEditing(false); } }} />
         ) : (
-          <div className="text-sm cursor-text" title="Click to edit" onClick={() => setEditing(true)}>{m.text}</div>
+          <div className="text-sm cursor-text" title={tx('Click to edit')} onClick={() => setEditing(true)}>{tx(m.text)}</div>
         )}
         <div className="flex flex-wrap items-center gap-x-1.5 text-[10px] text-[var(--text-muted)] mt-0.5">
           <select className="bg-transparent hover:text-[var(--text-primary)] cursor-pointer -ml-0.5" value={m.category}
-            onChange={e => onRun(mem.patch(m.id, { category: e.target.value }))} title="Category">
-            {categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+            onChange={e => onRun(mem.patch(m.id, { category: e.target.value }))} title={tx('Category')}>
+            {categories.map(c => <option key={c.id} value={c.id}>{tx(c.label)}</option>)}
           </select>
-          <span>· {ORIGIN[m.origin]} {relTime(m.createdAt)}</span>
-          {m.source && <a href={`#/c/${m.source}`} className="inline-flex items-center gap-0.5 hover:text-[var(--text-primary)]" title="Open the chat it came from"><MessageSquare className="w-2.5 h-2.5" />chat</a>}
-          {m.expires && <span>· until {day(m.expires)}</span>}
-          {m.localOnly && <span>· local only</span>}
+          <span>· {tx(ORIGIN[m.origin])} {relTime(m.createdAt)}</span>
+          {m.source && <a href={`#/c/${m.source}`} className="inline-flex items-center gap-0.5 hover:text-[var(--text-primary)]" title={tx('Open the chat it came from')}><MessageSquare className="w-2.5 h-2.5" />chat</a>}
+          {m.expires && <span>{tx('· until {v0}', { v0: day(m.expires) })}</span>}
+          {m.localOnly && <span>{tx('· local only')}</span>}
         </div>
       </div>
       <button className={clsx(btn.icon, m.localOnly ? 'text-[var(--accent)]' : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100')}
         aria-pressed={!!m.localOnly}
-        title={m.localOnly ? 'Local only: never sent to cloud agents. Click to allow' : 'Keep local: never send this to cloud agents'}
+        title={m.localOnly ? tx('Local only: never sent to cloud agents. Click to allow') : tx('Keep local: never send this to cloud agents')}
         onClick={() => onRun(mem.patch(m.id, { localOnly: !m.localOnly }))}>
         {m.localOnly ? <Lock className="w-3.5 h-3.5" /> : <LockOpen className="w-3.5 h-3.5" />}
       </button>
       {!catCore && (
         <button className={clsx(btn.icon, m.pinned ? 'text-[var(--accent)]' : 'opacity-0 group-hover:opacity-100')}
-          title={m.pinned ? 'Recall only when relevant' : 'Always know this'} onClick={() => onRun(mem.patch(m.id, { pinned: !m.pinned }))}>
+          title={m.pinned ? tx('Recall only when relevant') : tx('Always know this')} onClick={() => onRun(mem.patch(m.id, { pinned: !m.pinned }))}>
           {m.pinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
         </button>
       )}
-      <button className={clsx(btn.icon, 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-sky-400')} title="Share to a circle… (the memory stays private; a copy goes to one circle as a note from you)"
-        aria-label="Share to a circle" onClick={() => setSharing(true)}>
+      <button className={clsx(btn.icon, 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-sky-400')} title={tx('Share to a circle… (the memory stays private; a copy goes to one circle as a note from you)')}
+        aria-label={tx('Share to a circle')} onClick={() => setSharing(true)}>
         <UsersRound className="w-3.5 h-3.5" />
       </button>
-      {sharing && <ShareToCircle text={m.text} onClose={() => setSharing(false)} />}
-      <button className={clsx(btn.icon, 'opacity-0 group-hover:opacity-100 hover:text-indigo-400')} title="Move to the Codex (stops automatic recall)"
+      {sharing && <ShareToCircle text={tx(m.text)} onClose={() => setSharing(false)} />}
+      <button className={clsx(btn.icon, 'opacity-0 group-hover:opacity-100 hover:text-indigo-400')} title={tx('Move to the Codex (stops automatic recall)')}
         onClick={async () => { await api.memoryToCodex(m.id); onRun(mem.list()); }}>
         <BookMarked className="w-3.5 h-3.5" />
       </button>
-      <button className={clsx(btn.icon, 'opacity-0 group-hover:opacity-100 hover:text-red-400')} title="Forget (you can restore it below)"
+      <button className={clsx(btn.icon, 'opacity-0 group-hover:opacity-100 hover:text-red-400')} title={tx('Forget (you can restore it below)')}
         onClick={() => onRun(mem.act(m.id, 'forget'))}>
         <Trash2 className="w-3.5 h-3.5" />
       </button>
@@ -332,7 +331,7 @@ function PendingRow({ m, all, categories, onRun }: { m: MemoryRow; all: MemoryRo
     <div className="flex items-start gap-2 px-2.5 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
       <div className="flex-1 min-w-0 space-y-1">
         {forget ? (
-          <div className="text-sm"><span className="text-red-400 text-xs font-medium mr-1">Forget</span><span className="line-through">{m.text}</span></div>
+          <div className="text-sm"><span className="text-red-400 text-xs font-medium mr-1">{tx('Forget')}</span><span className="line-through">{tx(m.text)}</span></div>
         ) : (
           <input className={clsx(btn.input, 'py-1')} value={draft} onChange={e => setDraft(e.target.value)}
             onBlur={() => { if (draft.trim() && draft.trim() !== m.text) onRun(mem.patch(m.id, { text: draft.trim() })); }} />
@@ -341,17 +340,17 @@ function PendingRow({ m, all, categories, onRun }: { m: MemoryRow; all: MemoryRo
           {!forget && (
             <select className="bg-transparent hover:text-[var(--text-primary)] cursor-pointer -ml-0.5" value={m.category}
               onChange={e => onRun(mem.patch(m.id, { category: e.target.value }))}>
-              {categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+              {categories.map(c => <option key={c.id} value={c.id}>{tx(c.label)}</option>)}
             </select>
           )}
-          <span>· {ORIGIN[m.origin]}</span>
-          {m.source && <a href={`#/c/${m.source}`} className="hover:text-[var(--text-primary)]">· open chat</a>}
+          <span>· {tx(ORIGIN[m.origin])}</span>
+          {m.source && <a href={`#/c/${m.source}`} className="hover:text-[var(--text-primary)]">{tx('· open chat')}</a>}
           {olds.length > 0 && <span className="truncate">· {olds.length > 1 ? 'merges' : 'replaces'} {olds.map(o => `“${o.text}”`).join(' + ')}</span>}
-          {forget && m.note && <span>· {m.note}</span>}
+          {forget && m.note && <span>· {tx(m.note)}</span>}
         </div>
       </div>
-      <button className={btn.subtle} onClick={() => onRun(mem.act(m.id, 'accept'))}><Check className="w-3.5 h-3.5" />{forget ? 'Forget' : 'Keep'}</button>
-      <button className={btn.icon} title="Dismiss" onClick={() => onRun(mem.act(m.id, 'reject'))}><X className="w-3.5 h-3.5" /></button>
+      <button className={btn.subtle} onClick={() => onRun(mem.act(m.id, 'accept'))}><Check className="w-3.5 h-3.5" />{forget ? tx('Forget') : tx('Keep')}</button>
+      <button className={btn.icon} title={tx('Dismiss')} onClick={() => onRun(mem.act(m.id, 'reject'))}><X className="w-3.5 h-3.5" /></button>
     </div>
   );
 }
@@ -388,17 +387,17 @@ export function LearnedNote({ message, fresh }: { message: Message; fresh: boole
         <div key={i.id} className="group/l flex items-start gap-1.5 text-[11px] text-[var(--text-muted)]">
           <Brain className="w-3 h-3 mt-0.5 shrink-0 text-amber-400/80" />
           <span className="min-w-0">
-            <span className="font-medium text-[var(--text-secondary)]">{kept.has(i.id) ? 'Remembered' : verb(i)}</span>{' '}
-            <span className={clsx(i.op === 'retire' && 'line-through')}>{i.text}</span>
+            <span className="font-medium text-[var(--text-secondary)]">{kept.has(i.id) ? tx('Remembered') : verb(i)}</span>{' '}
+            <span className={clsx(i.op === 'retire' && 'line-through')}>{tx(i.text)}</span>
             {i.op === 'update' && i.old && <span className="opacity-70"> (was: {i.old})</span>}
           </span>
           {i.status === 'pending' && !kept.has(i.id) && (
-            <button className="shrink-0 inline-flex items-center gap-0.5 hover:text-[var(--text-primary)]" onClick={() => keep(i)}><Check className="w-3 h-3" />Keep</button>
+            <button className="shrink-0 inline-flex items-center gap-0.5 hover:text-[var(--text-primary)]" onClick={() => keep(i)}><Check className="w-3 h-3" />{tx('Keep')}</button>
           )}
           {!kept.has(i.id) && (
             <button className="shrink-0 inline-flex items-center gap-0.5 opacity-0 group-hover/l:opacity-100 hover:text-[var(--text-primary)]" onClick={() => undo(i)}
-              title={i.status === 'pending' ? 'Dismiss' : 'Undo'}>
-              {i.status === 'pending' ? <X className="w-3 h-3" /> : <Undo2 className="w-3 h-3" />}{i.status === 'pending' ? 'Dismiss' : 'Undo'}
+              title={i.status === 'pending' ? tx('Dismiss') : tx('Undo')}>
+              {i.status === 'pending' ? <X className="w-3 h-3" /> : <Undo2 className="w-3 h-3" />}{i.status === 'pending' ? tx('Dismiss') : tx('Undo')}
             </button>
           )}
         </div>
@@ -439,17 +438,17 @@ export function RecalledNote({ message }: { message: Message }) {
           <input autoFocus value={editing.text} onChange={e => setEditing({ id: m.id, text: e.target.value })}
             onKeyDown={e => { if (e.key === 'Escape') setEditing(null); }}
             className="flex-1 min-w-0 bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded px-1.5 py-0.5 text-[11px] text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent)]" />
-          <button type="submit" className="inline-flex items-center gap-0.5 hover:text-[var(--text-primary)]"><Check className="w-3 h-3" />Save</button>
-          <button type="button" className="hover:text-[var(--text-primary)]" onClick={() => setEditing(null)} title="Cancel"><X className="w-3 h-3" /></button>
+          <button type="submit" className="inline-flex items-center gap-0.5 hover:text-[var(--text-primary)]"><Check className="w-3 h-3" />{tx('Save')}</button>
+          <button type="button" className="hover:text-[var(--text-primary)]" onClick={() => setEditing(null)} title={tx('Cancel')}><X className="w-3 h-3" /></button>
         </form>
       ) : (
         <>
           <span className="min-w-0 flex-1">{edits[m.id] ?? m.text}{edits[m.id] && <span className="opacity-60"> (corrected)</span>}</span>
           <span className="shrink-0 flex items-center gap-1.5 opacity-0 group-hover/r:opacity-100 focus-within:opacity-100">
-            <button className="inline-flex items-center gap-0.5 hover:text-[var(--text-primary)]" title="Correct this memory"
-              onClick={() => setEditing({ id: m.id, text: edits[m.id] ?? m.text })}><Pencil className="w-3 h-3" />Edit</button>
-            <button className="inline-flex items-center gap-0.5 hover:text-[var(--text-primary)]" title="Forget this memory"
-              onClick={() => forget(m)}><Trash2 className="w-3 h-3" />Forget</button>
+            <button className="inline-flex items-center gap-0.5 hover:text-[var(--text-primary)]" title={tx('Correct this memory')}
+              onClick={() => setEditing({ id: m.id, text: edits[m.id] ?? m.text })}><Pencil className="w-3 h-3" />{tx('Edit')}</button>
+            <button className="inline-flex items-center gap-0.5 hover:text-[var(--text-primary)]" title={tx('Forget this memory')}
+              onClick={() => forget(m)}><Trash2 className="w-3 h-3" />{tx('Forget')}</button>
           </span>
         </>
       )}
@@ -461,8 +460,8 @@ export function RecalledNote({ message }: { message: Message }) {
         onClick={() => setOpen(o => !o)} aria-expanded={open}>
         {open ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
         <BookMarked className="w-3 h-3 text-amber-400/80" />
-        Recalled {relevant.length} {relevant.length === 1 ? 'memory' : 'memories'}
-        {core.length > 0 && <span className="opacity-70">· plus your profile ({core.length})</span>}
+        {tx('Recalled')} {relevant.length} {relevant.length === 1 ? 'memory' : 'memories'}
+        {core.length > 0 && <span className="opacity-70">{tx('· plus your profile ({length})', { length: core.length })}</span>}
       </button>
       {open && (
         <div className="mt-1 ml-4 max-w-[65ch]">
@@ -470,7 +469,7 @@ export function RecalledNote({ message }: { message: Message }) {
           {core.length > 0 && (
             <>
               <button className="mt-1 inline-flex items-center gap-1 hover:text-[var(--text-secondary)]" onClick={() => setShowCore(v => !v)}>
-                {showCore ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}Profile (in every reply)
+                {showCore ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}{tx('Profile (in every reply)')}
               </button>
               {showCore && <ul className="mt-0.5 space-y-0.5">{core.map(row)}</ul>}
             </>

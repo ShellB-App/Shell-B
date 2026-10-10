@@ -7,6 +7,7 @@ import { req } from '../api';
 import type { ActivityItem, FollowUpNoted, Message } from '../types';
 import { btn, relTime } from './common';
 import { toastError } from './toast';
+import { t as tx } from '../i18n';
 
 // Follow-ups and the morning brief (server/commitments.py): the note under replies, the Follow-ups tab in Activity,
 // the brief card in the feed, and the brief's settings (also shown in Settings → Memory).
@@ -95,7 +96,7 @@ export function FollowUpNote({ message, fresh }: { message: Message; fresh: bool
   const shown = items.filter(i => !undone.has(i.id));
   if (!shown.length) return null;
   const undo = async (i: FollowUpNoted) => {
-    try { await fu.undo(i.id, message.id); } catch (e) { toastError("Couldn't undo that follow-up")(e); return; }
+    try { await fu.undo(i.id, message.id); } catch (e) { toastError(tx('Couldn\'t undo that follow-up'))(e); return; }
     setUndone(s => new Set(s).add(i.id));
   };
   return (
@@ -107,14 +108,14 @@ export function FollowUpNote({ message, fresh }: { message: Message; fresh: bool
             {i.op === 'done' ? <CircleCheck className="w-3 h-3 mt-0.5 shrink-0 text-emerald-500/80" /> : <CalendarCheck className="w-3 h-3 mt-0.5 shrink-0 text-sky-400/80" />}
             <span className="min-w-0">
               <span className="font-medium text-[var(--text-secondary)]">
-                {i.op === 'done' ? 'Marked done' : i.who === 'agent' ? 'Noted a follow-up for Shell:B' : 'Noted a follow-up'}
+                {i.op === 'done' ? tx('Marked done') : i.who === 'agent' ? tx('Noted a follow-up for Shell:B') : tx('Noted a follow-up')}
               </span>{' '}
-              <a href="#/activity/follow-ups" className={clsx('hover:text-[var(--text-primary)]', i.op === 'done' && 'line-through')}>{i.text}</a>
-              {due && i.op !== 'done' && <span className={clsx('ml-1', TONE[due.tone])}>· {due.label}</span>}
+              <a href="#/activity/follow-ups" className={clsx('hover:text-[var(--text-primary)]', i.op === 'done' && 'line-through')}>{tx(i.text)}</a>
+              {due && i.op !== 'done' && <span className={clsx('ml-1', TONE[due.tone])}>· {tx(due.label)}</span>}
             </span>
             <button className="shrink-0 inline-flex items-center gap-0.5 opacity-0 group-hover/f:opacity-100 focus-visible:opacity-100 hover:text-[var(--text-primary)]"
-              onClick={() => undo(i)} title={i.op === 'done' ? 'Reopen it' : 'Forget this follow-up'}>
-              <Undo2 className="w-3 h-3" />Undo
+              onClick={() => undo(i)} title={i.op === 'done' ? tx('Reopen it') : tx('Forget this follow-up')}>
+              <Undo2 className="w-3 h-3" />{tx('Undo')}
             </button>
           </div>
         );
@@ -146,8 +147,8 @@ export function BriefNowButton({ onDone }: { onDone: () => void }) {
     setBusy(false);
   };
   return (
-    <button className={btn.ghost} onClick={go} disabled={busy} title={err || 'Write a brief now: follow-ups due, calendar, what ran overnight, what is waiting'}>
-      {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sunrise className="w-3.5 h-3.5" />}{busy ? 'Writing brief…' : 'Brief me now'}
+    <button className={btn.ghost} onClick={go} disabled={busy} title={err || tx('Write a brief now: follow-ups due, calendar, what ran overnight, what is waiting')}>
+      {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sunrise className="w-3.5 h-3.5" />}{busy ? tx('Writing brief…') : tx('Brief me now')}
     </button>
   );
 }
@@ -160,15 +161,15 @@ export function BriefRow({ it, onOpen, onDelete }: { it: ActivityItem; onOpen: (
       it.read ? 'border-[var(--border-subtle)]/60' : 'border-orange-400/30 bg-orange-400/[0.04]')}>
       <header className="flex items-center gap-2 mb-1.5">
         <Sunrise className="w-4 h-4 text-orange-400 shrink-0" />
-        <h3 className="text-sm font-semibold tracking-tight flex-1 min-w-0 truncate">Morning brief{day && <span className="font-normal text-[var(--text-muted)]"> · {day}</span>}</h3>
+        <h3 className="text-sm font-semibold tracking-tight flex-1 min-w-0 truncate">{tx('Morning brief')}{day && <span className="font-normal text-[var(--text-muted)]"> · {day}</span>}</h3>
         <span className="text-[11px] text-[var(--text-muted)]" title={new Date(it.ts).toLocaleString()}>
           {new Date(it.ts).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
         </span>
-        <button className={clsx(btn.icon, 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-red-400')} title="Delete" onClick={onDelete}><X className="w-3.5 h-3.5" /></button>
+        <button className={clsx(btn.icon, 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-red-400')} title={tx('Delete')} onClick={onDelete}><X className="w-3.5 h-3.5" /></button>
       </header>
       <p className="text-[13px] leading-relaxed text-[var(--text-primary)] max-w-[65ch]">{it.body}</p>
       <button className="mt-2 inline-flex items-center gap-1 text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent)] rounded" onClick={onOpen}>
-        <CalendarCheck className="w-3 h-3" />Open follow-ups
+        <CalendarCheck className="w-3 h-3" />{tx('Open follow-ups')}
       </button>
     </article>
   );
@@ -183,38 +184,38 @@ export function BriefSettingsRow({ compact = false }: { compact?: boolean }) {
   const load = useCallback(() => fu.brief().then(i => { setInfo(i); setPlace(i.place); }).catch(() => {}), []);
   useEffect(() => { load(); }, [load]);
   if (!info) return null;
-  const save = async (s: Parameters<typeof fu.settings>[0]) => { await fu.settings(s).catch(toastError("Couldn't save the brief settings")); load(); };
+  const save = async (s: Parameters<typeof fu.settings>[0]) => { await fu.settings(s).catch(toastError(tx('Couldn\'t save the brief settings'))); load(); };
   const next = new Date(info.next);
   return (
     <div className="space-y-1.5 text-[11px] text-[var(--text-secondary)]">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <label className="flex items-center gap-1.5">
           <input type="checkbox" className="accent-[var(--accent)]" checked={info.enabled} onChange={e => save({ morningBrief: e.target.checked })} />
-          Morning brief at
+          {tx('Morning brief at')}
         </label>
-        <input type="time" value={info.time} disabled={!info.enabled} aria-label="Brief time"
+        <input type="time" value={info.time} disabled={!info.enabled} aria-label={tx('Brief time')}
           onChange={e => e.target.value && save({ morningBriefTime: e.target.value })}
           className="bg-transparent border border-[var(--border-subtle)] rounded-md px-1.5 py-0.5 text-[11px] text-[var(--text-primary)] disabled:opacity-50 focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent)]" />
         <label className="flex items-center gap-1.5">
           <CloudSun className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-          <input value={place} onChange={e => setPlace(e.target.value)} placeholder="Weather for (town)" disabled={!info.enabled}
+          <input value={place} onChange={e => setPlace(e.target.value)} placeholder={tx('Weather for (town)')} disabled={!info.enabled}
             onBlur={() => place !== info.place && save({ briefWeatherPlace: place.trim() })}
             onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
             className="w-36 bg-transparent border border-[var(--border-subtle)] rounded-md px-1.5 py-0.5 text-[11px] text-[var(--text-primary)] placeholder-[var(--text-muted)] disabled:opacity-50 focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent)]" />
         </label>
         <label className="flex items-center gap-1.5">
           <input type="checkbox" className="accent-[var(--accent)]" checked={info.followUps} onChange={e => save({ followUps: e.target.checked })} />
-          Note follow-ups from chats
+          {tx('Note follow-ups from chats')}
         </label>
       </div>
       {!compact && (
         <div className="text-[var(--text-muted)]">
           {info.enabled
-            ? <>Next brief {next.toDateString() === new Date().toDateString() ? 'today' : next.toLocaleDateString(undefined, { weekday: 'long' })} at {next.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
-              {!info.ownerActive && ' — skipped while you haven’t used Shell:B for three days'}
-              {info.lastAt ? ` · last ${relTime(info.lastAt)}` : ''}.</>
-            : 'No morning brief. “Brief me now” still works.'}
-          {' '}Only the town name leaves the Spark for the weather.
+            ? <>{tx('Next brief')} {next.toDateString() === new Date().toDateString() ? 'today' : next.toLocaleDateString(undefined, { weekday: 'long' })} at {next.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+              {!info.ownerActive && tx(' — skipped while you haven’t used Shell:B for three days')}
+              {info.lastAt ? tx(' · last {v0}', { v0: relTime(info.lastAt) }) : ''}.</>
+            : tx('No morning brief. “Brief me now” still works.')}
+          {' '}{tx('Only the town name leaves the Spark for the weather.')}
         </div>
       )}
     </div>
@@ -224,9 +225,9 @@ export function BriefSettingsRow({ compact = false }: { compact?: boolean }) {
 // ── the Follow-ups tab ──────────────────────────────────────────────────────
 
 function Origin({ f }: { f: FollowUp }) {
-  if (f.origin === 'meeting') return <span className="inline-flex items-center gap-1"><Mic className="w-3 h-3" />{f.note || 'From a meeting'}</span>;
-  if (f.origin === 'chat' && f.convId) return <a href={`#/c/${f.convId}`} className="inline-flex items-center gap-1 hover:text-[var(--text-primary)]"><MessageSquare className="w-3 h-3" />From a chat · {relTime(f.createdAt)}</a>;
-  return <span>Added {relTime(f.createdAt)}</span>;
+  if (f.origin === 'meeting') return <span className="inline-flex items-center gap-1"><Mic className="w-3 h-3" />{f.note || tx('From a meeting')}</span>;
+  if (f.origin === 'chat' && f.convId) return <a href={`#/c/${f.convId}`} className="inline-flex items-center gap-1 hover:text-[var(--text-primary)]"><MessageSquare className="w-3 h-3" />{tx('From a chat ·')} {relTime(f.createdAt)}</a>;
+  return <span>{tx('Added {v0}', { v0: relTime(f.createdAt) })}</span>;
 }
 
 function Item({ f, onRun }: { f: FollowUp; onRun: (p: Promise<Overview>) => void }) {
@@ -239,7 +240,7 @@ function Item({ f, onRun }: { f: FollowUp; onRun: (p: Promise<Overview>) => void
     <li className="group flex items-start gap-2.5 px-2 py-2 rounded-lg hover:bg-[var(--bg-hover)] transition">
       <button className={clsx('mt-0.5 shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent)]',
         closed ? 'text-emerald-500' : 'text-[var(--text-muted)] hover:text-emerald-500')}
-        title={closed ? 'Reopen' : 'Mark done'} onClick={() => onRun(fu.patch(f.id, { status: closed ? 'open' : 'done' }))}>
+        title={closed ? tx('Reopen') : tx('Mark done')} onClick={() => onRun(fu.patch(f.id, { status: closed ? 'open' : 'done' }))}>
         {closed ? <CircleCheck className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
       </button>
       <div className="flex-1 min-w-0">
@@ -249,34 +250,34 @@ function Item({ f, onRun }: { f: FollowUp; onRun: (p: Promise<Overview>) => void
             className={clsx(btn.input, 'py-0.5 text-[13px]')} />
         ) : (
           <button className={clsx('text-left text-[13px] leading-snug max-w-[65ch] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent)] rounded',
-            closed ? 'line-through text-[var(--text-muted)]' : 'text-[var(--text-primary)]')} onClick={() => !closed && setEditing(true)} title={closed ? undefined : 'Edit'}>
-            {f.text}
+            closed ? 'line-through text-[var(--text-muted)]' : 'text-[var(--text-primary)]')} onClick={() => !closed && setEditing(true)} title={closed ? undefined : tx('Edit')}>
+            {tx(f.text)}
           </button>
         )}
         <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-[var(--text-muted)]">
-          {f.who === 'agent' && <span className="inline-flex items-center gap-1 text-[var(--text-secondary)]"><Bot className="w-3 h-3" />Shell:B promised</span>}
+          {f.who === 'agent' && <span className="inline-flex items-center gap-1 text-[var(--text-secondary)]"><Bot className="w-3 h-3" />{tx('Shell:B promised')}</span>}
           {f.who !== 'me' && f.who !== 'agent' && <span className="inline-flex items-center gap-1 text-[var(--text-secondary)]"><Users className="w-3 h-3" />{f.who}</span>}
           <Origin f={f} />
-          {f.status === 'dismissed' && <span>· dismissed</span>}
+          {f.status === 'dismissed' && <span>{tx('· dismissed')}</span>}
         </div>
       </div>
       {!closed && (
         <div className="shrink-0 flex items-center gap-1">
           <label className={clsx('relative inline-flex items-center gap-1 text-[11px] cursor-pointer rounded px-1 py-0.5 hover:bg-[var(--bg-tertiary)]', due ? TONE[due.tone] : 'text-[var(--text-muted)] opacity-0 group-hover:opacity-100 focus-within:opacity-100')}
-            title="Change the due date">
-            {due ? due.label : 'Add date'}
-            <input type="date" value={f.due?.slice(0, 10) ?? ''} aria-label="Due date"
+            title={tx('Change the due date')}>
+            {due ? tx(due.label) : tx('Add date')}
+            <input type="date" value={f.due?.slice(0, 10) ?? ''} aria-label={tx('Due date')}
               onChange={e => onRun(fu.patch(f.id, { due: e.target.value ? e.target.value + (f.due && f.due.length > 10 ? f.due.slice(10) : '') : null }))}
               className="absolute inset-0 opacity-0 cursor-pointer" />
           </label>
-          {f.due && <button className={clsx(btn.icon, 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100')} title="Clear the date"
+          {f.due && <button className={clsx(btn.icon, 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100')} title={tx('Clear the date')}
             onClick={() => onRun(fu.patch(f.id, { due: null }))}><CalendarX2 className="w-3.5 h-3.5" /></button>}
-          <button className={clsx(btn.icon, 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100')} title="Dismiss: not doing this"
+          <button className={clsx(btn.icon, 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100')} title={tx('Dismiss: not doing this')}
             onClick={() => onRun(fu.patch(f.id, { status: 'dismissed' }))}><X className="w-3.5 h-3.5" /></button>
         </div>
       )}
       {closed && (
-        <button className={clsx(btn.icon, 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100')} title="Reopen"
+        <button className={clsx(btn.icon, 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100')} title={tx('Reopen')}
           onClick={() => onRun(fu.patch(f.id, { status: 'open' }))}><RotateCcw className="w-3.5 h-3.5" /></button>
       )}
     </li>
@@ -339,11 +340,11 @@ export function FollowUpsPanel({ onChange }: { onChange?: () => void }) {
       </div>
 
       <form onSubmit={add} className="flex flex-wrap items-center gap-2">
-        <input value={text} onChange={e => setText(e.target.value)} placeholder="Add a follow-up, e.g. Renew the car registration"
-          className={clsx(btn.input, 'flex-1 min-w-[14rem]')} aria-label="New follow-up" />
-        <input type="date" value={due} onChange={e => setDue(e.target.value)} aria-label="Due date"
+        <input value={text} onChange={e => setText(e.target.value)} placeholder={tx('Add a follow-up, e.g. Renew the car registration')}
+          className={clsx(btn.input, 'flex-1 min-w-[14rem]')} aria-label={tx('New follow-up')} />
+        <input type="date" value={due} onChange={e => setDue(e.target.value)} aria-label={tx('Due date')}
           className="px-2 py-1.5 text-xs rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] text-[var(--text-secondary)] focus:outline-none focus:border-[var(--accent)]/70" />
-        <button type="submit" className={btn.primary} disabled={!text.trim()}><Plus className="w-3.5 h-3.5" />Add follow-up</button>
+        <button type="submit" className={btn.primary} disabled={!text.trim()}><Plus className="w-3.5 h-3.5" />{tx('Add follow-up')}</button>
       </form>
       {msg && <div className="-mt-3 text-[11px] text-[var(--text-muted)]">{msg}</div>}
       {err && <div className="text-xs text-red-500 dark:text-red-400">{err}</div>}
@@ -353,32 +354,30 @@ export function FollowUpsPanel({ onChange }: { onChange?: () => void }) {
       ) : items.length === 0 ? (
         <div className="py-12 text-center text-sm text-[var(--text-muted)] max-w-[52ch] mx-auto">
           <CalendarCheck className="w-8 h-8 mx-auto mb-2" />
-          Nothing to follow up on. When you tell Shell:B “I’ll send it Friday” or “remind me to call the vet”, it lands here,
-          along with action items from Secretary meetings.
+          {tx('Nothing to follow up on. When you tell Shell:B “I’ll send it Friday” or “remind me to call the vet”, it lands here, along with action items from Secretary meetings.')}
         </div>
       ) : (
         <div className="space-y-4">
-          <Group title="Overdue" tone="text-red-500 dark:text-red-400" items={overdue} onRun={run} />
-          <Group title="Today" tone="text-amber-600 dark:text-amber-400" items={dueToday} onRun={run} />
-          <Group title="This week" items={week} onRun={run} />
-          <Group title="Later" items={later} onRun={run} />
-          <Group title="No date" items={someday} onRun={run} />
-          <Group title="Waiting on others" items={others} onRun={run} />
+          <Group title={tx('Overdue')} tone="text-red-500 dark:text-red-400" items={overdue} onRun={run} />
+          <Group title={tx('Today')} tone="text-amber-600 dark:text-amber-400" items={dueToday} onRun={run} />
+          <Group title={tx('This week')} items={week} onRun={run} />
+          <Group title={tx('Later')} items={later} onRun={run} />
+          <Group title={tx('No date')} items={someday} onRun={run} />
+          <Group title={tx('Waiting on others')} items={others} onRun={run} />
         </div>
       )}
 
       <div>
         <button className="inline-flex items-center gap-1 text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent)] rounded"
           onClick={() => setShowClosed(v => !v)} aria-expanded={showClosed}>
-          <ChevronDown className={clsx('w-3 h-3 transition', !showClosed && '-rotate-90')} />Done and dismissed
+          <ChevronDown className={clsx('w-3 h-3 transition', !showClosed && '-rotate-90')} />{tx('Done and dismissed')}
         </button>
         {showClosed && (closed === null ? <Loader2 className="mt-2 w-4 h-4 animate-spin text-[var(--text-muted)]" />
-          : closed.length === 0 ? <div className="mt-1 px-2 text-[11px] text-[var(--text-muted)]">Nothing closed yet.</div>
+          : closed.length === 0 ? <div className="mt-1 px-2 text-[11px] text-[var(--text-muted)]">{tx('Nothing closed yet.')}</div>
             : <ul className="mt-1">{closed.map(f => <Item key={f.id} f={f} onRun={run} />)}</ul>)}
       </div>
       <p className="text-[11px] text-[var(--text-muted)] max-w-[65ch]">
-        <Check className="inline w-3 h-3 mr-0.5" />Follow-ups are noted by the local utility model after a chat reply, only when the exchange sounds like a promise
-        or a reminder; incognito chats are skipped. Undo under the reply removes one.
+        <Check className="inline w-3 h-3 mr-0.5" />{tx('Follow-ups are noted by the local utility model after a chat reply, only when the exchange sounds like a promise or a reminder; incognito chats are skipped. Undo under the reply removes one.')}
       </p>
     </div>
   );

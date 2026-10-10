@@ -20,6 +20,7 @@ import { api } from '../api';
 import type { BackupInfo } from '../types';
 import { btn, relTime } from './common';
 import { AdminGate } from './Integrations';
+import { t } from '../i18n';
 
 export function BackupsTab() {
   const [backups, setBackups] = useState<BackupInfo[]>([]);
@@ -141,15 +142,13 @@ export function BackupsTab() {
         <div>
           <h2 className="text-base font-semibold flex items-center gap-2 text-[var(--text-primary)]">
             <Archive className="w-4 h-4 text-[var(--brand-soft)]" />
-            Backups & Disaster Recovery
+            {t('Backups & Disaster Recovery')}
           </h2>
           <p className="text-xs text-[var(--text-muted)] mt-0.5">
-            Atomic SQLite snapshots with filesystem storage. Pre-restore safety snapshots protect against data loss.
+            {t('Atomic SQLite snapshots with filesystem storage. Pre-restore safety snapshots protect against data loss.')}
           </p>
           <p className="text-xs text-[var(--text-muted)] mt-1 max-w-[65ch]">
-            Archives stay on this machine and only you can read them. The key that unlocks Codex secrets is never put
-            in an archive; a restore keeps this machine's key, so copy <code>data/codex/.key</code> somewhere safe if
-            you move backups to another machine.
+            {t('Archives stay on this machine and only you can read them. The key that unlocks Codex secrets is never put in an archive; a restore keeps this machine\'s key, so copy')} <code>data/codex/.key</code> {t('somewhere safe if you move backups to another machine.')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -167,7 +166,7 @@ export function BackupsTab() {
             disabled={uploadBusy || loading}
           >
             {uploadBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-            Upload Archive
+            {t('Upload Archive')}
           </button>
           <button
             type="button"
@@ -176,7 +175,7 @@ export function BackupsTab() {
             disabled={createBusy || loading}
           >
             <Plus className="w-3.5 h-3.5" />
-            Create Backup
+            {t('Create Backup')}
           </button>
         </div>
       </div>
@@ -201,20 +200,20 @@ export function BackupsTab() {
       {loading ? (
         <div className="flex items-center justify-center p-12 text-[var(--text-muted)] text-sm gap-2">
           <Loader2 className="w-4 h-4 animate-spin" />
-          Loading backups...
+          {t('Loading backups...')}
         </div>
       ) : backups.length === 0 ? (
         <div className="text-center p-8 rounded-xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-secondary)] space-y-3">
           <div className="w-10 h-10 rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center mx-auto text-[var(--text-muted)]">
             <Database className="w-5 h-5" />
           </div>
-          <div className="text-sm font-medium">No backups created yet</div>
+          <div className="text-sm font-medium">{t('No backups created yet')}</div>
           <p className="text-xs text-[var(--text-muted)] max-w-sm mx-auto">
-            Create a backup to protect your conversations, memories, artifacts, and projects against hardware failure or corruption.
+            {t('Create a backup to protect your conversations, memories, artifacts, and projects against hardware failure or corruption.')}
           </p>
           <button type="button" className={btn.primary} onClick={() => setCreating(true)}>
             <Plus className="w-3.5 h-3.5" />
-            Create First Backup
+            {t('Create First Backup')}
           </button>
         </div>
       ) : (
@@ -249,7 +248,7 @@ export function BackupsTab() {
                           isFull ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
                         )}
                       >
-                        {isFull ? 'Full' : 'Core'}
+                        {isFull ? t('Full') : t('Core')}
                       </span>
                       <span
                         className={clsx(
@@ -259,11 +258,11 @@ export function BackupsTab() {
                             : 'bg-zinc-500/10 text-zinc-400 border border-zinc-500/20'
                         )}
                       >
-                        {isSafety ? 'Safety Snapshot' : isAuto ? 'Daily Auto' : 'Manual'}
+                        {isSafety ? t('Safety Snapshot') : isAuto ? t('Daily Auto') : t('Manual')}
                       </span>
                     </div>
 
-                    {bk.note && <p className="text-xs text-[var(--text-secondary)] italic">{bk.note}</p>}
+                    {bk.note && <p className="text-xs text-[var(--text-secondary)] italic">{t(bk.note)}</p>}
 
                     <div className="flex items-center gap-3 text-[11px] text-[var(--text-muted)] flex-wrap">
                       <span className="flex items-center gap-1">
@@ -291,25 +290,25 @@ export function BackupsTab() {
                     href={`/api/backup/${encodeURIComponent(bk.filename || bk.id)}/download`}
                     download={bk.filename}
                     className={btn.subtle}
-                    title="Download archive to local disk"
+                    title={t('Download archive to local disk')}
                   >
                     <Download className="w-3.5 h-3.5" />
-                    Download
+                    {t('Download')}
                   </a>
                   <button
                     type="button"
                     className={btn.subtle}
                     onClick={() => setTargetRestore(bk)}
-                    title="Restore this backup"
+                    title={t('Restore this backup')}
                   >
                     <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
-                    Restore
+                    {t('Restore')}
                   </button>
                   <button
                     type="button"
                     className={btn.ghost}
                     onClick={() => setTargetDelete(bk)}
-                    title="Delete backup"
+                    title={t('Delete backup')}
                   >
                     <Trash2 className="w-3.5 h-3.5 text-red-400" />
                   </button>
@@ -327,16 +326,16 @@ export function BackupsTab() {
             <div>
               <h3 className="text-base font-semibold text-[var(--text-primary)] flex items-center gap-2">
                 <Archive className="w-4 h-4 text-[var(--brand-soft)]" />
-                Create New Backup
+                {t('Create New Backup')}
               </h3>
               <p className="text-xs text-[var(--text-muted)] mt-1">
-                Creates an atomic snapshot archive of the database and selected filesystem components.
+                {t('Creates an atomic snapshot archive of the database and selected filesystem components.')}
               </p>
             </div>
 
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2">
-                <label className="text-xs font-medium text-[var(--text-secondary)]">Backup Scope</label>
+                <label className="text-xs font-medium text-[var(--text-secondary)]">{t('Backup Scope')}</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -348,8 +347,8 @@ export function BackupsTab() {
                         : 'border-[var(--border-subtle)] hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)]'
                     )}
                   >
-                    <div className="text-xs font-semibold">Full Backup</div>
-                    <div className="text-[11px] text-[var(--text-muted)] mt-0.5">Database + workspaces + assets</div>
+                    <div className="text-xs font-semibold">{t('Full Backup')}</div>
+                    <div className="text-[11px] text-[var(--text-muted)] mt-0.5">{t('Database + workspaces + assets')}</div>
                   </button>
                   <button
                     type="button"
@@ -361,17 +360,17 @@ export function BackupsTab() {
                         : 'border-[var(--border-subtle)] hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)]'
                     )}
                   >
-                    <div className="text-xs font-semibold">Core Backup</div>
-                    <div className="text-[11px] text-[var(--text-muted)] mt-0.5">Database + configs (fast, light)</div>
+                    <div className="text-xs font-semibold">{t('Core Backup')}</div>
+                    <div className="text-[11px] text-[var(--text-muted)] mt-0.5">{t('Database + configs (fast, light)')}</div>
                   </button>
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-[var(--text-secondary)]">Optional Label / Note</label>
+                <label className="text-xs font-medium text-[var(--text-secondary)]">{t('Optional Label / Note')}</label>
                 <input
                   type="text"
-                  placeholder="e.g. Prior to system upgrade"
+                  placeholder={t('e.g. Prior to system upgrade')}
                   value={note}
                   onChange={e => setNote(e.target.value)}
                   className={btn.input}
@@ -386,7 +385,7 @@ export function BackupsTab() {
                   onClick={() => setCreating(false)}
                   disabled={createBusy}
                 >
-                  Cancel
+                  {t('Cancel')}
                 </button>
                 <button
                   type="submit"
@@ -394,7 +393,7 @@ export function BackupsTab() {
                   disabled={createBusy}
                 >
                   {createBusy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  {createBusy ? 'Creating Archive...' : 'Start Backup'}
+                  {createBusy ? t('Creating Archive...') : t('Start Backup')}
                 </button>
               </div>
             </form>
@@ -411,20 +410,20 @@ export function BackupsTab() {
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-semibold text-[var(--text-primary)]">Restore from Backup?</h3>
-                <p className="text-xs text-[var(--text-muted)]">This operation will overwrite current active data.</p>
+                <h3 className="text-base font-semibold text-[var(--text-primary)]">{t('Restore from Backup?')}</h3>
+                <p className="text-xs text-[var(--text-muted)]">{t('This operation will overwrite current active data.')}</p>
               </div>
             </div>
 
             <div className="p-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] text-xs space-y-1.5">
               <div className="font-mono font-medium text-[var(--text-primary)]">{targetRestore.filename}</div>
               <div className="text-[var(--text-muted)]">
-                Created {new Date(targetRestore.createdAt * 1000).toLocaleString()} · {targetRestore.sizeFormatted} ({targetRestore.scope} scope)
+                {t('Created {v0} · {sizeFormatted} ({scope} scope)', { v0: new Date(targetRestore.createdAt * 1000).toLocaleString(), sizeFormatted: targetRestore.sizeFormatted, scope: targetRestore.scope })}
               </div>
             </div>
 
             <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-              Before applying this backup, Shell:B will automatically generate a <strong className="text-[var(--text-primary)]">pre-restore safety snapshot</strong> of the current system, ensuring no work is permanently lost.
+              {t('Before applying this backup, Shell:B will automatically generate a')} <strong className="text-[var(--text-primary)]">{t('pre-restore safety snapshot')}</strong> {t('of the current system, ensuring no work is permanently lost.')}
             </p>
 
             <div className="flex items-center justify-end gap-2 pt-2">
@@ -434,7 +433,7 @@ export function BackupsTab() {
                 onClick={() => setTargetRestore(null)}
                 disabled={restoreBusy}
               >
-                Cancel
+                {t('Cancel')}
               </button>
               <button
                 type="button"
@@ -443,7 +442,7 @@ export function BackupsTab() {
                 className="px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500 hover:bg-amber-400 text-black flex items-center gap-1.5 transition"
               >
                 {restoreBusy && <Loader2 className="w-3.5 h-3.5 animate-spin text-black" />}
-                {restoreBusy ? 'Restoring System...' : 'Proceed with Restore'}
+                {restoreBusy ? t('Restoring System...') : t('Proceed with Restore')}
               </button>
             </div>
           </div>
@@ -454,9 +453,9 @@ export function BackupsTab() {
       {targetDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] shadow-2xl p-6 space-y-4">
-            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Delete Backup File?</h3>
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t('Delete Backup File?')}</h3>
             <p className="text-xs text-[var(--text-muted)]">
-              Are you sure you want to permanently delete <code className="font-mono text-[var(--text-primary)]">{targetDelete.filename}</code>? This cannot be undone.
+              {t('Are you sure you want to permanently delete')} <code className="font-mono text-[var(--text-primary)]">{targetDelete.filename}</code>{t('? This cannot be undone.')}
             </p>
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
@@ -465,7 +464,7 @@ export function BackupsTab() {
                 onClick={() => setTargetDelete(null)}
                 disabled={deleteBusy}
               >
-                Cancel
+                {t('Cancel')}
               </button>
               <button
                 type="button"
@@ -474,7 +473,7 @@ export function BackupsTab() {
                 className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-600 hover:bg-red-500 text-white flex items-center gap-1.5 transition"
               >
                 {deleteBusy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                Delete
+                {t('Delete')}
               </button>
             </div>
           </div>

@@ -9,6 +9,7 @@ import type { CodexEntry } from '../../types';
 import { btn, relTime } from '../common';
 import { ContactAvatar } from './ContactAvatar';
 import { CodexRow } from './CodexRow';
+import { t as tx } from '../../i18n';
 
 function calculateDaysUntilBirthday(bdayStr?: string): number | null {
   if (!bdayStr) return null;
@@ -67,7 +68,7 @@ export function ContactsView({
   const importVcf = async (files: File[]) => {
     if (!files.length) return;
     setImporting(true);
-    try { onImported?.(await api.importCodexVcf(files)); } catch (e) { toastError('Import failed')(e); } finally { setImporting(false); }
+    try { onImported?.(await api.importCodexVcf(files)); } catch (e) { toastError(tx('Import failed'))(e); } finally { setImporting(false); }
   };
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
     try {
@@ -135,7 +136,7 @@ export function ContactsView({
             className={clsx(btn.input, 'pl-9 w-full')}
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search people by name, role, company, email, location..."
+            placeholder={tx('Search people by name, role, company, email, location...')}
           />
           {search && (
             <button
@@ -157,8 +158,8 @@ export function ContactsView({
                 ? 'bg-[var(--bg-hover)] text-teal-400 font-medium'
                 : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
             )}
-            title="Card Grid view"
-            aria-label="Grid view"
+            title={tx('Card Grid view')}
+            aria-label={tx('Grid view')}
           >
             <LayoutGrid className="w-4 h-4" />
           </button>
@@ -170,8 +171,8 @@ export function ContactsView({
                 ? 'bg-[var(--bg-hover)] text-teal-400 font-medium'
                 : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
             )}
-            title="Compact List view"
-            aria-label="List view"
+            title={tx('Compact List view')}
+            aria-label={tx('List view')}
           >
             <List className="w-4 h-4" />
           </button>
@@ -182,26 +183,26 @@ export function ContactsView({
           className={clsx(btn.primary, 'bg-teal-600 hover:bg-teal-500 text-white border-transparent')}
           onClick={onCreateContact}
         >
-          <Plus className="w-3.5 h-3.5" />New Contact
+          <Plus className="w-3.5 h-3.5" />{tx('New Contact')}
         </button>
 
         <button
           className={clsx(btn.subtle, 'text-amber-400 border-amber-500/30 hover:bg-amber-500/10')}
           onClick={onAutoPopulate}
           disabled={populating}
-          title="Extract people and contact details from memories"
+          title={tx('Extract people and contact details from memories')}
         >
           {populating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-          Auto-populate
+          {tx('Auto-populate')}
         </button>
-        <button className={btn.subtle} onClick={() => vcfInput.current?.click()} disabled={importing} title="Import people from a .vcf file (phone, Google or Outlook contacts export)">
-          {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}Import .vcf
+        <button className={btn.subtle} onClick={() => vcfInput.current?.click()} disabled={importing} title={tx('Import people from a .vcf file (phone, Google or Outlook contacts export)')}>
+          {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}{tx('Import .vcf')}
         </button>
         <input ref={vcfInput} type="file" accept=".vcf,text/vcard,text/x-vcard" multiple hidden onChange={e => { importVcf([...(e.target.files ?? [])]); e.target.value = ''; }} />
-        <a className={btn.subtle} href="/api/codex/contacts.vcf" download="shellb-contacts.vcf" title="Every contact as a vCard file for your phone or another address book">
-          <Download className="w-3.5 h-3.5" />Export .vcf
+        <a className={btn.subtle} href="/api/codex/contacts.vcf" download="shellb-contacts.vcf" title={tx('Every contact as a vCard file for your phone or another address book')}>
+          <Download className="w-3.5 h-3.5" />{tx('Export .vcf')}
         </a>
-        {onSync && <button className={btn.subtle} onClick={onSync} title="Keep a CardDAV address book in step with these contacts"><RefreshCw className="w-3.5 h-3.5" />Sync…</button>}
+        {onSync && <button className={btn.subtle} onClick={onSync} title={tx('Keep a CardDAV address book in step with these contacts')}><RefreshCw className="w-3.5 h-3.5" />{tx('Sync…')}</button>}
       </div>
 
       {/* Tag Filters */}
@@ -216,7 +217,7 @@ export function ContactsView({
                 : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
             )}
           >
-            All contacts ({contacts.length})
+            {tx('All contacts ({length})', { length: contacts.length })}
           </button>
           {allTags.map(t => (
             <button
@@ -243,25 +244,25 @@ export function ContactsView({
             <User className="w-7 h-7" />
           </div>
           <div>
-            <h3 className="text-base font-semibold">No contacts saved yet</h3>
+            <h3 className="text-base font-semibold">{tx('No contacts saved yet')}</h3>
             <p className="text-xs text-[var(--text-muted)] max-w-md mx-auto mt-1">
-              Store friends, colleagues, family, and team members with photos, contact details, and notes. Agents refer to contacts when you mention people.
+              {tx('Store friends, colleagues, family, and team members with photos, contact details, and notes. Agents refer to contacts when you mention people.')}
             </p>
           </div>
           <div className="flex items-center justify-center gap-2 pt-2">
             <button className={btn.primary} onClick={onAutoPopulate} disabled={populating}>
               {populating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-              Auto-populate from Memories
+              {tx('Auto-populate from Memories')}
             </button>
             <button className={btn.subtle} onClick={onCreateContact}>
-              <Plus className="w-3.5 h-3.5" />New Contact
+              <Plus className="w-3.5 h-3.5" />{tx('New Contact')}
             </button>
           </div>
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-sm text-[var(--text-muted)]">
           <User className="w-8 h-8 mx-auto mb-2 text-teal-400/50" />
-          No contacts match “{search || selectedTag}”.
+          {tx('No contacts match “')}{search || selectedTag}”.
         </div>
       ) : viewMode === 'grid' ? (
         /* Cards Directory Grid */
@@ -297,12 +298,12 @@ export function ContactsView({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1">
                         <span className="text-sm font-semibold truncate group-hover:text-teal-400 transition-colors">
-                          {c.title}
+                          {tx(c.title)}
                         </span>
                         <div className="flex items-center gap-1 shrink-0" onClick={ev => ev.stopPropagation()}>
                           {c.draft ? (
                             <span className="px-1.5 py-px rounded border text-[10px] font-medium bg-amber-500/10 text-amber-500 border-amber-500/30">
-                              Draft
+                              {tx('Draft')}
                             </span>
                           ) : (
                             <button
@@ -311,7 +312,7 @@ export function ContactsView({
                                 'opacity-0 group-hover:opacity-100 transition-opacity',
                                 c.pinned && 'opacity-100'
                               )}
-                              title={c.pinned ? 'Unpin' : 'Pin'}
+                              title={c.pinned ? tx('Unpin') : 'Pin'}
                               onClick={() => onPin(c)}
                             >
                               <Pin className={clsx('w-3.5 h-3.5', c.pinned && 'fill-current text-[var(--accent)]')} />
@@ -397,7 +398,7 @@ export function ContactsView({
                         <span>{m.birthday}</span>
                         {daysUntilBday !== null && (
                           <span className="opacity-75">
-                            {daysUntilBday === 0 ? '(Today!)' : `(in ${daysUntilBday}d)`}
+                            {daysUntilBday === 0 ? '(Today!)' : tx('(in {daysUntilBday}d)', { daysUntilBday: daysUntilBday })}
                           </span>
                         )}
                       </span>

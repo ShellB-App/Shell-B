@@ -5,6 +5,7 @@ import clsx from 'clsx';
 import { CheckCircle2, KeyRound, Loader2, Mail, Send, Trash2 } from 'lucide-react';
 import { req } from '../api';
 import { btn, relTime } from './common';
+import { t } from '../i18n';
 
 export interface EmailStatus {
   provider: 'resend' | 'cloudflare'; accountId: string; from: string; fromName: string; to: string; appUrl: string;
@@ -52,7 +53,7 @@ export function EmailSection({ onChange }: { onChange?: (s: EmailStatus) => void
   const dirty = !!(s && draft && (Object.keys(draft) as (keyof EmailConfig)[]).some(k => draft[k] !== s[k]));
   const save = () => run('save', async () => { apply(await emailApi.save(draft!)); setMsg({ ok: true, text: 'Saved.' }); });
   const saveToken = () => run('token', async () => { apply(await emailApi.setToken(token.trim())); setToken(''); setMsg({ ok: true, text: 'Token saved. It stays on this machine.' }); });
-  const dropToken = () => run('drop', async () => { if (confirm('Remove the API key? Shell:B stops sending email until you add one again.')) apply(await emailApi.dropToken()); });
+  const dropToken = () => run('drop', async () => { if (confirm(t('Remove the API key? Shell:B stops sending email until you add one again.'))) apply(await emailApi.dropToken()); });
   const test = () => run('test', async () => {
     await emailApi.test();
     setMsg({ ok: true, text: `Sent a test to ${s!.to}. Check your inbox (and spam, the first time).` });
@@ -60,7 +61,7 @@ export function EmailSection({ onChange }: { onChange?: (s: EmailStatus) => void
   });
 
   if (!s || !draft) {
-    return msg ? <p className="text-xs text-amber-400">{msg.text}</p> : <div className="h-24 rounded-lg bg-[var(--bg-tertiary)] animate-pulse" aria-hidden />;
+    return msg ? <p className="text-xs text-amber-400">{t(msg.text)}</p> : <div className="h-24 rounded-lg bg-[var(--bg-tertiary)] animate-pulse" aria-hidden />;
   }
   return (
     <section className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
@@ -70,76 +71,76 @@ export function EmailSection({ onChange }: { onChange?: (s: EmailStatus) => void
           <Mail className="w-4 h-4" />
         </span>
         <div className="flex-1 min-w-[12rem]">
-          <div className="text-sm font-medium">Email</div>
+          <div className="text-sm font-medium">{t('Email')}</div>
           <p className="text-xs text-[var(--text-muted)] leading-relaxed max-w-[60ch]">
             {s.ready
-              ? `Ready. Shell:B sends from ${s.from} through ${s.provider === 'resend' ? 'Resend' : 'Cloudflare'}, at most ${s.cap} emails an hour.`
+              ? t('Ready. Shell:B sends from {from} through {v0}, at most {cap} emails an hour.', { from: s.from, v0: s.provider === 'resend' ? 'Resend' : 'Cloudflare', cap: s.cap })
               : s.provider === 'resend'
-                ? 'Sent through Resend (resend.com, free tier). Verify your domain there, then paste an API key with sending access.'
-                : 'Sent through Cloudflare Email Sending (a paid plan). Add your Cloudflare account ID and an API token that can send email.'}
-            {' '}Notifications, guest invites and resets, and agent emails (each one approved by you) all use it.
+                ? t('Sent through Resend (resend.com, free tier). Verify your domain there, then paste an API key with sending access.')
+                : t('Sent through Cloudflare Email Sending (a paid plan). Add your Cloudflare account ID and an API token that can send email.')}
+            {' '}{t('Notifications, guest invites and resets, and agent emails (each one approved by you) all use it.')}
           </p>
         </div>
         <button className={btn.subtle} onClick={test} disabled={!s.ready || !s.to || !!busy || dirty}
-          title={dirty ? 'Save first' : !s.to ? 'Add your address first' : 'Send a test to your address'}>
-          {busy === 'test' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}Send test
+          title={dirty ? t('Save first') : !s.to ? t('Add your address first') : t('Send a test to your address')}>
+          {busy === 'test' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}{t('Send test')}
         </button>
       </div>
 
       <div className="px-4 pb-4 grid gap-3 sm:grid-cols-2">
         <label className="block space-y-1">
-          <span className="text-[11px] font-medium text-[var(--text-secondary)]">Sending service</span>
+          <span className="text-[11px] font-medium text-[var(--text-secondary)]">{t('Sending service')}</span>
           <select className={btn.input} value={draft.provider} onChange={e => setDraft({ ...draft, provider: e.target.value as EmailConfig['provider'] })}>
-            <option value="resend">Resend</option>
-            <option value="cloudflare">Cloudflare Email Sending</option>
+            <option value="resend">{t('Resend')}</option>
+            <option value="cloudflare">{t('Cloudflare Email Sending')}</option>
           </select>
         </label>
         {FIELDS.filter(f => f.key !== 'accountId' || draft.provider === 'cloudflare').map(f => (
           <label key={f.key} className="block space-y-1">
-            <span className="text-[11px] font-medium text-[var(--text-secondary)]">{f.label}</span>
-            <input className={clsx(btn.input, f.mono && 'font-mono text-xs')} value={draft[f.key]} placeholder={f.placeholder}
+            <span className="text-[11px] font-medium text-[var(--text-secondary)]">{t(f.label)}</span>
+            <input className={clsx(btn.input, f.mono && 'font-mono text-xs')} value={draft[f.key]} placeholder={t(f.placeholder)}
               spellCheck={false} autoComplete="off" onChange={e => setDraft({ ...draft, [f.key]: e.target.value })} />
-            {f.hint && <span className="block text-[11px] text-[var(--text-muted)] leading-snug">{f.hint}</span>}
+            {f.hint && <span className="block text-[11px] text-[var(--text-muted)] leading-snug">{t(f.hint)}</span>}
           </label>
         ))}
         <div className="block space-y-1">
-          <span className="text-[11px] font-medium text-[var(--text-secondary)]">{s.provider === 'resend' ? 'Resend API key' : 'Cloudflare API token'}</span>
+          <span className="text-[11px] font-medium text-[var(--text-secondary)]">{s.provider === 'resend' ? t('Resend API key') : t('Cloudflare API token')}</span>
           {s.tokenSet ? (
             <div className="flex items-center gap-2 text-xs text-emerald-400 py-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5" />Saved on this machine
-              <button className={clsx(btn.icon, 'ml-auto')} onClick={dropToken} disabled={!!busy} aria-label="Remove the token" title="Remove the token">
+              <CheckCircle2 className="w-3.5 h-3.5" />{t('Saved on this machine')}
+              <button className={clsx(btn.icon, 'ml-auto')} onClick={dropToken} disabled={!!busy} aria-label={t('Remove the token')} title={t('Remove the token')}>
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
           ) : (
             <div className="flex gap-2">
-              <input className={clsx(btn.input, 'font-mono text-xs')} type="password" value={token} placeholder="Paste the token"
+              <input className={clsx(btn.input, 'font-mono text-xs')} type="password" value={token} placeholder={t('Paste the token')}
                 autoComplete="off" onChange={e => setToken(e.target.value)} />
               <button className={btn.subtle} onClick={saveToken} disabled={!token.trim() || !!busy}>
-                {busy === 'token' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <KeyRound className="w-3.5 h-3.5" />}Save
+                {busy === 'token' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <KeyRound className="w-3.5 h-3.5" />}{t('Save')}
               </button>
             </div>
           )}
-          <span className="block text-[11px] text-[var(--text-muted)] leading-snug">Never shown again or sent anywhere but the sending service.</span>
+          <span className="block text-[11px] text-[var(--text-muted)] leading-snug">{t('Never shown again or sent anywhere but the sending service.')}</span>
         </div>
       </div>
 
       {dirty && (
         <div className="px-4 pb-4 flex gap-2">
-          <button className={btn.primary} onClick={save} disabled={!!busy}>{busy === 'save' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}Save</button>
-          <button className={btn.ghost} onClick={() => apply(s)} disabled={!!busy}>Cancel</button>
+          <button className={btn.primary} onClick={save} disabled={!!busy}>{busy === 'save' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}{t('Save')}</button>
+          <button className={btn.ghost} onClick={() => apply(s)} disabled={!!busy}>{t('Cancel')}</button>
         </div>
       )}
-      {msg && <p role="status" className={clsx('px-4 py-2.5 border-t border-[var(--border-subtle)] text-xs leading-relaxed', msg.ok ? 'text-emerald-400' : 'text-amber-400')}>{msg.text}</p>}
+      {msg && <p role="status" className={clsx('px-4 py-2.5 border-t border-[var(--border-subtle)] text-xs leading-relaxed', msg.ok ? 'text-emerald-400' : 'text-amber-400')}>{t(msg.text)}</p>}
 
       {s.log.length > 0 && (
         <details className="border-t border-[var(--border-subtle)]">
-          <summary className="px-4 py-2.5 text-xs text-[var(--text-secondary)] cursor-pointer select-none">Recently sent ({s.log.length})</summary>
+          <summary className="px-4 py-2.5 text-xs text-[var(--text-secondary)] cursor-pointer select-none">{t('Recently sent ({length})', { length: s.log.length })}</summary>
           <ul className="px-4 pb-3 space-y-1.5">
             {s.log.map((l, i) => (
               <li key={i} className="text-[11px] leading-snug">
-                <span className={l.ok ? 'text-emerald-400' : 'text-amber-400'}>{l.ok ? 'Sent' : 'Failed'}</span>
-                <span className="text-[var(--text-muted)]"> · {KIND[l.kind] ?? l.kind} · {relTime(l.ts)} · to {l.to}</span>
+                <span className={l.ok ? 'text-emerald-400' : 'text-amber-400'}>{l.ok ? t('Sent') : t('Failed')}</span>
+                <span className="text-[var(--text-muted)]"> {t('· {v0} · {v1} · to {to}', { v0: KIND[l.kind] ?? l.kind, v1: relTime(l.ts), to: l.to })}</span>
                 <div className="truncate" title={l.subject}>{l.subject}</div>
                 {l.error && <div className="text-amber-400 truncate" title={l.error}>{l.error}</div>}
               </li>

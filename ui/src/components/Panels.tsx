@@ -50,25 +50,25 @@ const SERVICE_INFO: Record<string, [string, string]> = {
 
 export function ToolsModal({ open, onClose, tools, onChanged }: { open: boolean; onClose: () => void; tools: ToolInfo[]; onChanged: () => void }) {
   return (
-    <Modal open={open} onClose={onClose} title="Tools" icon={<Boxes className="w-4 h-4 text-sky-400" />}>
+    <Modal open={open} onClose={onClose} title={t('Tools')} icon={<Boxes className="w-4 h-4 text-sky-400" />}>
       <div className="overflow-y-auto p-4 space-y-2">
-        <p className="text-xs text-[var(--text-muted)] mb-3">Switch a tool off here to disable it for every agent. Pick which agents get which tools in the Agent Lab.</p>
-        {tools.map(t => {
-          const Icon = toolIcon(t.id);
+        <p className="text-xs text-[var(--text-muted)] mb-3">{t('Switch a tool off here to disable it for every agent. Pick which agents get which tools in the Agent Lab.')}</p>
+        {tools.map(tool => {
+          const Icon = toolIcon(tool.id);
           return (
-            <div key={t.id} className="flex items-center gap-3 p-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
+            <div key={tool.id} className="flex items-center gap-3 p-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
               <span className="w-9 h-9 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] flex items-center justify-center shrink-0">
                 <Icon className="w-4 h-4 text-sky-400" />
               </span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">{t.displayName}</span>
-                  <span className="text-[10px] font-mono text-[var(--text-muted)]">{t.id}</span>
+                  <span className="text-sm font-medium">{tool.displayName}</span>
+                  <span className="text-[10px] font-mono text-[var(--text-muted)]">{tool.id}</span>
                 </div>
-                <div className="text-xs text-[var(--text-muted)]">{t.description}</div>
-                {!t.available && <div className="text-[11px] text-amber-400 mt-0.5">Backing service is offline: {SERVICE_INFO[t.service ?? '']?.[0] ?? t.service}</div>}
+                <div className="text-xs text-[var(--text-muted)]">{t(tool.description)}</div>
+                {!tool.available && <div className="text-[11px] text-amber-400 mt-0.5">{t('Backing service is offline: {v0}', { v0: SERVICE_INFO[tool.service ?? '']?.[0] ?? tool.service })}</div>}
               </div>
-              <Toggle on={t.enabled} label={t.displayName} onChange={async v => { await api.setTool(t.id, v); onChanged(); }} />
+              <Toggle on={tool.enabled} label={tool.displayName} onChange={async v => { await api.setTool(tool.id, v); onChanged(); }} />
             </div>
           );
         })}
@@ -173,8 +173,8 @@ function Appearance({ settings, theme, onTheme, onClose }: SettingsProps) {
   return (
     <div>
       <ThemePicker settings={settings} mode={theme} onMode={onTheme} onDone={onClose} />
-      <Row label="Moving backdrop" hint="The particles and scenery motion some themes have (fireflies, rain, aurora…). Saved in this browser">
-        <Toggle on={ambient} onChange={setAmbientOn} label="Moving backdrop" />
+      <Row label={t('Moving backdrop')} hint={t('The particles and scenery motion some themes have (fireflies, rain, aurora…). Saved in this browser')}>
+        <Toggle on={ambient} onChange={setAmbientOn} label={t('Moving backdrop')} />
       </Row>
       <ScaleRow />
       <DisplayRows onDone={onClose} />
@@ -190,9 +190,9 @@ function General({ settings, agents, models, onSaved, onOpenTab }: SettingsProps
   return (
     <div>
       <InstallRow />
-      <Row label="Default agent" hint="Used for new chats">
+      <Row label={t('Default agent')} hint={t('Used for new chats')}>
         <select className={btn.input} value={settings.defaultAgent} onChange={e => save({ defaultAgent: e.target.value })}>
-          {agents.map(a => <option key={a.id} value={a.id}>{a.name} — {a.title}</option>)}
+          {agents.map(a => <option key={a.id} value={a.id}>{a.name} — {t(a.title)}</option>)}
         </select>
       </Row>
       <Row label={t('Language')} hint={t('Interface and replies. Automatic follows the browser')}>
@@ -201,64 +201,64 @@ function General({ settings, agents, models, onSaved, onOpenTab }: SettingsProps
           {LOCALES.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
         </select>
       </Row>
-      <Row label="Vision fallback" hint="Handles images when the agent's model can't see">
+      <Row label={t('Vision fallback')} hint={t('Handles images when the agent\'s model can\'t see')}>
         <select className={btn.input} value={settings.visionFallbackModel} onChange={e => save({ visionFallbackModel: e.target.value })}>
           {vision.map(m => <option key={m.name} value={m.name}>{m.name}</option>)}
         </select>
       </Row>
-      <Row label="Utility model" hint="Writes conversation titles">
+      <Row label={t('Utility model')} hint={t('Writes conversation titles')}>
         <select className={btn.input} value={settings.utilityModel} onChange={e => save({ utilityModel: e.target.value })}>
           {models.filter(m => m.capabilities.includes('completion')).map(m => <option key={m.name} value={m.name}>{m.name}</option>)}
         </select>
       </Row>
-      <Row label="Memory embeddings" hint="Changing this makes existing memories unsearchable">
+      <Row label={t('Memory embeddings')} hint={t('Changing this makes existing memories unsearchable')}>
         <select className={btn.input} value={settings.embeddingModel} onChange={e => save({ embeddingModel: e.target.value })}>
           {(embedders.length ? embedders : models).map(m => <option key={m.name} value={m.name}>{m.name}</option>)}
         </select>
       </Row>
-      <Row label="Remember on request" hint="Agents can save, correct and forget memories when you ask. Background learning is set in the Memory tab">
-        <Toggle on={settings.autoMemory} onChange={v => save({ autoMemory: v })} label="Auto-remember" />
+      <Row label={t('Remember on request')} hint={t('Agents can save, correct and forget memories when you ask. Background learning is set in the Memory tab')}>
+        <Toggle on={settings.autoMemory} onChange={v => save({ autoMemory: v })} label={t('Auto-remember')} />
       </Row>
-      <Row label="Suggest replies" hint="After each reply, the utility model guesses your next message; Tab accepts it">
-        <Toggle on={settings.promptSuggestions ?? true} onChange={v => save({ promptSuggestions: v })} label="Suggest replies" />
+      <Row label={t('Suggest replies')} hint={t('After each reply, the utility model guesses your next message; Tab accepts it')}>
+        <Toggle on={settings.promptSuggestions ?? true} onChange={v => save({ promptSuggestions: v })} label={t('Suggest replies')} />
       </Row>
-      <Row label="Fresh starter cards" hint="Every 12 hours, while nobody is chatting, the utility model writes new suggestions for the empty-chat screen">
-        <Toggle on={settings.suggestionsRefresh ?? true} onChange={v => save({ suggestionsRefresh: v })} label="Fresh starter cards" />
-      </Row>
-      {!isCell() && (
-        <Row label="API Keys" hint="Credentials for external services and cloud AI providers">
-          <button className={btn.subtle} onClick={() => onOpenTab?.('apikeys')}><KeyRound className="w-3.5 h-3.5 text-rose-400" />API keys & external services</button>
-        </Row>
-      )}
-      <Row label="Voice" hint="Reading voice, speed, and the voice library">
-        <button className={btn.subtle} onClick={() => onOpenTab?.('speech')}><AudioLines className="w-3.5 h-3.5" />Speech settings</button>
+      <Row label={t('Fresh starter cards')} hint={t('Every 12 hours, while nobody is chatting, the utility model writes new suggestions for the empty-chat screen')}>
+        <Toggle on={settings.suggestionsRefresh ?? true} onChange={v => save({ suggestionsRefresh: v })} label={t('Fresh starter cards')} />
       </Row>
       {!isCell() && (
-        <Row label="Network" hint="Wi-Fi, Ethernet, and active VPN tunnels">
-          <button className={btn.subtle} onClick={() => onOpenTab?.('network')}><Network className="w-3.5 h-3.5" />Network settings</button>
+        <Row label={t('API Keys')} hint={t('Credentials for external services and cloud AI providers')}>
+          <button className={btn.subtle} onClick={() => onOpenTab?.('apikeys')}><KeyRound className="w-3.5 h-3.5 text-rose-400" />{t('API keys & external services')}</button>
         </Row>
       )}
-      <Row label="Max tool rounds" hint="Safety cap on tool calls per reply; the loop guard may extend it up to the hard cap">
+      <Row label={t('Voice')} hint={t('Reading voice, speed, and the voice library')}>
+        <button className={btn.subtle} onClick={() => onOpenTab?.('speech')}><AudioLines className="w-3.5 h-3.5" />{t('Speech settings')}</button>
+      </Row>
+      {!isCell() && (
+        <Row label={t('Network')} hint={t('Wi-Fi, Ethernet, and active VPN tunnels')}>
+          <button className={btn.subtle} onClick={() => onOpenTab?.('network')}><Network className="w-3.5 h-3.5" />{t('Network settings')}</button>
+        </Row>
+      )}
+      <Row label={t('Max tool rounds')} hint={t('Safety cap on tool calls per reply; the loop guard may extend it up to the hard cap')}>
         <div className="flex items-center gap-2">
           <input type="number" min={1} max={50} className={clsx(btn.input, 'w-24')} value={settings.maxToolRounds}
             onChange={e => save({ maxToolRounds: Math.max(1, Math.min(50, Number(e.target.value) || 16)) })} />
-          <span className="text-xs text-[var(--text-muted)]">hard cap</span>
+          <span className="text-xs text-[var(--text-muted)]">{t('hard cap')}</span>
           <input type="number" min={20} max={500} className={clsx(btn.input, 'w-20 text-center')} value={settings.maxToolRoundsHardCap ?? 100}
             onChange={e => save({ maxToolRoundsHardCap: Math.max(20, Math.min(500, Number(e.target.value) || 100)) })} />
         </div>
       </Row>
-      <Row label="Stream stall" hint="End a local turn when the model sends nothing for this long (minutes)">
+      <Row label={t('Stream stall')} hint={t('End a local turn when the model sends nothing for this long (minutes)')}>
         <input type="number" min={2} max={60} className={clsx(btn.input, 'w-24')} value={settings.streamStallMinutes ?? 10}
           onChange={e => save({ streamStallMinutes: Math.max(2, Math.min(60, Number(e.target.value) || 10)) })} />
       </Row>
-      <Row label="Loop guard" hint="Evaluates progress every X turns: auto-extends budget, prevents runaway loops">
+      <Row label={t('Loop guard')} hint={t('Evaluates progress every X turns: auto-extends budget, prevents runaway loops')}>
         <div className="flex items-center gap-2">
           <label className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] cursor-pointer">
             <input type="checkbox" checked={settings.runawayLoopChecker ?? true}
               onChange={e => save({ runawayLoopChecker: e.target.checked })} />
-            Active
+            {t('Active')}
           </label>
-          <span className="text-xs text-[var(--text-muted)]">Check every</span>
+          <span className="text-xs text-[var(--text-muted)]">{t('Check every')}</span>
           <input type="number" min={3} max={30} className={clsx(btn.input, 'w-16 text-center')}
             value={settings.loopCheckInterval ?? 10}
             onChange={e => save({ loopCheckInterval: Math.max(3, Math.min(30, Number(e.target.value) || 10)) })} />
@@ -274,12 +274,12 @@ function ScaleRow() {
   const scale = useScale();
   const pct = (s: number) => `${Math.round(s * 100)}%`;
   return (
-    <Row label="UI scale" hint="Zooms text and controls. Saved in this browser">
+    <Row label={t('UI scale')} hint={t('Zooms text and controls. Saved in this browser')}>
       <div className="flex gap-1.5">
         <select className={btn.input} value={scale} onChange={e => setScale(Number(e.target.value))}>
           {[...new Set([...SCALES, scale])].sort((a, b) => a - b).map(s => <option key={s} value={s}>{pct(s)}{s === 1 ? ' (default)' : ''}</option>)}
         </select>
-        <button className={btn.subtle} disabled={scale === 1} onClick={() => setScale(1)}>Reset</button>
+        <button className={btn.subtle} disabled={scale === 1} onClick={() => setScale(1)}>{t('Reset')}</button>
       </div>
     </Row>
   );
@@ -291,11 +291,11 @@ function InstallRow() {
   const state = useInstallState();
   if (state === 'unavailable') return null;
   return (
-    <Row label="Desktop app" hint={state === 'installed' ? 'Shell:B is running as an installed app on this device'
-      : 'Its own window and dock icon with a badge for what’s waiting, “Open with Shell:B” for files, and Share → Shell:B'}>
+    <Row label={t('Desktop app')} hint={state === 'installed' ? t('Shell:B is running as an installed app on this device')
+      : t('Its own window and dock icon with a badge for what’s waiting, “Open with Shell:B” for files, and Share → Shell:B')}>
       {state === 'installed'
-        ? <span className="text-xs text-emerald-400">Installed</span>
-        : <button className={btn.subtle} onClick={() => { promptInstall().catch(() => {}); }}><MonitorDown className="w-3.5 h-3.5" />Install Shell:B</button>}
+        ? <span className="text-xs text-emerald-400">{t('Installed')}</span>
+        : <button className={btn.subtle} onClick={() => { promptInstall().catch(() => {}); }}><MonitorDown className="w-3.5 h-3.5" />{t('Install Shell:B')}</button>}
     </Row>
   );
 }
@@ -313,48 +313,48 @@ function DisplayRows({ onDone }: { onDone?: () => void }) {
       const p = await api.createProject({ name: 'Screensaver', kind: 'screensaver', brief: '' });
       onDone?.();
       location.hash = `#/studio/${p.id}`;
-    } catch (e) { toast(`Couldn't create the project: ${e}`, { kind: 'error' }); } finally { setCreating(false); }
+    } catch (e) { toast(t('Couldn\'t create the project: {e}', { e: String(e) }), { kind: 'error' }); } finally { setCreating(false); }
   };
   const missing = amb.saverStyle.startsWith('studio:') && !made.some(m => `studio:${m.id}` === amb.saverStyle);
   return (
     <>
-      <Row label="Startup animation" hint="Plays when Shell:B opens; click or press a key to skip">
+      <Row label={t('Startup animation')} hint={t('Plays when Shell:B opens; click or press a key to skip')}>
         <div className="flex gap-1.5">
           <select className={btn.input} value={amb.splash} onChange={e => saveAmbience({ splash: e.target.value as SplashMode })}>
-            <option value="off">Off</option>
-            <option value="session">Once per browser session</option>
-            <option value="always">Every time the page loads</option>
+            <option value="off">{t('Off')}</option>
+            <option value="session">{t('Once per browser session')}</option>
+            <option value="always">{t('Every time the page loads')}</option>
           </select>
-          <button className={btn.subtle} onClick={() => preview(PREVIEW_SPLASH)}>Preview</button>
+          <button className={btn.subtle} onClick={() => preview(PREVIEW_SPLASH)}>{t('Preview')}</button>
         </div>
       </Row>
-      <Row label="Screensaver" hint="Starts after this long without mouse, keyboard or touch input">
+      <Row label={t('Screensaver')} hint={t('Starts after this long without mouse, keyboard or touch input')}>
         <div className="flex gap-1.5">
           <select className={btn.input} value={amb.saverMinutes} onChange={e => saveAmbience({ saverMinutes: Number(e.target.value) })}>
-            {SAVER_MINUTES.map(m => <option key={m} value={m}>{m ? `After ${m} minute${m > 1 ? 's' : ''}` : 'Off'}</option>)}
+            {SAVER_MINUTES.map(m => <option key={m} value={m}>{m ? t('After {m} minute{v0}', { m: m, v0: m > 1 ? 's' : '' }) : t('Off')}</option>)}
           </select>
-          <button className={btn.subtle} onClick={() => preview(PREVIEW_SAVER)}>Preview</button>
+          <button className={btn.subtle} onClick={() => preview(PREVIEW_SAVER)}>{t('Preview')}</button>
         </div>
       </Row>
-      <Row label="Screensaver style">
+      <Row label={t('Screensaver style')}>
         <div className="flex items-center gap-3">
           <select className={btn.input} value={amb.saverStyle} onChange={e => saveAmbience({ saverStyle: e.target.value as SaverStyle })}>
-            <optgroup label="Built in">
-              {SAVER_STYLES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+            <optgroup label={t('Built in')}>
+              {SAVER_STYLES.map(s => <option key={s.id} value={s.id}>{t(s.label)}</option>)}
             </optgroup>
             {(made.length > 0 || missing) && (
-              <optgroup label="Made in the Studio">
+              <optgroup label={t('Made in the Studio')}>
                 {made.map(m => <option key={m.id} value={`studio:${m.id}`}>{m.name}</option>)}
-                {missing && <option value={amb.saverStyle}>(deleted project)</option>}
+                {missing && <option value={amb.saverStyle}>{t('(deleted project)')}</option>}
               </optgroup>
             )}
           </select>
           <button className={btn.subtle} disabled={creating} onClick={makeOne}
-            title="Start a Screensaver project in the Studio and describe what you'd like; Shell:B builds it">
-            <MonitorPlay className="w-3.5 h-3.5" />Make one in the Studio
+            title={t('Start a Screensaver project in the Studio and describe what you\'d like; Shell:B builds it')}>
+            <MonitorPlay className="w-3.5 h-3.5" />{t('Make one in the Studio')}
           </button>
           <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] whitespace-nowrap">
-            <Toggle on={amb.saverClock} onChange={v => saveAmbience({ saverClock: v })} label="Show clock" />Clock
+            <Toggle on={amb.saverClock} onChange={v => saveAmbience({ saverClock: v })} label={t('Show clock')} />{t('Clock')}
           </label>
         </div>
       </Row>
@@ -372,17 +372,17 @@ function SystemTab({ status, models, onOpenTab }: { status?: Status; models: Mod
             <Archive className="w-4 h-4" />
           </div>
           <div>
-            <div className="text-xs font-semibold text-[var(--text-primary)]">Backups & Disaster Recovery</div>
-            <div className="text-[11px] text-[var(--text-muted)]">Atomic database snapshots, filesystem archives & safety restores</div>
+            <div className="text-xs font-semibold text-[var(--text-primary)]">{t('Backups & Disaster Recovery')}</div>
+            <div className="text-[11px] text-[var(--text-muted)]">{t('Atomic database snapshots, filesystem archives & safety restores')}</div>
           </div>
         </div>
         <button type="button" className={btn.subtle} onClick={() => onOpenTab?.('backups')}>
-          Manage Backups →
+          {t('Manage Backups →')}
         </button>
       </div>
 
       <div>
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">Services</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">{t('Services')}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
           {Object.entries(SERVICE_INFO).map(([id, [name, desc]]) => {
             const ok = status?.services[id]?.ok;
@@ -390,8 +390,8 @@ function SystemTab({ status, models, onOpenTab }: { status?: Status; models: Mod
               <div key={id} className="flex items-center gap-2.5 p-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
                 <span className={clsx('w-2 h-2 rounded-full shrink-0', ok == null ? 'bg-neutral-500' : ok ? 'bg-emerald-400' : 'bg-red-400')} />
                 <div className="min-w-0">
-                  <div className="text-sm font-medium">{name} <span className={clsx('text-[11px] font-normal', ok ? 'text-emerald-400' : 'text-red-400')}>{ok == null ? '' : ok ? 'online' : 'offline'}</span></div>
-                  <div className="text-[11px] text-[var(--text-muted)] truncate">{desc}</div>
+                  <div className="text-sm font-medium">{name} <span className={clsx('text-[11px] font-normal', ok ? 'text-emerald-400' : 'text-red-400')}>{ok == null ? '' : ok ? t('online') : t('offline')}</span></div>
+                  <div className="text-[11px] text-[var(--text-muted)] truncate">{t(desc)}</div>
                 </div>
               </div>
             );
@@ -401,7 +401,7 @@ function SystemTab({ status, models, onOpenTab }: { status?: Status; models: Mod
       <SystemInfoPanel />
       {mem && (
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">Models in memory</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">{t('Models in memory')}</h3>
           <div className="h-2 rounded-full bg-[var(--bg-tertiary)] overflow-hidden flex">
             {status?.loaded.map((m, i) => (
               <div key={m.name} className="h-full" title={`${m.name} · ${fmtBytes(m.size)}`}
@@ -409,27 +409,27 @@ function SystemTab({ status, models, onOpenTab }: { status?: Status; models: Mod
             ))}
           </div>
           <div className="mt-1.5 text-[11px] text-[var(--text-muted)] font-mono">
-            {fmtBytes(mem.MemTotal - mem.MemAvailable)} used of {fmtBytes(mem.MemTotal)} · {fmtBytes(mem.MemAvailable)} free
+            {t('{v0} used of {v1} · {v2} free', { v0: fmtBytes(mem.MemTotal - mem.MemAvailable), v1: fmtBytes(mem.MemTotal), v2: fmtBytes(mem.MemAvailable) })}
           </div>
           <div className="mt-2 space-y-1">
             {status?.loaded.map((m, i) => (
               <div key={m.name} className="flex items-center gap-2 text-xs">
                 <span className="w-2 h-2 rounded-sm" style={{ background: ['#c96442', '#0284c7', '#059669', '#a855f7'][i % 4] }} />
                 <span className="font-medium">{m.name}</span>
-                <span className="text-[var(--text-muted)] font-mono">{fmtBytes(m.size)}{m.context ? ` · ctx ${m.context.toLocaleString()}` : ''}</span>
+                <span className="text-[var(--text-muted)] font-mono">{fmtBytes(m.size)}{m.context ? t(' · ctx {v0}', { v0: m.context.toLocaleString() }) : ''}</span>
               </div>
             ))}
-            {status?.loaded.length === 0 && <div className="text-xs text-[var(--text-muted)]">No models loaded. They load on first use.</div>}
+            {status?.loaded.length === 0 && <div className="text-xs text-[var(--text-muted)]">{t('No models loaded. They load on first use.')}</div>}
           </div>
         </div>
       )}
       <div>
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2 flex items-center">Installed models
-          <a href="#/models" className="ml-auto normal-case tracking-normal font-normal text-[11px] text-[var(--accent)] hover:underline">Manage models →</a></h3>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2 flex items-center">{t('Installed models')}
+          <a href="#/models" className="ml-auto normal-case tracking-normal font-normal text-[11px] text-[var(--accent)] hover:underline">{t('Manage models →')}</a></h3>
         <div className="rounded-lg border border-[var(--border-subtle)] overflow-hidden">
           <table className="w-full text-xs">
             <thead className="bg-[var(--bg-secondary)] text-[var(--text-muted)]">
-              <tr><th className="text-left font-medium px-2.5 py-1.5">Model</th><th className="text-left font-medium px-2.5 py-1.5 hidden sm:table-cell">Abilities</th><th className="text-right font-medium px-2.5 py-1.5">Size</th></tr>
+              <tr><th className="text-left font-medium px-2.5 py-1.5">{t('Model')}</th><th className="text-left font-medium px-2.5 py-1.5 hidden sm:table-cell">{t('Abilities')}</th><th className="text-right font-medium px-2.5 py-1.5">{t('Size')}</th></tr>
             </thead>
             <tbody>
               {models.map(m => (
@@ -443,7 +443,7 @@ function SystemTab({ status, models, onOpenTab }: { status?: Status; models: Mod
           </table>
         </div>
       </div>
-      <div className="text-[11px] text-[var(--text-muted)]">Shell:B Web v{status?.version} · everything above runs locally on this system.</div>
+      <div className="text-[11px] text-[var(--text-muted)]">{t('Shell:B Web v{version} · everything above runs locally on this system.', { version: status?.version ?? '' })}</div>
     </div>
   );
 }
@@ -589,7 +589,7 @@ export function CommandPalette({ open, onClose, agents, conversations, theme, ac
       <div className="w-full max-w-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-2xl shadow-2xl overflow-hidden animate-slide-up" onMouseDown={e => e.stopPropagation()}>
         <div className="flex items-center gap-2 px-3 border-b border-[var(--border-subtle)]">
           <Search className="w-4 h-4 text-[var(--text-muted)]" />
-          <input ref={input} value={q} onChange={e => { setQ(e.target.value); setSel(0); }} placeholder="Search everything: chats, notes, files, commands…"
+          <input ref={input} value={q} onChange={e => { setQ(e.target.value); setSel(0); }} placeholder={t('Search everything: chats, notes, files, commands…')}
             className="flex-1 bg-transparent py-3 text-sm focus:outline-none"
             onKeyDown={e => {
               if (e.key === 'ArrowDown') { e.preventDefault(); setSel(s => Math.min(items.length - 1, s + 1)); }
@@ -609,8 +609,8 @@ export function CommandPalette({ open, onClose, agents, conversations, theme, ac
               className={clsx('w-full flex flex-col gap-1 px-2.5 py-2 rounded-lg text-left text-sm transition', i === sel ? 'bg-[var(--bg-hover)]' : '')}>
               <div className="flex items-center gap-2.5 w-full">
                 <span className="text-[var(--text-secondary)] shrink-0">{it.icon}</span>
-                <span className="flex-1 truncate font-medium">{it.label}</span>
-                {it.hint && <span className="text-[11px] text-[var(--text-muted)] shrink-0">{it.hint}</span>}
+                <span className="flex-1 truncate font-medium">{t(it.label)}</span>
+                {it.hint && <span className="text-[11px] text-[var(--text-muted)] shrink-0">{t(it.hint)}</span>}
               </div>
               {it.snippet && (
                 <div className="text-[11px] leading-snug text-[var(--text-muted)] pl-6.5 line-clamp-2">
@@ -620,13 +620,13 @@ export function CommandPalette({ open, onClose, agents, conversations, theme, ac
             </button>
             </Fragment>
           ))}
-          {items.length === 0 && !everything.loading && !(everything.empty && everything.searched.length) && <div className="text-xs text-[var(--text-muted)] text-center py-6">No matches</div>}
+          {items.length === 0 && !everything.loading && !(everything.empty && everything.searched.length) && <div className="text-xs text-[var(--text-muted)] text-center py-6">{t('No matches')}</div>}
           {q.trim().length >= 2 && everything.loading && (
-            <div className="px-2.5 py-2 text-[11px] text-[var(--text-muted)] animate-pulse">Searching notes, follow-ups, the Library, chat files, media and the wiki…</div>
+            <div className="px-2.5 py-2 text-[11px] text-[var(--text-muted)] animate-pulse">{t('Searching notes, follow-ups, the Library, chat files, media and the wiki…')}</div>
           )}
           {q.trim().length >= 2 && everything.empty && everything.searched.length > 0 && (
             <div className="px-2.5 py-2 text-[11px] leading-snug text-[var(--text-muted)]">
-              Nothing in your {searchedList(everything.searched)} matches “{everything.query}”.
+              {t('Nothing in your {v0} matches “{query}”.', { v0: searchedList(everything.searched), query: everything.query })}
             </div>
           )}
         </div>

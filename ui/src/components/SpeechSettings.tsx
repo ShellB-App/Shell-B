@@ -8,6 +8,7 @@ import { api } from '../api';
 import { lexicon, readAloud, voiceLib, type FxParam, type LexiconEntry, type LibraryVoice, type ReadState, type RvcModel, type RvcSettings } from '../speech';
 import type { Settings, TtsVoice } from '../types';
 import { btn } from './common';
+import { t } from '../i18n';
 
 // Settings → Speech: the reading voice (voice, speed, tone) and the voice library — Qwen3-TTS voices designed from a
 // description or cloned from audio clips, each with its own delivery and effects chain (hermes/qwen/server.py, fx.py).
@@ -99,31 +100,31 @@ function ReadingVoice({ settings, save, reload }: { settings: Settings; save: Sa
   const expressive = settings.ttsVoice.startsWith('qwen:');
 
   return (
-    <Section title="Reading voice" hint="Used for read-aloud and voice mode">
-      <Field label="Voice">
+    <Section title={t('Reading voice')} hint={t('Used for read-aloud and voice mode')}>
+      <Field label={t('Voice')}>
         <div className="flex items-center gap-2">
           <select className={btn.input} value={settings.ttsVoice} disabled={!voices.length}
             onChange={e => { save({ ttsVoice: e.target.value }); preview(e.target.value, speed, style, true); }}>
             {!known && <option value={settings.ttsVoice}>{settings.ttsVoice}</option>}
             {groups.map(g => {
               const vs = voices.filter(v => v.engine === g.id);
-              return vs.length ? <optgroup key={g.id} label={g.label}>{vs.map(v => <option key={v.id} value={v.id}>{v.label}</option>)}</optgroup> : null;
+              return vs.length ? <optgroup key={g.id} label={t(g.label)}>{vs.map(v => <option key={v.id} value={v.id}>{t(v.label)}</option>)}</optgroup> : null;
             })}
           </select>
-          <button className={btn.icon} title={state === 'idle' ? 'Preview' : 'Stop'} onClick={() => preview()}>
+          <button className={btn.icon} title={state === 'idle' ? t('Preview') : t('Stop')} onClick={() => preview()}>
             {state === 'loading' ? <Loader2 className="w-4 h-4 animate-spin" /> : state === 'playing' ? <Square className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
         </div>
       </Field>
       {expressive && (
-        <Field label="Tone" hint="in your words; a library voice with its own delivery ignores this">
-          <input className={btn.input} value={style} placeholder="Warm, natural and conversational."
+        <Field label={t('Tone')} hint={t('in your words; a library voice with its own delivery ignores this')}>
+          <input className={btn.input} value={style} placeholder={t('Warm, natural and conversational.')}
             onChange={e => setStyle(e.target.value)}
             onBlur={() => style !== (settings.ttsStyle ?? '') && save({ ttsStyle: style })}
             onKeyDown={e => { if (e.key === 'Enter') { save({ ttsStyle: style }); preview(settings.ttsVoice, speed, style, true); } }} />
         </Field>
       )}
-      <Field label="Speed" hint={expressive ? 'expressive voices only roughly follow this' : undefined}>
+      <Field label={t('Speed')} hint={expressive ? t('expressive voices only roughly follow this') : undefined}>
         <div className="flex items-center gap-2">
           <input type="range" min={0.7} max={1.5} step={0.05} value={speed} className="w-48 accent-[var(--accent)]"
             onChange={e => setSpeed(Number(e.target.value))}
@@ -134,7 +135,7 @@ function ReadingVoice({ settings, save, reload }: { settings: Settings; save: Sa
       </Field>
       {expressive && (
         <p className="text-[11px] text-[var(--text-muted)]">
-          Expressive voices take about 5 s per sentence; the first one after 20 idle minutes loads the model (about 30 s).
+          {t('Expressive voices take about 5 s per sentence; the first one after 20 idle minutes loads the model (about 30 s).')}
         </p>
       )}
     </Section>
@@ -174,43 +175,43 @@ function Pronunciation() {
   const check = async () => { try { setHeard((await lexicon.apply(trial)).text); } catch (e) { setError(errText(e)); } };
 
   return (
-    <Section title="Pronunciation" hint="Words every voice says your way. Applied before speaking, for every voice and engine.">
+    <Section title={t('Pronunciation')} hint={t('Words every voice says your way. Applied before speaking, for every voice and engine.')}>
       <div className="space-y-1">
         {builtin.map(b => (
           <div key={b.from} className="flex items-center gap-2 text-xs">
-            <span className="w-44 shrink-0 truncate px-2.5 py-1.5 rounded-lg bg-[var(--bg-tertiary)] text-[var(--text-muted)]" title={b.from}>{b.note ?? b.from}</span>
+            <span className="w-44 shrink-0 truncate px-2.5 py-1.5 rounded-lg bg-[var(--bg-tertiary)] text-[var(--text-muted)]" title={b.from}>{b.note ? t(b.note) : b.from}</span>
             <span className="text-[var(--text-muted)]">→</span>
             <span className="flex-1 px-2.5 py-1.5 rounded-lg bg-[var(--bg-tertiary)]">{b.to}</span>
-            <span title="Built in"><Lock className="w-3.5 h-3.5 text-[var(--text-muted)]" /></span>
+            <span title={t('Built in')}><Lock className="w-3.5 h-3.5 text-[var(--text-muted)]" /></span>
           </div>
         ))}
         {rows.map((r, i) => (
           <div key={i} className="flex items-center gap-2">
-            <input className={clsx(btn.input, 'w-44 shrink-0')} value={r.from} placeholder="Word or name" onChange={e => setRow(i, { from: e.target.value })} />
+            <input className={clsx(btn.input, 'w-44 shrink-0')} value={r.from} placeholder={t('Word or name')} onChange={e => setRow(i, { from: e.target.value })} />
             <span className="text-[var(--text-muted)] text-xs">→</span>
-            <input className={btn.input} value={r.to} placeholder="How to say it (spell it out)" onChange={e => setRow(i, { to: e.target.value })} />
-            <button className={btn.icon} title="Hear it" disabled={!r.to.trim()} onClick={() => say(r.to)}><Volume2 className="w-3.5 h-3.5" /></button>
-            <button className={btn.icon} title="Remove" onClick={() => setRows(rs => rs.filter((_, j) => j !== i))}><Trash2 className="w-3.5 h-3.5" /></button>
+            <input className={btn.input} value={r.to} placeholder={t('How to say it (spell it out)')} onChange={e => setRow(i, { to: e.target.value })} />
+            <button className={btn.icon} title={t('Hear it')} disabled={!r.to.trim()} onClick={() => say(r.to)}><Volume2 className="w-3.5 h-3.5" /></button>
+            <button className={btn.icon} title={t('Remove')} onClick={() => setRows(rs => rs.filter((_, j) => j !== i))}><Trash2 className="w-3.5 h-3.5" /></button>
           </div>
         ))}
       </div>
       <div className="flex items-center gap-2 mt-2">
-        <button className={btn.ghost} onClick={() => setRows(rs => [...rs, { from: '', to: '' }])}><Plus className="w-3.5 h-3.5" />Add word</button>
-        <button className={btn.primary} disabled={!dirty || busy} onClick={save}>{busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}Save</button>
-        {dirty && <button className={btn.ghost} onClick={() => setRows(JSON.parse(saved))}><RotateCcw className="w-3.5 h-3.5" />Revert</button>}
+        <button className={btn.ghost} onClick={() => setRows(rs => [...rs, { from: '', to: '' }])}><Plus className="w-3.5 h-3.5" />{t('Add word')}</button>
+        <button className={btn.primary} disabled={!dirty || busy} onClick={save}>{busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}{t('Save')}</button>
+        {dirty && <button className={btn.ghost} onClick={() => setRows(JSON.parse(saved))}><RotateCcw className="w-3.5 h-3.5" />{t('Revert')}</button>}
         {error && <span className="text-xs text-red-400">{error}</span>}
       </div>
-      <Field label="Try it" hint="what the voices will actually read">
+      <Field label={t('Try it')} hint={t('what the voices will actually read')}>
         <div className="flex items-center gap-2">
           <input className={btn.input} value={trial} onChange={e => { setTrial(e.target.value); setHeard(''); }} onKeyDown={e => e.key === 'Enter' && check()} />
-          <button className={btn.subtle} onClick={check}>Show</button>
-          <button className={btn.icon} title="Hear it in the reading voice" onClick={() => say(trial)}>
+          <button className={btn.subtle} onClick={check}>{t('Show')}</button>
+          <button className={btn.icon} title={t('Hear it in the reading voice')} onClick={() => say(trial)}>
             {state === 'loading' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : state === 'playing' ? <Square className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
           </button>
         </div>
       </Field>
-      {heard && <p className="text-xs -mt-1"><span className="text-[var(--text-muted)]">Reads: </span>{heard}</p>}
-      {dirty && <p className="text-[11px] text-amber-400">Unsaved: “Try it” and “Hear it” use the saved list.</p>}
+      {heard && <p className="text-xs -mt-1"><span className="text-[var(--text-muted)]">{t('Reads:')} </span>{heard}</p>}
+      {dirty && <p className="text-[11px] text-amber-400">{t('Unsaved: “Try it” and “Hear it” use the saved list.')}</p>}
     </Section>
   );
 }
@@ -235,20 +236,20 @@ function VoiceLibrary({ settings, save, onChanged }: { settings: Settings; save:
   const changed = (id?: string) => { load(); onChanged(); if (id) setOpen(id); };
 
   const remove = async (v: LibraryVoice) => {
-    if (!confirm(`Delete "${v.label}"? Its reference clip and ${v.samples.length} sample(s) are deleted too.`)) return;
+    if (!confirm(t('Delete "{label}"? Its reference clip and {length} sample(s) are deleted too.', { label: v.label, length: v.samples.length }))) return;
     await voiceLib.remove(v.id);
     if (settings.ttsVoice === `qwen:${v.id}`) save({ ttsVoice: 'bf_isabella' });
     changed();
   };
 
   return (
-    <Section title="Voice library"
-      hint="Expressive voices you've designed, cloned from clips, or built on an RVC model. Clips you upload stay with the voice, for training it further later."
+    <Section title={t('Voice library')}
+      hint={t('Expressive voices you\'ve designed, cloned from clips, or built on an RVC model. Clips you upload stay with the voice, for training it further later.')}
       right={
         <div className="flex gap-1.5 shrink-0">
-          <button className={btn.subtle} onClick={() => setCreating(c => (c === 'design' ? '' : 'design'))}><Wand2 className="w-3.5 h-3.5" />Describe</button>
-          <button className={btn.subtle} onClick={() => setCreating(c => (c === 'samples' ? '' : 'samples'))}><Upload className="w-3.5 h-3.5" />From clips</button>
-          <button className={btn.subtle} onClick={() => setCreating(c => (c === 'rvc' ? '' : 'rvc'))}><Waypoints className="w-3.5 h-3.5" />RVC model</button>
+          <button className={btn.subtle} onClick={() => setCreating(c => (c === 'design' ? '' : 'design'))}><Wand2 className="w-3.5 h-3.5" />{t('Describe')}</button>
+          <button className={btn.subtle} onClick={() => setCreating(c => (c === 'samples' ? '' : 'samples'))}><Upload className="w-3.5 h-3.5" />{t('From clips')}</button>
+          <button className={btn.subtle} onClick={() => setCreating(c => (c === 'rvc' ? '' : 'rvc'))}><Waypoints className="w-3.5 h-3.5" />{t('RVC model')}</button>
         </div>
       }>
       {creating === 'design' && <DesignNew fxInfo={fxInfo} onDone={id => { setCreating(''); if (id) changed(id); }} />}
@@ -256,7 +257,7 @@ function VoiceLibrary({ settings, save, onChanged }: { settings: Settings; save:
       {creating === 'rvc' && <RvcNew models={rvcModels} bases={bases} onModels={load} onDone={id => { setCreating(''); if (id) changed(id); }} />}
       {error && <p className="text-xs text-red-400 mb-2">{error}</p>}
       {voices === null ? <Loader2 className="w-4 h-4 animate-spin text-[var(--text-muted)]" /> : !voices.length ? (
-        <p className="text-xs text-[var(--text-muted)]">No voices yet. Describe one, or clone one from a few clean clips.</p>
+        <p className="text-xs text-[var(--text-muted)]">{t('No voices yet. Describe one, or clone one from a few clean clips.')}</p>
       ) : (
         <div className="space-y-1.5">
           {voices.map(v => (
@@ -286,15 +287,15 @@ function VoiceCard({ v, fxInfo, bases, models, active, expanded, onToggle, onUse
           {expanded ? <ChevronDown className="w-4 h-4 shrink-0" /> : <ChevronRight className="w-4 h-4 shrink-0" />}
           {v.source === 'samples' ? <FileAudio className="w-4 h-4 shrink-0 text-sky-400" />
             : v.source === 'rvc' ? <Waypoints className="w-4 h-4 shrink-0 text-amber-400" /> : <Sparkles className="w-4 h-4 shrink-0 text-violet-400" />}
-          <span className="text-sm font-medium truncate">{v.label}</span>
+          <span className="text-sm font-medium truncate">{t(v.label)}</span>
           {v.source !== 'rvc' && v.rvc?.model && <span className="text-[10px] px-1.5 rounded bg-[var(--bg-tertiary)] text-[var(--text-muted)]">rvc</span>}
           {hasFx && <span className="text-[10px] px-1.5 rounded bg-[var(--bg-tertiary)] text-[var(--text-muted)]">fx</span>}
-          {active && <span className="text-[10px] px-1.5 rounded bg-[var(--accent)]/20 text-[var(--accent)]">in use</span>}
+          {active && <span className="text-[10px] px-1.5 rounded bg-[var(--accent)]/20 text-[var(--accent)]">{t('in use')}</span>}
         </button>
-        <button className={btn.icon} title="Play the reference clip" onClick={() => play(voiceLib.referenceUrl(v))}><Play className="w-3.5 h-3.5" /></button>
-        {!active && <button className={btn.ghost} onClick={onUse}><Check className="w-3.5 h-3.5" />Use</button>}
-        <button className={btn.icon} title="Duplicate (to try changes on a copy)" onClick={onDuplicate}><Copy className="w-3.5 h-3.5" /></button>
-        <button className={btn.icon} title="Delete" onClick={onDelete}><Trash2 className="w-3.5 h-3.5" /></button>
+        <button className={btn.icon} title={t('Play the reference clip')} onClick={() => play(voiceLib.referenceUrl(v))}><Play className="w-3.5 h-3.5" /></button>
+        {!active && <button className={btn.ghost} onClick={onUse}><Check className="w-3.5 h-3.5" />{t('Use')}</button>}
+        <button className={btn.icon} title={t('Duplicate (to try changes on a copy)')} onClick={onDuplicate}><Copy className="w-3.5 h-3.5" /></button>
+        <button className={btn.icon} title={t('Delete')} onClick={onDelete}><Trash2 className="w-3.5 h-3.5" /></button>
       </div>
       {expanded && <VoiceEditor v={v} fxInfo={fxInfo} bases={bases} models={models} onChanged={onChanged} />}
     </div>
@@ -373,23 +374,23 @@ function VoiceEditor({ v, fxInfo, bases, models, onChanged }: {
   return (
     <div className="px-3 pb-3 pt-1 border-t border-[var(--border-subtle)] space-y-3">
       <div className="grid sm:grid-cols-2 gap-x-4">
-        <Field label="Name"><input className={btn.input} value={draft.label} onChange={e => set({ label: e.target.value })} /></Field>
-        <Field label="Delivery" hint="overrides the global tone">
-          <input className={btn.input} value={draft.style} placeholder="(use the global tone)" onChange={e => set({ style: e.target.value })} />
+        <Field label={t('Name')}><input className={btn.input} value={draft.label} onChange={e => set({ label: e.target.value })} /></Field>
+        <Field label={t('Delivery')} hint={t('overrides the global tone')}>
+          <input className={btn.input} value={draft.style} placeholder={t('(use the global tone)')} onChange={e => set({ style: e.target.value })} />
         </Field>
       </div>
-      <Field label="Description" hint={v.source === 'design' ? 'what “New take” designs from' : 'notes'}>
+      <Field label={t('Description')} hint={v.source === 'design' ? t('what “New take” designs from') : 'notes'}>
         <textarea className={clsx(btn.input, 'h-16 resize-y')} value={draft.description} onChange={e => set({ description: e.target.value })} />
       </Field>
 
       {/* effects */}
       <div>
         <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
-          <span className="text-xs font-medium mr-1">Effects</span>
+          <span className="text-xs font-medium mr-1">{t('Effects')}</span>
           {fxInfo && Object.keys(fxInfo.presets).map(name => (
             <button key={name} onClick={() => set({ fx: { ...fxInfo.presets[name] } })}
               className={clsx('text-[11px] px-2 py-0.5 rounded-full capitalize', preset === name ? 'bg-[var(--accent)] text-[var(--accent-fg)]' : 'bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover)]')}>
-              {name === 'glados' ? 'GLaDOS' : name}
+              {name === 'glados' ? t('GLaDOS') : name}
             </button>
           ))}
         </div>
@@ -408,7 +409,7 @@ function VoiceEditor({ v, fxInfo, bases, models, onChanged }: {
         <input className={btn.input} value={test} onChange={e => setTest(e.target.value)} onKeyDown={e => e.key === 'Enter' && preview()} />
         <button className={btn.subtle} onClick={preview}>
           {state === 'loading' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : state === 'playing' ? <Square className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-          {dirty ? 'Preview changes' : 'Preview'}
+          {dirty ? t('Preview changes') : t('Preview')}
         </button>
       </div>
 
@@ -416,34 +417,34 @@ function VoiceEditor({ v, fxInfo, bases, models, onChanged }: {
       {v.source === 'rvc' ? null : v.source === 'design' ? (
         <div className="flex items-center gap-2 flex-wrap">
           <button className={btn.ghost} disabled={!!busy || !draft.description.trim()} onClick={newTake}
-            title="Design a new reference clip from the description; the settings above stay">
-            {busy === 'take' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}{take ? 'Another take' : 'New take'}
+            title={t('Design a new reference clip from the description; the settings above stay')}>
+            {busy === 'take' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}{take ? t('Another take') : t('New take')}
           </button>
           {take && (
             <>
-              <button className={btn.ghost} onClick={newTake} disabled={!!busy}><RotateCcw className="w-3.5 h-3.5" />Retry</button>
-              <button className={btn.primary} onClick={keepTake} disabled={!!busy}>Use this take</button>
+              <button className={btn.ghost} onClick={newTake} disabled={!!busy}><RotateCcw className="w-3.5 h-3.5" />{t('Retry')}</button>
+              <button className={btn.primary} onClick={keepTake} disabled={!!busy}>{t('Use this take')}</button>
             </>
           )}
-          {busy === 'take' && <span className="text-[11px] text-[var(--text-muted)]">the designer model takes about 30 s to load the first time</span>}
+          {busy === 'take' && <span className="text-[11px] text-[var(--text-muted)]">{t('the designer model takes about 30 s to load the first time')}</span>}
         </div>
       ) : (
         <Samples v={v} busy={busy} onAdd={() => files.current?.click()} run={run} onChanged={onChanged} />
       )}
       <input ref={files} type="file" accept="audio/*,video/*" multiple hidden onChange={e => { addClips(e.target.files); e.target.value = ''; }} />
       {v.source !== 'rvc' && <details className="text-xs">
-        <summary className="cursor-pointer text-[var(--text-muted)]">Reference transcript</summary>
+        <summary className="cursor-pointer text-[var(--text-muted)]">{t('Reference transcript')}</summary>
         <p className="text-[11px] text-[var(--text-muted)] my-1">
-          What the reference clip says, word for word. Cloning works best when this matches exactly; fix any Whisper mistakes.
+          {t('What the reference clip says, word for word. Cloning works best when this matches exactly; fix any Whisper mistakes.')}
         </p>
         <textarea className={clsx(btn.input, 'h-16 resize-y')} value={draft.refText} onChange={e => set({ refText: e.target.value })} />
       </details>}
 
       <div className="flex items-center gap-2">
         <button className={btn.primary} disabled={!dirty || !!busy} onClick={saveAll}>
-          {busy === 'save' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}Save
+          {busy === 'save' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}{t('Save')}
         </button>
-        <button className={btn.ghost} disabled={!dirty} onClick={() => setDraft(initial)}><RotateCcw className="w-3.5 h-3.5" />Revert</button>
+        <button className={btn.ghost} disabled={!dirty} onClick={() => setDraft(initial)}><RotateCcw className="w-3.5 h-3.5" />{t('Revert')}</button>
         {error && <span className="text-xs text-red-400">{error}</span>}
       </div>
     </div>
@@ -466,24 +467,24 @@ function RvcSection({ v, rvc, base, bases, models, onRvc, onBase }: {
   if (!isRvc && !models.length) return null;
   return (
     <div>
-      <div className="text-xs font-medium mb-1">{isRvc ? 'RVC voice' : 'RVC conversion'}</div>
+      <div className="text-xs font-medium mb-1">{isRvc ? t('RVC voice') : t('RVC conversion')}</div>
       <p className="text-[11px] text-[var(--text-muted)] mb-1.5">
         {isRvc
-          ? 'The base voice speaks the text, then the RVC model turns it into this character. The base sets accent and delivery; the model sets the sound.'
-          : 'Optionally run this voice through an RVC model after synthesis.'}
+          ? t('The base voice speaks the text, then the RVC model turns it into this character. The base sets accent and delivery; the model sets the sound.')
+          : t('Optionally run this voice through an RVC model after synthesis.')}
       </p>
       <div className="grid sm:grid-cols-2 gap-x-4">
         {isRvc && (
-          <Field label="Base voice">
+          <Field label={t('Base voice')}>
             <select className={btn.input} value={base ?? 'nova'} onChange={e => onBase(e.target.value)}>
-              {bases.map(b => <option key={b.id} value={b.id}>{b.label}</option>)}
+              {bases.map(b => <option key={b.id} value={b.id}>{t(b.label)}</option>)}
             </select>
           </Field>
         )}
-        <Field label="Model">
+        <Field label={t('Model')}>
           <select className={btn.input} value={rvc?.model ?? ''}
             onChange={e => onRvc(e.target.value ? { ...RVC_DEFAULTS, ...rvc, model: e.target.value } : null)}>
-            {!isRvc && <option value="">None</option>}
+            {!isRvc && <option value="">{t('None')}</option>}
             {models.map(m => <option key={m.name} value={m.name}>{m.name}</option>)}
           </select>
         </Field>
@@ -506,13 +507,13 @@ function FxSlider({ p, value, onChange }: { p: FxParam; value: number; onChange:
   if (p.max === 1 && p.step === 1) {
     return (
       <label className="flex items-center gap-2 text-[11px] py-0.5">
-        <input type="checkbox" checked={value >= 1} onChange={e => onChange(e.target.checked ? 1 : 0)} />{p.label}
+        <input type="checkbox" checked={value >= 1} onChange={e => onChange(e.target.checked ? 1 : 0)} />{t(p.label)}
       </label>
     );
   }
   return (
     <label className="flex items-center gap-2 text-[11px]">
-      <span className={clsx('w-40 shrink-0 truncate', value === p.off && 'text-[var(--text-muted)]')} title={p.label}>{p.label}</span>
+      <span className={clsx('w-40 shrink-0 truncate', value === p.off && 'text-[var(--text-muted)]')} title={t(p.label)}>{t(p.label)}</span>
       <input type="range" min={p.min} max={p.max} step={p.step} value={value} className="flex-1 accent-[var(--accent)]"
         onChange={e => onChange(Number(e.target.value))} onDoubleClick={() => onChange(p.off)} />
       <span className="w-10 text-right tabular-nums">{Number.isInteger(p.step) ? value : value.toFixed(2)}</span>
@@ -526,23 +527,23 @@ function Samples({ v, busy, onAdd, run, onChanged }: {
   return (
     <div>
       <div className="flex items-center gap-2 mb-1">
-        <span className="text-xs font-medium">Clips ({v.samples.length})</span>
+        <span className="text-xs font-medium">{t('Clips ({length})', { length: v.samples.length })}</span>
         <button className={btn.ghost} disabled={!!busy} onClick={onAdd}>
-          {busy === 'clips' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}Add clips
+          {busy === 'clips' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}{t('Add clips')}
         </button>
-        <button className={btn.ghost} disabled={!!busy || !v.samples.length} title="Rebuild the reference from the first 10–18 s of clips"
+        <button className={btn.ghost} disabled={!!busy || !v.samples.length} title={t('Rebuild the reference from the first 10–18 s of clips')}
           onClick={() => run('rebuild', async () => { await voiceLib.rebuild(v.id); onChanged(); })}>
-          {busy === 'rebuild' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <AudioLines className="w-3.5 h-3.5" />}Rebuild reference
+          {busy === 'rebuild' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <AudioLines className="w-3.5 h-3.5" />}{t('Rebuild reference')}
         </button>
       </div>
       <p className="text-[11px] text-[var(--text-muted)] mb-1">
-        The first 10–18 s of clips (in name order) become the reference. Clean speech without music or effects clones best.
+        {t('The first 10–18 s of clips (in name order) become the reference. Clean speech without music or effects clones best.')}
       </p>
       <div className="flex flex-wrap gap-1">
         {v.samples.map(s => (
           <span key={s} className="inline-flex items-center gap-1 text-[11px] pl-2 pr-1 py-0.5 rounded-full bg-[var(--bg-tertiary)]">
             <button className="hover:text-[var(--accent)]" onClick={() => play(voiceLib.sampleUrl(v, s))}>{s.replace(/\.wav$/, '')}</button>
-            <button className="opacity-60 hover:opacity-100" title="Remove this clip (then rebuild the reference)"
+            <button className="opacity-60 hover:opacity-100" title={t('Remove this clip (then rebuild the reference)')}
               onClick={() => run('del', async () => { await voiceLib.deleteSample(v.id, s); onChanged(); })}>
               <Trash2 className="w-3 h-3" />
             </button>
@@ -582,8 +583,8 @@ function DesignNew({ fxInfo, onDone }: { fxInfo?: { presets: Record<string, Reco
 
   return (
     <div className="mb-3 rounded-lg border border-[var(--border-subtle)] p-3 space-y-2">
-      <div className="text-sm font-medium">Describe a voice</div>
-      <p className="text-xs text-[var(--text-muted)]">Age, accent, pitch, personality. Each audition is a new take; keep the one you like.</p>
+      <div className="text-sm font-medium">{t('Describe a voice')}</div>
+      <p className="text-xs text-[var(--text-muted)]">{t('Age, accent, pitch, personality. Each audition is a new take; keep the one you like.')}</p>
       <textarea className={clsx(btn.input, 'h-20 resize-y')} value={description} placeholder={IDEAS[0]}
         onChange={e => { setDescription(e.target.value); setDraft(''); }} />
       <div className="flex flex-wrap gap-1">
@@ -593,26 +594,26 @@ function DesignNew({ fxInfo, onDone }: { fxInfo?: { presets: Record<string, Reco
         ))}
       </div>
       <div className="flex items-center gap-2 text-xs">
-        Effects
+        {t('Effects')}
         <select className={clsx(btn.input, 'w-auto')} value={preset} onChange={e => { setPreset(e.target.value); setDraft(''); }}>
-          {Object.keys(fxInfo?.presets ?? { none: {} }).map(p => <option key={p} value={p}>{p === 'glados' ? 'GLaDOS' : p}</option>)}
+          {Object.keys(fxInfo?.presets ?? { none: {} }).map(p => <option key={p} value={p}>{p === 'glados' ? t('GLaDOS') : p}</option>)}
         </select>
-        <span className="text-[var(--text-muted)]">fine-tune them after saving</span>
+        <span className="text-[var(--text-muted)]">{t('fine-tune them after saving')}</span>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <button className={btn.subtle} disabled={!description.trim() || !!busy} onClick={audition}>
-          {busy === 'design' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Volume2 className="w-3.5 h-3.5" />}{draft ? 'Another take' : 'Audition'}
+          {busy === 'design' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Volume2 className="w-3.5 h-3.5" />}{draft ? t('Another take') : t('Audition')}
         </button>
         {draft && (
           <>
-            <button className={btn.icon} title="Play again" onClick={() => audio.current && play(audio.current)}><Play className="w-3.5 h-3.5" /></button>
-            <input className={clsx(btn.input, 'w-40')} value={name} placeholder="Name" onChange={e => setName(e.target.value)} />
-            <button className={btn.primary} disabled={!!busy} onClick={keep}>Keep this voice</button>
+            <button className={btn.icon} title={t('Play again')} onClick={() => audio.current && play(audio.current)}><Play className="w-3.5 h-3.5" /></button>
+            <input className={clsx(btn.input, 'w-40')} value={name} placeholder={t('Name')} onChange={e => setName(e.target.value)} />
+            <button className={btn.primary} disabled={!!busy} onClick={keep}>{t('Keep this voice')}</button>
           </>
         )}
-        <button className={btn.ghost} onClick={() => onDone()}>Cancel</button>
+        <button className={btn.ghost} onClick={() => onDone()}>{t('Cancel')}</button>
       </div>
-      {busy === 'design' && <p className="text-xs text-[var(--text-muted)]">Making a take… the first one loads the designer model (about 30 s).</p>}
+      {busy === 'design' && <p className="text-xs text-[var(--text-muted)]">{t('Making a take… the first one loads the designer model (about 30 s).')}</p>}
       {error && <p className="text-xs text-red-400">{error}</p>}
     </div>
   );
@@ -630,23 +631,22 @@ function SamplesNew({ onDone }: { onDone: (id?: string) => void }) {
   };
   return (
     <div className="mb-3 rounded-lg border border-[var(--border-subtle)] p-3 space-y-2">
-      <div className="text-sm font-medium">Clone a voice from clips</div>
+      <div className="text-sm font-medium">{t('Clone a voice from clips')}</div>
       <p className="text-xs text-[var(--text-muted)]">
-        A few clips of one speaker, 10–20 s in total, any audio or video format. Clean lines without music or sound effects work best.
-        Whisper writes the transcript; check it afterwards. All clips are kept with the voice for later training.
+        {t('A few clips of one speaker, 10–20 s in total, any audio or video format. Clean lines without music or sound effects work best. Whisper writes the transcript; check it afterwards. All clips are kept with the voice for later training.')}
       </p>
       <div className="grid sm:grid-cols-2 gap-x-4">
-        <Field label="Name"><input className={btn.input} value={name} placeholder="Claptrap" onChange={e => setName(e.target.value)} /></Field>
-        <Field label="Notes"><input className={btn.input} value={description} placeholder="where the clips came from" onChange={e => setDescription(e.target.value)} /></Field>
+        <Field label={t('Name')}><input className={btn.input} value={name} placeholder={t('Claptrap')} onChange={e => setName(e.target.value)} /></Field>
+        <Field label={t('Notes')}><input className={btn.input} value={description} placeholder={t('where the clips came from')} onChange={e => setDescription(e.target.value)} /></Field>
       </div>
       <input type="file" accept="audio/*,video/*" multiple className="text-xs" onChange={e => setFiles(Array.from(e.target.files ?? []))} />
       {files.length > 0 && <p className="text-[11px] text-[var(--text-muted)]">{files.length} file(s), {(files.reduce((n, f) => n + f.size, 0) / 1e6).toFixed(1)} MB</p>}
       <div className="flex items-center gap-2">
         <button className={btn.primary} disabled={!files.length || busy} onClick={create}>
-          {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}Create voice
+          {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}{t('Create voice')}
         </button>
-        <button className={btn.ghost} onClick={() => onDone()}>Cancel</button>
-        {busy && <span className="text-[11px] text-[var(--text-muted)]">Cleaning the clips and transcribing…</span>}
+        <button className={btn.ghost} onClick={() => onDone()}>{t('Cancel')}</button>
+        {busy && <span className="text-[11px] text-[var(--text-muted)]">{t('Cleaning the clips and transcribing…')}</span>}
       </div>
       {error && <p className="text-xs text-red-400">{error}</p>}
     </div>
@@ -679,56 +679,54 @@ function RvcNew({ models, bases, onModels, onDone }: {
     onModels();
   });
   const removeModel = (m: RvcModel) => {
-    if (confirm(`Delete the RVC model "${m.name}"?`)) run('del', async () => { await voiceLib.deleteRvcModel(m.name); setModel(''); onModels(); });
+    if (confirm(t('Delete the RVC model "{name}"?', { name: m.name }))) run('del', async () => { await voiceLib.deleteRvcModel(m.name); setModel(''); onModels(); });
   };
 
   return (
     <div className="mb-3 rounded-lg border border-[var(--border-subtle)] p-3 space-y-2">
-      <div className="text-sm font-medium">Voice from an RVC model</div>
+      <div className="text-sm font-medium">{t('Voice from an RVC model')}</div>
       <p className="text-xs text-[var(--text-muted)]">
-        An RVC model is a trained character voice (a .pth and usually an .index, shared as a zip on voice-model sites).
-        A base voice speaks the text and the model converts it, adding under a second per sentence. The base's accent and
-        delivery carry through, so pick an American base for an American character.
+        {t('An RVC model is a trained character voice (a .pth and usually an .index, shared as a zip on voice-model sites). A base voice speaks the text and the model converts it, adding under a second per sentence. The base\'s accent and delivery carry through, so pick an American base for an American character.')}
       </p>
       <div className="flex flex-wrap gap-1">
         {models.map(m => (
           <span key={m.name} className={clsx('inline-flex items-center gap-1 text-[11px] pl-2 pr-1 py-0.5 rounded-full',
             model === m.name ? 'bg-[var(--accent)]/20 text-[var(--accent)]' : 'bg-[var(--bg-tertiary)]')}>
-            <button onClick={() => setModel(m.name)} title={m.usedBy.length ? `used by ${m.usedBy.join(', ')}` : 'not used yet'}>
+            <button onClick={() => setModel(m.name)} title={m.usedBy.length ? t('used by {v0}', { v0: m.usedBy.join(', ') }) : t('not used yet')}>
               {m.name}{m.usedBy.length ? ' ✓' : ''}
             </button>
             {!m.usedBy.length && (
-              <button className="opacity-60 hover:opacity-100" title="Delete this model" onClick={() => removeModel(m)}><Trash2 className="w-3 h-3" /></button>
+              <button className="opacity-60 hover:opacity-100" title={t('Delete this model')} onClick={() => removeModel(m)}><Trash2 className="w-3 h-3" /></button>
             )}
           </span>
         ))}
         <button className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover)] inline-flex items-center gap-1"
           disabled={!!busy} onClick={() => zip.current?.click()}>
-          {busy === 'import' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}Import model (.zip)
+          {busy === 'import' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}{t('Import model (.zip)')}
         </button>
         <input ref={zip} type="file" accept=".zip,application/zip" hidden onChange={e => { importZip(e.target.files?.[0]); e.target.value = ''; }} />
       </div>
       {models.length > 0 && (
         <>
           <div className="grid sm:grid-cols-2 gap-x-4">
-            <Field label="Name"><input className={btn.input} value={name} placeholder={model} onChange={e => setName(e.target.value)} /></Field>
-            <Field label="Base voice">
+            <Field label={t('Name')}><input className={btn.input} value={name} placeholder={model} onChange={e => setName(e.target.value)} /></Field>
+            <Field label={t('Base voice')}>
               <select className={btn.input} value={base} onChange={e => setBase(e.target.value)}>
-                {bases.map(b => <option key={b.id} value={b.id}>{b.label}</option>)}
+                {bases.map(b => <option key={b.id} value={b.id}>{t(b.label)}</option>)}
               </select>
             </Field>
           </div>
-          <Field label="Delivery" hint="how the character talks; optional">
-            <input className={btn.input} value={style} placeholder="Playful, upbeat and curious." onChange={e => setStyle(e.target.value)} />
+          <Field label={t('Delivery')} hint={t('how the character talks; optional')}>
+            <input className={btn.input} value={style} placeholder={t('Playful, upbeat and curious.')} onChange={e => setStyle(e.target.value)} />
           </Field>
         </>
       )}
       <div className="flex items-center gap-2">
         <button className={btn.primary} disabled={!model || !!busy} onClick={create}>
-          {busy === 'create' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}Create voice
+          {busy === 'create' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}{t('Create voice')}
         </button>
-        <button className={btn.ghost} onClick={() => onDone()}>Cancel</button>
-        {busy === 'create' && <span className="text-[11px] text-[var(--text-muted)]">Rendering a sample through the model…</span>}
+        <button className={btn.ghost} onClick={() => onDone()}>{t('Cancel')}</button>
+        {busy === 'create' && <span className="text-[11px] text-[var(--text-muted)]">{t('Rendering a sample through the model…')}</span>}
       </div>
       {error && <p className="text-xs text-red-400">{error}</p>}
     </div>

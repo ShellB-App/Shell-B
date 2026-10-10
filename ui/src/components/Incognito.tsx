@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { EyeOff } from 'lucide-react';
 import { api } from '../api';
+import { t } from '../i18n';
 
 // Incognito chats (server/privacy.py): not remembered, learned from or searchable, and deleted
 // `incognitoHours` (a setting, 24 by default) after the last message by the server's sweep.
@@ -32,10 +33,10 @@ export function IncognitoStrip({ updatedAt, hours = INCOGNITO_HOURS }: { updated
     <div role="status"
       className="shrink-0 flex items-center justify-center gap-2 px-4 py-1.5 border-b border-dashed border-slate-500/30 bg-slate-500/[0.06] text-[11px] text-[var(--text-secondary)]">
       <EyeOff className="w-3.5 h-3.5 shrink-0 text-slate-500 dark:text-slate-400" aria-hidden />
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-primary)]">Incognito</span>
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-primary)]">{t('Incognito')}</span>
       <span className="text-[var(--text-muted)]" aria-hidden>·</span>
       <span className="truncate">
-        Not remembered or searchable{updatedAt ? `; deleted ${when(updatedAt + hours * 3600_000)} unless you continue` : ''}
+        {t('Not remembered or searchable')}{updatedAt ? t('; deleted {v0} unless you continue', { v0: when(updatedAt + hours * 3600_000) }) : ''}
       </span>
     </div>
   );
@@ -46,7 +47,7 @@ export function IncognitoNote({ hours = INCOGNITO_HOURS }: { hours?: number }) {
   return (
     <div className="flex items-center justify-center gap-1.5 text-[11px] text-[var(--text-secondary)] mt-1.5">
       <EyeOff className="w-3 h-3 shrink-0 text-slate-500 dark:text-slate-400" aria-hidden />
-      <span>Incognito: Shell:B won’t remember or learn from this chat; it is deleted {keepFor(hours)} after the last message.</span>
+      <span>{t('Incognito: Shell:B won’t remember or learn from this chat; it is deleted {v0} after the last message.', { v0: keepFor(hours) })}</span>
     </div>
   );
 }
@@ -54,8 +55,8 @@ export function IncognitoNote({ hours = INCOGNITO_HOURS }: { hours?: number }) {
 /** A small marker beside an incognito chat's title (header, sidebar, palette). */
 export function IncognitoMark({ className }: { className?: string }) {
   return (
-    <span title="Incognito chat: not remembered, deleted automatically" className="inline-flex shrink-0">
-      <EyeOff className={clsx('w-3.5 h-3.5 text-slate-500 dark:text-slate-400', className)} aria-label="Incognito" />
+    <span title={t('Incognito chat: not remembered, deleted automatically')} className="inline-flex shrink-0">
+      <EyeOff className={clsx('w-3.5 h-3.5 text-slate-500 dark:text-slate-400', className)} aria-label={t('Incognito')} />
     </span>
   );
 }
@@ -76,12 +77,12 @@ export function IncognitoSettingsRow() {
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-[var(--text-secondary)]">
       <EyeOff className="w-3.5 h-3.5 text-[var(--text-muted)]" aria-hidden />
-      <label htmlFor="incognito-hours">Delete incognito chats</label>
+      <label htmlFor="incognito-hours">{t('Delete incognito chats')}</label>
       <select id="incognito-hours" value={hours} onChange={e => save(Number(e.target.value))}
         className="bg-transparent border border-[var(--border-subtle)] rounded-md px-1.5 py-0.5 text-[11px] text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent)]">
         {choices.map(h => <option key={h} value={h}>{keepFor(h)}</option>)}
       </select>
-      <span className="text-[var(--text-muted)]">after their last message. Chats already open follow the new setting.</span>
+      <span className="text-[var(--text-muted)]">{t('after their last message. Chats already open follow the new setting.')}</span>
       {err && <span className="text-red-400">{err}</span>}
     </div>
   );

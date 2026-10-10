@@ -11,6 +11,7 @@ import { btn, relTime } from '../common';
 import { Draft, busyIndex, who } from './types';
 import { IndexState, TagInput } from './Inputs';
 import { ContactAvatar } from './ContactAvatar';
+import { t as tx } from '../../i18n';
 
 interface Backlink {
   id: string;
@@ -271,13 +272,13 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
       {/* Header bar */}
       <div className="flex items-center gap-2 px-4 h-12 border-b border-[var(--border-subtle)] shrink-0">
         <User className="w-4 h-4 text-teal-400" />
-        <span className="text-xs text-[var(--text-secondary)] flex-1">{e.id ? 'Contact' : 'New Contact'}{dirty && ' · unsaved'}</span>
+        <span className="text-xs text-[var(--text-secondary)] flex-1">{e.id ? tx('Contact') : tx('New Contact')}{dirty && tx(' · unsaved')}</span>
         {e.id && (
-          <button className={btn.icon} title={e.pinned ? 'Unpin' : 'Pin'} onClick={() => set({ pinned: !e.pinned })}>
+          <button className={btn.icon} title={e.pinned ? tx('Unpin') : 'Pin'} onClick={() => set({ pinned: !e.pinned })}>
             <Pin className={clsx('w-4 h-4', e.pinned && 'fill-current text-[var(--accent)]')} />
           </button>
         )}
-        <button className={btn.icon} onClick={() => { if (!dirty || confirm('Discard your changes?')) onClose(); }} aria-label="Close">
+        <button className={btn.icon} onClick={() => { if (!dirty || confirm(tx('Discard your changes?'))) onClose(); }} aria-label={tx('Close')}>
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -285,8 +286,8 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
       <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4">
         {e.draft && (
           <div className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg border border-amber-500/35 bg-amber-500/5 text-xs">
-            <span className="flex-1 min-w-[180px]">Draft added by {who(e as CodexEntry, agentNames)}. Agents can see it, but it stays a draft until you accept it.</span>
-            <button className={btn.primary} onClick={accept}><Check className="w-3.5 h-3.5" />Accept</button>
+            <span className="flex-1 min-w-[180px]">{tx('Draft added by {v0}. Agents can see it, but it stays a draft until you accept it.', { v0: who(e as CodexEntry, agentNames) })}</span>
+            <button className={btn.primary} onClick={accept}><Check className="w-3.5 h-3.5" />{tx('Accept')}</button>
           </div>
         )}
 
@@ -313,7 +314,7 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
                 dragOverAvatar && 'ring-2 ring-teal-400 scale-105',
                 'group-hover:opacity-95'
               )}
-              title="Click or drag an image here to change profile photo"
+              title={tx('Click or drag an image here to change profile photo')}
             >
               <ContactAvatar
                 name={e.title}
@@ -326,7 +327,7 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
               {/* Hover / Camera action badge */}
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white p-1 text-center">
                 <Camera className="w-5 h-5 mb-0.5" />
-                <span className="text-[10px] font-medium leading-tight">{m.avatar ? 'Change' : 'Add photo'}</span>
+                <span className="text-[10px] font-medium leading-tight">{m.avatar ? tx('Change') : tx('Add photo')}</span>
               </div>
             </div>
 
@@ -347,14 +348,14 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
             <input
               className="w-full bg-transparent text-xl font-semibold focus:outline-none placeholder-[var(--text-muted)]"
               value={e.title ?? ''}
-              placeholder="Full Name"
+              placeholder={tx('Full Name')}
               onChange={ev => set({ title: ev.target.value })}
               autoFocus={!e.id}
             />
             <input
               className="w-full bg-transparent text-xs text-[var(--text-muted)] focus:outline-none placeholder-[var(--text-muted)] mt-1"
               value={m.pronouns ?? ''}
-              placeholder="Pronouns (they/them, she/her, he/him)"
+              placeholder={tx('Pronouns (they/them, she/her, he/him)')}
               onChange={ev => setMeta({ pronouns: ev.target.value })}
             />
             <label className="flex items-baseline gap-1.5 mt-1 text-xs text-[var(--text-muted)]">
@@ -362,8 +363,8 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
             <input
               className="w-full bg-transparent text-xs text-[var(--text-secondary)] focus:outline-none placeholder-[var(--text-muted)]"
               value={akaText}
-              placeholder="Nicknames, comma-separated (what you call them)"
-              title="Shell:B treats these names as this person in chats and memories"
+              placeholder={tx('Nicknames, comma-separated (what you call them)')}
+              title={tx('Shell:B treats these names as this person in chats and memories')}
               onChange={ev => {
                 setAkaText(ev.target.value);
                 setMeta({ aka: ev.target.value.split(',').map(s => s.trim()).filter(Boolean) });
@@ -377,18 +378,18 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
                 <a
                   href={`mailto:${m.email}`}
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 transition border border-teal-500/25"
-                  title="Send email"
+                  title={tx('Send email')}
                 >
-                  <Mail className="w-3 h-3" />Email
+                  <Mail className="w-3 h-3" />{tx('Email')}
                 </a>
               )}
               {m.phone && (
                 <a
                   href={`tel:${m.phone}`}
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 transition border border-teal-500/25"
-                  title="Call phone"
+                  title={tx('Call phone')}
                 >
-                  <Phone className="w-3 h-3" />Call
+                  <Phone className="w-3 h-3" />{tx('Call')}
                 </a>
               )}
               {e.url && (
@@ -397,9 +398,9 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
                   target="_blank"
                   rel="noreferrer noopener"
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition border border-[var(--border-subtle)]"
-                  title="Open site"
+                  title={tx('Open site')}
                 >
-                  <ExternalLink className="w-3 h-3" />Website
+                  <ExternalLink className="w-3 h-3" />{tx('Website')}
                 </a>
               )}
               <button
@@ -411,7 +412,7 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition"
               >
                 <Camera className="w-3 h-3 text-teal-400" />
-                {m.avatar ? 'Edit photo' : 'Add photo'}
+                {m.avatar ? tx('Edit photo') : tx('Add photo')}
               </button>
             </div>
           </div>
@@ -420,34 +421,34 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
         {/* Fields grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <label className="block space-y-1">
-            <span className="text-xs text-[var(--text-secondary)] flex items-center gap-1.5"><Briefcase className="w-3.5 h-3.5 text-teal-400" />Role / Job Title</span>
-            <input className={btn.input} value={m.role ?? ''} placeholder="Lead Architect, Designer..." onChange={ev => setMeta({ role: ev.target.value })} />
+            <span className="text-xs text-[var(--text-secondary)] flex items-center gap-1.5"><Briefcase className="w-3.5 h-3.5 text-teal-400" />{tx('Role / Job Title')}</span>
+            <input className={btn.input} value={m.role ?? ''} placeholder={tx('Lead Architect, Designer...')} onChange={ev => setMeta({ role: ev.target.value })} />
           </label>
           <label className="block space-y-1">
-            <span className="text-xs text-[var(--text-secondary)] flex items-center gap-1.5"><Building className="w-3.5 h-3.5 text-teal-400" />Company / Organization</span>
-            <input className={btn.input} value={m.company ?? ''} placeholder="Acme Inc, Studio..." onChange={ev => setMeta({ company: ev.target.value })} />
+            <span className="text-xs text-[var(--text-secondary)] flex items-center gap-1.5"><Building className="w-3.5 h-3.5 text-teal-400" />{tx('Company / Organization')}</span>
+            <input className={btn.input} value={m.company ?? ''} placeholder={tx('Acme Inc, Studio...')} onChange={ev => setMeta({ company: ev.target.value })} />
           </label>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <label className="block space-y-1">
-            <span className="text-xs text-[var(--text-secondary)] flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-teal-400" />Email Address</span>
+            <span className="text-xs text-[var(--text-secondary)] flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-teal-400" />{tx('Email Address')}</span>
             <input className={btn.input} type="email" value={m.email ?? ''} placeholder="name@example.com" onChange={ev => setMeta({ email: ev.target.value })} />
           </label>
           <label className="block space-y-1">
-            <span className="text-xs text-[var(--text-secondary)] flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-teal-400" />Phone Number</span>
+            <span className="text-xs text-[var(--text-secondary)] flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-teal-400" />{tx('Phone Number')}</span>
             <input className={btn.input} type="tel" value={m.phone ?? ''} placeholder="+1 555-0199" onChange={ev => setMeta({ phone: ev.target.value })} />
           </label>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <label className="block space-y-1">
-            <span className="text-xs text-[var(--text-secondary)] flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-teal-400" />Location / City</span>
-            <input className={btn.input} value={m.location ?? ''} placeholder="London, UK" onChange={ev => setMeta({ location: ev.target.value })} />
+            <span className="text-xs text-[var(--text-secondary)] flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-teal-400" />{tx('Location / City')}</span>
+            <input className={btn.input} value={m.location ?? ''} placeholder={tx('London, UK')} onChange={ev => setMeta({ location: ev.target.value })} />
           </label>
           <label className="block space-y-1">
             <span className="text-xs text-[var(--text-secondary)] flex items-center justify-between">
-              <span className="flex items-center gap-1.5"><Cake className="w-3.5 h-3.5 text-teal-400" />Birthday</span>
+              <span className="flex items-center gap-1.5"><Cake className="w-3.5 h-3.5 text-teal-400" />{tx('Birthday')}</span>
               {bdayInfo && <span className="text-[11px] font-medium text-teal-400 truncate max-w-[160px]">{bdayInfo}</span>}
             </span>
             <input className={btn.input} type="date" value={m.birthday ?? ''} onChange={ev => setMeta({ birthday: ev.target.value })} />
@@ -455,16 +456,16 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
         </div>
 
         <label className="block space-y-1">
-          <span className="text-xs text-[var(--text-secondary)] flex items-center gap-1.5"><Link2 className="w-3.5 h-3.5 text-teal-400" />Website / Profile Link</span>
+          <span className="text-xs text-[var(--text-secondary)] flex items-center gap-1.5"><Link2 className="w-3.5 h-3.5 text-teal-400" />{tx('Website / Profile Link')}</span>
           <div className="flex gap-2">
             <input className={btn.input} value={e.url ?? ''} placeholder="https://github.com/... or personal site" onChange={ev => set({ url: ev.target.value })} />
-            {e.url && <a className={btn.subtle} href={e.url} target="_blank" rel="noreferrer noopener"><ExternalLink className="w-3.5 h-3.5" />Open</a>}
+            {e.url && <a className={btn.subtle} href={e.url} target="_blank" rel="noreferrer noopener"><ExternalLink className="w-3.5 h-3.5" />{tx('Open')}</a>}
           </div>
         </label>
 
         <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,180px)_1fr] gap-2">
-          <select className={btn.input} value={e.collectionId ?? ''} onChange={ev => set({ collectionId: ev.target.value || null })} aria-label="Collection">
-            <option value="">Unfiled</option>
+          <select className={btn.input} value={e.collectionId ?? ''} onChange={ev => set({ collectionId: ev.target.value || null })} aria-label={tx('Collection')}>
+            <option value="">{tx('Unfiled')}</option>
             {index?.collections.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           <TagInput value={e.tags ?? []} onChange={tags => set({ tags })} all={allTags} />
@@ -474,7 +475,7 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
         {backlinks && backlinks.length > 0 && (
           <div className="p-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] space-y-1.5 text-xs">
             <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1">
-              <Link2 className="w-3 h-3 text-teal-400" />Mentioned in {backlinks.length} note{backlinks.length === 1 ? '' : 's'}
+              <Link2 className="w-3 h-3 text-teal-400" />{tx('Mentioned in')} {backlinks.length} note{backlinks.length === 1 ? '' : 's'}
             </span>
             <div className="flex flex-wrap gap-1.5">
               {backlinks.map(b => (
@@ -483,7 +484,7 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
                   href={`#/codex/e/${b.id}`}
                   className="px-2 py-0.5 rounded-md bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-teal-400 transition"
                 >
-                  {b.title}
+                  {tx(b.title)}
                 </a>
               ))}
             </div>
@@ -493,7 +494,7 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
         {/* Notes & Context */}
         <div className="space-y-1.5 pt-1">
           <div className="flex items-center gap-1">
-            <span className="text-xs text-[var(--text-secondary)] flex-1">Notes & Context</span>
+            <span className="text-xs text-[var(--text-secondary)] flex-1">{tx('Notes & Context')}</span>
             {(['notes', 'preview'] as const).map(t => (
               <button
                 key={t}
@@ -503,7 +504,7 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
                   tab === t ? 'bg-[var(--bg-hover)] text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                 )}
               >
-                {t === 'notes' ? 'Edit' : 'Preview'}
+                {t === 'notes' ? tx('Edit') : tx('Preview')}
               </button>
             ))}
           </div>
@@ -511,16 +512,16 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
             <textarea
               className={clsx(area, 'min-h-[140px]')}
               value={e.body ?? ''}
-              placeholder="Background, relationship context, preferences, shared projects, [[Wiki]] links to notes..."
+              placeholder={tx('Background, relationship context, preferences, shared projects, [[Wiki]] links to notes...')}
               onChange={ev => set({ body: ev.target.value })}
             />
           ) : (
             <div
               className="min-h-[80px] px-3 py-2 rounded-lg border border-[var(--border-subtle)] cursor-text"
               onDoubleClick={() => setTab('notes')}
-              title="Double-click to edit"
+              title={tx('Double-click to edit')}
             >
-              {e.body ? <Markdown text={e.body} /> : <span className="text-sm text-[var(--text-muted)]">No notes written yet. Double-click to edit.</span>}
+              {e.body ? <Markdown text={e.body} /> : <span className="text-sm text-[var(--text-muted)]">{tx('No notes written yet. Double-click to edit.')}</span>}
             </div>
           )}
         </div>
@@ -534,25 +535,25 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
           {e.id && full ? (
             <>
               <IndexState e={full} />
-              <span className="block">Added by {who(full, agentNames)} {relTime(full.createdAt)} · edited {relTime(full.updatedAt)}</span>
+              <span className="block">{tx('Added by {v0} {v1} · edited {v2}', { v0: who(full, agentNames), v1: relTime(full.createdAt), v2: relTime(full.updatedAt) })}</span>
             </>
-          ) : 'Ctrl+S saves'}
+          ) : tx('Ctrl+S saves')}
         </span>
         {e.id && (
           confirmDel ? (
             <>
-              <button className="px-2 py-1 rounded text-[11px] bg-red-500/20 text-red-600 dark:text-red-300 hover:bg-red-500/30" onClick={async () => { await api.deleteCodexEntry(e.id!); onDeleted(e.id!); }}>Delete</button>
-              <button className="px-2 py-1 rounded text-[11px] hover:bg-[var(--bg-hover)]" onClick={() => setConfirmDel(false)}>Keep</button>
+              <button className="px-2 py-1 rounded text-[11px] bg-red-500/20 text-red-600 dark:text-red-300 hover:bg-red-500/30" onClick={async () => { await api.deleteCodexEntry(e.id!); onDeleted(e.id!); }}>{tx('Delete')}</button>
+              <button className="px-2 py-1 rounded text-[11px] hover:bg-[var(--bg-hover)]" onClick={() => setConfirmDel(false)}>{tx('Keep')}</button>
             </>
           ) : (
-            <button className={clsx(btn.icon, 'hover:text-red-400')} title="Delete" onClick={() => setConfirmDel(true)}>
+            <button className={clsx(btn.icon, 'hover:text-red-400')} title={tx('Delete')} onClick={() => setConfirmDel(true)}>
               <Trash2 className="w-4 h-4" />
             </button>
           )
         )}
         <button className={btn.primary} disabled={busy || !dirty || !e.title?.trim()} onClick={save}>
           {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-          {e.id ? 'Save' : 'Add Contact'}
+          {e.id ? tx('Save') : tx('Add Contact')}
         </button>
       </div>
 
@@ -566,7 +567,7 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Camera className="w-4 h-4 text-teal-400" />
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Contact Profile Photo</h3>
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">{tx('Contact Profile Photo')}</h3>
               </div>
               <button className={btn.icon} onClick={() => setShowPhotoModal(false)}>
                 <X className="w-4 h-4" />
@@ -577,17 +578,17 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
             <div className="flex items-center gap-4 p-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
               <ContactAvatar name={e.title} avatar={photoUrlInput || m.avatar} size="xl" shape="square" />
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold truncate">{e.title || 'Untitled Contact'}</div>
-                <div className="text-xs text-[var(--text-muted)] truncate">{m.role || m.company || 'Contact photo preview'}</div>
+                <div className="text-sm font-semibold truncate">{e.title || tx('Untitled Contact')}</div>
+                <div className="text-xs text-[var(--text-muted)] truncate">{m.role || m.company || tx('Contact photo preview')}</div>
                 <div className="text-[11px] text-teal-400 mt-1">
-                  {m.avatar ? 'Photo is set' : 'Showing initials monogram'}
+                  {m.avatar ? tx('Photo is set') : tx('Showing initials monogram')}
                 </div>
               </div>
             </div>
 
             {/* Option 1: Upload from Device */}
             <div className="space-y-1.5">
-              <span className="text-xs font-medium text-[var(--text-secondary)]">Upload image from device</span>
+              <span className="text-xs font-medium text-[var(--text-secondary)]">{tx('Upload image from device')}</span>
               <button
                 type="button"
                 className={clsx(btn.subtle, 'w-full justify-center gap-2 py-2')}
@@ -595,13 +596,13 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
                 onClick={() => fileInputRef.current?.click()}
               >
                 {uploadingPhoto ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4 text-teal-400" />}
-                Choose image file (PNG, JPG, WebP)
+                {tx('Choose image file (PNG, JPG, WebP)')}
               </button>
             </div>
 
             {/* Option 2: Image URL */}
             <div className="space-y-1.5">
-              <span className="text-xs font-medium text-[var(--text-secondary)]">Or link web image URL</span>
+              <span className="text-xs font-medium text-[var(--text-secondary)]">{tx('Or link web image URL')}</span>
               <div className="flex gap-2">
                 <input
                   className={clsx(btn.input, 'flex-1')}
@@ -615,7 +616,7 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
                   disabled={uploadingPhoto || !photoUrlInput.trim()}
                   onClick={handleApplyUrl}
                 >
-                  {uploadingPhoto ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Set'}
+                  {uploadingPhoto ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : tx('Set')}
                 </button>
               </div>
             </div>
@@ -624,11 +625,11 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
             <div className="space-y-1.5 p-3 rounded-xl border border-teal-500/25 bg-teal-500/5">
               <div className="flex items-center gap-1.5 text-xs font-medium text-teal-400">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Generate Portrait with Local AI (NYX / FLUX)</span>
+                <span>{tx('Generate Portrait with Local AI (NYX / FLUX)')}</span>
               </div>
               <input
                 className={clsx(btn.input, 'w-full text-xs')}
-                placeholder="Portrait prompt..."
+                placeholder={tx('Portrait prompt...')}
                 value={aiPrompt}
                 onChange={ev => setAiPrompt(ev.target.value)}
               />
@@ -641,12 +642,12 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
                 {generatingAi ? (
                   <>
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    Generating with FLUX…
+                    {tx('Generating with FLUX…')}
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-3.5 h-3.5" />
-                    Generate AI Portrait
+                    {tx('Generate AI Portrait')}
                   </>
                 )}
               </button>
@@ -655,13 +656,13 @@ export function ContactEditor({ start, index, agentNames, onClose, onSaved, onDe
             {/* Option 4: Remove photo */}
             {m.avatar && (
               <div className="pt-1 border-t border-[var(--border-subtle)] flex justify-between items-center">
-                <span className="text-xs text-[var(--text-muted)]">Revert to initials monogram</span>
+                <span className="text-xs text-[var(--text-muted)]">{tx('Revert to initials monogram')}</span>
                 <button
                   type="button"
                   className="px-2.5 py-1 rounded-lg text-xs text-red-400 hover:bg-red-500/10 flex items-center gap-1.5 transition"
                   onClick={handleRemovePhoto}
                 >
-                  <Trash2 className="w-3.5 h-3.5" />Remove photo
+                  <Trash2 className="w-3.5 h-3.5" />{tx('Remove photo')}
                 </button>
               </div>
             )}

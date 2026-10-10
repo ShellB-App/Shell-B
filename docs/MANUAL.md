@@ -474,10 +474,12 @@ French, every agent gets a note to answer in French unless you write to it in an
   interface and their agents' replies outright; in their own Shell:B it is the starting choice, and they can change
   it in their Settings. Invite and password-reset emails go out in that language.
 - **What is translated**: the login and guest sign-in screens, the guest page, the chat (sidebar, rail, composer,
-  message menus, greeting), the mobile bar and the Settings tab names, with dates and relative times in the language.
-  Panels deeper in (Studio, Codex, Activity, the Settings pages themselves) are still English; translations live in
-  `ui/src/i18n/fr.json`, keyed by the English text, and `tests/i18n_test.py` keeps them complete for every string the
-  code wraps in `t()`. Adding a language is a catalog file plus one line in `ui/src/i18n/index.ts`.
+  message menus, greeting), the mobile bar, every Settings page and the whole Codex (calendar, contacts, secrets and
+  their editors, the sync dialog), with dates and relative times in the language. Studio, Activity, Library, Feeds and
+  the other apps are still English. Translations live in `ui/src/i18n/fr.json`, keyed by the English text, and
+  `tests/i18n_test.py` keeps them complete for every string the code wraps in `t()`. Adding a language is a catalog
+  file plus one line in `ui/src/i18n/index.ts`. To wrap a new panel, run the AST helper in
+  `scripts/i18n_wrap.js` (JSX text, label attributes, toasts) and add the French it lists.
 
 ## Translation
 

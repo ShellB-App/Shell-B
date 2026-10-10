@@ -10,6 +10,7 @@ import {
   isStationPasswordAuthenticated,
   setStationPasswordAuthenticated,
 } from '../kiosk/KioskLockScreen';
+import { t } from '../i18n';
 
 const errText = (e: unknown) => String(e).replace(/^Error: \d+: /, '');
 
@@ -56,35 +57,35 @@ export function AccountTab() {
       {me.via === 'session' ? (
         <>
           <section>
-            <h3 className="text-sm font-medium mb-2">This session</h3>
-            <button className={btn.subtle} onClick={signOut}><LogOut className="w-3.5 h-3.5" />Sign out</button>
+            <h3 className="text-sm font-medium mb-2">{t('This session')}</h3>
+            <button className={btn.subtle} onClick={signOut}><LogOut className="w-3.5 h-3.5" />{t('Sign out')}</button>
           </section>
 
           <TwoStepSection />
           <PasskeysSection />
           <section>
-            <h3 className="text-sm font-medium mb-2">Change password</h3>
+            <h3 className="text-sm font-medium mb-2">{t('Change password')}</h3>
             <form onSubmit={change} className="space-y-2 max-w-sm">
               <input type="text" name="username" value="owner" autoComplete="username" readOnly hidden />
-              <input className={btn.input} type="password" placeholder="Current password" autoComplete="current-password" value={current} onChange={e => setCurrent(e.target.value)} />
-              <input className={btn.input} type="password" placeholder="New password (8+ characters)" autoComplete="new-password" value={next} onChange={e => setNext(e.target.value)} />
-              {msg && <p className={`text-xs ${msg.ok ? 'text-emerald-400' : 'text-red-400'}`}>{msg.text}</p>}
+              <input className={btn.input} type="password" placeholder={t('Current password')} autoComplete="current-password" value={current} onChange={e => setCurrent(e.target.value)} />
+              <input className={btn.input} type="password" placeholder={t('New password (8+ characters)')} autoComplete="new-password" value={next} onChange={e => setNext(e.target.value)} />
+              {msg && <p className={`text-xs ${msg.ok ? 'text-emerald-400' : 'text-red-400'}`}>{t(msg.text)}</p>}
               <button type="submit" className={btn.primary} disabled={busy || !current || next.length < 8}>
-                {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}Change password
+                {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}{t('Change password')}
               </button>
             </form>
           </section>
 
           <section>
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium">Signed-in devices</h3>
-              {others > 0 && <button className={btn.ghost} onClick={() => api.logoutOthers().then(load)}>Sign out the other {others}</button>}
+              <h3 className="text-sm font-medium">{t('Signed-in devices')}</h3>
+              {others > 0 && <button className={btn.ghost} onClick={() => api.logoutOthers().then(load)}>{t('Sign out the other {others}', { others: others })}</button>}
             </div>
             <ul className="divide-y divide-[var(--border-subtle)] border border-[var(--border-subtle)] rounded-lg">
               {sessions.map((s, i) => (
                 <li key={i} className="px-3 py-2 flex items-center justify-between gap-3 text-[13px]">
                   <span className="truncate">{device(s.userAgent)} <span className="text-[var(--text-muted)]">· {s.ip}</span></span>
-                  <span className="shrink-0 text-[11px] text-[var(--text-muted)]">{s.current ? 'this device' : relTime(s.lastSeen * 1000)}</span>
+                  <span className="shrink-0 text-[11px] text-[var(--text-muted)]">{s.current ? t('this device') : relTime(s.lastSeen * 1000)}</span>
                 </li>
               ))}
             </ul>
@@ -94,9 +95,9 @@ export function AccountTab() {
         </>
       ) : (
         <section className="p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] space-y-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Local Host Access</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">{t('Local Host Access')}</h3>
           <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-            You are on this machine (localhost), which is trusted for direct system requests. Open Shell:B from a network device or sign in below to establish full owner session permissions.
+            {t('You are on this machine (localhost), which is trusted for direct system requests. Open Shell:B from a network device or sign in below to establish full owner session permissions.')}
           </p>
         </section>
       )}
@@ -147,10 +148,10 @@ function KioskPinSection() {
       <div>
         <h3 className="text-sm font-medium flex items-center gap-2 text-[var(--text-primary)]">
           <ShieldCheck className="w-4 h-4 text-[var(--accent)]" />
-          Kiosk Screen Lock & PIN
+          {t('Kiosk Screen Lock & PIN')}
         </h3>
         <p className="text-xs text-[var(--text-muted)] mt-1">
-          When in Kiosk mode, leaving the screensaver requires typing in the password or PIN. A PIN can only be used if this station was authenticated prior with the system password.
+          {t('When in Kiosk mode, leaving the screensaver requires typing in the password or PIN. A PIN can only be used if this station was authenticated prior with the system password.')}
         </p>
       </div>
 
@@ -160,10 +161,10 @@ function KioskPinSection() {
           <span className={`w-2.5 h-2.5 rounded-full ${authed ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'bg-amber-400'}`} />
           <div>
             <div className="text-xs font-semibold text-[var(--text-primary)]">
-              {authed ? 'Station Password-Authenticated' : 'Station Authentication Required'}
+              {authed ? t('Station Password-Authenticated') : t('Station Authentication Required')}
             </div>
             <div className="text-[11px] text-[var(--text-muted)]">
-              {authed ? 'PIN unlock enabled for kiosk standby' : 'Must sign in with password before PIN unlock is allowed'}
+              {authed ? t('PIN unlock enabled for kiosk standby') : t('Must sign in with password before PIN unlock is allowed')}
             </div>
           </div>
         </div>
@@ -173,10 +174,10 @@ function KioskPinSection() {
             onClick={handleDeauth}
             className="px-2.5 py-1 text-xs rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition"
           >
-            De-authenticate Station
+            {t('De-authenticate Station')}
           </button>
         ) : (
-          <span className="text-[11px] text-amber-400 font-mono font-medium">Password Required</span>
+          <span className="text-[11px] text-amber-400 font-mono font-medium">{t('Password Required')}</span>
         )}
       </div>
 
@@ -184,12 +185,12 @@ function KioskPinSection() {
       {!authed && (
         <form onSubmit={handleAuthStation} className="space-y-2 max-w-sm p-3 rounded-xl bg-amber-500/5 border border-amber-500/20">
           <div className="text-xs text-[var(--text-secondary)]">
-            Authenticate this station now with your system password to enable PIN unlock:
+            {t('Authenticate this station now with your system password to enable PIN unlock:')}
           </div>
           <div className="flex gap-2">
             <input
               type="password"
-              placeholder="System password"
+              placeholder={t('System password')}
               value={passCandidate}
               onChange={e => { setPassCandidate(e.target.value); setAuthErr(''); }}
               className={`${btn.input} flex-1`}
@@ -199,7 +200,7 @@ function KioskPinSection() {
               disabled={authBusy || !passCandidate}
               className={`${btn.primary} shrink-0`}
             >
-              {authBusy ? 'Verifying…' : 'Authenticate'}
+              {authBusy ? t('Verifying…') : t('Authenticate')}
             </button>
           </div>
           {authErr && <p className="text-xs text-red-400">{authErr}</p>}
@@ -209,7 +210,7 @@ function KioskPinSection() {
       {/* PIN configuration */}
       <form onSubmit={handleSavePin} className="space-y-2 max-w-sm">
         <label className="text-xs text-[var(--text-secondary)] block">
-          Kiosk Screen Unlock PIN (4-8 digits):
+          {t('Kiosk Screen Unlock PIN (4-8 digits):')}
         </label>
         <div className="flex gap-2">
           <input
@@ -226,10 +227,10 @@ function KioskPinSection() {
             disabled={!/^\d{4,8}$/.test(pin) || pin === getKioskPin()}
             className={`${btn.subtle} shrink-0`}
           >
-            Save PIN
+            {t('Save PIN')}
           </button>
         </div>
-        {pinSuccess && <p className="text-xs text-emerald-400">PIN updated successfully.</p>}
+        {pinSuccess && <p className="text-xs text-emerald-400">{t('PIN updated successfully.')}</p>}
       </form>
     </section>
   );
@@ -256,21 +257,21 @@ function AuditLog() {
   return (
     <section>
       <button className="flex items-center justify-between w-full mb-2" onClick={() => setOpen(o => !o)} aria-expanded={open}>
-        <h3 className="text-sm font-medium">Audit log</h3>
-        <span className="text-[11px] text-[var(--text-muted)]">{open ? 'Hide' : 'Show'}</span>
+        <h3 className="text-sm font-medium">{t('Audit log')}</h3>
+        <span className="text-[11px] text-[var(--text-muted)]">{open ? t('Hide') : t('Show')}</span>
       </button>
       {open && (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <select className={btn.input} value={action} onChange={e => setAction(e.target.value)} aria-label="Filter by action">
-              <option value="">All actions</option>
+            <select className={btn.input} value={action} onChange={e => setAction(e.target.value)} aria-label={t('Filter by action')}>
+              <option value="">{t('All actions')}</option>
               {actions.map(a => <option key={a} value={a}>{a}</option>)}
             </select>
-            <span className="text-[11px] text-[var(--text-muted)]">Settings changes, admin actions, approvals and backups, newest first.</span>
+            <span className="text-[11px] text-[var(--text-muted)]">{t('Settings changes, admin actions, approvals and backups, newest first.')}</span>
           </div>
           <ul className="divide-y divide-[var(--border-subtle)] border border-[var(--border-subtle)] rounded-lg max-h-80 overflow-y-auto">
-            {rows === null && <li className="px-3 py-2 text-[12px] text-[var(--text-muted)]">Loading…</li>}
-            {rows?.length === 0 && <li className="px-3 py-2 text-[12px] text-[var(--text-muted)]">Nothing logged yet.</li>}
+            {rows === null && <li className="px-3 py-2 text-[12px] text-[var(--text-muted)]">{t('Loading…')}</li>}
+            {rows?.length === 0 && <li className="px-3 py-2 text-[12px] text-[var(--text-muted)]">{t('Nothing logged yet.')}</li>}
             {rows?.map(r => (
               <li key={r.id} className="px-3 py-1.5 text-[12px] flex items-start gap-3">
                 <span className="shrink-0 w-24 text-[var(--text-muted)]" title={new Date(r.timestamp * 1000).toLocaleString()}>{relTime(r.timestamp * 1000)}</span>
@@ -279,7 +280,7 @@ function AuditLog() {
               </li>
             ))}
           </ul>
-          {more && rows && rows.length > 0 && <button className={btn.ghost} onClick={() => load(rows.length)}>Load more</button>}
+          {more && rows && rows.length > 0 && <button className={btn.ghost} onClick={() => load(rows.length)}>{t('Load more')}</button>}
         </div>
       )}
     </section>
@@ -306,18 +307,17 @@ function TwoStepSection() {
   return (
     <section>
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-medium">Two-step verification</h3>
-        <span className={`text-[11px] ${st.on ? 'text-emerald-400' : 'text-[var(--text-muted)]'}`}>{st.on ? `On · ${st.recoveryLeft} recovery codes left` : 'Off'}</span>
+        <h3 className="text-sm font-medium">{t('Two-step verification')}</h3>
+        <span className={`text-[11px] ${st.on ? 'text-emerald-400' : 'text-[var(--text-muted)]'}`}>{st.on ? t('On · {recoveryLeft} recovery codes left', { recoveryLeft: st.recoveryLeft }) : t('Off')}</span>
       </div>
       <p className="text-xs text-[var(--text-muted)] max-w-[65ch]">
-        Logging in asks for a code from an authenticator app (any TOTP app) after the password. Localhost and the admin key are unaffected.
-        Lost the phone? Use a recovery code, or run <code className="font-mono">auth.py disable-2fa</code> on the Spark.
+        {t('Logging in asks for a code from an authenticator app (any TOTP app) after the password. Localhost and the admin key are unaffected. Lost the phone? Use a recovery code, or run')} <code className="font-mono">auth.py disable-2fa</code> {t('on the Spark.')}
       </p>
       {mode === 'idle' && (
         <div className="flex flex-wrap gap-2 mt-2">
-          {!st.on && <button className={btn.primary} onClick={() => setMode('password')}>Turn on</button>}
-          {st.on && <button className={btn.subtle} onClick={() => setMode('recovery')}>New recovery codes</button>}
-          {st.on && <button className={btn.ghost} onClick={() => setMode('off')}>Turn off</button>}
+          {!st.on && <button className={btn.primary} onClick={() => setMode('password')}>{t('Turn on')}</button>}
+          {st.on && <button className={btn.subtle} onClick={() => setMode('recovery')}>{t('New recovery codes')}</button>}
+          {st.on && <button className={btn.ghost} onClick={() => setMode('off')}>{t('Turn off')}</button>}
         </div>
       )}
       {(mode === 'password' || mode === 'off' || mode === 'recovery') && (
@@ -327,9 +327,9 @@ function TwoStepSection() {
           else { setCodes((await api.twoStepRecovery(password)).recovery); setMode('codes'); }
           setPassword('');
         }); }}>
-          <input className={`${btn.input} flex-1`} type="password" autoComplete="current-password" placeholder="Your password" value={password} onChange={e => setPassword(e.target.value)} autoFocus />
-          <button className={mode === 'off' ? btn.subtle : btn.primary} type="submit" disabled={busy || !password}>{mode === 'password' ? 'Continue' : mode === 'off' ? 'Turn off' : 'Make new codes'}</button>
-          <button className={btn.ghost} type="button" onClick={reset}>Cancel</button>
+          <input className={`${btn.input} flex-1`} type="password" autoComplete="current-password" placeholder={t('Your password')} value={password} onChange={e => setPassword(e.target.value)} autoFocus />
+          <button className={mode === 'off' ? btn.subtle : btn.primary} type="submit" disabled={busy || !password}>{mode === 'password' ? t('Continue') : mode === 'off' ? t('Turn off') : t('Make new codes')}</button>
+          <button className={btn.ghost} type="button" onClick={reset}>{t('Cancel')}</button>
         </form>
       )}
       {mode === 'scan' && setup && (
@@ -338,26 +338,26 @@ function TwoStepSection() {
         }); }}>
           <QrCode text={setup.uri} />
           <div className="space-y-2 flex-1 min-w-0">
-            <p className="text-xs text-[var(--text-secondary)]">Scan this with your authenticator app, or enter the key by hand:</p>
+            <p className="text-xs text-[var(--text-secondary)]">{t('Scan this with your authenticator app, or enter the key by hand:')}</p>
             <code className="block font-mono text-[11px] break-all select-all text-[var(--text-primary)]">{setup.secret}</code>
-            <p className="text-xs text-[var(--text-secondary)]">Then type the code it shows:</p>
+            <p className="text-xs text-[var(--text-secondary)]">{t('Then type the code it shows:')}</p>
             <div className="flex gap-2">
               <input className={`${btn.input} w-32`} inputMode="numeric" autoComplete="one-time-code" placeholder="123 456" value={code} onChange={e => setCode(e.target.value)} />
-              <button className={btn.primary} type="submit" disabled={busy || code.trim().length < 6}>Turn on</button>
-              <button className={btn.ghost} type="button" onClick={reset}>Cancel</button>
+              <button className={btn.primary} type="submit" disabled={busy || code.trim().length < 6}>{t('Turn on')}</button>
+              <button className={btn.ghost} type="button" onClick={reset}>{t('Cancel')}</button>
             </div>
           </div>
         </form>
       )}
       {mode === 'codes' && (
         <div className="mt-2 space-y-2">
-          <p className="text-xs text-[var(--text-secondary)] max-w-[65ch]">Recovery codes: each one opens the app once if the phone is gone. Keep them somewhere safe; they are shown only now.</p>
+          <p className="text-xs text-[var(--text-secondary)] max-w-[65ch]">{t('Recovery codes: each one opens the app once if the phone is gone. Keep them somewhere safe; they are shown only now.')}</p>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 font-mono text-[12px] select-all">
             {codes.map(c => <span key={c} className="px-2 py-1 rounded border border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-center">{c}</span>)}
           </div>
           <div className="flex gap-2">
-            <button className={btn.subtle} onClick={() => navigator.clipboard?.writeText(codes.join('\n')).catch(() => {})}>Copy</button>
-            <button className={btn.primary} onClick={reset}>Done</button>
+            <button className={btn.subtle} onClick={() => navigator.clipboard?.writeText(codes.join('\n')).catch(() => {})}>{t('Copy')}</button>
+            <button className={btn.primary} onClick={reset}>{t('Done')}</button>
           </div>
         </div>
       )}
@@ -372,7 +372,7 @@ function QrCode({ text }: { text: string }) {
   m.forEach((row, y) => row.forEach((on, x) => { if (on) d += `M${x + 4} ${y + 4}h1v1h-1z`; }));
   const n = m.length + 8;
   return (
-    <svg viewBox={`0 0 ${n} ${n}`} className="w-40 h-40 rounded-lg shrink-0" role="img" shapeRendering="crispEdges" aria-label="QR code to scan with your authenticator app">
+    <svg viewBox={`0 0 ${n} ${n}`} className="w-40 h-40 rounded-lg shrink-0" role="img" shapeRendering="crispEdges" aria-label={t('QR code to scan with your authenticator app')}>
       <rect width={n} height={n} fill="#fff" /><path d={d} fill="#000" />
     </svg>
   );
@@ -389,21 +389,21 @@ function SharedLinks() {
   return (
     <section>
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-medium">Shared links</h3>
-        <span className="text-[11px] text-[var(--text-muted)]">{live.length ? `${live.length} live` : 'none live'}</span>
+        <h3 className="text-sm font-medium">{t('Shared links')}</h3>
+        <span className="text-[11px] text-[var(--text-muted)]">{live.length ? t('{length} live', { length: live.length }) : t('none live')}</span>
       </div>
       <p className="text-xs text-[var(--text-muted)] max-w-[65ch]">
-        Right-click a chat or an artifact → <em>Share read-only link</em>. Each link is a snapshot taken at that moment; later edits never show. Links expire after 30 days unless revoked sooner.
-        {!data.host && <> No share host is set (Settings → Network), so links open only for people who can log in here.</>}
+        {t('Right-click a chat or an artifact →')} <em>{t('Share read-only link')}</em>. Each link is a snapshot taken at that moment; later edits never show. Links expire after 30 days unless revoked sooner.
+        {!data.host && <> {t('No share host is set (Settings → Network), so links open only for people who can log in here.')}</>}
       </p>
       {live.length > 0 && (
         <ul className="mt-2 divide-y divide-[var(--border-subtle)] border border-[var(--border-subtle)] rounded-lg">
           {live.map(s => (
             <li key={s.token} className="px-3 py-2 flex items-center gap-3 text-[13px]">
-              <span className="min-w-0 flex-1 truncate">{s.kind === 'artifact' ? 'Artifact · ' : 'Chat · '}{s.title}</span>
-              <span className="shrink-0 text-[11px] text-[var(--text-muted)]">{s.views} view{s.views === 1 ? '' : 's'} · {s.expires ? `until ${new Date(s.expires * 1000).toLocaleDateString()}` : 'no expiry'}</span>
-              <button className={btn.ghost} onClick={() => navigator.clipboard?.writeText(s.url.startsWith('#') ? `${location.origin}/${s.url}` : s.url)}>Copy</button>
-              <button className={`${btn.ghost} text-red-400`} onClick={() => api.revokeShare(s.token).then(load)}>Revoke</button>
+              <span className="min-w-0 flex-1 truncate">{s.kind === 'artifact' ? t('Artifact · ') : t('Chat · ')}{t(s.title)}</span>
+              <span className="shrink-0 text-[11px] text-[var(--text-muted)]">{s.views} view{s.views === 1 ? '' : 's'} · {s.expires ? t('until {v0}', { v0: new Date(s.expires * 1000).toLocaleDateString() }) : t('no expiry')}</span>
+              <button className={btn.ghost} onClick={() => navigator.clipboard?.writeText(s.url.startsWith('#') ? `${location.origin}/${s.url}` : s.url)}>{t('Copy')}</button>
+              <button className={`${btn.ghost} text-red-400`} onClick={() => api.revokeShare(s.token).then(load)}>{t('Revoke')}</button>
             </li>
           ))}
         </ul>
@@ -437,31 +437,31 @@ function PasskeysSection() {
   return (
     <section>
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-medium">Passkeys</h3>
-        <span className="text-[11px] text-[var(--text-muted)]">{keys.length ? `${keys.length} registered` : 'none'}</span>
+        <h3 className="text-sm font-medium">{t('Passkeys')}</h3>
+        <span className="text-[11px] text-[var(--text-muted)]">{keys.length ? t('{length} registered', { length: keys.length }) : 'none'}</span>
       </div>
       <p className="text-xs text-[var(--text-muted)] max-w-[65ch]">
-        Sign in with this device's screen lock or a security key instead of the password. A passkey is tied to the address you make it at ({location.hostname}); make one per address you use. It satisfies two-step verification on its own.
-        {!supported && <> This browser doesn't support passkeys{location.protocol !== 'https:' ? ' (they need HTTPS)' : ''}.</>}
+        {t('Sign in with this device\'s screen lock or a security key instead of the password. A passkey is tied to the address you make it at (')}{location.hostname}{t('); make one per address you use. It satisfies two-step verification on its own.')}
+        {!supported && <> {t('This browser doesn\'t support passkeys')}{location.protocol !== 'https:' ? t(' (they need HTTPS)') : ''}.</>}
       </p>
       {keys.length > 0 && (
         <ul className="mt-2 divide-y divide-[var(--border-subtle)] border border-[var(--border-subtle)] rounded-lg">
           {keys.map(k => (
             <li key={k.id} className="px-3 py-2 flex items-center justify-between gap-3 text-[13px]">
-              <span className="min-w-0 truncate">{k.label} <span className="text-[var(--text-muted)]">· {k.rpId}</span></span>
-              <span className="shrink-0 text-[11px] text-[var(--text-muted)]">{k.lastUsed ? `used ${relTime(k.lastUsed * 1000)}` : `made ${relTime(k.created * 1000)}`}</span>
-              <button className={`${btn.ghost} text-red-400`} onClick={() => { if (confirm(`Remove the passkey “${k.label}”?`)) api.passkeyDelete(k.id).then(load); }}>Remove</button>
+              <span className="min-w-0 truncate">{t(k.label)} <span className="text-[var(--text-muted)]">· {k.rpId}</span></span>
+              <span className="shrink-0 text-[11px] text-[var(--text-muted)]">{k.lastUsed ? t('used {v0}', { v0: relTime(k.lastUsed * 1000) }) : t('made {v0}', { v0: relTime(k.created * 1000) })}</span>
+              <button className={`${btn.ghost} text-red-400`} onClick={() => { if (confirm(t('Remove the passkey “{label}”?', { label: k.label }))) api.passkeyDelete(k.id).then(load); }}>{t('Remove')}</button>
             </li>
           ))}
         </ul>
       )}
-      {supported && !adding && <button className={`${btn.subtle} mt-2`} onClick={() => setAdding(true)}>Add a passkey</button>}
+      {supported && !adding && <button className={`${btn.subtle} mt-2`} onClick={() => setAdding(true)}>{t('Add a passkey')}</button>}
       {adding && (
         <form className="mt-2 flex flex-col sm:flex-row gap-2" onSubmit={add}>
-          <input className={`${btn.input} sm:w-44`} placeholder="Label (e.g. MacBook)" value={label} onChange={e => setLabel(e.target.value)} />
-          <input className={`${btn.input} flex-1`} type="password" autoComplete="current-password" placeholder="Your password" value={password} onChange={e => setPassword(e.target.value)} autoFocus />
-          <button className={btn.primary} type="submit" disabled={busy || !password}>{busy ? 'Waiting for the device…' : 'Create'}</button>
-          <button className={btn.ghost} type="button" onClick={() => { setAdding(false); setErr(''); }}>Cancel</button>
+          <input className={`${btn.input} sm:w-44`} placeholder={t('Label (e.g. MacBook)')} value={label} onChange={e => setLabel(e.target.value)} />
+          <input className={`${btn.input} flex-1`} type="password" autoComplete="current-password" placeholder={t('Your password')} value={password} onChange={e => setPassword(e.target.value)} autoFocus />
+          <button className={btn.primary} type="submit" disabled={busy || !password}>{busy ? t('Waiting for the device…') : t('Create')}</button>
+          <button className={btn.ghost} type="button" onClick={() => { setAdding(false); setErr(''); }}>{t('Cancel')}</button>
         </form>
       )}
       {err && <p className="text-xs text-red-400 mt-2">{err}</p>}

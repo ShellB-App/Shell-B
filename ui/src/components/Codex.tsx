@@ -32,6 +32,7 @@ import { CodexRow as Row } from './codex/CodexRow';
 import { CalendarView } from './codex/CalendarView';
 import { ContactsView } from './codex/ContactsView';
 import { SyncAccountsDialog } from './codex/SyncAccounts';
+import { t as tx } from '../i18n';
 
 // Re-export helpers for external consumers (e.g. Notes.tsx, App.tsx)
 export { parseCodexRoute, TagInput };
@@ -145,20 +146,20 @@ export function Codex({ sub, agentNames }: { sub: string; agentNames: Record<str
     <button onClick={onClick} className={clsx('px-2.5 py-1 rounded-lg text-xs border transition',
       on ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] border-[var(--accent)]/60 font-medium' : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]')}>{label}</button>
   );
-  const title = route.view === 'drafts' ? 'Drafts from agents'
-    : route.view === 'pinned' ? 'Pinned'
-    : route.view === 'unfiled' ? 'Unfiled'
-    : route.view === 'secrets' ? 'API Keys & Secrets'
-    : route.view === 'contacts' ? 'Contacts'
-    : (route.view === 'calendar' || route.view === 'events') ? 'Calendar'
-    : current?.name ?? 'Codex';
+  const title = route.view === 'drafts' ? tx('Drafts from agents')
+    : route.view === 'pinned' ? tx('Pinned')
+    : route.view === 'unfiled' ? tx('Unfiled')
+    : route.view === 'secrets' ? tx('API Keys & Secrets')
+    : route.view === 'contacts' ? tx('Contacts')
+    : (route.view === 'calendar' || route.view === 'events') ? tx('Calendar')
+    : current?.name ?? tx('Codex');
 
   const description = current?.description || (
-    route.view === 'drafts' ? 'What agents saved for you. Agents can already find drafts; accept the ones worth keeping.'
-    : route.view === 'secrets' ? 'Encrypted API keys, tokens, and credentials for external services. Agents can reference them safely by name without exposing the secret values.'
-    : route.view === 'contacts' ? 'People, roles, contact details and notes. Agents search contacts when you refer to people.'
-    : (route.view === 'calendar' || route.view === 'events') ? 'Meetings, milestones and scheduled events. Browse by month or upcoming timeline.'
-    : 'Your long-term reference shelf: notes, links, snippets, files, contacts and calendar events. Agents search it when they need it, so it never crowds their prompt the way memories can.'
+    route.view === 'drafts' ? tx('What agents saved for you. Agents can already find drafts; accept the ones worth keeping.')
+    : route.view === 'secrets' ? tx('Encrypted API keys, tokens, and credentials for external services. Agents can reference them safely by name without exposing the secret values.')
+    : route.view === 'contacts' ? tx('People, roles, contact details and notes. Agents search contacts when you refer to people.')
+    : (route.view === 'calendar' || route.view === 'events') ? tx('Meetings, milestones and scheduled events. Browse by month or upcoming timeline.')
+    : tx('Your long-term reference shelf: notes, links, snippets, files, contacts and calendar events. Agents search it when they need it, so it never crowds their prompt the way memories can.')
   );
 
   const isCalendarView = route.view === 'calendar' || route.view === 'events';
@@ -167,20 +168,20 @@ export function Codex({ sub, agentNames }: { sub: string; agentNames: Record<str
   return (
     <div className="h-full flex min-h-0">
       <aside className={clsx('hidden w-56 shrink-0 flex-col border-r border-[var(--border-subtle)] overflow-y-auto px-2 py-4 gap-0.5', open ? '2xl:flex' : 'md:flex')}>
-        {nav(false, 'Me', () => go('#/codex/me'), <UserRound className="w-4 h-4 text-rose-400" />)}
-        {nav(route.view === 'all' && !route.entry, 'Everything', () => go('#/codex'), <BookMarked className="w-4 h-4 text-indigo-400" />, index?.counts.all)}
-        {nav(route.view === 'secrets', 'API Keys & Secrets', () => go('#/codex/secrets'), <KeyRound className="w-4 h-4 text-rose-400" />, index?.counts.secrets)}
-        {nav(route.view === 'contacts', 'Contacts', () => go('#/codex/contacts'), <User className="w-4 h-4 text-teal-400" />, index?.counts.contacts)}
-        {nav(route.view === 'calendar' || route.view === 'events', 'Calendar', () => go('#/codex/calendar'), <Calendar className="w-4 h-4 text-orange-400" />, index?.counts.events)}
-        {nav(route.view === 'pinned', 'Pinned', () => go('#/codex/pinned'), <Pin className="w-4 h-4" />, index?.counts.pinned)}
-        {nav(route.view === 'drafts', 'Drafts from agents', () => go('#/codex/drafts'), <Inbox className="w-4 h-4" />, index?.counts.drafts, true)}
-        {nav(route.view === 'unfiled', 'Unfiled', () => go('#/codex/unfiled'), <FolderClosed className="w-4 h-4" />, index?.counts.unfiled)}
+        {nav(false, tx('Me'), () => go('#/codex/me'), <UserRound className="w-4 h-4 text-rose-400" />)}
+        {nav(route.view === 'all' && !route.entry, tx('Everything'), () => go('#/codex'), <BookMarked className="w-4 h-4 text-indigo-400" />, index?.counts.all)}
+        {nav(route.view === 'secrets', tx('API Keys & Secrets'), () => go('#/codex/secrets'), <KeyRound className="w-4 h-4 text-rose-400" />, index?.counts.secrets)}
+        {nav(route.view === 'contacts', tx('Contacts'), () => go('#/codex/contacts'), <User className="w-4 h-4 text-teal-400" />, index?.counts.contacts)}
+        {nav(route.view === 'calendar' || route.view === 'events', tx('Calendar'), () => go('#/codex/calendar'), <Calendar className="w-4 h-4 text-orange-400" />, index?.counts.events)}
+        {nav(route.view === 'pinned', tx('Pinned'), () => go('#/codex/pinned'), <Pin className="w-4 h-4" />, index?.counts.pinned)}
+        {nav(route.view === 'drafts', tx('Drafts from agents'), () => go('#/codex/drafts'), <Inbox className="w-4 h-4" />, index?.counts.drafts, true)}
+        {nav(route.view === 'unfiled', tx('Unfiled'), () => go('#/codex/unfiled'), <FolderClosed className="w-4 h-4" />, index?.counts.unfiled)}
         <div className="flex items-center justify-between mt-4 mb-1 px-2.5">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Collections</span>
-          <button className={btn.icon} title="New collection" onClick={() => setNewCol('')}><Plus className="w-3.5 h-3.5" /></button>
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">{tx('Collections')}</span>
+          <button className={btn.icon} title={tx('New collection')} onClick={() => setNewCol('')}><Plus className="w-3.5 h-3.5" /></button>
         </div>
         {newCol !== null && (
-          <input className={clsx(btn.input, 'mb-1')} autoFocus value={newCol} placeholder="Collection name" onChange={e => setNewCol(e.target.value)}
+          <input className={clsx(btn.input, 'mb-1')} autoFocus value={newCol} placeholder={tx('Collection name')} onChange={e => setNewCol(e.target.value)}
             onKeyDown={async e => {
               if (e.key === 'Escape') setNewCol(null);
               if (e.key === 'Enter' && newCol.trim()) {
@@ -191,13 +192,13 @@ export function Codex({ sub, agentNames }: { sub: string; agentNames: Record<str
         )}
         {index?.collections.map(c => nav(route.view === 'collection' && route.collection === c.id, c.name, () => go(`#/codex/c/${c.id}`),
           <FolderClosed className="w-4 h-4 text-indigo-300" />, c.count))}
-        {index && !index.collections.length && newCol === null && <p className="px-2.5 text-[11px] text-[var(--text-muted)]">Group entries by topic: Lab, Work, Projects…</p>}
+        {index && !index.collections.length && newCol === null && <p className="px-2.5 text-[11px] text-[var(--text-muted)]">{tx('Group entries by topic: Lab, Work, Projects…')}</p>}
         {!!index?.tags.length && (
           <>
-            <span className="mt-4 mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Tags</span>
+            <span className="mt-4 mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">{tx('Tags')}</span>
             <div className="flex flex-wrap gap-1 px-2">
               {index.tags.slice(0, 30).map(([t, n]) => (
-                <button key={t} onClick={() => setTag(tag === t ? '' : t)} title={`${n} entries`}
+                <button key={t} onClick={() => setTag(tag === t ? '' : t)} title={tx('{n} entries', { n: n })}
                   className={clsx('px-1.5 py-0.5 rounded text-[11px] border', tag === t ? 'border-[var(--accent)]/60 bg-[var(--bg-hover)] text-[var(--text-primary)]' : 'border-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]')}>#{t}</button>
               ))}
             </div>
@@ -211,16 +212,16 @@ export function Codex({ sub, agentNames }: { sub: string; agentNames: Record<str
         onDrop={e => { e.preventDefault(); setDrag(false); upload([...e.dataTransfer.files]); }}>
         <div className="max-w-4xl mx-auto px-4 py-6 animate-fade-in">
           <div className={clsx('mb-3', open ? '2xl:hidden' : 'md:hidden')}>
-            <select className={btn.input} aria-label="Section" value={route.view === 'collection' ? `#/codex/c/${route.collection}` : route.view === 'all' ? '#/codex' : `#/codex/${route.view}`}
+            <select className={btn.input} aria-label={tx('Section')} value={route.view === 'collection' ? `#/codex/c/${route.collection}` : route.view === 'all' ? '#/codex' : `#/codex/${route.view}`}
               onChange={e => go(e.target.value)}>
-              <option value="#/codex">Everything ({index?.counts.all ?? 0})</option>
-              <option value="#/codex/secrets">API Keys & Secrets ({index?.counts.secrets ?? 0})</option>
-              <option value="#/codex/me">Me</option>
-              <option value="#/codex/contacts">Contacts ({index?.counts.contacts ?? 0})</option>
-              <option value="#/codex/calendar">Calendar ({index?.counts.events ?? 0})</option>
-              <option value="#/codex/pinned">Pinned ({index?.counts.pinned ?? 0})</option>
-              <option value="#/codex/drafts">Drafts from agents ({index?.counts.drafts ?? 0})</option>
-              <option value="#/codex/unfiled">Unfiled ({index?.counts.unfiled ?? 0})</option>
+              <option value="#/codex">{tx('Everything ({v0})', { v0: index?.counts.all ?? 0 })}</option>
+              <option value="#/codex/secrets">{tx('API Keys & Secrets ({v0})', { v0: index?.counts.secrets ?? 0 })}</option>
+              <option value="#/codex/me">{tx('Me')}</option>
+              <option value="#/codex/contacts">{tx('Contacts ({v0})', { v0: index?.counts.contacts ?? 0 })}</option>
+              <option value="#/codex/calendar">{tx('Calendar ({v0})', { v0: index?.counts.events ?? 0 })}</option>
+              <option value="#/codex/pinned">{tx('Pinned ({v0})', { v0: index?.counts.pinned ?? 0 })}</option>
+              <option value="#/codex/drafts">{tx('Drafts from agents ({v0})', { v0: index?.counts.drafts ?? 0 })}</option>
+              <option value="#/codex/unfiled">{tx('Unfiled ({v0})', { v0: index?.counts.unfiled ?? 0 })}</option>
               {index?.collections.map(c => <option key={c.id} value={`#/codex/c/${c.id}`}>{c.name} ({c.count})</option>)}
             </select>
           </div>
@@ -228,21 +229,21 @@ export function Codex({ sub, agentNames }: { sub: string; agentNames: Record<str
             <h1 className="text-2xl font-semibold tracking-tight flex-1 min-w-0 truncate">{title}</h1>
             {current && (
               <div className="relative">
-                <button className={btn.ghost} onClick={() => setColMenu(!colMenu)}>Collection<ChevronDown className="w-3 h-3" /></button>
+                <button className={btn.ghost} onClick={() => setColMenu(!colMenu)}>{tx('Collection')}<ChevronDown className="w-3 h-3" /></button>
                 {colMenu && (
                   <div className="absolute right-0 top-full mt-1 z-30 w-48 p-1 rounded-lg border border-[var(--border-strong)] bg-[var(--bg-secondary)] shadow-xl" onMouseLeave={() => setColMenu(false)}>
                     <button className="w-full text-left px-2.5 py-1.5 rounded text-xs hover:bg-[var(--bg-hover)]" onClick={async () => {
-                      setColMenu(false); const n = prompt('Rename collection', current.name)?.trim();
+                      setColMenu(false); const n = prompt(tx('Rename collection'), current.name)?.trim();
                       if (n) { await api.patchCodexCollection(current.id, { name: n }).catch(e => setError(String(e))); loadIndex(); }
-                    }}>Rename</button>
+                    }}>{tx('Rename')}</button>
                     <button className="w-full text-left px-2.5 py-1.5 rounded text-xs hover:bg-[var(--bg-hover)]" onClick={async () => {
-                      setColMenu(false); const d = prompt('Describe this collection (agents see it)', current.description);
+                      setColMenu(false); const d = prompt(tx('Describe this collection (agents see it)'), current.description);
                       if (d !== null && d !== undefined) { await api.patchCodexCollection(current.id, { description: d }); loadIndex(); }
-                    }}>Edit description</button>
+                    }}>{tx('Edit description')}</button>
                     <button className="w-full text-left px-2.5 py-1.5 rounded text-xs text-red-400 hover:bg-red-500/10" onClick={async () => {
                       setColMenu(false);
-                      if (confirm(`Delete the collection “${current.name}”? Its ${current.count} entries move to Unfiled.`)) { await api.deleteCodexCollection(current.id); go('#/codex'); loadIndex(); }
-                    }}>Delete collection</button>
+                      if (confirm(tx('Delete the collection “{name}”? Its {count} entries move to Unfiled.', { name: current.name, count: current.count }))) { await api.deleteCodexCollection(current.id); go('#/codex'); loadIndex(); }
+                    }}>{tx('Delete collection')}</button>
                   </div>
                 )}
               </div>
@@ -263,7 +264,7 @@ export function Codex({ sub, agentNames }: { sub: string; agentNames: Record<str
               onAccept={async c => { onSaved(await api.patchCodexEntry(c.id, { draft: false })); }}
               onDiscard={async c => { await api.deleteCodexEntry(c.id); setItems(p => p.filter(i => i.id !== c.id)); setAllContacts(p => p.filter(i => i.id !== c.id)); loadIndex(); }}
               onPin={async c => onSaved(await api.patchCodexEntry(c.id, { pinned: !c.pinned }))}
-              onImported={r => { toast(`Imported ${r.added} new, updated ${r.updated}`); loadItems(); loadIndex(); }}
+              onImported={r => { toast(tx('Imported {added} new, updated {updated}', { added: r.added, updated: r.updated })); loadItems(); loadIndex(); }}
               onSync={() => setSyncKind('carddav')}
             />
           ) : !isCalendarView ? (
@@ -271,24 +272,24 @@ export function Codex({ sub, agentNames }: { sub: string; agentNames: Record<str
               <div className="flex flex-wrap gap-2 mb-3">
                 <div className="relative flex-1 min-w-[200px]">
                   <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-                  <input className={clsx(btn.input, 'pl-8')} value={q} onChange={e => setQ(e.target.value)} placeholder="Search by meaning or words" />
+                  <input className={clsx(btn.input, 'pl-8')} value={q} onChange={e => setQ(e.target.value)} placeholder={tx('Search by meaning or words')} />
                 </div>
                 {(['note', 'link', 'snippet', 'contact', 'event', 'secret'] as CodexKind[]).map(k => {
                   const I = KIND[k].icon;
                   return <button key={k} className={btn.subtle} onClick={() => setOpen({ kind: k, title: '', body: '', tags: tag ? [tag] : [], collectionId: defaultCollection, url: '', language: '', meta: {} })}>
-                    <I className={clsx('w-3.5 h-3.5', KIND[k].color)} />{KIND[k].label}</button>;
+                    <I className={clsx('w-3.5 h-3.5', KIND[k].color)} />{tx(KIND[k].label)}</button>;
                 })}
                 <button className={btn.subtle} onClick={() => fileInput.current?.click()} disabled={uploading}>
-                  {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 text-violet-400" />}Files</button>
+                  {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 text-violet-400" />}{tx('Files')}</button>
                 <input ref={fileInput} type="file" multiple hidden onChange={e => { upload([...(e.target.files ?? [])]); e.target.value = ''; }} />
-                <button className={clsx(btn.subtle, 'text-amber-400 border-amber-500/30 hover:bg-amber-500/10')} onClick={autoPopulate} disabled={populating} title="Extract people and calendar events from what Shell:B knows in Memory">
+                <button className={clsx(btn.subtle, 'text-amber-400 border-amber-500/30 hover:bg-amber-500/10')} onClick={autoPopulate} disabled={populating} title={tx('Extract people and calendar events from what Shell:B knows in Memory')}>
                   {populating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                  Auto-populate
+                  {tx('Auto-populate')}
                 </button>
               </div>
               <div className="flex flex-wrap items-center gap-1.5 mb-4">
-                {chip(kind === '', 'All kinds', () => setKind(''))}
-                {(Object.keys(KIND) as CodexKind[]).map(k => chip(kind === k, KIND[k].plural, () => setKind(kind === k ? '' : k)))}
+                {chip(kind === '', tx('All kinds'), () => setKind(''))}
+                {(Object.keys(KIND) as CodexKind[]).map(k => chip(kind === k, tx(KIND[k].plural), () => setKind(kind === k ? '' : k)))}
                 {tag && <button className="ml-1 flex items-center gap-1 px-2 py-1 rounded-lg text-xs border border-[var(--accent)]/60" onClick={() => setTag('')}>#{tag}<X className="w-3 h-3" /></button>}
               </div>
               {popStatus && (
@@ -309,22 +310,22 @@ export function Codex({ sub, agentNames }: { sub: string; agentNames: Record<str
                       <KeyRound className="w-6 h-6" />
                     </div>
                     <div>
-                      <h3 className="text-base font-semibold">No API keys or secrets stored yet</h3>
+                      <h3 className="text-base font-semibold">{tx('No API keys or secrets stored yet')}</h3>
                       <p className="text-xs text-[var(--text-muted)] max-w-md mx-auto mt-1">
-                        Store credentials for external APIs, GitHub tokens, webhooks, or third-party services. Shell:B encrypts them on disk with AES-256-GCM and lets agents use them safely.
+                        {tx('Store credentials for external APIs, GitHub tokens, webhooks, or third-party services. Shell:B encrypts them on disk with AES-256-GCM and lets agents use them safely.')}
                       </p>
                     </div>
                     <div className="flex items-center justify-center gap-2 pt-2">
                       <button className={btn.primary} onClick={() => setOpen({ kind: 'secret', title: '', body: '', tags: [], collectionId: defaultCollection, url: '', language: '', meta: {} })}>
-                        <Plus className="w-3.5 h-3.5" />New Secret / API Key
+                        <Plus className="w-3.5 h-3.5" />{tx('New Secret / API Key')}
                       </button>
                     </div>
                   </div>
                 ) : (
                   <div className="text-center py-16 text-sm text-[var(--text-muted)]">
                     <BookMarked className="w-8 h-8 mx-auto mb-2" />
-                    {query ? 'Nothing matches that search.' : route.view === 'drafts' ? 'No drafts waiting. When an agent saves something to the Codex, it lands here first.'
-                      : 'Nothing here yet. Add a note, contact, event, link or snippet, or drop files anywhere on this page.'}
+                    {query ? tx('Nothing matches that search.') : route.view === 'drafts' ? tx('No drafts waiting. When an agent saves something to the Codex, it lands here first.')
+                      : tx('Nothing here yet. Add a note, contact, event, link or snippet, or drop files anywhere on this page.')}
                   </div>
                 )
               ) : (
@@ -351,13 +352,13 @@ export function Codex({ sub, agentNames }: { sub: string; agentNames: Record<str
               onCreateEvent={d => setOpen({ kind: 'event', title: '', body: '', tags: [], collectionId: defaultCollection, url: '', meta: { date: d || selectedDate } })}
               onAutoPopulate={autoPopulate}
               populating={populating}
-              onImported={r => { toast(`Imported ${r.added} new, updated ${r.updated}`); loadItems(); loadIndex(); }}
+              onImported={r => { toast(tx('Imported {added} new, updated {updated}', { added: r.added, updated: r.updated })); loadItems(); loadIndex(); }}
               onSync={() => setSyncKind('caldav')}
             />
           )}
         </div>
         {drag && <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-[var(--bg-primary)]/60 text-sm font-medium">
-          Drop to add {current ? `to ${current.name}` : 'to the Codex'}</div>}
+          {tx('Drop to add')} {current ? tx('to {name}', { name: current.name }) : tx('to the Codex')}</div>}
       </div>
 
       {open && open.kind === 'contact' && (

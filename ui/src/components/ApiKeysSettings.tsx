@@ -24,6 +24,7 @@ import type { CodexEntry, Provider, Settings } from '../types';
 import { Modal, Toggle, btn, relTime } from './common';
 import { AdminGate } from './Integrations';
 import { HostInput } from './codex/Inputs';
+import { t, tn } from '../i18n';
 
 interface Props {
   settings?: Settings;
@@ -216,10 +217,9 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
             <KeyRound className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-sm font-semibold tracking-tight">API Keys & External Services</h2>
+            <h2 className="text-sm font-semibold tracking-tight">{t('API Keys & External Services')}</h2>
             <p className="text-xs text-[var(--text-muted)] mt-0.5 max-w-2xl leading-relaxed">
-              Store credentials for third-party REST APIs, webhooks, and cloud AI models. External tokens are AES-256-GCM
-              encrypted and injected on-demand into authorized HTTPS requests using placeholder syntax.
+              {t('Store credentials for third-party REST APIs, webhooks, and cloud AI models. External tokens are AES-256-GCM encrypted and injected on-demand into authorized HTTPS requests using placeholder syntax.')}
             </p>
           </div>
         </div>
@@ -239,7 +239,7 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
             }}
           >
             <Plus className="w-3.5 h-3.5" />
-            Add API Key
+            {t('Add API Key')}
           </button>
         </div>
       </div>
@@ -265,7 +265,7 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
               : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
           )}
         >
-          All Credentials ({secrets.length + configuredProvidersCount})
+          {t('All Credentials ({v0})', { v0: secrets.length + configuredProvidersCount })}
         </button>
         <button
           onClick={() => setActiveSection('external')}
@@ -277,7 +277,7 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
           )}
         >
           <KeyRound className="w-3.5 h-3.5 text-rose-400" />
-          External Services ({secrets.length})
+          {t('External Services (')}{secrets.length})
         </button>
         <button
           onClick={() => setActiveSection('cloud')}
@@ -289,14 +289,14 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
           )}
         >
           <Cloud className="w-3.5 h-3.5 text-sky-400" />
-          Cloud AI Providers ({configuredProvidersCount})
+          {t('Cloud AI Providers (')}{configuredProvidersCount})
         </button>
         <a
           href="#/codex/secrets"
           className="ml-auto inline-flex items-center gap-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] text-xs transition"
-          title="Open secrets collection in Codex"
+          title={t('Open secrets collection in Codex')}
         >
-          Open in Codex
+          {t('Open in Codex')}
           <ArrowUpRight className="w-3.5 h-3.5" />
         </a>
       </div>
@@ -307,10 +307,10 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
           <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                External Service Keys (Codex Secrets)
+                {t('External Service Keys (Codex Secrets)')}
               </h3>
               <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
-                Agents use these via placeholder <code className="font-mono text-[var(--text-primary)]">{'{{secret:NAME}}'}</code>. Values are never exposed to LLM prompts.
+                {t('Agents use these via placeholder')} <code className="font-mono text-[var(--text-primary)]">{'{{secret:NAME}}'}</code>. Values are never exposed to LLM prompts.
               </p>
             </div>
             {secrets.length > 3 && (
@@ -318,7 +318,7 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
                 <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
                 <input
                   type="text"
-                  placeholder="Filter keys…"
+                  placeholder={t('Filter keys…')}
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   className={clsx(btn.input, 'pl-8 text-xs h-8')}
@@ -334,10 +334,9 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
           ) : filteredSecrets.length === 0 ? (
             <div className="p-6 rounded-xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-secondary)]/50 text-center space-y-2">
               <KeyRound className="w-6 h-6 text-rose-400/80 mx-auto" />
-              <div className="text-sm font-medium">No external service keys configured</div>
+              <div className="text-sm font-medium">{t('No external service keys configured')}</div>
               <p className="text-xs text-[var(--text-muted)] max-w-md mx-auto">
-                Need Shell:B to query GitHub, push webhooks, fetch weather data, or access external APIs?
-                Save your API keys here so agents can interact securely.
+                {t('Need Shell:B to query GitHub, push webhooks, fetch weather data, or access external APIs? Save your API keys here so agents can interact securely.')}
               </p>
               <button
                 className={clsx(btn.subtle, 'mt-2')}
@@ -354,7 +353,7 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
                 }}
               >
                 <Plus className="w-3.5 h-3.5" />
-                Create your first API key
+                {t('Create your first API key')}
               </button>
             </div>
           ) : (
@@ -379,11 +378,11 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-mono text-sm font-semibold text-[var(--text-primary)]">
-                              {s.title}
+                              {t(s.title)}
                             </span>
                             <button
                               className="text-[11px] font-mono text-[var(--text-muted)] hover:text-[var(--text-primary)] flex items-center gap-1 transition"
-                              title="Copy placeholder tag"
+                              title={t('Copy placeholder tag')}
                               onClick={() => copyToClipboard(`{{secret:${s.title}}}`, s.id)}
                             >
                               {copiedKey === s.id ? (
@@ -406,7 +405,7 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
                                   : 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30'
                               )}
                             >
-                              {approval === 'auto' ? 'Auto-approved' : 'Approval required'}
+                              {approval === 'auto' ? t('Auto-approved') : t('Approval required')}
                             </span>
                           </div>
                           {s.body && (
@@ -422,7 +421,7 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
                           className={btn.subtle}
                           onClick={() => handleReveal(s.id)}
                           disabled={revealingId === s.id}
-                          title={isRevealed ? 'Hide secret value' : 'Temporarily reveal secret (30s)'}
+                          title={isRevealed ? t('Hide secret value') : t('Temporarily reveal secret (30s)')}
                         >
                           {revealingId === s.id ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -431,14 +430,14 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
                           ) : (
                             <Eye className="w-3.5 h-3.5" />
                           )}
-                          {isRevealed ? 'Hide' : 'Reveal'}
+                          {isRevealed ? t('Hide') : t('Reveal')}
                         </button>
                         <button
                           className={btn.subtle}
                           onClick={() => handleOpenEdit(s)}
-                          title="Edit API key settings and hosts"
+                          title={t('Edit API key settings and hosts')}
                         >
-                          Edit
+                          {t('Edit')}
                         </button>
                         {confirmDeleteId === s.id ? (
                           <div className="flex items-center gap-1">
@@ -446,19 +445,19 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
                               className="px-2 py-1 rounded text-[11px] bg-red-500/20 text-red-400 hover:bg-red-500/30 transition"
                               onClick={() => handleDeleteSecret(s.id)}
                             >
-                              Confirm
+                              {t('Confirm')}
                             </button>
                             <button
                               className={btn.ghost}
                               onClick={() => setConfirmDeleteId(null)}
                             >
-                              Cancel
+                              {t('Cancel')}
                             </button>
                           </div>
                         ) : (
                           <button
                             className={clsx(btn.icon, 'hover:text-red-400')}
-                            title="Delete secret"
+                            title={t('Delete secret')}
                             onClick={() => setConfirmDeleteId(s.id)}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -482,7 +481,7 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
                           ) : (
                             <Copy className="w-3.5 h-3.5" />
                           )}
-                          {copiedKey === `raw-${s.id}` ? 'Copied' : 'Copy'}
+                          {copiedKey === `raw-${s.id}` ? t('Copied') : t('Copy')}
                         </button>
                       </div>
                     )}
@@ -496,15 +495,15 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
                           {hosts.length > 3 ? ` +${hosts.length - 3}` : ''}
                         </span>
                       ) : (
-                        <span className="text-amber-400 font-medium">No hosts permitted (cannot be used)</span>
+                        <span className="text-amber-400 font-medium">{t('No hosts permitted (cannot be used)')}</span>
                       )}
                       <span>
-                        {uses > 0 ? `Used ${uses} time${uses === 1 ? '' : 's'}` : 'Unused'}
+                        {uses > 0 ? tn(uses, 'Used {n} time', 'Used {n} times') : t('Unused')}
                       </span>
                       {s.secret?.lastUsed && (
-                        <span>Last used {relTime(s.secret.lastUsed)}</span>
+                        <span>{t('Last used {v0}', { v0: relTime(s.secret.lastUsed) })}</span>
                       )}
-                      <span className="ml-auto">Updated {relTime(s.updatedAt)}</span>
+                      <span className="ml-auto">{t('Updated {v0}', { v0: relTime(s.updatedAt) })}</span>
                     </div>
                   </div>
                 );
@@ -520,18 +519,18 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
           <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                Cloud AI Provider Keys
+                {t('Cloud AI Provider Keys')}
               </h3>
               <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
-                API keys for external LLMs (Claude, Gemini, OpenAI, Mammouth). Handled opt-in via cloud models.
+                {t('API keys for external LLMs (Claude, Gemini, OpenAI, Mammouth). Handled opt-in via cloud models.')}
               </p>
             </div>
             {settings && (
               <div className="flex items-center gap-2">
-                <span className="text-xs text-[var(--text-secondary)]">Cloud AI:</span>
+                <span className="text-xs text-[var(--text-secondary)]">{t('Cloud AI:')}</span>
                 <Toggle
                   on={settings.cloudEnabled}
-                  label="Enable cloud AI"
+                  label={t('Enable cloud AI')}
                   onChange={async v => {
                     await api.saveSettings({ cloudEnabled: v });
                     onSaved();
@@ -562,10 +561,10 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
       <div className="p-3.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[11px] text-[var(--text-muted)] space-y-1.5">
         <div className="flex items-center gap-2 font-medium text-[var(--text-secondary)]">
           <ShieldCheck className="w-4 h-4 text-emerald-400" />
-          <span>Security & Encryption Boundary</span>
+          <span>{t('Security & Encryption Boundary')}</span>
         </div>
         <p className="leading-relaxed">
-          External service API keys are encrypted at rest with AES-256-GCM. The key resides at <code className="font-mono">~/shellb/web/data/codex/.key</code>.
+          {t('External service API keys are encrypted at rest with AES-256-GCM. The key resides at')} <code className="font-mono">~/shellb/web/data/codex/.key</code>.
           Outbound requests verify destination hosts strictly against whitelist rules, bypass redirects, redact confidential values from response buffers,
           and append an entry to the audit log.
         </p>
@@ -576,17 +575,17 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
         <Modal
           open={Boolean(secretModal)}
           onClose={() => setSecretModal(null)}
-          title={secretModal.id ? `Edit Secret: ${secretModal.name}` : 'Add External Service API Key'}
+          title={secretModal.id ? t('Edit Secret: {name}', { name: secretModal.name }) : t('Add External Service API Key')}
           icon={<KeyRound className="w-4 h-4 text-rose-400" />}
         >
           <div className="p-5 space-y-4">
             <div className="space-y-1">
-              <label className="text-xs font-medium text-[var(--text-secondary)]">Secret Name</label>
+              <label className="text-xs font-medium text-[var(--text-secondary)]">{t('Secret Name')}</label>
               <input
                 type="text"
                 autoFocus={!secretModal.id}
                 value={secretModal.name}
-                placeholder="GITHUB_TOKEN, WEATHER_API_KEY..."
+                placeholder={t('GITHUB_TOKEN, WEATHER_API_KEY...')}
                 onChange={e =>
                   setSecretModal({
                     ...secretModal,
@@ -596,20 +595,20 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
                 className={clsx(btn.input, 'font-mono uppercase')}
               />
               <p className="text-[11px] text-[var(--text-muted)]">
-                Capital letters, digits and underscores. Referenced by agents as <code className="font-mono text-[var(--text-primary)]">{`{{secret:${secretModal.name || 'NAME'}}}`}</code>.
+                {t('Capital letters, digits and underscores. Referenced by agents as')} <code className="font-mono text-[var(--text-primary)]">{`{{secret:${secretModal.name || 'NAME'}}}`}</code>.
               </p>
             </div>
 
             <div className="space-y-1">
               <label className="text-xs font-medium text-[var(--text-secondary)]">
-                {secretModal.id ? 'Replace Secret Value (leave blank to keep current)' : 'Secret Value'}
+                {secretModal.id ? t('Replace Secret Value (leave blank to keep current)') : t('Secret Value')}
               </label>
               <div className="relative">
                 <input
                   type={showModalValue ? 'text' : 'password'}
                   autoComplete="new-password"
                   value={secretModal.value}
-                  placeholder={secretModal.id ? 'Paste new value to replace existing…' : 'sk-..., ghp_..., token...'}
+                  placeholder={secretModal.id ? t('Paste new value to replace existing…') : t('sk-..., ghp_..., token...')}
                   onChange={e => setSecretModal({ ...secretModal, value: e.target.value })}
                   className={clsx(btn.input, 'font-mono pr-9')}
                 />
@@ -617,7 +616,7 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
                   type="button"
                   className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                   onClick={() => setShowModalValue(!showModalValue)}
-                  title={showModalValue ? 'Hide' : 'Show'}
+                  title={showModalValue ? t('Hide') : t('Show')}
                 >
                   {showModalValue ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 </button>
@@ -626,12 +625,12 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
 
             <div className="space-y-1">
               <label className="text-xs font-medium text-[var(--text-secondary)]">
-                Description (agents and tools read this to understand usage)
+                {t('Description (agents and tools read this to understand usage)')}
               </label>
               <textarea
                 value={secretModal.description}
                 rows={2}
-                placeholder="Personal access token for GitHub API with repository and issues scope"
+                placeholder={t('Personal access token for GitHub API with repository and issues scope')}
                 onChange={e => setSecretModal({ ...secretModal, description: e.target.value })}
                 className={clsx(btn.input, 'resize-y min-h-[60px]')}
               />
@@ -639,28 +638,28 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
 
             <div className="space-y-1">
               <label className="text-xs font-medium text-[var(--text-secondary)]">
-                Allowed Hosts (https only; e.g. api.github.com, *.github.com)
+                {t('Allowed Hosts (https only; e.g. api.github.com, *.github.com)')}
               </label>
               <HostInput
                 value={secretModal.hosts}
                 onChange={hosts => setSecretModal({ ...secretModal, hosts })}
               />
               <p className="text-[11px] text-[var(--text-muted)]">
-                The key will ONLY be decrypted and sent to requests matching these hosts. Subdomains supported via <code className="font-mono">*.domain.com</code>.
+                {t('The key will ONLY be decrypted and sent to requests matching these hosts. Subdomains supported via')} <code className="font-mono">*.domain.com</code>.
               </p>
             </div>
 
             <label className="flex items-center justify-between gap-3 p-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-tertiary)]">
               <div>
-                <span className="text-xs font-medium text-[var(--text-primary)] block">Ask approval before each use</span>
+                <span className="text-xs font-medium text-[var(--text-primary)] block">{t('Ask approval before each use')}</span>
                 <span className="text-[11px] text-[var(--text-muted)] block">
-                  Wait for confirmation in the chat inbox whenever an agent attempts to send this secret.
+                  {t('Wait for confirmation in the chat inbox whenever an agent attempts to send this secret.')}
                 </span>
               </div>
               <Toggle
                 on={secretModal.approval === 'ask'}
                 onChange={v => setSecretModal({ ...secretModal, approval: v ? 'ask' : 'auto' })}
-                label="Ask before use"
+                label={t('Ask before use')}
               />
             </label>
 
@@ -676,7 +675,7 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
                 onClick={() => setSecretModal(null)}
                 disabled={modalBusy}
               >
-                Cancel
+                {t('Cancel')}
               </button>
               <button
                 className={btn.primary}
@@ -684,7 +683,7 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
                 disabled={modalBusy || (!secretModal.id && !secretModal.value)}
               >
                 {modalBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                {secretModal.id ? 'Save changes' : 'Add API key'}
+                {secretModal.id ? t('Save changes') : t('Add API key')}
               </button>
             </div>
           </div>
@@ -748,8 +747,8 @@ function ProviderCardItem({
           )}
         >
           {p.configured
-            ? `Active · …${p.keyTail}${p.fromEnv ? ` (${p.env})` : ''}`
-            : 'Not configured'}
+            ? t('Active · …{keyTail}{v0}', { keyTail: p.keyTail, v0: p.fromEnv ? ` (${p.env})` : '' })
+            : t('Not configured')}
         </span>
       </div>
 
@@ -761,7 +760,7 @@ function ProviderCardItem({
             className={clsx(btn.input, 'font-mono text-xs')}
             value={key}
             onChange={e => setKey(e.target.value)}
-            placeholder={p.configured ? 'Replace API key…' : 'Enter API key…'}
+            placeholder={p.configured ? t('Replace API key…') : t('Enter API key…')}
             disabled={locked}
           />
           <button
@@ -769,18 +768,18 @@ function ProviderCardItem({
             disabled={locked || (!key.trim() && (id !== 'openai' || base === (p.baseUrl ?? '')))}
             onClick={save}
           >
-            Save
+            {t('Save')}
           </button>
           {p.configured && (
-            <button className={btn.subtle} onClick={runTest} disabled={test.busy} title="Test provider connection">
-              {test.busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Test'}
+            <button className={btn.subtle} onClick={runTest} disabled={test.busy} title={t('Test provider connection')}>
+              {test.busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t('Test')}
             </button>
           )}
         </div>
 
         {id === 'openai' && (
           <label className="block text-[11px] text-[var(--text-muted)] mt-1.5">
-            Base URL (OpenAI or custom endpoint)
+            {t('Base URL (OpenAI or custom endpoint)')}
             <input
               className={clsx(btn.input, 'font-mono text-xs mt-1')}
               value={base}
@@ -797,7 +796,7 @@ function ProviderCardItem({
 
       {test.text && (
         <div className={clsx('text-[11px] px-2 py-1 rounded border', test.ok ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400')}>
-          {test.text}
+          {t(test.text)}
         </div>
       )}
       {error && <div className="text-[11px] text-red-400">{error}</div>}

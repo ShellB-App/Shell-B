@@ -1,5 +1,6 @@
 import { Keyboard } from 'lucide-react';
 import { APPS, useRailOrder, shortcutLabel } from './apps';
+import { t } from '../i18n';
 
 /** Every key the app binds (App.tsx and AppRail.tsx), in one place, so Settings → Shortcuts can list them. */
 const MOD = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl';
@@ -27,16 +28,16 @@ export function KeyboardShortcutsSection() {
   );
   return (
     <section>
-      <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2"><Keyboard className="w-3.5 h-3.5" />Keyboard</h3>
+      <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2"><Keyboard className="w-3.5 h-3.5" />{t('Keyboard')}</h3>
       <div className="rounded-lg border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)]">
         {[...SHORTCUTS, ...tiles].map(s => (
           <div key={s.keys + s.what} className="flex items-start gap-3 px-3 py-2 text-sm">
             <span className="w-36 shrink-0 pt-px"><Key k={s.keys} /></span>
-            <span className="text-[var(--text-secondary)] leading-snug">{s.what}</span>
+            <span className="text-[var(--text-secondary)] leading-snug">{t(s.what)}</span>
           </div>
         ))}
       </div>
-      <p className="text-[11px] text-[var(--text-muted)] mt-2 max-w-[65ch]">The number keys follow the order of the tiles in the app rail; drag tiles to change it.</p>
+      <p className="text-[11px] text-[var(--text-muted)] mt-2 max-w-[65ch]">{t('The number keys follow the order of the tiles in the app rail; drag tiles to change it.')}</p>
     </section>
   );
 }

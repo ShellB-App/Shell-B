@@ -15,6 +15,7 @@ import { toastError } from '../toast';
 import type { CodexEntry } from '../../types';
 import { btn } from '../common';
 import { ContactAvatar } from './ContactAvatar';
+import { t } from '../../i18n';
 
 /** Does the event fall on this day? Daily, weekly, monthly and yearly repeats are expanded here (from the first
  * date on); a custom RRULE is only expanded by the server (codex_sync.occurrences), so it shows on its first date. */
@@ -72,7 +73,7 @@ export function CalendarView({
   const importIcs = async (files: File[]) => {
     if (!files.length) return;
     setImporting(true);
-    try { onImported?.(await api.importCodexIcs(files)); } catch (e) { toastError('Import failed')(e); } finally { setImporting(false); }
+    try { onImported?.(await api.importCodexIcs(files)); } catch (e) { toastError(t('Import failed'))(e); } finally { setImporting(false); }
   };
   const [viewMonth, setViewMonth] = useState(() => {
     const today = new Date();
@@ -182,15 +183,15 @@ export function CalendarView({
         <div className="p-4 rounded-xl border border-orange-500/30 bg-orange-500/5 flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="text-sm font-semibold text-orange-400 flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4" />No events or calendar items yet
+              <Sparkles className="w-4 h-4" />{t('No events or calendar items yet')}
             </div>
             <div className="text-xs text-[var(--text-muted)] mt-0.5">
-              Extract birthdays, anniversaries, and scheduled milestones from your memories automatically.
+              {t('Extract birthdays, anniversaries, and scheduled milestones from your memories automatically.')}
             </div>
           </div>
           <button className={btn.primary} onClick={onAutoPopulate} disabled={populating}>
             {populating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-            Auto-populate from Memories
+            {t('Auto-populate from Memories')}
           </button>
         </div>
       )}
@@ -199,33 +200,33 @@ export function CalendarView({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <h2 className="text-lg font-bold tracking-tight min-w-[180px]">{monthLabel}</h2>
-          <button className={btn.icon} onClick={prevMonth} aria-label="Previous month"><ChevronLeft className="w-4 h-4" /></button>
-          <button className={btn.icon} onClick={nextMonth} aria-label="Next month"><ChevronRight className="w-4 h-4" /></button>
-          <button className={clsx(btn.subtle, 'text-xs px-2 py-1')} onClick={goToday}>Today</button>
+          <button className={btn.icon} onClick={prevMonth} aria-label={t('Previous month')}><ChevronLeft className="w-4 h-4" /></button>
+          <button className={btn.icon} onClick={nextMonth} aria-label={t('Next month')}><ChevronRight className="w-4 h-4" /></button>
+          <button className={clsx(btn.subtle, 'text-xs px-2 py-1')} onClick={goToday}>{t('Today')}</button>
         </div>
 
         <div className="flex items-center gap-2">
           <div className="flex items-center p-0.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-xs">
             <button onClick={() => setMode('grid')}
               className={clsx('px-2.5 py-1 rounded-md transition', mode === 'grid' ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]')}>
-              Month Grid
+              {t('Month Grid')}
             </button>
             <button onClick={() => setMode('agenda')}
               className={clsx('px-2.5 py-1 rounded-md transition', mode === 'agenda' ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]')}>
-              Agenda
+              {t('Agenda')}
             </button>
           </div>
           <button className={clsx(btn.primary, 'bg-orange-600 hover:bg-orange-500 text-white border-transparent')} onClick={() => onCreateEvent(selectedDate)}>
-            <Plus className="w-3.5 h-3.5" />New Event
+            <Plus className="w-3.5 h-3.5" />{t('New Event')}
           </button>
-          <button className={btn.subtle} onClick={() => icsInput.current?.click()} disabled={importing} title="Import events from an .ics file (Google, Apple, Outlook exports; repeats and reminders come along)">
-            {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}Import .ics
+          <button className={btn.subtle} onClick={() => icsInput.current?.click()} disabled={importing} title={t('Import events from an .ics file (Google, Apple, Outlook exports; repeats and reminders come along)')}>
+            {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}{t('Import .ics')}
           </button>
           <input ref={icsInput} type="file" accept=".ics,text/calendar" multiple hidden onChange={e => { importIcs([...(e.target.files ?? [])]); e.target.value = ''; }} />
-          <a className={btn.subtle} href="/api/codex/calendar.ics" download="shellb-calendar.ics" title="Every event as one .ics file; open it in another calendar app">
-            <Download className="w-3.5 h-3.5" />Export .ics
+          <a className={btn.subtle} href="/api/codex/calendar.ics" download="shellb-calendar.ics" title={t('Every event as one .ics file; open it in another calendar app')}>
+            <Download className="w-3.5 h-3.5" />{t('Export .ics')}
           </a>
-          {onSync && <button className={btn.subtle} onClick={onSync} title="Keep a CalDAV calendar in step with this one"><RefreshCw className="w-3.5 h-3.5" />Sync…</button>}
+          {onSync && <button className={btn.subtle} onClick={onSync} title={t('Keep a CalDAV calendar in step with this one')}><RefreshCw className="w-3.5 h-3.5" />{t('Sync…')}</button>}
         </div>
       </div>
 
@@ -233,7 +234,7 @@ export function CalendarView({
         <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] overflow-hidden shadow-sm">
           {/* Weekday headers */}
           <div className="grid grid-cols-7 border-b border-[var(--border-subtle)] bg-[var(--bg-tertiary)] text-center text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] py-2">
-            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+            <span>{t('Mon')}</span><span>{t('Tue')}</span><span>{t('Wed')}</span><span>{t('Thu')}</span><span>{t('Fri')}</span><span>{t('Sat')}</span><span>{t('Sun')}</span>
           </div>
           {/* Days grid */}
           <div className="grid grid-cols-7 divide-x divide-y divide-[var(--border-subtle)]">
@@ -259,9 +260,9 @@ export function CalendarView({
                   {c.birthdays.map(b => (
                     <div key={b.id} onClick={e => { e.stopPropagation(); onOpenContact ? onOpenContact(b) : onSelectDate(c.dateStr); }}
                       className="px-1.5 py-0.5 rounded text-[11px] font-medium truncate bg-teal-500/15 text-teal-400 border border-teal-500/25 hover:bg-teal-500/25 transition flex items-center gap-1"
-                      title={`${b.title}'s Birthday`}>
+                      title={t('{title}\'s Birthday', { title: b.title })}>
                       <Cake className="w-3 h-3 shrink-0" />
-                      <span className="truncate">{b.title}</span>
+                      <span className="truncate">{t(b.title)}</span>
                     </div>
                   ))}
 
@@ -270,7 +271,7 @@ export function CalendarView({
                     <div key={ev.id} onClick={e => { e.stopPropagation(); onOpenEvent(ev); }}
                       className="px-1.5 py-0.5 rounded text-[11px] font-medium truncate bg-orange-500/15 text-orange-400 border border-orange-500/25 hover:bg-orange-500/25 transition">
                       {ev.meta?.time && <span className="font-mono text-[10px] mr-1">{ev.meta.time}</span>}
-                      {ev.title}
+                      {t(ev.title)}
                     </div>
                   ))}
                   {c.events.length + c.birthdays.length > 3 && (
@@ -288,15 +289,15 @@ export function CalendarView({
             <div className="p-4 border-t border-[var(--border-subtle)] bg-[var(--bg-tertiary)]/50">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-semibold text-[var(--text-primary)]">
-                  Schedule for {new Date(selectedDate + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                  {t('Schedule for')} {new Date(selectedDate + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
                 </span>
                 <button className={btn.subtle} onClick={() => onCreateEvent(selectedDate)}>
-                  <Plus className="w-3.5 h-3.5 text-orange-400" />Add event on this date
+                  <Plus className="w-3.5 h-3.5 text-orange-400" />{t('Add event on this date')}
                 </button>
               </div>
 
               {selectedEvents.length === 0 && selectedBirthdays.length === 0 ? (
-                <p className="text-xs text-[var(--text-muted)]">No events scheduled for this day.</p>
+                <p className="text-xs text-[var(--text-muted)]">{t('No events scheduled for this day.')}</p>
               ) : (
                 <div className="space-y-2">
                   {/* Birthdays on selected date */}
@@ -307,10 +308,10 @@ export function CalendarView({
                         <ContactAvatar name={b.title} avatar={b.meta?.avatar} size="sm" shape="circle" />
                         <div>
                           <div className="text-sm font-medium text-teal-400 flex items-center gap-1.5">
-                            <Cake className="w-3.5 h-3.5" />{b.title}’s Birthday
+                            <Cake className="w-3.5 h-3.5" />{t(b.title)}{t('’s Birthday')}
                           </div>
                           <div className="text-xs text-[var(--text-muted)]">
-                            {[b.meta?.role, b.meta?.company].filter(Boolean).join(' · ') || 'Contact in Codex'}
+                            {[b.meta?.role, b.meta?.company].filter(Boolean).join(' · ') || t('Contact in Codex')}
                           </div>
                         </div>
                       </div>
@@ -325,9 +326,9 @@ export function CalendarView({
                       <div className="flex items-center gap-3">
                         <span className="w-2 h-2 rounded-full bg-orange-400" />
                         <div>
-                          <div className="text-sm font-medium">{ev.title}</div>
+                          <div className="text-sm font-medium">{t(ev.title)}</div>
                           <div className="text-xs text-[var(--text-muted)] flex flex-wrap items-center gap-2 mt-0.5">
-                            {ev.meta?.allDay ? 'All day' : ev.meta?.time ? `${ev.meta.time}${ev.meta.endTime ? ` – ${ev.meta.endTime}` : ''}` : ''}
+                            {ev.meta?.allDay ? t('All day') : ev.meta?.time ? `${ev.meta.time}${ev.meta.endTime ? ` – ${ev.meta.endTime}` : ''}` : ''}
                             {ev.meta?.location && <span>· {ev.meta.location}</span>}
                             {ev.meta?.attendees && ev.meta.attendees.length > 0 && (
                               <span className="flex items-center gap-1.5 flex-wrap">
@@ -358,10 +359,10 @@ export function CalendarView({
         /* Agenda view */
         <div className="space-y-4">
           <div className="space-y-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] px-1">Upcoming Events & Milestones ({upcomingEvents.length})</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] px-1">{t('Upcoming Events & Milestones ({length})', { length: upcomingEvents.length })}</h3>
             {upcomingEvents.length === 0 ? (
               <div className="p-6 text-center text-xs text-[var(--text-muted)] rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
-                No upcoming events found.
+                {t('No upcoming events found.')}
               </div>
             ) : (
               upcomingEvents.map(ev => {
@@ -380,16 +381,16 @@ export function CalendarView({
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold truncate">{ev.title}</span>
+                        <span className="text-sm font-semibold truncate">{t(ev.title)}</span>
                         {ev.meta?.recurrence === 'yearly' && (
-                          <span className="px-1.5 py-px rounded text-[10px] uppercase font-mono bg-orange-500/10 text-orange-400 border border-orange-500/25">Yearly</span>
+                          <span className="px-1.5 py-px rounded text-[10px] uppercase font-mono bg-orange-500/10 text-orange-400 border border-orange-500/25">{t('Yearly')}</span>
                         )}
                         {ev.meta?.status && ev.meta.status !== 'confirmed' && (
                           <span className="px-1.5 py-px rounded text-[10px] uppercase font-mono bg-zinc-500/15 text-zinc-400 border border-zinc-500/30">{ev.meta.status}</span>
                         )}
                       </div>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)] mt-1">
-                        {ev.meta?.allDay ? 'All day' : ev.meta?.time ? <span className="flex items-center gap-1 font-mono"><Clock className="w-3 h-3 text-orange-400" />{ev.meta.time}{ev.meta.endTime ? ` – ${ev.meta.endTime}` : ''}</span> : null}
+                        {ev.meta?.allDay ? t('All day') : ev.meta?.time ? <span className="flex items-center gap-1 font-mono"><Clock className="w-3 h-3 text-orange-400" />{ev.meta.time}{ev.meta.endTime ? ` – ${ev.meta.endTime}` : ''}</span> : null}
                         {ev.meta?.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-orange-400" />{ev.meta.location}</span>}
                         {ev.meta?.attendees && ev.meta.attendees.length > 0 && (
                           <span className="flex items-center gap-1.5 flex-wrap">
@@ -416,13 +417,13 @@ export function CalendarView({
 
           {pastEvents.length > 0 && (
             <div className="space-y-2 pt-4 border-t border-[var(--border-subtle)]">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] px-1">Past Events ({pastEvents.length})</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] px-1">{t('Past Events ({length})', { length: pastEvents.length })}</h3>
               {pastEvents.map(ev => (
                 <div key={ev.id} onClick={() => onOpenEvent(ev)}
                   className="flex items-center justify-between p-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/50 hover:bg-[var(--bg-hover)] cursor-pointer transition opacity-70 hover:opacity-100">
                   <div className="flex items-center gap-3">
                     <span className="font-mono text-xs text-[var(--text-muted)]">{ev.meta?.date || (ev.meta as any)?.startDate}</span>
-                    <span className="text-sm font-medium text-[var(--text-secondary)]">{ev.title}</span>
+                    <span className="text-sm font-medium text-[var(--text-secondary)]">{t(ev.title)}</span>
                   </div>
                   <ChevronRight className="w-4 h-4 text-[var(--text-muted)]" />
                 </div>

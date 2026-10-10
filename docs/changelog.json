@@ -2,6 +2,12 @@
   {
     "date": "2026-10-10",
     "area": "Languages",
+    "title": "Settings and the Codex in French",
+    "summary": "Every Settings page (General, Appearance, API keys, Speech, Network, Memory, Shortcuts, System, Notifications, Backups, Changelog, Account, Usage) and the whole Codex (calendar, contacts, secrets, editors, sync) follow the interface language. About 850 more strings."
+  },
+  {
+    "date": "2026-10-10",
+    "area": "Languages",
     "title": "Shell:B in French",
     "summary": "Settings → General → Language (Automatic follows the browser) and a per-guest language in Tools → Guests. The login and guest sign-in screens, the guest page, the chat, the mobile bar and the Settings tabs are translated; agents reply in the person's language; invite and reset emails too. Other panels follow as their strings are wrapped (ui/src/i18n)."
   },

@@ -1,3 +1,4 @@
+import { t as tx } from '../i18n';
 import { useCallback, useEffect, useState } from 'react';
 import clsx from 'clsx';
 import {
@@ -133,19 +134,18 @@ export function AdminGate({ onUnlocked }: { onUnlocked: () => void }) {
   const submit = async () => {
     adminKey.set(key.trim());
     const r = await api.adminCheck().catch(() => ({ ok: false }));
-    if (r.ok) onUnlocked(); else setErr('That key is not right.');
+    if (r.ok) onUnlocked(); else setErr(tx('That key is not right.'));
   };
   return (
     <div className="mb-4 p-3 rounded-xl border border-amber-500/30 bg-amber-500/5">
-      <div className="flex items-center gap-2 text-sm font-medium"><Lock className="w-4 h-4 text-amber-400" />Admin key needed to make changes</div>
+      <div className="flex items-center gap-2 text-sm font-medium"><Lock className="w-4 h-4 text-amber-400" />{tx('Admin key needed to make changes')}</div>
       <p className="text-xs text-[var(--text-muted)] mt-1">
-        Connectors can launch programs on this machine and cloud keys spend money, so changes need the admin key.
-        It is on the server: <code className="font-mono">cat ~/shellb/web/data/admin.key</code>. This browser remembers it.
+        {tx('Connectors can launch programs on this machine and cloud keys spend money, so changes need the admin key. It is on the server:')} <code className="font-mono">cat ~/shellb/web/data/admin.key</code>. {tx('This browser remembers it.')}
       </p>
       <div className="flex gap-2 mt-2">
         <input type="password" className={btn.input} value={key} onChange={e => { setKey(e.target.value); setErr(''); }}
-          placeholder="Admin key" onKeyDown={e => e.key === 'Enter' && key.trim() && submit()} />
-        <button className={btn.primary} disabled={!key.trim()} onClick={submit}><KeyRound className="w-3.5 h-3.5" />Unlock</button>
+          placeholder={tx('Admin key')} onKeyDown={e => e.key === 'Enter' && key.trim() && submit()} />
+        <button className={btn.primary} disabled={!key.trim()} onClick={submit}><KeyRound className="w-3.5 h-3.5" />{tx('Unlock')}</button>
       </div>
       {err && <div className="text-[11px] text-red-400 mt-1">{err}</div>}
     </div>

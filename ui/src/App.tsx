@@ -693,7 +693,7 @@ export function App() {
                 <Telescope className="w-4 h-4 text-teal-500" />Research
               </button>
             ) : library || scheduled || activity || codexRoute !== null || modelsRoute ? (
-              <span className="text-sm font-medium">{library === 'favorites' ? 'Favorites' : library ? 'Library' : scheduled ? 'Scheduled' : activity ? 'Activity' : codexRoute !== null ? (/^me\b/.test(codexRoute) ? 'Me' : /^notes\b/.test(codexRoute) ? 'Notes' : /^contacts\b/.test(codexRoute) ? 'Contacts' : /^(events|calendar)\b/.test(codexRoute) ? 'Calendar' : 'Codex') : 'Models'}</span>
+              <span className="text-sm font-medium">{library === 'favorites' ? t('Favorites') : library ? t('Library') : scheduled ? t('Scheduled') : activity ? t('Activity') : codexRoute !== null ? (/^me\b/.test(codexRoute) ? t('Me') : /^notes\b/.test(codexRoute) ? t('Notes') : /^contacts\b/.test(codexRoute) ? t('Contacts') : /^(events|calendar)\b/.test(codexRoute) ? t('Calendar') : t('Codex')) : t('Models')}</span>
             ) : groupRoute ? (
               <>
                 <button className="text-sm font-medium hover:text-[var(--accent)]" onClick={() => openGroup()}>Projects</button>

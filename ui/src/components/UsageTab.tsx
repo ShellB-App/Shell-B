@@ -5,6 +5,7 @@ import { api } from '../api';
 import type { ModelInfo, UsageReport, UsageRow } from '../types';
 import { btn } from './common';
 import { toastError } from './toast';
+import { t as tx } from '../i18n';
 
 /** Settings → Usage (server/tokens.py `report`): tokens per day split owner / guests / API, per agent and per model,
  * lifetime totals, and optional prices for cloud models. One hue in three lightness steps carries the split; the
@@ -19,8 +20,8 @@ export function UsageTab({ models }: { models: ModelInfo[] }) {
   const [days, setDays] = useState(30);
   const [r, setR] = useState<UsageReport | null>(null);
   const [hover, setHover] = useState<number | null>(null);
-  useEffect(() => { setR(null); api.usage(days).then(setR).catch(toastError('Usage')); }, [days]);
-  if (!r) return <div className="text-xs text-[var(--text-muted)] flex items-center gap-2"><Loader2 className="w-3.5 h-3.5 animate-spin" />Adding up the ledger…</div>;
+  useEffect(() => { setR(null); api.usage(days).then(setR).catch(toastError(tx('Usage'))); }, [days]);
+  if (!r) return <div className="text-xs text-[var(--text-muted)] flex items-center gap-2"><Loader2 className="w-3.5 h-3.5 animate-spin" />{tx('Adding up the ledger…')}</div>;
   const max = Math.max(1, ...r.series.map(d => d.prompt + d.completion));
   const W = 600, H = 160, pad = 2;
   const bw = (W - pad * (r.series.length - 1)) / r.series.length;
@@ -30,8 +31,8 @@ export function UsageTab({ models }: { models: ModelInfo[] }) {
     <div className="space-y-6 max-w-[80ch]">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h3 className="text-sm font-medium flex items-center gap-2"><BarChart3 className="w-4 h-4 text-[var(--accent)]" />Token usage</h3>
-          <p className="text-xs text-[var(--text-muted)] mt-0.5 max-w-[60ch]">Every agent turn's prompt and completion tokens, from the ledger (chat deletion doesn't shrink it). Background work like titles and memory distilling isn't counted.</p>
+          <h3 className="text-sm font-medium flex items-center gap-2"><BarChart3 className="w-4 h-4 text-[var(--accent)]" />{tx('Token usage')}</h3>
+          <p className="text-xs text-[var(--text-muted)] mt-0.5 max-w-[60ch]">{tx('Every agent turn\'s prompt and completion tokens, from the ledger (chat deletion doesn\'t shrink it). Background work like titles and memory distilling isn\'t counted.')}</p>
         </div>
         <div className="flex items-center p-0.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-xs">
           {[7, 30, 90].map(d => (
@@ -48,7 +49,7 @@ export function UsageTab({ models }: { models: ModelInfo[] }) {
           { label: 'Cost (priced models)', value: r.cost === null ? '—' : money(r.cost), sub: r.cost === null ? 'set prices below' : `${days} days` },
         ].map(t => (
           <div key={t.label} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 py-2.5">
-            <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">{t.label}</div>
+            <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">{tx(t.label)}</div>
             <div className="text-lg font-semibold tabular-nums tracking-tight">{t.value}</div>
             {t.sub && <div className="text-[11px] text-[var(--text-muted)]">{t.sub}</div>}
           </div>
@@ -57,12 +58,12 @@ export function UsageTab({ models }: { models: ModelInfo[] }) {
 
       <section>
         <div className="flex items-center justify-between mb-1 text-[11px] text-[var(--text-muted)] h-5">
-          <span>{sel ? `${sel.day} · ${fmt(sel.prompt + sel.completion)} tokens · ${sel.turns} replies` : 'Tokens per day'}</span>
+          <span>{sel ? tx('{day} · {v0} tokens · {turns} replies', { day: sel.day, v0: fmt(sel.prompt + sel.completion), turns: sel.turns }) : tx('Tokens per day')}</span>
           <span className="flex items-center gap-3">
-            {SPLIT.map(s => <span key={s.key} className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'var(--accent)', opacity: s.opacity }} />{s.label}{sel ? ` ${fmt(sel[s.key])}` : ''}</span>)}
+            {SPLIT.map(s => <span key={s.key} className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'var(--accent)', opacity: s.opacity }} />{tx(s.label)}{sel ? ` ${fmt(sel[s.key])}` : ''}</span>)}
           </span>
         </div>
-        <svg viewBox={`0 0 ${W} ${H + 18}`} className="w-full h-auto" role="img" aria-label={`Tokens per day over the last ${days} days`} onMouseLeave={() => setHover(null)}>
+        <svg viewBox={`0 0 ${W} ${H + 18}`} className="w-full h-auto" role="img" aria-label={tx('Tokens per day over the last {days} days', { days: days })} onMouseLeave={() => setHover(null)}>
           {[0.5, 1].map(f => <line key={f} x1={0} x2={W} y1={H - H * f} y2={H - H * f} stroke="var(--border-subtle)" strokeWidth={1} />)}
           {r.series.map((d, i) => {
             const x = i * (bw + pad);
@@ -87,8 +88,8 @@ export function UsageTab({ models }: { models: ModelInfo[] }) {
       </section>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Table title="By agent" rows={r.agents} total={total} />
-        <Table title="By model" rows={r.models} total={total} priced={r.cost !== null} />
+        <Table title={tx('By agent')} rows={r.agents} total={total} />
+        <Table title={tx('By model')} rows={r.models} total={total} priced={r.cost !== null} />
       </div>
 
       <Costs models={models} used={r.models.map(m => m.name)} costs={r.costs} onSaved={() => api.usage(days).then(setR).catch(() => {})} />
@@ -102,10 +103,10 @@ function Table({ title, rows, total, priced }: { title: string; rows: UsageRow[]
       <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-1.5">{title}</h4>
       <table className="w-full text-[12px]">
         <thead className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
-          <tr><th className="text-left font-medium py-1">Name</th><th className="text-right font-medium py-1">Tokens</th><th className="text-right font-medium py-1">Replies</th>{priced && <th className="text-right font-medium py-1">Cost</th>}</tr>
+          <tr><th className="text-left font-medium py-1">{tx('Name')}</th><th className="text-right font-medium py-1">{tx('Tokens')}</th><th className="text-right font-medium py-1">{tx('Replies')}</th>{priced && <th className="text-right font-medium py-1">{tx('Cost')}</th>}</tr>
         </thead>
         <tbody className="divide-y divide-[var(--border-subtle)]">
-          {rows.length === 0 && <tr><td colSpan={4} className="py-2 text-[var(--text-muted)]">Nothing in this window.</td></tr>}
+          {rows.length === 0 && <tr><td colSpan={4} className="py-2 text-[var(--text-muted)]">{tx('Nothing in this window.')}</td></tr>}
           {rows.slice(0, 12).map(x => {
             const n = x.prompt + x.completion;
             return (
@@ -141,7 +142,7 @@ function Costs({ models, used, costs, onSaved }: { models: ModelInfo[]; used: st
   const [draft, setDraft] = useState<Record<string, { in?: number; out?: number }>>(costs);
   const [busy, setBusy] = useState(false);
   useEffect(() => setDraft(costs), [costs]);
-  if (!cloud.length && !Object.keys(costs).length) return <p className="text-[11px] text-[var(--text-muted)]">Prices apply to cloud models; none are configured (Tools & Connectors → Cloud AI).</p>;
+  if (!cloud.length && !Object.keys(costs).length) return <p className="text-[11px] text-[var(--text-muted)]">{tx('Prices apply to cloud models; none are configured (Tools & Connectors → Cloud AI).')}</p>;
   const hidden = cloud.length - names.filter(n => cloud.includes(n)).length;
   const set = (name: string, k: 'in' | 'out', v: string) => setDraft(d => ({ ...d, [name]: { ...d[name], [k]: v === '' ? undefined : Math.max(0, Number(v)) } }));
   const save = async () => {
@@ -150,12 +151,12 @@ function Costs({ models, used, costs, onSaved }: { models: ModelInfo[]; used: st
       const clean = Object.fromEntries(Object.entries(draft).filter(([, v]) => v && (v.in !== undefined || v.out !== undefined)));
       await api.saveSettings({ modelCosts: clean });
       onSaved();
-    } catch (e) { toastError('Prices')(e); } finally { setBusy(false); }
+    } catch (e) { toastError(tx('Prices'))(e); } finally { setBusy(false); }
   };
   return (
     <section className="space-y-2">
-      <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Prices for cloud models ($ per million tokens)</h4>
-      {!names.length && <p className="text-[11px] text-[var(--text-muted)]">No cloud model was used in this period.</p>}
+      <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">{tx('Prices for cloud models ($ per million tokens)')}</h4>
+      {!names.length && <p className="text-[11px] text-[var(--text-muted)]">{tx('No cloud model was used in this period.')}</p>}
       <div className="space-y-1.5">
         {names.map(n => (
           <div key={n} className="flex flex-wrap items-center gap-2 text-[12px]">
@@ -166,9 +167,9 @@ function Costs({ models, used, costs, onSaved }: { models: ModelInfo[]; used: st
         ))}
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {names.length > 0 && <button className={btn.subtle} onClick={save} disabled={busy}>{busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}Save prices</button>}
-        {hidden > 0 && !all && <button className={btn.ghost} onClick={() => setAll(true)}>Show all cloud models ({hidden} more)</button>}
-        {all && <button className={btn.ghost} onClick={() => setAll(false)}>Only models used in this period</button>}
+        {names.length > 0 && <button className={btn.subtle} onClick={save} disabled={busy}>{busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}{tx('Save prices')}</button>}
+        {hidden > 0 && !all && <button className={btn.ghost} onClick={() => setAll(true)}>{tx('Show all cloud models ({hidden} more)', { hidden: hidden })}</button>}
+        {all && <button className={btn.ghost} onClick={() => setAll(false)}>{tx('Only models used in this period')}</button>}
       </div>
     </section>
   );

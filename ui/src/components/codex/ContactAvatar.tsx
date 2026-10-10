@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
+import { t } from '../../i18n';
 
 export type ContactAvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 
@@ -81,7 +82,7 @@ export function ContactAvatar({
       {showImage ? (
         <img
           src={cleanAvatar}
-          alt={name || 'Contact photo'}
+          alt={name || t('Contact photo')}
           className={clsx('w-full h-full object-cover', radius)}
           onError={() => setImgError(true)}
           loading="lazy"
