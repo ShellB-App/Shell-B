@@ -33,10 +33,13 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 
 import auth
+import cell_boot
 import db
 from tools import SANDBOX_IMAGE, TOOLS, ToolResult, _fn
 
-DEV = db.DATA / "devservers"
+# In a guest's cell (cell_boot.CELL) the host runs the container for it (cells.dev_start) and the socket lives in a
+# folder both can reach: the cell's /run/web/dev (SHELLB_DEV_DIR, set by cells._run_args), data/cells/<gid>/web/dev here.
+DEV = Path(os.environ.get("SHELLB_DEV_DIR") or db.DATA / "devservers")
 PORTS = list(range(int(os.environ.get("SHELLB_DEV_PORT", "8210")), int(os.environ.get("SHELLB_DEV_PORT", "8210")) + 8))
 IDLE_S = 30 * 60
 MAX_RUNNING = 4
@@ -56,8 +59,49 @@ def _name(pid: str) -> str:
     return f"shellb-dev-{pid}"
 
 
+# Dev servers the host runs for guests' cells: pid → (socket, the cell's uid, guest id). The preview proxy and the
+# screenshot helper reach them through this; cells.dev_start fills it and stop() clears it.
+_cell_socks: dict[str, tuple[Path, int, str]] = {}
+
+
+def register_cell(pid: str, sock: Path, uid: int, gid: str):
+    _cell_socks[pid] = (sock, uid, gid)
+    _last_use[pid] = time.time()
+
+
+def cell_owner(pid: str) -> str | None:
+    return _cell_socks[pid][2] if pid in _cell_socks else None
+
+
 def _sock(pid: str) -> Path:
-    return DEV / pid / "app.sock"
+    return _cell_socks[pid][0] if pid in _cell_socks else DEV / pid / "app.sock"
+
+
+def _unlink_sock(pid: str):
+    try:
+        _sock(pid).unlink()
+    except OSError:  # a cell's socket sits in the cell's own folder: the container's exit removes it
+        pass
+
+
+def _in_cell() -> bool:
+    return cell_boot.CELL
+
+
+async def _broker(path: str, body: dict, timeout: float = 120) -> dict:
+    """Cell mode: ask the host broker (cells._sandbox, forwarded to 127.0.0.1:8250 by cell/entry.py)."""
+    try:
+        async with httpx.AsyncClient(timeout=timeout, trust_env=False) as c:
+            r = await c.post(f"{cell_boot.SANDBOX_URL}{path}", json=body)
+    except httpx.HTTPError as e:
+        raise RuntimeError(f"The host isn't answering: {type(e).__name__}")
+    if r.status_code != 200:
+        try:
+            why = r.json().get("error") or r.text
+        except ValueError:
+            why = r.text
+        raise RuntimeError(str(why)[:500])
+    return r.json()
 
 
 def config(pid: str) -> dict | None:
@@ -112,24 +156,22 @@ async def _docker(*args, timeout=60) -> tuple[int, str]:
 
 async def running(pid: str) -> bool:
     if _in_cell():
-        return False
+        try:
+            return bool((await _broker("/dev/status", {"pid": pid}, timeout=30)).get("running"))
+        except RuntimeError:
+            return False
     rc, out = await _docker("inspect", "-f", "{{.State.Running}}", _name(pid))
     return rc == 0 and out.strip() == "true"
 
 
 async def logs(pid: str, n: int = 200) -> str:
     if _in_cell():
-        return ""
+        try:
+            return str((await _broker("/dev/logs", {"pid": pid, "lines": n}, timeout=30)).get("logs") or "")
+        except RuntimeError as e:
+            return f"(no logs: {e})"
     rc, out = await _docker("logs", "--tail", str(n), _name(pid))
     return out if rc == 0 else ""
-
-
-CELL_NOTE = "Live dev servers aren't part of your Shell:B yet: they need Docker on the host (static previews work)."
-
-
-def _in_cell() -> bool:
-    import cell_boot
-    return cell_boot.CELL
 
 
 async def status(pid: str) -> dict:
@@ -137,9 +179,14 @@ async def status(pid: str) -> dict:
         cfg, err = config(pid), None
     except ValueError as e:
         cfg, err = None, str(e)
-    if _in_cell():  # a guest's container has no Docker (cells.py); the canvas shows the note instead of a start button
-        return {"configured": cfg is not None, "error": err or (CELL_NOTE if cfg else None), "running": False, "port": None,
-                "preview": None, "ticket": None, "command": cfg and cfg["command"], "idleStopsIn": None, "unavailable": True}
+    if _in_cell():  # the host runs it and owns the preview host and ticket (cells.dev_status)
+        try:
+            st = await _broker("/dev/status", {"pid": pid}, timeout=30)
+        except RuntimeError as e:
+            st, err = {"running": False, "port": None, "preview": None, "ticket": None}, err or str(e)
+        return {"configured": cfg is not None, "error": err, "running": bool(st.get("running")), "port": st.get("port"),
+                "preview": st.get("preview"), "ticket": st.get("ticket"), "command": cfg and cfg["command"],
+                "idleStopsIn": max(0, int(IDLE_S - (time.time() - _last_use.get(pid, time.time())))) if st.get("running") else None}
     up = await running(pid)
     port = port_for(pid, assign=False)
     base = preview_base(pid)
@@ -151,10 +198,35 @@ async def status(pid: str) -> dict:
 
 async def stop(pid: str):
     if _in_cell():
-        return
-    await _docker("rm", "-f", _name(pid))
+        try:
+            await _broker("/dev/stop", {"pid": pid}, timeout=60)
+        except RuntimeError:
+            pass
+    else:
+        await _docker("rm", "-f", _name(pid))
     _last_use.pop(pid, None)
-    _sock(pid).unlink(missing_ok=True)
+    _unlink_sock(pid)
+    _cell_socks.pop(pid, None)
+
+
+async def _make_room(pid: str):
+    """At most MAX_RUNNING dev servers on this machine (the owner's and guests' together): the least recently used go."""
+    live = [k for k in list(_last_use) if k != pid]
+    for k in sorted(live, key=lambda k: _last_use[k])[:max(0, len(live) - MAX_RUNNING + 1)]:
+        await stop(k)
+
+
+async def _wait_up(pid: str) -> int | None:
+    """Up to ~30 s for installs-free startups (uvicorn, node, flask): the first HTTP status, or None."""
+    code = None
+    for _ in range(60):
+        await asyncio.sleep(0.5)
+        if not await running(pid):
+            break
+        code = await _probe(pid)
+        if code is not None:
+            break
+    return code
 
 
 async def _probe(pid: str) -> int | None:
@@ -165,46 +237,51 @@ async def _probe(pid: str) -> int | None:
         return None
 
 
+def boot_command(cfg: dict, sock_mode: int = 0o600) -> str:
+    """What runs in the container: socat bridges /run/dev/app.sock to the app's port, then the app itself. socat's
+    own connection-refused noise (while the app boots) would bury the app's tracebacks in the logs."""
+    return (f"socat UNIX-LISTEN:/run/dev/app.sock,fork,mode={sock_mode:o} TCP:127.0.0.1:{cfg['port']} 2>/dev/null & "
+            f"exec bash -c {shlex.quote(cfg['command'])}")
+
+
+def run_args(cfg: dict, name: str, ws: Path, devdir: Path, uid: int, gid: int, label: str, sock_mode: int = 0o600,
+             git_ro: bool = True) -> list[str]:
+    """The hardened `docker run` for a dev server (the owner's, or a cell's with its uid and folders)."""
+    env = [x for k, v in {**cfg["env"], "PORT": str(cfg["port"]), "HOST": "127.0.0.1", "HOME": "/tmp",
+                           "PYTHONUNBUFFERED": "1", "NODE_ENV": "development"}.items() for x in ("-e", f"{k}={v}")]
+    return ["run", "-d", "--name", name, "--label", label, "--network", "none",
+            "--cap-drop", "ALL",  # see tools.run_code for why not no-new-privileges
+            "--memory", "2g", "--cpus", "2", "--pids-limit", "256", "--read-only", "--tmpfs", "/tmp:rw,size=256m",
+            "--user", f"{uid}:{gid}", *env,
+            # --mount (not -v): a missing source is an error, never a root-owned folder conjured into place
+            "--mount", f"type=bind,src={ws},dst=/work", *(["-v", f"{ws}/.git:/work/.git:ro"] if git_ro and (ws / ".git").is_dir() else []),
+            "-v", f"{devdir}:/run/dev", "-w", "/work", SANDBOX_IMAGE, "bash", "-c", boot_command(cfg, sock_mode)]
+
+
 async def start(pid: str) -> dict:
     """(Re)start the project's server and wait until it answers HTTP. Returns status plus a log tail."""
-    if _in_cell():
-        raise RuntimeError(CELL_NOTE)
     cfg = config(pid)
     if not cfg:
         raise ValueError(f"No {CONFIG} in the project. Write one first, e.g. "
                          '{"command": "uvicorn server.main:app --host 127.0.0.1 --port 8000", "port": 8000}')
     async with _locks.setdefault(pid, asyncio.Lock()):
         await stop(pid)
-        live = [k for k in list(_last_use) if k != pid]
-        for k in sorted(live, key=lambda k: _last_use[k])[:max(0, len(live) - MAX_RUNNING + 1)]:
-            await stop(k)
         (DEV / pid).mkdir(parents=True, exist_ok=True)
-        ws = _root(pid)
-        port = cfg["port"]
-        # socat's own connection-refused noise (while the app boots) would bury the app's tracebacks in the logs
-        boot = (f"socat UNIX-LISTEN:/run/dev/app.sock,fork,mode=600 TCP:127.0.0.1:{port} 2>/dev/null & "
-                f"exec bash -c {shlex.quote(cfg['command'])}")
-        env = [x for k, v in {**cfg["env"], "PORT": str(port), "HOST": "127.0.0.1", "HOME": "/tmp",
-                               "PYTHONUNBUFFERED": "1", "NODE_ENV": "development"}.items() for x in ("-e", f"{k}={v}")]
-        rc, out = await _docker(
-            "run", "-d", "--name", _name(pid), "--label", "shellb.dev=1", "--network", "none",
-            "--cap-drop", "ALL",  # see tools.run_code for why not no-new-privileges
-            "--memory", "2g", "--cpus", "2", "--pids-limit", "256", "--read-only", "--tmpfs", "/tmp:rw,size=256m",
-            "--user", f"{os.getuid()}:{os.getgid()}", *env,
-            "-v", f"{ws}:/work", *(["-v", f"{ws}/.git:/work/.git:ro"] if (ws / ".git").is_dir() else []),
-            "-v", f"{DEV / pid}:/run/dev", "-w", "/work", SANDBOX_IMAGE, "bash", "-c", boot)
-        if rc != 0:
-            raise RuntimeError(f"docker run failed: {out.strip()[:800]}")
+        if _in_cell():
+            # the host runs the container (cells.dev_start) as this cell's uid, bound to this project and this folder;
+            # the folder must let the host in to reach the socket (the cell's umask makes it private otherwise)
+            for d in (DEV, DEV / pid):
+                os.chmod(d, 0o755)
+            _unlink_sock(pid)
+            await _broker("/dev/start", {"pid": pid, "command": cfg["command"], "port": cfg["port"], "env": cfg["env"]}, timeout=90)
+        else:
+            await _make_room(pid)
+            rc, out = await _docker(*run_args(cfg, _name(pid), _root(pid), DEV / pid, os.getuid(), os.getgid(), "shellb.dev=1"))
+            if rc != 0:
+                raise RuntimeError(f"docker run failed: {out.strip()[:800]}")
+            port_for(pid)
         _last_use[pid] = time.time()
-        port_for(pid)
-        code = None
-        for _ in range(60):  # up to ~30 s for installs-free startups (uvicorn, node, flask)
-            await asyncio.sleep(0.5)
-            if not await running(pid):
-                break
-            code = await _probe(pid)
-            if code is not None:
-                break
+        code = await _wait_up(pid)
         st = await status(pid)
         st["httpStatus"] = code
         st["logs"] = (await logs(pid, 60))[-4000:]
@@ -219,7 +296,7 @@ async def reaper():
                 await stop(pid)
             elif not await running(pid):  # it crashed: forget it but keep the exited container, so its logs stay readable
                 _last_use.pop(pid, None)
-                _sock(pid).unlink(missing_ok=True)
+                _unlink_sock(pid)
 
 
 async def adopt():
@@ -380,8 +457,7 @@ async def _proxy_http(pid, scope, receive, send, h, path, qs, set_cookie=None):
     if h.get("cookie") and _strip_cookie(h["cookie"]):
         headers.append(("cookie", _strip_cookie(h["cookie"])))
     headers += [("host", h.get("host", "localhost")), ("x-forwarded-proto", "http")]
-    transport = httpx.AsyncHTTPTransport(uds=str(_sock(pid)))
-    async with httpx.AsyncClient(transport=transport, timeout=httpx.Timeout(120, connect=5)) as c:
+    async with httpx.AsyncClient(transport=_transport(pid), timeout=httpx.Timeout(120, connect=5)) as c:
         try:
             req = c.build_request(scope["method"], f"http://app{path}" + (f"?{fwd_qs}" if fwd_qs else ""),
                                   headers=headers, content=body)
@@ -419,10 +495,42 @@ async def _proxy_http(pid, scope, receive, send, h, path, qs, set_cookie=None):
             await r.aclose()
 
 
+def _transport(pid: str) -> httpx.AsyncHTTPTransport:
+    """A cell's socket sits in a folder the cell writes: connect only to a socket its uid owns (cells._CellSocket)."""
+    if pid in _cell_socks:
+        import httpcore
+
+        import cells
+        sock, uid, _gid = _cell_socks[pid]
+        t = httpx.AsyncHTTPTransport()
+        t._pool = httpcore.AsyncConnectionPool(uds="dev", network_backend=cells._CellSocket(sock, uid))
+        return t
+    return httpx.AsyncHTTPTransport(uds=str(_sock(pid)))
+
+
+def _sock_ok(pid: str) -> bool:
+    """For the WebSocket hop, which has no pluggable backend: the same ownership check, just before connecting."""
+    if pid not in _cell_socks:
+        return True
+    import stat
+    sock, uid, _gid = _cell_socks[pid]
+    try:
+        fd = os.open(sock, os.O_PATH | os.O_NOFOLLOW)
+    except OSError:
+        return False
+    try:
+        st = os.fstat(fd)
+        return stat.S_ISSOCK(st.st_mode) and st.st_uid == uid
+    finally:
+        os.close(fd)
+
+
 async def _proxy_ws(pid, scope, receive, send):
     import websockets
     qs = scope.get("query_string", b"").decode("latin-1")
     try:
+        if not _sock_ok(pid):
+            raise OSError("not the cell's socket")
         upstream = await websockets.unix_connect(str(_sock(pid)), f"ws://app{scope['path']}" + (f"?{qs}" if qs else ""),
                                                  subprotocols=scope.get("subprotocols") or None, open_timeout=5)
     except Exception:
@@ -513,30 +621,24 @@ async def stop_proxy():
 # ── screenshots through the proxy ───────────────────────────────────────────
 
 async def screenshot(pid: str, path: str, width: int, height: int, max_tiles: int = 1) -> list[bytes]:
-    import math
-    import uuid
+    """Viewport tiles of a page on the running dev server, rendered through the preview proxy (localhost trust)."""
     import projects
+    if _in_cell():  # the host's Firefox renders it through its own proxy (cells.shot)
+        return await cell_shot({"pid": pid, "path": path, "width": width, "height": height, "pages": max_tiles, "live": True})
     port = port_for(pid)
     path, _, qs = ("/" + path.lstrip("/")).partition("?")
-    base = f"http://127.0.0.1:{port}{path}?" + (qs + "&" if qs else "")
+    return await projects.shoot(f"http://127.0.0.1:{port}{path}?" + (qs + "&" if qs else ""), width, height, max_tiles, 900)
 
-    def url(y, t):
-        return f"{base}__shot={t}&__y={y}&__hold=900"
 
-    token = uuid.uuid4().hex
-    first = await projects._firefox_shot(url(0, token), width, height)
-    if not first:
-        token = uuid.uuid4().hex
-        first = await projects._firefox_shot(url(0, token), width, height)
-    if not first:
+async def cell_shot(body: dict) -> list[bytes]:
+    """Cell mode: screenshots come from the host's Firefox (cells.shot); the tiles travel back base64-encoded."""
+    import base64
+    try:
+        out = await _broker("/shot", body, timeout=240)
+    except RuntimeError as e:
+        print(f"cell screenshot: {e}")
         return []
-    tiles = [first]
-    page_h = projects._shot_heights.pop(token, (0, height))[1] or height
-    n = max(1, min(max_tiles, math.ceil((page_h - 2) / height)))
-    if n > 1:
-        rest = await asyncio.gather(*(projects._firefox_shot(url(k * height, uuid.uuid4().hex), width, height) for k in range(1, n)))
-        tiles += [t for t in rest if t]
-    return tiles
+    return [base64.b64decode(t) for t in out.get("tiles") or []]
 
 
 # ── HTTP API for the Studio UI ──────────────────────────────────────────────

@@ -260,7 +260,8 @@ in `guests.init`), the full UI learned cell mode (`ui/src/cell.ts`: host apps an
 the gear menu, Settings → Account and the palette, Report flags on replies, a start screen fed by `GET/POST
 /api/guest/cell`), cell-mode `/api` strays answer a JSON 404 (`cell_boot.finish`), and dev servers and screenshots say
 they aren't available. The in-process guest app stays as the per-guest fallback (untick "Their own Shell:B").
-Still open (2b): live dev servers and screenshots through the broker.
+Later the same day phase 2b landed: live dev servers and screenshots run through the broker (`cells.dev_start`,
+`cells.shot`; MANUAL § Shell:B Guest → Own container has the mechanics). Nothing of the plan is open.
 
 ## Verification
 - **Unit tests (`tests/cells_test.py`):**

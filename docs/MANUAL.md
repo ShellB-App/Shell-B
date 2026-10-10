@@ -701,8 +701,8 @@ Friends and coworkers can have their own Shell:B on this machine, without access
   palette carry the gateway's own panels (Account and security, Your devices, About and limits, Report to Evie, Sign
   out), each reply has a Report flag, and the sidebar shows whose Shell:B it is. While the container boots, the sign-in
   screen says "Starting your Shell:B…" (`GET/POST /api/guest/cell` on the gateway) and offers Try again if it fails.
-  Inside a cell, host-only `/api` paths answer a JSON 404, dev servers and screenshots say they aren't available there
-  yet, and the status probe asks the broker for the sandbox instead of Docker.
+  Inside a cell, host-only `/api` paths answer a JSON 404 and the status probe asks the broker for the sandbox instead
+  of Docker. Dev servers and screenshots work through the broker (below).
 - **The lighter guest app** (untick *Their own Shell:B* on a guest's row; also what guests had before): an installable
   app (guest.html) with chats, web search, offline wiki and law, maps and sky tools, pictures, music, sound, Kokoro
   voices, the code sandbox, artifacts, file uploads and voice mode, plus Notes (their own Markdown notes with
@@ -738,9 +738,20 @@ Friends and coworkers can have their own Shell:B on this machine, without access
   uid with only that chat's or project's folder mounted; one run at a time per cell), and web access goes through a
   filtered proxy on the host (`cells._Egress`: public addresses only, ports 80/443, per-cell caps), so web reading, Research
   sources, Shopping, Codex snapshots and `git clone` work; the cell reports each turn so `turnsPerDay`/`tokensPerDay`
-  apply. Not in cells yet (Phase 2b): live dev
-  servers and agent screenshots (no Docker or Firefox in the container; static previews work). Deleting the guest
-  removes the container and wipes its data.
+  apply. **Dev servers** (phase 2b, 2026-10-10): the
+  cell's `devserver.py` asks the broker (`POST /dev/start|status|stop|logs` on the sandbox socket); the host runs the
+  project's container (`devserver.run_args`, label `shellb.celldev=<gid>`) as the cell's uid with only that project bound at
+  /work and the socket in `data/cells/<gid>/web/dev/<pid>/app.sock`, a folder the cell made (0755, socket mode 666) so
+  the cell reaches its own app (probes, `http_request`) and the host's preview proxy serves the guest's browser on the
+  project's preview host (`p-<id>.<previewHost>`) with a ticket the host signs; the proxy connects only to a socket the
+  cell's uid owns (`cells._CellSocket`), never through a symlink. Dev servers share `MAX_RUNNING` and the idle reaper
+  with the owner's; a cell's stop and a guest's deletion remove them. **Screenshots**: `projects.screenshot` and
+  `devserver.screenshot` post to the broker's `/shot`; the host's Firefox renders a static page through the guest
+  gateway under the project's frame key (`/api/k/p-<pid>.<mac>/projects/<pid>/raw/…`, signed with the cell's frame
+  secret) and a live page through the preview proxy's port; the page's height beacon lands on the gateway's
+  `POST /api/projects/_shotinfo/<token>`, accepted only for tokens `projects.shoot` made. Every bind source inside the
+  cell's data is checked from a root helper to be a real directory with no symlink in its path (`cells._real_dir`, the
+  sandbox too). Deleting the guest removes the container and wipes its data.
 
 ## Login
 

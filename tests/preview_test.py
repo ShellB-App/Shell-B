@@ -65,6 +65,28 @@ class PreviewTickets(unittest.TestCase):
         finally:
             db.kv_set("settings", settings)
 
+    def test_a_cells_dev_server_is_reached_by_its_own_socket(self):
+        """cells.dev_start registers the socket in the cell's folder; the proxy uses it and only as the cell's own socket."""
+        import os
+        import tempfile
+        from pathlib import Path
+        sock = Path(tempfile.mkdtemp(prefix="celldev")) / "app.sock"
+        devserver.register_cell(PID, sock, os.getuid(), "guest-0123456789ab")
+        try:
+            self.assertEqual(devserver._sock(PID), sock)
+            self.assertEqual(devserver.cell_owner(PID), "guest-0123456789ab")
+            self.assertFalse(devserver._sock_ok(PID))  # nothing there yet
+            # a ticketed request answers 503 (stopped) rather than 404: the proxy knows the project
+            self.assertEqual(call(f"__pt={devserver.preview_ticket(PID)}"), 503)
+            sock.symlink_to("/dev/null")
+            self.assertFalse(devserver._sock_ok(PID))  # never through a symlink
+            t = devserver._transport(PID)
+            self.assertEqual(type(t._pool._network_backend).__name__, "_CellSocket")
+            self.assertEqual(call(f"__pt={devserver.preview_ticket(PID)}"), 502)  # the planted link isn't connected to
+        finally:
+            asyncio.run(devserver.stop(PID))
+            self.assertIsNone(devserver.cell_owner(PID))
+
     def test_host_names_the_project(self):
         settings = db.kv_get("settings", {})
         try:

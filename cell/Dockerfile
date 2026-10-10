@@ -9,10 +9,11 @@ FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 
-# libgl1 and libglib2.0-0 for opencv-python, libsndfile1 for soundfile, tzdata so the guest's day matches the host's
+# libgl1 and libglib2.0-0 for opencv-python, libsndfile1 for soundfile, tzdata so the guest's day matches the host's,
+# git for Studio and Code projects (every project is a repository; clones go out through the egress proxy)
 RUN apt-get update \
  && apt-get install -y --no-install-recommends python3.12 python3.12-venv libgl1 libglib2.0-0 libsndfile1 \
-      ca-certificates tzdata \
+      ca-certificates tzdata git \
  && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt /opt/requirements.txt

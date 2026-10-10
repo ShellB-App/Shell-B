@@ -547,16 +547,25 @@ async def _firefox_shot(url: str, w: int, h: int) -> bytes | None:
 async def screenshot(pid: str, rel: str, width: int, height: int, max_tiles: int = 1, hold_ms: int = 900) -> list[bytes]:
     """Viewport-sized PNG tiles of a page, top to bottom (scrolling keeps 100vh layouts honest)."""
     from urllib.parse import quote
-    token = uuid.uuid4().hex
+    import cell_boot
+    if cell_boot.CELL:  # no Firefox in a guest's container: the host renders the page through the gateway (cells.shot)
+        import devserver
+        return await devserver.cell_shot({"pid": pid, "path": rel, "width": width, "height": height, "pages": max_tiles,
+                                          "live": False, "hold": hold_ms})
     rel, _, qs = rel.partition("?")
-    base = f"{SELF}/api/projects/{pid}/raw/{quote(rel)}?" + (qs + "&" if qs else "")
+    return await shoot(f"{SELF}/api/projects/{pid}/raw/{quote(rel)}?" + (qs + "&" if qs else ""), width, height, max_tiles, hold_ms)
 
+
+async def shoot(base: str, width: int, height: int, max_tiles: int = 1, hold_ms: int = 900) -> list[bytes]:
+    """Tiles of the page at `base` (a URL ending in `?` or `&`, ready for the shot parameters) in headless Firefox. The
+    page's injected snippet (SHOT_SNIPPET) reports its height for the token, which decides how many tiles follow."""
     def url(y, t):
         return f"{base}__shot={t}&__y={y}&__hold={hold_ms}"
 
+    token = shot_token()
     first = await _firefox_shot(url(0, token), width, height)
     if not first:  # snap Firefox occasionally hangs on startup; one retry clears it
-        token = uuid.uuid4().hex
+        token = shot_token()
         first = await _firefox_shot(url(0, token), width, height)
     if not first:
         return []
@@ -564,9 +573,35 @@ async def screenshot(pid: str, rel: str, width: int, height: int, max_tiles: int
     page_h = _shot_heights.pop(token, (0, height))[1] or height
     n = max(1, min(max_tiles, math.ceil((page_h - 2) / height)))
     if n > 1:
-        rest = await asyncio.gather(*(_firefox_shot(url(k * height, uuid.uuid4().hex), width, height) for k in range(1, n)))
+        rest = await asyncio.gather(*(_firefox_shot(url(k * height, shot_token()), width, height) for k in range(1, n)))
         tiles += [t for t in rest if t]
     return tiles
+
+
+def shot_token() -> str:
+    """A token for one rendering; the guest gateway accepts a page's height report only for a token made here."""
+    token = uuid.uuid4().hex
+    _shot_tokens.add(token)
+    if len(_shot_tokens) > 200:
+        _shot_tokens.clear()
+    return token
+
+
+_shot_tokens: set[str] = set()
+
+
+def record_height(token: str, raw: bytes) -> bool:
+    """The height a rendering page reported (SHOT_SNIPPET's beacon); False for a token that isn't a rendering's."""
+    if token not in _shot_tokens:
+        return False
+    try:
+        _shot_heights[token] = (time.time(), int(float(raw.decode() or 0)))
+    except ValueError:
+        pass
+    for k, (t, _) in list(_shot_heights.items()):
+        if time.time() - t > 300:
+            _shot_heights.pop(k, None)
+    return True
 
 
 MIN_SIDE = 128  # Qwen-VL in Ollama panics (killing the model runner) on images under 32 px, e.g. pixel-art sprites

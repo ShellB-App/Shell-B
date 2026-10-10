@@ -483,6 +483,21 @@ class Gateway(unittest.TestCase):
         self.assertTrue(anon.get("/api/auth/me").json()["gateway"])  # signed out: the UI reloads to the gateway's sign-in page
 
 
+class ShotBeacon(unittest.TestCase):
+    """A page the host renders for a cell's screenshot reports its height to the gateway, for its own token only."""
+
+    def test_only_tokens_from_a_rendering(self):
+        import projects
+        anon = TestClient(guest_app.root, base_url=f"http://testserver:{guest_app.GUEST_PORT}", client=("127.0.0.1", 40004),
+                          raise_server_exceptions=False)
+        self.assertEqual(anon.post("/api/projects/_shotinfo/abc123", content=b"900", headers={"origin": "null"}).status_code, 404)
+        token = projects.shot_token()
+        r = anon.post(f"/api/projects/_shotinfo/{token}", content=b"1234", headers={"origin": "null"})  # sandboxed page: Origin null
+        self.assertEqual(r.status_code, 204)
+        self.assertEqual(projects._shot_heights[token][1], 1234)
+        self.assertEqual(anon.post("/api/projects/_shotinfo/..%2Fx", content=b"1").status_code, 404)
+
+
 class Defaults(unittest.TestCase):
     """Since 2026-10-10 a new guest gets their own Shell:B unless the owner unticks it (guests.clean_config)."""
 

@@ -92,7 +92,7 @@ def _origin_ok(req: Request) -> bool:
 @guest_app.middleware("http")
 async def guard(req: Request, call_next):
     path = req.url.path
-    framed = path.startswith("/api/k/")
+    framed = path.startswith("/api/k/") or path.startswith("/api/projects/_shotinfo/")  # the latter: a beacon from a sandboxed page
     if req.method in UNSAFE and not framed and not _origin_ok(req):
         return JSONResponse({"detail": "Cross-site request refused"}, status_code=403)
     got = None
@@ -706,6 +706,16 @@ for _r in SHARED_READS:
 
 
 # ── the guest UI ────────────────────────────────────────────────────────────
+
+@guest_app.post("/api/projects/_shotinfo/{token}")
+async def shot_info(token: str, req: Request):
+    """A page the host's Firefox renders for a cell's screenshot (cells.shot) reports its height here, from its sandboxed
+    (null-origin) frame; only tokens projects.shoot made are kept, so this stays a dead end for anyone else."""
+    import projects
+    if not re.fullmatch(r"[A-Za-z0-9]{1,64}", token) or not projects.record_height(token, await req.body()):
+        raise HTTPException(404)
+    return Response(status_code=204)
+
 
 @guest_app.get("/api/_hold")
 async def hold(ms: int = 4000):

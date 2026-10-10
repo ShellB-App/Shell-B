@@ -79,6 +79,10 @@ EGRESS_MAX_BYTES = 64 * 2**20
 SANDBOX_TIMEOUT = 180
 SANDBOX_LIMITS = ["--memory", "2g", "--memory-swap", "2g", "--cpus", "2", "--pids-limit", "256"]
 WS_RE = re.compile(r"^(workspaces|projects)/[A-Za-z0-9_-]{1,64}$")
+DEV_PID = re.compile(r"^proj-[0-9a-f]{12}$")
+ENV_KEY = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+DEV_LABEL = "shellb.celldev"  # dev-server containers the host runs for cells (never `shellb.dev=1`, the owner's)
+GUEST_PORT = int(os.environ.get("SHELLB_GUEST_PORT", "8220"))
 _egress_conns: dict[str, list[float]] = {}
 _sandbox_locks: dict[str, asyncio.Lock] = {}
 _data_bytes: dict[str, tuple[float, int]] = {}
@@ -191,7 +195,7 @@ def _run_args(cell: Cell, guest: dict) -> list[str]:
     models = {"models": allowed_models(), "embeddingModel": s.get("embeddingModel"), "utilityModel": s.get("utilityModel"),
               "visionFallbackModel": s.get("visionFallbackModel")}
     env = {"SHELLB_CELL": "1", "SHELLB_CELL_SECRET": cell.secret, "SHELLB_CELL_FRAME_SECRET": guests.frame_secret(cell.gid),
-           "SHELLB_CELL_GUEST": guest["name"], "SHELLB_CELL_MODELS": json.dumps(models),
+           "SHELLB_CELL_GUEST": guest["name"], "SHELLB_CELL_MODELS": json.dumps(models), "SHELLB_DEV_DIR": "/run/web/dev",
            "SHELLB_CELL_FORWARD": ",".join(f"{port}:{svc}" for svc, (port, _up) in SERVICES.items()),
            "HOME": "/home/cell", "TZ": os.environ.get("TZ") or _host_tz(), "PYTHONDONTWRITEBYTECODE": "1",
            # web access goes through the host's filtered proxy (_Egress); the model services stay direct
@@ -272,6 +276,9 @@ async def _start(cell: Cell, guest: dict):
 
 
 async def _teardown(cell: Cell):
+    import devserver
+    for pid in [p for p, (_s, _u, g) in list(devserver._cell_socks.items()) if g == cell.gid]:
+        await devserver.stop(pid)
     if cell.client:
         await cell.client.aclose()
         cell.client = None
@@ -334,9 +341,10 @@ def startup():
     global _reaper
 
     async def go():
-        rc, ids = await _docker("ps", "-aq", "--filter", "label=shellb.cell")
-        if not rc and ids.split():
-            await _docker("rm", "-f", *ids.split(), timeout=60)
+        for label in ("shellb.cell", DEV_LABEL):
+            rc, ids = await _docker("ps", "-aq", "--filter", f"label={label}")
+            if not rc and ids.split():
+                await _docker("rm", "-f", *ids.split(), timeout=60)
     asyncio.get_running_loop().create_task(go())
     _reaper = asyncio.get_running_loop().create_task(_reap())
 
@@ -356,6 +364,9 @@ def forget(gid: str):
     """Delete a guest's cell and everything in it (guests.delete_guest; runs in a worker thread)."""
     _cells.pop(gid, None)
     subprocess.run(["docker", "rm", "-f", name(gid)], capture_output=True, timeout=60)
+    devs = subprocess.run(["docker", "ps", "-aq", "--filter", f"label={DEV_LABEL}={gid}"], capture_output=True, text=True, timeout=60)
+    if devs.stdout.split():
+        subprocess.run(["docker", "rm", "-f", *devs.stdout.split()], capture_output=True, timeout=60)
     d = _dir(gid)
     if d.exists():
         subprocess.run(["docker", *_helper(gid, "rm -rf /c/data /c/web")], capture_output=True, timeout=120)
@@ -1041,12 +1052,22 @@ def parse_run_output(stdout: str) -> tuple[str, int | None, list[str]]:
     return head, rc, changed
 
 
+async def _real_dir(gid: str, rel: str) -> Path:
+    """The host path of a folder inside the cell's data, after checking (from a root helper, since the folder belongs
+    to the cell's uid) that it is a real directory and no part of it is a symlink: Docker resolves a bind source on the
+    host, so a link planted by the cell could otherwise mount a host folder into its sandbox."""
+    if not shutil.which("docker"):
+        raise Refused("the code sandbox isn't available on this machine")
+    rc, out = await _docker(*_helper(gid, f'p=$(readlink -f /c/data/{rel}) && test -d "$p" && test "$p" = /c/data/{rel}'), timeout=30)
+    if rc:
+        raise Refused("that workspace doesn't exist yet" if rc == 1 else f"couldn't check the workspace: {out[-200:]}")
+    return _dir(gid) / "data" / rel
+
+
 async def run_sandbox(gid: str, uid: int, workspace: str, language: str, code: str) -> dict:
     """Run a cell's code on the host: the sandbox image as the cell's uid, only that workspace bound at /work."""
     from tools import CELLS, SANDBOX_IMAGE
-    if not shutil.which("docker"):
-        raise Refused("the code sandbox isn't available on this machine")
-    src = _dir(gid) / "data" / workspace
+    src = await _real_dir(gid, workspace)
     script = CELLS / f"run-{secrets.token_hex(8)}.{'py' if language == 'python' else 'sh'}"
     script.write_text(code)
     os.chmod(script, 0o644)
@@ -1099,7 +1120,127 @@ async def _sandbox(req: Request, gid: str) -> Response:
         if language not in ("python", "bash") or not WS_RE.match(ws) or not code or len(code) > 200_000:
             raise Refused("a run needs language (python|bash), code and a workspace of this cell")
         return JSONResponse(await run_sandbox(gid, _cell(gid).uid, ws, language, code))
+    if path.startswith("/dev/"):
+        pid = str(body.get("pid") or "")
+        if not DEV_PID.match(pid):
+            raise Refused("a dev server needs a project id")
+        if path == "/dev/start":
+            return JSONResponse(await dev_start(gid, _cell(gid).uid, pid, body))
+        if path == "/dev/status":
+            return JSONResponse(await dev_status(gid, pid))
+        if path == "/dev/stop":
+            await dev_stop(gid, pid)
+            return JSONResponse({"ok": True})
+        if path == "/dev/logs":
+            return JSONResponse({"logs": await dev_logs(gid, pid, int(body.get("lines") or 200))})
+    if path == "/shot":
+        return JSONResponse({"tiles": await shot(gid, body)})
     raise Refused(f"{req.method} {path} isn't available to guests")
+
+
+# ── dev servers for a cell's Studio projects (phase 2b) ────────────────────
+# The host runs the project's container (devserver.run_args) as the cell's uid, with the project bound at /work and the
+# socket in data/cells/<gid>/web/dev/<pid>, a folder the cell made (0755) so both sides reach it: the cell's own
+# devserver.py probes and proxies the app's API through it, and the host's preview proxy (devserver.proxy_app) serves
+# the guest's browser over the project's preview host with a ticket signed by the host.
+
+def dev_config(body: dict) -> dict:
+    command, port, env = body.get("command"), body.get("port", 8000), body.get("env") or {}
+    if not isinstance(command, str) or not command.strip() or len(command) > 2000:
+        raise Refused("a dev server needs a command")
+    if not isinstance(port, int) or isinstance(port, bool) or not 1024 <= port <= 65535:
+        raise Refused("port must be an integer 1024-65535")
+    if not isinstance(env, dict) or len(env) > 32 or not all(isinstance(k, str) and ENV_KEY.match(k) for k in env):
+        raise Refused("env must be an object of up to 32 variables")
+    return {"command": command, "port": port, "env": {k: str(v)[:4000] for k, v in env.items()}}
+
+
+def _dev_sock_dir(gid: str, pid: str) -> Path:
+    """The cell's dev folder for a project: a real directory the cell's uid owns (never a symlink it planted)."""
+    base = _dir(gid) / "web" / "dev"
+    for p in (base, base / pid):
+        try:
+            st = os.lstat(p)
+        except OSError:
+            raise Refused("make the dev folder first")
+        if not stat.S_ISDIR(st.st_mode) or st.st_uid != uid_of(gid):
+            raise Refused("the dev folder isn't the cell's own directory")
+    return base / pid
+
+
+def _dev_owned(gid: str, pid: str):
+    import devserver
+    if devserver.cell_owner(pid) != gid:
+        raise Refused("no such dev server")
+
+
+async def dev_start(gid: str, uid: int, pid: str, body: dict) -> dict:
+    import devserver
+    cfg = dev_config(body)
+    if devserver.cell_owner(pid) not in (None, gid):
+        raise Refused("that project id is taken")
+    ws = await _real_dir(gid, f"projects/{pid}")
+    devdir = _dev_sock_dir(gid, pid)
+    await devserver.stop(pid)
+    await devserver._make_room(pid)
+    rc, out = await _docker(*devserver.run_args(cfg, devserver._name(pid), ws, devdir, uid, uid, f"{DEV_LABEL}={gid}",
+                                                sock_mode=0o666, git_ro=False), timeout=60)
+    if rc:
+        raise Refused(f"the dev server didn't start: {out.strip()[-600:]}")
+    devserver.register_cell(pid, devdir / "app.sock", uid, gid)
+    devserver.port_for(pid)
+    return await dev_status(gid, pid)
+
+
+async def dev_status(gid: str, pid: str) -> dict:
+    import devserver
+    owned = devserver.cell_owner(pid) == gid
+    base = devserver.preview_base(pid) if owned else None
+    return {"running": owned and await devserver.running(pid), "port": devserver.port_for(pid, assign=False) if owned else None,
+            "preview": base, "ticket": devserver.preview_ticket(pid) if base else None}
+
+
+async def dev_stop(gid: str, pid: str):
+    import devserver
+    if devserver.cell_owner(pid) == gid:
+        await devserver.stop(pid)
+
+
+async def dev_logs(gid: str, pid: str, n: int) -> str:
+    import devserver
+    _dev_owned(gid, pid)
+    return (await devserver.logs(pid, max(10, min(n, 2000))))[-20_000:]
+
+
+async def shot(gid: str, body: dict) -> list[str]:
+    """Screenshots for a cell's agents: the host's Firefox renders the page. A static page goes through the guest
+    gateway under the project's frame key (what the Studio canvas itself uses for this guest, signed with the cell's
+    frame secret); a live dev-server page goes through the preview proxy's port, as for the owner."""
+    import base64
+    from urllib.parse import quote
+
+    import auth
+    import devserver
+    import projects
+    pid = str(body.get("pid") or "")
+    if not DEV_PID.match(pid):
+        raise Refused("a screenshot needs a project id")
+    width = int(_clamp(body.get("width"), 320, 2560, 1280))
+    height = int(_clamp(body.get("height"), 320, 2560, 800))
+    pages = int(_clamp(body.get("pages"), 1, 6, 1))
+    hold = int(_clamp(body.get("hold"), 0, 5000, 900))
+    rel = str(body.get("path") or "")
+    if len(rel) > 1000 or "\\" in rel or "\0" in rel:
+        raise Refused("bad path")
+    if body.get("live"):
+        _dev_owned(gid, pid)
+        tiles = await devserver.screenshot(pid, rel, width, height, pages)
+    else:
+        rel, _, qs = rel.partition("?")
+        key = f"p-{pid}.{auth.frame_mac(guests.frame_secret(gid), f'p-{pid}')}"
+        base = f"http://127.0.0.1:{GUEST_PORT}/api/k/{key}/projects/{pid}/raw/{quote(rel)}?" + (qs + "&" if qs else "")
+        tiles = await projects.shoot(base, width, height, pages, hold)
+    return [base64.b64encode(t).decode() for t in tiles]
 
 
 def data_bytes(gid: str) -> int:

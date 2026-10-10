@@ -328,9 +328,9 @@ function CellSwitch({ guest: g, onChange }: { guest: Guest; onChange: (cell: boo
         <span className="leading-relaxed text-[var(--text-secondary)] max-w-[65ch]">
           <span className="text-[var(--text-primary)]">Their own Shell:B.</span> The full app, running as their own instance in
           a sealed container that reaches the models only through the broker: chat, Studio, Code, Codex, Library, Research,
-          Shopping, Circles, pictures, voice, search and the code sandbox, with their own agents, memory and themes. Not yet:
-          live dev servers and screenshots (no Docker or Firefox in there). Untick for the lighter guest app (chat, Notes,
-          Circles, Wiki, Worlds, Radio); chats made in one don't show in the other.
+          Shopping, Circles, pictures, voice, search, the code sandbox, live dev servers and screenshots (the broker runs
+          those on this machine for them), with their own agents, memory and themes. Untick for the lighter guest app
+          (chat, Notes, Circles, Wiki, Worlds, Radio); chats made in one don't show in the other.
         </span>
       </label>
       {g.config.cell && (
