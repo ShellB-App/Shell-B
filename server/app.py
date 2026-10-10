@@ -40,6 +40,7 @@ import codex
 import codex_secrets
 import codex_sync
 import feeds
+import gitremote
 import hooks
 import shares
 import translate
@@ -149,6 +150,7 @@ feeds.init()
 feeds.register()
 shares.init()
 translate.register()
+gitremote.register()
 mailer.init()
 studio_tools.register()
 studio_assets.register()
@@ -266,6 +268,7 @@ app.include_router(feeds.router)
 app.include_router(shares.router)
 app.include_router(shares.public_router)
 app.include_router(translate.router)
+app.include_router(gitremote.router)
 app.include_router(guests.admin_router)  # owner side of Shell:B Guest; the guests' own app is guest_app.py
 app.include_router(guest_accounts.admin_router)  # guests' accounts: unlock, reset links, two-step off, sign-in log
 app.include_router(mcp_server.router)

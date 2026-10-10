@@ -75,7 +75,7 @@ function Waiting({ p, onDeny }: { p: PendingApproval; onDeny: () => Promise<void
           </div>
           {p.detail && (
             <button className="mt-1.5 flex items-center gap-1 text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)]" onClick={() => setOpen(!open)}>
-              <ChevronDown className={clsx('w-3 h-3 transition', !open && '-rotate-90')} />{diff ? 'Preview the change' : p.kind === 'secret' ? 'Preview the request' : p.kind === 'email' ? 'Read the email' : p.kind === 'question' ? 'Show the options' : 'Preview the call'}
+              <ChevronDown className={clsx('w-3 h-3 transition', !open && '-rotate-90')} />{diff ? 'Preview the change' : p.kind === 'secret' ? 'Preview the request' : p.kind === 'email' ? 'Read the email' : p.kind === 'git' ? 'Show the commits' : p.kind === 'question' ? 'Show the options' : 'Preview the call'}
             </button>
           )}
           {open && (

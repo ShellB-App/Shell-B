@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import {
-  ArrowLeft, Check, ChevronDown, Download, ExternalLink, FolderTree, History, Loader2, MessageSquare, MonitorCheck, MonitorPlay, Moon, PanelLeft, Plus, SquareTerminal, Sun,
-} from 'lucide-react';
+  ArrowLeft, Check, ChevronDown, Download, ExternalLink, FolderTree, History, Loader2, MessageSquare, MonitorCheck, MonitorPlay, Moon, PanelLeft, Plus, SquareTerminal, Sun, GitBranch } from 'lucide-react';
 import { PREVIEW_SAVER, loadAmbience, saveAmbience, useAmbience, type SaverStyle } from '../ambience';
 import type { Agent, Attachment, Effort, ModelInfo, Project, ProjectFile, StreamEvent } from '../types';
 import { api, rawUrl } from '../api';
@@ -12,7 +11,7 @@ import { RunCodeContext } from '../components/Markdown';
 import { Composer } from '../components/Composer';
 import { AgentAvatar, btn, relTime } from '../components/common';
 import { Canvas, type Pick } from './Canvas';
-import { FilesPanel, HistoryPanel } from './Sidebar';
+import { FilesPanel, HistoryPanel, RemotePanel } from './Sidebar';
 import { KIND_ICON } from './Studio';
 import { Terminal } from './Terminal';
 import { foldSummarized } from '../summarized';
@@ -36,7 +35,7 @@ export function ProjectView({ projectId, agents, models, theme, onToggleTheme, v
   const [error, setError] = useState('');
   const [selected, setSelected] = useState<string>();
   const [version, setVersion] = useState(0);
-  const [leftTab, setLeftTab] = useState<'files' | 'history'>('files');
+  const [leftTab, setLeftTab] = useState<'files' | 'history' | 'remote'>('files');
   const [left, setLeft] = useState(() => window.innerWidth >= 1100);
   const [chatOpen, setChatOpen] = useState(true);
   const [agentId, setAgentId] = useState('daedalus');
@@ -199,7 +198,7 @@ export function ProjectView({ projectId, agents, models, theme, onToggleTheme, v
         {left && (
           <aside className="w-64 shrink-0 border-r border-[var(--border-subtle)] bg-[var(--bg-secondary)] flex flex-col absolute lg:static inset-y-0 left-0 z-20 shadow-2xl lg:shadow-none">
             <div className="flex p-1.5 gap-1 border-b border-[var(--border-subtle)]">
-              {([['files', 'Files', FolderTree], ['history', 'History', History]] as const).map(([id, label, I]) => (
+              {([['files', 'Files', FolderTree], ['history', 'History', History], ['remote', 'Remote', GitBranch]] as const).map(([id, label, I]) => (
                 <button key={id} onClick={() => setLeftTab(id)}
                   className={clsx('flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs transition', leftTab === id ? 'bg-[var(--bg-hover)] text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]')}>
                   <I className="w-3.5 h-3.5" />{label}
@@ -210,8 +209,10 @@ export function ProjectView({ projectId, agents, models, theme, onToggleTheme, v
               <FilesPanel projectId={projectId} files={project.files} selected={selected} entry={project.entry} code={isCode}
                 onSelect={path => { setSelected(path); if (window.innerWidth < 1024) setLeft(false); }}
                 onChanged={() => { refresh(); setVersion(v => v + 1); }} />
-            ) : (
+            ) : leftTab === 'history' ? (
               <HistoryPanel projectId={projectId} version={version} onRestored={() => { refresh(); setVersion(v => v + 1); }} />
+            ) : (
+              <RemotePanel projectId={projectId} onChanged={() => { refresh(); setVersion(v => v + 1); }} />
             )}
           </aside>
         )}

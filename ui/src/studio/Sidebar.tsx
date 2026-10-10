@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type DragEvent, useCallback } from 'react';
 import clsx from 'clsx';
 import {
   Box, ChevronDown, ChevronRight, Copy, Download, ExternalLink, FileCode, FileImage, FilePlus, FileText, FileType, Folder, History, Home, Link2,
-  Loader2, Pencil, RotateCcw, Trash2, Upload, Film, Music2, FileArchive, Shapes,
-} from 'lucide-react';
+  Loader2, Pencil, RotateCcw, Trash2, Upload, Film, Music2, FileArchive, Shapes, GitBranch, RefreshCw, ArrowDownToLine, ArrowUpFromLine, Settings2 } from 'lucide-react';
+import { req } from '../api';
 import type { Commit, ProjectFile } from '../types';
 import { api, fmtBytes, rawUrl } from '../api';
-import { relTime } from '../components/common';
+import { relTime, btn } from '../components/common';
 import { AssetPicker } from '../components/Assets';
 import { openContextMenu, type MenuEntry } from '../components/ContextMenu';
 import { toast } from '../components/toast';
@@ -339,6 +339,82 @@ export function HistoryPanel({ projectId, version, onRestored }: { projectId: st
         );
       })}
       {commits.length === 0 && <div className="text-xs text-[var(--text-muted)] text-center py-6 flex items-center justify-center gap-1.5"><History className="w-3.5 h-3.5" />No versions yet</div>}
+    </div>
+  );
+}
+
+
+const errText = (e: unknown) => String(e).replace(/^Error: \d+: /, '');
+
+// ── git remote ─────────────────────────────────────────────────────────────
+
+interface RemoteStatus { url: string; branch: string; secretId: string | null; hasCredential: boolean; localBranch: string; ahead: number | null; behind: number | null; dirty: boolean; lastFetch: number | null }
+interface RemoteInfo { remote: RemoteStatus | null; outgoing?: string[] }
+interface SecretLite { id: string; title: string }
+
+/** Code/Studio → Remote: the project's https git remote (server/gitremote.py). Fetch and pull are plain; a push
+ * publishes commits, so it asks once. The token is a Codex secret and never shows here. */
+export function RemotePanel({ projectId, onChanged }: { projectId: string; onChanged: () => void }) {
+  const [info, setInfo] = useState<RemoteInfo | null>(null);
+  const [secrets, setSecrets] = useState<SecretLite[]>([]);
+  const [edit, setEdit] = useState<{ url: string; branch: string; secretId: string } | null>(null);
+  const [busy, setBusy] = useState('');
+  const [err, setErr] = useState('');
+  const load = useCallback(() => req<RemoteInfo>(`/api/projects/${projectId}/git`).then(setInfo).catch(e => { setErr(errText(e)); setInfo({ remote: null }); }), [projectId]);
+  useEffect(() => { load(); req<{ id: string; title: string }[]>('/api/codex/entries?kind=secret').then(r => setSecrets(r.map(x => ({ id: x.id, title: x.title })))).catch(() => {}); }, [load]);
+  const act = async (what: string, f: () => Promise<RemoteInfo | unknown>) => {
+    setBusy(what); setErr('');
+    try { const r = await f(); if (r && typeof r === 'object' && 'remote' in (r as RemoteInfo)) setInfo(r as RemoteInfo); else await load(); onChanged(); }
+    catch (e) { setErr(errText(e)); } finally { setBusy(''); }
+  };
+  if (!info) return <div className="p-3 text-xs text-[var(--text-muted)]">Loading…</div>;
+  const r = info.remote;
+  const form = edit ?? (r ? null : { url: '', branch: 'main', secretId: '' });
+  return (
+    <div className="flex-1 overflow-y-auto p-3 space-y-3 text-xs">
+      {form ? (
+        <form className="space-y-2" onSubmit={e => { e.preventDefault(); act('save', () => req<RemoteInfo>(`/api/projects/${projectId}/git`, { method: 'PUT', body: JSON.stringify(form) })).then(() => setEdit(null)); }}>
+          <div className="text-[11px] text-[var(--text-muted)] max-w-[40ch]">An https remote (GitHub, GitLab, Gitea…). The token comes from a Codex secret (Codex → Secrets), so it never sits in the URL or in this workspace.</div>
+          <input className={btn.input} placeholder="https://github.com/owner/repo.git" value={form.url} onChange={e => setEdit({ ...form, url: e.target.value })} required />
+          <input className={btn.input} placeholder="Branch (main)" value={form.branch} onChange={e => setEdit({ ...form, branch: e.target.value })} />
+          <select className={btn.input} value={form.secretId} onChange={e => setEdit({ ...form, secretId: e.target.value })}>
+            <option value="">No credential (public repository, fetch and pull only)</option>
+            {secrets.map(sct => <option key={sct.id} value={sct.id}>{sct.title}</option>)}
+          </select>
+          <div className="flex gap-1.5">
+            <button className={btn.primary} type="submit" disabled={busy === 'save' || !form.url.trim()}>{busy === 'save' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}Save remote</button>
+            {r && <button className={btn.ghost} type="button" onClick={() => setEdit(null)}>Cancel</button>}
+          </div>
+        </form>
+      ) : r && (
+        <>
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 font-medium"><GitBranch className="w-3.5 h-3.5 text-[var(--accent)]" /><span className="truncate" title={r.url}>{r.url.replace(/^https:\/\//, '')}</span></div>
+            <div className="text-[var(--text-muted)]">
+              {r.localBranch} → origin/{r.branch}{r.hasCredential ? '' : ' · no credential'}
+              {r.ahead !== null && <> · {r.ahead ? <span className="text-amber-400">{r.ahead} to push</span> : 'nothing to push'}{r.behind ? <>, <span className="text-sky-400">{r.behind} to pull</span></> : ''}</>}
+              {r.lastFetch && <> · fetched {relTime(r.lastFetch * 1000)}</>}
+            </div>
+            {r.dirty && <div className="text-[var(--text-muted)]">Uncommitted edits are committed before a pull or push.</div>}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            <button className={btn.subtle} disabled={!!busy} onClick={() => act('fetch', () => req<RemoteInfo>(`/api/projects/${projectId}/git/fetch`, { method: 'POST' }))}>{busy === 'fetch' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}Fetch</button>
+            <button className={btn.subtle} disabled={!!busy} onClick={() => act('pull', () => req<RemoteInfo>(`/api/projects/${projectId}/git/pull`, { method: 'POST' }))}>{busy === 'pull' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowDownToLine className="w-3.5 h-3.5" />}Pull</button>
+            <button className={btn.primary} disabled={!!busy || !r.hasCredential} title={r.hasCredential ? 'Push HEAD to the remote branch' : 'Pushing needs a credential'}
+              onClick={() => { if (confirm(`Push to ${r.url} (${r.branch})?`)) act('push', () => req<RemoteInfo>(`/api/projects/${projectId}/git/push`, { method: 'POST' })); }}>{busy === 'push' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowUpFromLine className="w-3.5 h-3.5" />}Push</button>
+            <button className={btn.icon} title="Change the remote" onClick={() => setEdit({ url: r.url, branch: r.branch, secretId: r.secretId ?? '' })}><Settings2 className="w-3.5 h-3.5" /></button>
+            <button className={btn.icon} title="Forget the remote" onClick={() => { if (confirm('Forget this remote? The local history stays.')) act('clear', () => req(`/api/projects/${projectId}/git`, { method: 'DELETE' })); }}><Trash2 className="w-3.5 h-3.5" /></button>
+          </div>
+          {info.outgoing && info.outgoing.length > 0 && (
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Not on the remote yet</div>
+              <ul className="font-mono text-[11px] space-y-0.5 text-[var(--text-secondary)]">{info.outgoing.map(l => <li key={l} className="truncate">{l}</li>)}</ul>
+            </div>
+          )}
+          <p className="text-[11px] text-[var(--text-muted)] max-w-[40ch]">Agents in this project can fetch and pull on their own; a push shows an approval card in the chat first.</p>
+        </>
+      )}
+      {err && <div className="text-red-400 whitespace-pre-wrap break-words">{err}</div>}
     </div>
   );
 }

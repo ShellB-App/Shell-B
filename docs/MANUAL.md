@@ -284,7 +284,13 @@ address (`_ShortNameRedirect` in app.py). Check with `tailscale serve status`; r
 - **Code** (`#/code`): a coding partner in the spirit of Claude Code. A workspace is a real git repository in the same
   `data/projects/<id>/` machinery as Studio (kind `code`), so it shares the file tree, editor, history/diff/restore,
   uploads and export. Start empty, upload a `.zip`, or clone a public https repo (`POST /api/projects/clone`; the server
-  clones, the sandbox stays offline). **Hephaestus** is the default partner, with an engineering prompt
+  clones, the sandbox stays offline). The **Remote** tab (`server/gitremote.py`) ties the workspace to an https remote
+  (GitHub, GitLab, Gitea…): URL, branch and a Codex secret holding the token (`user:token` or a bare token; it reaches
+  git through `GIT_ASKPASS` from the environment, never the command line, with credential helpers off). Fetch and Pull
+  (fast-forward only; a diverged branch is reported) and Push (never forced) need the owner; local, LAN and tailnet
+  remotes are refused. Agents in the project get `git_remote`: status, fetch and pull on their own, while a push shows
+  an approval card (kind `git`) listing the commits and waits for you. Every operation lands in `data/ssh/audit.jsonl`.
+  Routes: `GET/PUT/DELETE /api/projects/<id>/git`, `POST …/git/{fetch,pull,push}`. **Hephaestus** is the default partner, with an engineering prompt
   (`code_context` in `server/agent.py`): read before editing, focused `edit_file` changes, run the tests with
   `run_code`, check `project_diff` before replying, cite file:line. Extra project tools: `search_files` (regex grep),
   `find_files` (glob), `project_diff` (uncommitted changes). The **Terminal** drawer runs bash in the same sandbox

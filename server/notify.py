@@ -87,7 +87,7 @@ VERB = {"done": "finished", "complete": "finished", "failed": "failed", "blocked
         "review": "needs your review", "waiting": "is waiting for you", "warning": "needs attention",
         "recovered": "recovered", "due": "is coming up"}
 APPROVAL_NOUN = {"self": "Self-deploy", "remote": "Remote command", "secret": "Secret access", "question": "Question", "browser": "Browser submit",
-                 "email": "Email to send"}
+                 "email": "Email to send", "git": "Git push"}
 
 _ready = False
 _recent: deque = deque(maxlen=50)

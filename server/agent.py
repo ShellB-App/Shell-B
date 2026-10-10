@@ -929,6 +929,9 @@ class Turn:
                     elif name == "send_email" and self.depth == 0:
                         import mailer
                         res = await mailer.run(args if isinstance(args, dict) else {}, ctx, self.abort, sink, idx)
+                    elif name == "git_remote":
+                        import gitremote
+                        res = await gitremote.run(args, ctx, self.abort, sink, idx)
                     elif name == "codex" and isinstance(args, dict) and args.get("action") == "request":
                         res = await self._secret_request(args, ctx, sink, idx)
                     elif name == "schedule_task" and isinstance(args, dict) \

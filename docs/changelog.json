@@ -1,6 +1,12 @@
 [
  {
   "date": "2026-10-10",
+  "area": "Code",
+  "title": "Git remotes: fetch, pull and push from a Code workspace",
+  "summary": "The Code and Studio sidebar has a Remote tab: give it the https address of a GitHub, GitLab or Gitea repository, a branch, and a Codex secret holding your token, then Fetch, Pull (fast-forward only) and Push. Agents working in the project can fetch and pull themselves; when one wants to push, an approval card lists the commits and waits for you."
+ },
+ {
+  "date": "2026-10-10",
   "area": "Sharing",
   "title": "Read-only share links for chats and artifacts",
   "summary": "Right-click a chat or an artifact → Share read-only link. The link opens a frozen copy (what was there when you shared it) for anyone who has it, for 30 days or until you revoke it in Settings → Account → Shared links. Set a share host in Settings → Network so the links work without a login; incognito and guest chats can't be shared."
