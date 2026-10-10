@@ -184,7 +184,16 @@ stays signed in for 90 days. Replace this with real accounts in `server/guests.p
   - Storage quota for cells isn't enforced yet (the data dir belongs to the cell uid; measure with a helper container).
   - The cell sees host memory totals in /proc/meminfo (no lxcfs); the UI's memory meter shows the host's.
   - `service_status` now tolerates a missing docker CLI (sandbox shows offline in cells until Phase 2).
-- **Phase 2: not started.**
+- **Phase 2: sandbox and egress built 2026-10-10** (feature-completeness review). `cells._sandbox` broker service (port 8250
+  in the cell): `POST /run` runs the guest's code in the sandbox image as the cell's uid with only that chat's or project's
+  folder bound at /work (docker `--mount type=bind`, which never creates a missing source), one run at a time per cell,
+  changed files listed by the container itself; `POST /usage` lets the cell report each turn so `turnsPerDay`/
+  `tokensPerDay` apply (checked in `_ollama`). `cells._Egress`: a raw CONNECT/HTTP proxy on `sock/egress.sock`
+  (port 3128 in the cell, HTTP(S)_PROXY set in `_run_args`): public addresses only (`tools._blocked_host`), ports 80/443,
+  per-cell connection and byte caps; so web_fetch, Research sources, Shopping, Codex snapshots and `git clone` work
+  without the container ever getting a network. `guests.storage_bytes` adds the cell's data (`du` in the helper
+  container). Not done: dev servers / live previews (Phase 2b), headless Firefox in cells (scrape/screenshot fall
+  back), the memory meter (lxcfs).
 
 ## Handoff
 This plan was written in one session and is to be **implemented by another agent**. State when it was written

@@ -196,6 +196,9 @@ async def run_code(args, ctx):
         return ToolResult("Sandbox unavailable: docker is not installed.", error=True)
     ws = (db.DATA / "projects" / ctx.project_id) if ctx.project_id else (WORKSPACES / ctx.conv_id)
     ws.mkdir(exist_ok=True)
+    import cell_boot
+    if cell_boot.CELL:  # a guest's container has no docker: the host runs the sandbox for it (cells._sandbox)
+        return await _cell_run(ws, language, code, ctx)
     cell = CELLS / f"{uuid.uuid4().hex}.{'py' if language == 'python' else 'sh'}"
     cell.write_text(code)
     before = _snapshot(ws)
@@ -228,9 +231,34 @@ async def run_code(args, ctx):
     stdout, stderr = out.decode(errors="replace"), err.decode(errors="replace")
     if "Unable to find image" in stderr or "No such image" in stderr:
         return ToolResult(f"Sandbox image {SANDBOX_IMAGE} is not built yet.", error=True)
-
     after = _snapshot(ws)
     changed = sorted(p for p, m in after.items() if before.get(p) != m)
+    return await _run_result(ws, ctx, changed, proc.returncode, timed_out, elapsed, stdout, stderr)
+
+
+async def _cell_run(ws: Path, language: str, code: str, ctx) -> "ToolResult":
+    """Inside a cell: POST the run to the host's sandbox broker socket (forwarded to 127.0.0.1:8250 by cell/entry.py)."""
+    import cell_boot
+    rel_ws = str(ws.relative_to(db.DATA))
+    try:
+        async with httpx.AsyncClient(timeout=200, trust_env=False) as c:
+            r = await c.post(f"{cell_boot.SANDBOX_URL}/run", json={"language": language, "code": code, "workspace": rel_ws})
+    except httpx.HTTPError as e:
+        return ToolResult(f"Sandbox unavailable: {type(e).__name__}", error=True)
+    if r.status_code != 200:
+        try:
+            why = r.json().get("error") or r.text
+        except ValueError:
+            why = r.text
+        return ToolResult(f"Sandbox refused: {why}"[:500], error=True)
+    out = r.json()
+    changed = [ws / p for p in out.get("changed") or [] if ".." not in p]
+    return await _run_result(ws, ctx, changed, out.get("exit"), bool(out.get("timedOut")), float(out.get("elapsed") or 0),
+                             str(out.get("stdout") or ""), str(out.get("stderr") or ""))
+
+
+async def _run_result(ws: Path, ctx, changed: list[Path], rc, timed_out: bool, elapsed: float, stdout: str, stderr: str) -> "ToolResult":
+    """What the model and the UI get after a sandbox run: output, exit code and the files that changed."""
     rel = [str(p.relative_to(ws)) for p in changed]
     rel = [r for r in rel if not r.startswith(".git/")]
     changed = [p for p in changed if ".git" not in p.relative_to(ws).parts]
@@ -254,7 +282,7 @@ async def run_code(args, ctx):
     def clip(s, n=8000):
         return s if len(s) <= n else s[:n // 2] + f"\n…[{len(s) - n} chars truncated]…\n" + s[-n // 2:]
 
-    parts = [f"exit code: {'TIMEOUT (180s)' if timed_out else proc.returncode}  ({elapsed:.1f}s)"]
+    parts = [f"exit code: {'TIMEOUT (180s)' if timed_out else rc}  ({elapsed:.1f}s)"]
     if stdout:
         parts.append("stdout:\n" + clip(stdout))
     if stderr:
@@ -266,7 +294,7 @@ async def run_code(args, ctx):
     if downloads:
         parts.append("(the other files are shown to the user as download buttons under this step)")
     return ToolResult("\n\n".join(parts), {"images": images, "files": rel[:40], "downloads": downloads,
-                                            "exitCode": proc.returncode}, error=bool(proc.returncode) or timed_out)
+                                            "exitCode": rc}, error=bool(rc) or timed_out)
 
 
 # ── artifacts ───────────────────────────────────────────────────────────────

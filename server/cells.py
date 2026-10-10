@@ -70,7 +70,18 @@ LIMITS = ["--memory", "3g", "--memory-swap", "3g", "--cpus", "4", "--pids-limit"
 SERVICES = {"ollama": (11434, OLLAMA), "hermes": (8001, HERMES), "orpheus": (8002, ORPHEUS),
             "stableaudio": (8003, STABLE_AUDIO), "comfy": (8188, COMFY), "searxng": (8080, SEARXNG),
             "valhalla": (8230, VALHALLA),
-            "circles": (8240, None)}  # circles.py's store: answered here (circles.broker_app), for this cell's guest only
+            "circles": (8240, None),  # circles.py's store: answered here (circles.broker_app), for this cell's guest only
+            "sandbox": (8250, None),  # run_code for the cell (the host runs the sandbox image as the cell's uid) + usage reports
+            "egress": (3128, None)}   # a filtered CONNECT/HTTP proxy: the cell's web access without a network (_Egress)
+EGRESS_PORTS = {80, 443}
+EGRESS_PER_MINUTE = 120
+EGRESS_MAX_BYTES = 64 * 2**20
+SANDBOX_TIMEOUT = 180
+SANDBOX_LIMITS = ["--memory", "2g", "--memory-swap", "2g", "--cpus", "2", "--pids-limit", "256"]
+WS_RE = re.compile(r"^(workspaces|projects)/[A-Za-z0-9_-]{1,64}$")
+_egress_conns: dict[str, list[float]] = {}
+_sandbox_locks: dict[str, asyncio.Lock] = {}
+_data_bytes: dict[str, tuple[float, int]] = {}
 MAX_BODY = 48 * 2**20  # chat with images, uploads
 MAX_JSON = 8 * 2**20
 SEARCHES_PER_MINUTE = 30
@@ -182,7 +193,10 @@ def _run_args(cell: Cell, guest: dict) -> list[str]:
     env = {"SHELLB_CELL": "1", "SHELLB_CELL_SECRET": cell.secret, "SHELLB_CELL_FRAME_SECRET": guests.frame_secret(cell.gid),
            "SHELLB_CELL_GUEST": guest["name"], "SHELLB_CELL_MODELS": json.dumps(models),
            "SHELLB_CELL_FORWARD": ",".join(f"{port}:{svc}" for svc, (port, _up) in SERVICES.items()),
-           "HOME": "/home/cell", "TZ": os.environ.get("TZ") or _host_tz(), "PYTHONDONTWRITEBYTECODE": "1"}
+           "HOME": "/home/cell", "TZ": os.environ.get("TZ") or _host_tz(), "PYTHONDONTWRITEBYTECODE": "1",
+           # web access goes through the host's filtered proxy (_Egress); the model services stay direct
+           "HTTP_PROXY": "http://127.0.0.1:3128", "HTTPS_PROXY": "http://127.0.0.1:3128", "http_proxy": "http://127.0.0.1:3128",
+           "https_proxy": "http://127.0.0.1:3128", "NO_PROXY": "127.0.0.1,localhost,::1", "no_proxy": "127.0.0.1,localhost,::1"}
     mounts = [(WEB / "server", "/app/server", "ro"), (WEB / "cell", "/app/cell", "ro"), (WEB / "ui" / "dist", "/app/ui/dist", "ro"),
               (WEB / "ui" / "src" / "cdnMap.json", "/app/ui/src/cdnMap.json", "ro"),
               (WEB / "ui" / "public" / "studio-inspector.js", "/app/ui/public/studio-inspector.js", "ro"),
@@ -448,10 +462,21 @@ class _Listener:
         self.gid, self.dir = gid, directory or _dir(gid) / "sock"
         self.paths: list[str] = []
         self.server: uvicorn.Server | None = None
+        self.egress: asyncio.AbstractServer | None = None
 
     async def start(self):
         socks = []
+        egress_path = str(self.dir / "egress.sock")
+        try:
+            os.unlink(egress_path)
+        except FileNotFoundError:
+            pass
+        self.egress = await asyncio.start_unix_server(lambda r, w: _egress_conn(self.gid, r, w), path=egress_path)
+        os.chmod(egress_path, 0o666)
+        self.paths.append(egress_path)
         for svc in SERVICES:
+            if svc == "egress":
+                continue
             path = str(self.dir / f"{svc}.sock")
             try:
                 os.unlink(path)
@@ -471,6 +496,9 @@ class _Listener:
         await self.server.startup(sockets=socks)
 
     async def stop(self):
+        if self.egress:
+            self.egress.close()
+            self.egress = None
         if self.server:
             for srv in getattr(self.server, "servers", []):
                 srv.close()
@@ -682,6 +710,8 @@ async def _ollama(req: Request, gid: str) -> Response:
         return JSONResponse({"version": data.get("version", "")}, status_code=code)
     if req.method != "POST":
         raise Refused(f"{req.method} {path} isn't available to guests")
+    if path in ("/api/chat", "/api/generate", "/v1/chat/completions"):
+        _turn_caps(gid)
     body = ollama_body(path, await _json(req, MAX_BODY), allowed, s.get("embeddingModel"))
     gated = path in ("/api/chat", "/api/generate", "/v1/chat/completions")
     return await _relay("POST", f"{OLLAMA}{path}", gated=gated, json_body=body)
@@ -981,8 +1011,209 @@ async def _valhalla(req: Request, gid: str) -> Response:
     raise Refused(f"{req.method} {path} isn't available to guests")
 
 
+def _turn_caps(gid: str):
+    """turnsPerDay / tokensPerDay for a cell: the cell reports each turn through the sandbox socket (`POST /usage`)."""
+    g = guests.get_guest(gid)
+    if not g or g["disabled"]:
+        raise Refused("this guest is paused")
+    cfg, use = g["config"], guests.usage(gid)
+    if cfg.get("turnsPerDay") and use["turns"] >= cfg["turnsPerDay"]:
+        raise Refused(f"today's {cfg['turnsPerDay']} replies are used up; they reset at midnight")
+    if cfg.get("tokensPerDay") and use["tokens"] >= cfg["tokensPerDay"]:
+        raise Refused(f"today's {cfg['tokensPerDay']:,} tokens are used up; they reset at midnight")
+
+
+# ── sandbox (run_code for cells) ────────────────────────────────────────────
+
+def parse_run_output(stdout: str) -> tuple[str, int | None, list[str]]:
+    """The wrapper prints the program's output, then a marker with its exit code, then the files it changed."""
+    marker = "\n__SHELLB_RC__ "
+    i = stdout.rfind(marker)
+    if i < 0:
+        return stdout, None, []
+    head, tail = stdout[:i], stdout[i + len(marker):]
+    lines = tail.splitlines()
+    try:
+        rc = int(lines[0].strip())
+    except (IndexError, ValueError):
+        rc = None
+    changed = [ln[len("/work/"):] for ln in lines[1:] if ln.startswith("/work/") and "/.git/" not in ln]
+    return head, rc, changed
+
+
+async def run_sandbox(gid: str, uid: int, workspace: str, language: str, code: str) -> dict:
+    """Run a cell's code on the host: the sandbox image as the cell's uid, only that workspace bound at /work."""
+    from tools import CELLS, SANDBOX_IMAGE
+    if not shutil.which("docker"):
+        raise Refused("the code sandbox isn't available on this machine")
+    src = _dir(gid) / "data" / workspace
+    script = CELLS / f"run-{secrets.token_hex(8)}.{'py' if language == 'python' else 'sh'}"
+    script.write_text(code)
+    os.chmod(script, 0o644)
+    runner = "python" if language == "python" else "bash"
+    wrapper = (f"touch /tmp/.mark; {runner} /cell/main; rc=$?; echo; echo __SHELLB_RC__ $rc; "
+               "find /work -type f -newer /tmp/.mark -not -path '*/.git/*' -not -path '*/__pycache__/*' 2>/dev/null | head -500")
+    name = f"shellb-cellrun-{secrets.token_hex(5)}"
+    cmd = ["docker", "run", "--rm", "--name", name, "--network", "none", "--cap-drop", "ALL", *SANDBOX_LIMITS, "--read-only",
+           "--tmpfs", "/tmp:rw,exec,size=512m", "--user", f"{uid}:{uid}", "-e", "HOME=/tmp", "-e", "MPLBACKEND=Agg", "-e", "PYTHONUNBUFFERED=1",
+           # --mount (not -v): a missing source is an error, never a root-owned folder conjured into the cell's data
+           "--mount", f"type=bind,src={src},dst=/work", "-v", f"{script}:/cell/main:ro", "-w", "/work", SANDBOX_IMAGE, "bash", "-c", wrapper]
+    lock = _sandbox_locks.setdefault(gid, asyncio.Lock())
+    t0 = time.time()
+    async with lock:
+        proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        try:
+            out, err = await asyncio.wait_for(proc.communicate(), timeout=SANDBOX_TIMEOUT)
+            timed_out = False
+        except asyncio.TimeoutError:
+            await (await asyncio.create_subprocess_exec("docker", "kill", name)).wait()
+            out, err = await proc.communicate()
+            timed_out = True
+        finally:
+            script.unlink(missing_ok=True)
+    stdout, rc, changed = parse_run_output(out.decode(errors="replace"))
+    stderr = err.decode(errors="replace")
+    if "bind source path does not exist" in stderr or "invalid mount config" in stderr:
+        raise Refused("that workspace doesn't exist yet")
+    return {"exit": rc if rc is not None else proc.returncode, "timedOut": timed_out, "elapsed": round(time.time() - t0, 1),
+            "stdout": stdout[-200_000:], "stderr": stderr[-50_000:], "changed": changed}
+
+
+async def _sandbox(req: Request, gid: str) -> Response:
+    path = req.url.path
+    if req.method == "GET" and path == "/healthz":
+        return JSONResponse({"ok": True})
+    if req.method != "POST":
+        raise Refused(f"{req.method} {path} isn't available to guests")
+    body = await _json(req, MAX_JSON)
+    if path == "/usage":
+        p, c = int(body.get("prompt") or 0), int(body.get("completion") or 0)
+        guests._bump(gid, "turns", 1)
+        if p + c:
+            guests._bump(gid, "tokens", p + c)
+        return JSONResponse({"ok": True})
+    if path == "/run":
+        language = str(body.get("language") or "python").lower()
+        code = str(body.get("code") or "")
+        ws = str(body.get("workspace") or "")
+        if language not in ("python", "bash") or not WS_RE.match(ws) or not code or len(code) > 200_000:
+            raise Refused("a run needs language (python|bash), code and a workspace of this cell")
+        return JSONResponse(await run_sandbox(gid, _cell(gid).uid, ws, language, code))
+    raise Refused(f"{req.method} {path} isn't available to guests")
+
+
+def data_bytes(gid: str) -> int:
+    """Size of the cell's data folder (owned by its uid, so measured from the helper container); cached a minute."""
+    hit = _data_bytes.get(gid)
+    if hit and time.time() - hit[0] < 60:
+        return hit[1]
+    n = 0
+    if shutil.which("docker") and (_dir(gid) / "data").exists():
+        try:
+            r = subprocess.run(["docker", *_helper(gid, "du -sb /c/data | cut -f1")], capture_output=True, text=True, timeout=30)
+            n = int(r.stdout.strip().splitlines()[-1]) if r.returncode == 0 and r.stdout.strip() else 0
+        except (subprocess.SubprocessError, ValueError, OSError):
+            n = 0
+    _data_bytes[gid] = (time.time(), n)
+    return n
+
+
+# ── egress: a filtered proxy, the cell's only way to the web ────────────────
+
+def egress_target(request_line: str) -> tuple[str, str, int, bytes | None]:
+    """('connect'|'http', host, port, rewritten request line) for a proxy request line; Refused otherwise."""
+    from urllib.parse import urlparse
+    parts = request_line.strip().split()
+    if len(parts) != 3 or not parts[2].startswith("HTTP/1."):
+        raise Refused("bad proxy request")
+    method, target, version = parts
+    if method == "CONNECT":
+        host, _, port = target.rpartition(":")
+        if not host or not port.isdigit():
+            raise Refused("CONNECT needs host:port")
+        return "connect", host.strip("[]").lower(), int(port), None
+    u = urlparse(target)
+    if u.scheme != "http" or not u.hostname or u.username or u.password:
+        raise Refused("only absolute http:// requests or CONNECT")
+    path = (u.path or "/") + (f"?{u.query}" if u.query else "")
+    return "http", u.hostname.lower(), u.port or 80, f"{method} {path} {version}\r\n".encode()
+
+
+async def egress_allow(gid: str, host: str, port: int):
+    from tools import _blocked_host
+    if port not in EGRESS_PORTS:
+        raise Refused(f"port {port} isn't allowed; only 80 and 443")
+    if not re.fullmatch(r"[a-z0-9.-]+", host) or host in ("localhost",) or await asyncio.to_thread(_blocked_host, host):
+        raise Refused(f"{host} isn't a public address")
+    now = time.time()
+    recent = [t for t in _egress_conns.get(gid, []) if now - t < 60]
+    if len(recent) >= EGRESS_PER_MINUTE:
+        raise Refused("too many connections this minute")
+    _egress_conns[gid] = recent + [now]
+
+
+async def _pipe_capped(reader: asyncio.StreamReader, writer: asyncio.StreamWriter, cap: int):
+    moved = 0
+    try:
+        while data := await asyncio.wait_for(reader.read(64 * 1024), 120):
+            moved += len(data)
+            if moved > cap:
+                break
+            writer.write(data)
+            await writer.drain()
+    except (asyncio.TimeoutError, ConnectionError, OSError):
+        pass
+    finally:
+        try:
+            writer.close()
+        except OSError:
+            pass
+
+
+async def _egress_conn(gid: str, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+    up_w = None
+    try:
+        line = await asyncio.wait_for(reader.readline(), 30)
+        kind, host, port, first = egress_target(line.decode(errors="replace"))
+        headers = []
+        while True:
+            h = await asyncio.wait_for(reader.readline(), 30)
+            if not h or h in (b"\r\n", b"\n"):
+                break
+            if not h.lower().startswith((b"proxy-", b"connection:", b"keep-alive:")):
+                headers.append(h)
+        await egress_allow(gid, host, port)
+        up_r, up_w = await asyncio.wait_for(asyncio.open_connection(host, port), 20)
+        if kind == "connect":
+            writer.write(b"HTTP/1.1 200 Connection Established\r\n\r\n")
+        else:
+            up_w.write(first + b"".join(headers) + b"Connection: close\r\n\r\n")
+            await up_w.drain()
+        await writer.drain()
+        await asyncio.gather(_pipe_capped(reader, up_w, EGRESS_MAX_BYTES), _pipe_capped(up_r, writer, EGRESS_MAX_BYTES))
+    except Refused as e:
+        try:
+            writer.write(f"HTTP/1.1 403 Forbidden\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\n{e}\n".encode())
+            await writer.drain()
+        except (ConnectionError, OSError):
+            pass
+    except (asyncio.TimeoutError, ConnectionError, OSError, UnicodeDecodeError, ValueError):
+        try:
+            writer.write(b"HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\n")
+            await writer.drain()
+        except (ConnectionError, OSError):
+            pass
+    finally:
+        for w in (writer, up_w):
+            if w is not None:
+                try:
+                    w.close()
+                except OSError:
+                    pass
+
+
 POLICIES = {"ollama": _ollama, "comfy": _comfy, "hermes": _hermes, "orpheus": _orpheus, "stableaudio": _stableaudio,
-            "searxng": _searxng, "valhalla": _valhalla}
+            "searxng": _searxng, "valhalla": _valhalla, "sandbox": _sandbox}
 
 
 async def broker(scope, receive, send):

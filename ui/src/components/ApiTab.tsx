@@ -12,7 +12,7 @@ import { WebhooksPanel } from './WebhooksPanel';
 type Mode = 'agent' | 'persona' | 'raw';
 interface KeyConfig {
   perMinute: number; concurrent: number; dailyRequests: number; dailyTokens: number; maxTokens: number;
-  logContent: boolean; disabled: boolean; instructions: string; tools: string[]; model: string; models: string[]; thinking: string;
+  logContent: boolean; disabled: boolean; memory?: boolean; instructions: string; tools: string[]; model: string; models: string[]; thinking: string;
 }
 interface Totals { calls: number; errors: number; refused: number; promptTokens: number; completionTokens: number; avgMs: number; last: number }
 interface ApiKey {
@@ -167,6 +167,12 @@ function KeyForm({ initial, agents, options, onSave, onCancel, saveLabel }: {
           <input type="checkbox" checked={cfg.logContent} onChange={e => set('logContent', e.target.checked)} />
           Keep the start of each message and reply in the usage log (14 days)
         </label>
+        {mode === 'agent' && (
+          <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] mt-2">
+            <input type="checkbox" checked={!!cfg.memory} onChange={e => set('memory', e.target.checked)} />
+            May read and add your memories (GET/POST /api/v1/memory, MCP shellb_memory_*)
+          </label>
+        )}
       </details>
 
       <div className="flex gap-2">

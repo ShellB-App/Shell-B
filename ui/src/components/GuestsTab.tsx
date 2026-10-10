@@ -325,9 +325,10 @@ function CellSwitch({ guest: g, onChange }: { guest: Guest; onChange: (cell: boo
       <label className="flex items-start gap-2.5 cursor-pointer">
         <input type="checkbox" checked={g.config.cell} onChange={e => onChange(e.target.checked)} className="mt-0.5 accent-[var(--accent)]" />
         <span className="leading-relaxed text-[var(--text-secondary)] max-w-[65ch]">
-          <span className="text-[var(--text-primary)]">Own container (beta).</span> The full Shell:B in a sealed container
-          with no network, reaching the models only through the broker. Chat, pictures, voice and search work; Studio,
-          Code and web pages come in the next phase. Their guest-app chats stay in the guest app.
+          <span className="text-[var(--text-primary)]">Own container (beta).</span> The full Shell:B in a sealed container,
+          reaching the models only through the broker. Chat, pictures, voice, search, the code sandbox, Studio and Code,
+          research and web reading work (web traffic goes through a filtered proxy on this machine); live dev-server
+          previews come later. Their guest-app chats stay in the guest app.
         </span>
       </label>
       {g.config.cell && (

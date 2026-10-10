@@ -700,7 +700,11 @@ Friends and coworkers can have their own Shell:B on this machine, without access
   Generation waits behind the owner's turns and shares the guest slots; picture and audio caps count there. The
   gateway signs the guest in, then proxies to the cell with a per-start gate secret; frames are routed by their
   key. Cells start on demand (a few seconds), stop after 30 idle minutes, at most "Guest containers running at once"
-  (default 3), and restart by themselves if the container dies. Not in cells yet (Phase 2): the code sandbox, dev
+  (default 3), and restart by themselves if the container dies. The code sandbox runs through the broker (the cell's `run_code` asks the host, which runs the sandbox image as the cell's
+  uid with only that chat's or project's folder mounted; one run at a time per cell), and web access goes through a
+  filtered proxy on the host (`cells._Egress`: public addresses only, ports 80/443, per-cell caps), so web reading, Research
+  sources, Shopping, Codex snapshots and `git clone` work; the cell reports each turn so `turnsPerDay`/`tokensPerDay`
+  apply. Not in cells yet (Phase 2b): dev
   servers, Studio/Code previews and web fetching. Deleting the guest removes the container and wipes its data.
 
 ## Login

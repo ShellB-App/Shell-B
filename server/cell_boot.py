@@ -41,6 +41,25 @@ def _router_module(router) -> str:
     return next((getattr(r.endpoint, "__module__", "") for r in router.routes if hasattr(r, "endpoint")), "")
 
 
+SANDBOX_URL = "http://127.0.0.1:8250"  # forwarded by cell/entry.py to the host broker's sandbox socket (cells.py)
+
+
+def report_usage(usage: dict | None):
+    """Tell the host what a turn cost, so turnsPerDay/tokensPerDay apply to cells too (cells._sandbox → guests._bump)."""
+    if not CELL or not usage:
+        return
+    import threading
+
+    def post():
+        try:
+            import httpx
+            httpx.post(f"{SANDBOX_URL}/usage", json={"prompt": int(usage.get("prompt") or 0), "completion": int(usage.get("completion") or 0)},
+                       timeout=10, trust_env=False)
+        except Exception as e:  # noqa: BLE001
+            print(f"cell usage report: {type(e).__name__}: {e}")
+    threading.Thread(target=post, name="cell-usage", daemon=True).start()
+
+
 def auth_me():
     """What the UI asks first: signed in (the gateway only forwards signed-in guests), and the frame key."""
     return {"authenticated": True, "via": "session", "passwordSet": True, "frameKey": FRAME_SECRET,

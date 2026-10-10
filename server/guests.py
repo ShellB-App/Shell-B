@@ -547,6 +547,10 @@ def storage_bytes(gid: str, fresh: bool = False) -> int:
             total += (FILES / n).stat().st_size
         except OSError:
             pass
+    g = get_guest(gid)
+    if g and g["config"].get("cell"):  # the cell's own data belongs to its uid: a helper container measures it
+        import cells
+        total += cells.data_bytes(gid)
     _storage[gid] = (time.time(), total)
     return total
 

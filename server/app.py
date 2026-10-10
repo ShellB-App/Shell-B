@@ -903,6 +903,7 @@ def begin_turn(conv, body, stream=True, note="", adult_ok=False, interactive=Non
         if ACTIVE.get(conv_id, {}).get("abort") is abort:
             ACTIVE.pop(conv_id, None)
         tokens.record(guest or ("api" if sealed else ""), turn.usage, turn.agent.get("id", ""), turn.model)  # the token ledger (Settings → Usage)
+        cell_boot.report_usage(turn.usage)  # inside a cell: the host counts it against the guest's daily share
         if guest:  # tokens against the guest's daily share; their own memory learns from the exchange
             guests.after_turn(guest, conv_id, content, final, learn=stream and status == "complete" and not abort.is_set())
         if stream and status == "complete" and not abort.is_set() and not sealed:

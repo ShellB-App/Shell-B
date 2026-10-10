@@ -1,6 +1,12 @@
 [
  {
   "date": "2026-10-10",
+  "area": "Guests",
+  "title": "Guest containers: code sandbox and web access",
+  "summary": "A guest's own container can now run code (the host runs the sandbox for it, with only that chat's folder visible) and reach the web through a filtered proxy on this machine, so Studio, Code, Research, Shopping and web reading work for guests in containers. Their daily turn and token caps now apply there too, and their storage count includes the container's files."
+ },
+ {
+  "date": "2026-10-10",
   "area": "Media",
   "title": "Transcribe audio and video, edit pictures, LoRAs, Gemini import",
   "summary": "Agents can transcribe audio and video files (and Secretary takes video recordings): ffmpeg in the sandbox extracts the sound, Whisper writes a timestamped transcript saved next to the file. NYX and Daedalus got edit_image: cut a subject out, upscale with an ESRGAN model from the Model Store, or inpaint a masked area from a prompt. generate_image can apply a LoRA from the Model Store. Import history now reads a Google Takeout of Gemini activity. The API gained artifact content, image inputs, library search and (per key) memory, and the MCP server the matching tools."
