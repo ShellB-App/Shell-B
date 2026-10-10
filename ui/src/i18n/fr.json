@@ -479,5 +479,15 @@
  "{time} left": "il reste {time}",
  "{used} of {total} unified memory": "{used} sur {total} de mémoire unifiée",
  "{used}{unit} of {cap}{unit}": "{used}{unit} sur {cap}{unit}",
- "{used}{unit} · no limit": "{used}{unit} · sans limite"
+ "{used}{unit} · no limit": "{used}{unit} · sans limite",
+ "Split view": "Vue partagée",
+ "Drag to resize; double-click to reset": "Faites glisser pour redimensionner ; double-cliquez pour rétablir",
+ "Reload": "Recharger",
+ "Open in a new tab": "Ouvrir dans un nouvel onglet",
+ "Back to split view": "Revenir à la vue partagée",
+ "Full screen": "Plein écran",
+ "This file is long; split view shows the beginning. Download it for the rest.": "Ce fichier est long ; la vue partagée en montre le début. Téléchargez-le pour la suite.",
+ "This sheet is empty.": "Cette feuille est vide.",
+ "Showing {rows} of {total} rows and {cols} of {totalCols} columns.": "{rows} lignes sur {total} et {cols} colonnes sur {totalCols} affichées.",
+ "Open {path} beside the chat": "Ouvrir {path} à côté de la discussion"
 }

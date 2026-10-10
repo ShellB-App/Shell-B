@@ -4,12 +4,15 @@ import {
   Code,
   Download,
   ExternalLink,
+  FileSpreadsheet,
   FileText,
   Palette,
   Workflow,
 } from 'lucide-react';
 import type { ToolDisplay, WorkspaceFile } from '../../types';
 import { fmtBytes } from '../../api';
+import { chipClick, docTarget, isSheet } from '../../docView';
+import { t } from '../../i18n';
 import { artifactMenu } from '../artifactMenu';
 import { openContextMenu } from '../ContextMenu';
 
@@ -86,10 +89,11 @@ export function DownloadChip({ file }: { file: WorkspaceFile }) {
         href={file.url}
         target="_blank"
         rel="noreferrer"
-        title={`Open ${file.path}`}
+        title={docTarget(file.url) ? t('Open {path} beside the chat', { path: file.path }) : `Open ${file.path}`}
+        onClick={e => chipClick(e, file.url)}
         className="flex items-center gap-1.5 px-2 py-1 min-w-0 hover:bg-[var(--bg-hover)]"
       >
-        <FileText className="w-3.5 h-3.5 text-[var(--accent)] shrink-0" />
+        {isSheet(file.path) ? <FileSpreadsheet className="w-3.5 h-3.5 text-[var(--accent)] shrink-0" /> : <FileText className="w-3.5 h-3.5 text-[var(--accent)] shrink-0" />}
         <span className="font-mono truncate">{name}</span>
         <span className="text-[var(--text-muted)] shrink-0">{fmtBytes(file.size)}</span>
       </a>

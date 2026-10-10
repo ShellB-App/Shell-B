@@ -57,6 +57,8 @@ import { MobileComposer } from './MobileComposer';
 import { CircleShareHost } from '../components/CircleCards';
 import { MobileAppsSheet } from './MobileAppsSheet';
 import { MobileArtifactSheet } from './MobileArtifactSheet';
+import { DocPanel } from '../components/DocPanel';
+import { onDocView, type DocTarget } from '../docView';
 import { MobileAgentPicker } from './MobileAgentPicker';
 import { MobileRadioBar } from './MobileRadioBar';
 import { FormFactorSwitcher } from './FormFactorSwitcher';
@@ -192,6 +194,9 @@ export function MobileApp() {
   const [formFactorOpen, setFormFactorOpen] = useState(() => /[?&]switch=1/.test(location.search));
   const [artifactSheetOpen, setArtifactSheetOpen] = useState(false);
   const [activeArtifact, setActiveArtifact] = useState<{ id: string; version?: number } | null>(null);
+  // a document or spreadsheet from the chat's /work, full screen (docView.ts)
+  const [doc, setDoc] = useState<DocTarget | null>(null);
+  useEffect(() => onDocView(setDoc), []);
   const [modal, setModal] = useState<null | 'agents' | 'tools' | 'settings' | 'palette'>(null);
   const [guestPanel, setGuestPanel] = useState<GuestPanel | null>(null);  // a guest's cell: the gateway's panels (CellGuest.tsx)
   const [settingsTab, setSettingsTab] = useState<SettingsTabId>('general');
@@ -1112,6 +1117,8 @@ export function MobileApp() {
         activeId={agent.id}
         onSelect={selectAgent}
       />
+
+      {doc && doc.convId === conv?.id && <DocPanel mobile target={doc} onClose={() => setDoc(null)} />}
 
       {artifactSheetOpen && activeArtifact && (
         <MobileArtifactSheet

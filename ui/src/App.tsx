@@ -40,6 +40,8 @@ import { foldSummarized } from './summarized';
 import { ContextMeter } from './components/composer/ContextMeter';
 import { isCell, type GuestPanel } from './cell';
 import { GuestPanelHost } from './components/CellGuest';
+import { DocPanel } from './components/DocPanel';
+import { onDocView, type DocTarget } from './docView';
 
 const Studio = lazy(() => import('./studio/Studio'));
 // the apps load when first opened, not with the chat (the main bundle was 2.7 MB)
@@ -183,6 +185,10 @@ export function App() {
     (!location.hash || /^#\/(?:c\/|$)/.test(location.hash))
   );
   const [panel, setPanel] = useState<{ id: string; version?: number } | null>(null);
+  // split view: a document or spreadsheet from the chat's /work beside it (docView.ts); one side panel at a time
+  const [doc, setDoc] = useState<DocTarget | null>(null);
+  useEffect(() => onDocView(t => { setPanel(null); setDoc(t); }), []);
+  useEffect(() => { if (panel) setDoc(null); }, [panel]);
   // ?shot&settings=<tab> opens Settings on that tab, for headless screenshots (index.html)
   const shotSettings = /[?&]shot\b/.test(location.search) ? /[?&]settings=(\w+)/.exec(location.search)?.[1] : undefined;
   const [modal, setModal] = useState<null | 'agents' | 'tools' | 'settings' | 'palette'>(shotSettings ? 'settings' : null);
@@ -510,10 +516,11 @@ export function App() {
       else if (mod && !e.shiftKey && e.key.toLowerCase() === 'b' && !(e.target instanceof HTMLTextAreaElement)) { e.preventDefault(); setSidebar(s => !s); }
       else if (e.key === '?' && !mod && !e.altKey && !(e.target instanceof HTMLTextAreaElement) && !(e.target instanceof HTMLInputElement) && !(e.target as HTMLElement | null)?.isContentEditable) { e.preventDefault(); setSettingsTab('shortcuts'); setModal('settings'); }
       else if (e.key === 'Escape' && !modal && panel) setPanel(null);
+      else if (e.key === 'Escape' && !modal && doc && !(e.target instanceof HTMLTextAreaElement)) setDoc(null);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [newChat, modal, panel]);
+  }, [newChat, modal, panel, doc]);
 
   // scheduled runs start and finish chats on their own; the status poll notices and refreshes the list
   const runMark = `${status?.scheduledRunAt ?? 0}|${status?.active.join(',') ?? ''}`;
@@ -942,6 +949,9 @@ export function App() {
       {panel && artifacts.length > 0 && onChatPage && (
         <ArtifactPanel groups={artifacts} activeId={panel.id} version={panel.version} dark={theme === 'dark'} convId={conv?.id}
           onSelect={(id, version) => setPanel({ id, version })} onClose={() => setPanel(null)} />
+      )}
+      {doc && !panel && doc.convId === conv?.id && onChatPage && (
+        <DocPanel target={doc} onClose={() => setDoc(null)} refreshKey={`${messages.length}-${busy}`} />
       )}
 
       {modals}

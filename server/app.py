@@ -57,6 +57,7 @@ import studio_tools
 import studio_assets
 import devserver
 import doc_tools
+import docview
 import adult
 import maps
 import flights
@@ -232,6 +233,7 @@ app.include_router(network.router)
 app.include_router(changelog.router)
 app.include_router(asset_libs.router)
 app.include_router(groups.router)
+app.include_router(docview.router)
 app.include_router(schedules.router)
 app.include_router(research.router)
 app.include_router(notebook.router)

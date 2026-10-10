@@ -208,3 +208,15 @@ html.wco .fixed.inset-0 { top: var(--titlebar-h); }
 }
 .wco-nodrag { app-region: no-drag; -webkit-app-region: no-drag; }
 @media print { .wco-titlebar { display: none; } html.wco body { padding-top: 0; } }
+
+/* split view (DocPanel): a Word document drawn from server/docview.py */
+.docview { font-size: 0.95rem; }
+.docview .subtitle { color: var(--text-secondary); font-size: 1.1em; margin-top: 0.2em; }
+.docview p:empty, .docview td > p { margin: 0; }
+.docview table { border-collapse: collapse; width: 100%; font-size: 0.9em; }
+.docview td { border: 1px solid var(--border-strong); padding: 0.35em 0.6em; vertical-align: top; }
+.docview img { max-width: 100%; height: auto; display: inline-block; border-radius: 4px; }
+.docview ul { list-style: disc; padding-left: 1.5em; }
+.docview ol { list-style: decimal; padding-left: 1.5em; }
+.docview blockquote { border-left: 3px solid var(--border-strong); padding-left: 1em; color: var(--text-secondary); }
+.docview a { color: var(--accent-soft); text-decoration: underline; }
