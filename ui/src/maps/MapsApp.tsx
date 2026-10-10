@@ -13,7 +13,7 @@ import type { FeatureCollection, Point } from 'geojson';
 import {
   Activity, Anchor, Bookmark, Check, Compass, Copy, Crosshair, Download, Eye, Flag, Globe2, Info, Loader2, LocateFixed,
   Map as MapIcon, MapPin, Navigation, Orbit, PanelLeftClose, PanelLeftOpen, Radar, Rocket, Route as RouteIcon, Ruler,
-  Satellite, Search, Sparkles, Thermometer, Video, X,
+  Satellite, Search, Sparkles, Thermometer, Video, Wheat, Hand, X,
 } from 'lucide-react';
 import { drawOverlays, fetchBodies, fmtCoord, frameSpec, loadMapLib, styleFor, type MapBody, type MapLib, type MapSpec } from './core';
 import { MAPS_HANDOFF, useDarkTheme } from './MapCard';
@@ -48,6 +48,11 @@ import { OVERLAYS, loadPrefs, savePrefs, type LayerPrefs, type OverlayId } from 
 import { LayersPanel } from './LayersPanel';
 import { TimeBar } from './TimeBar';
 import { attachRelief } from './relief';
+import { PREHISTORY, isCaveSite, siteName, yearsAgo, type PrehistorySite } from './prehistory';
+import { KIND_COLOR, KIND_LABEL, PrehistoryCard, SOLAR_LABEL } from './PrehistoryCard';
+import { DeepTimePanel } from './DeepTimePanel';
+import { attachIceAge, attachSolarLines, seaLevelAt } from './deeptime';
+import { t } from '../i18n';
 import { useClockState, useClockTime } from './clock';
 import { ASK_ATLAS, OPEN_MEDIA, mediaSrc, type NoteMedia } from './notes';
 
@@ -85,6 +90,7 @@ const LAST = 'shellb.maps.last';
 const VIEW = (id: string) => `shellb.maps.view.${id}`;
 const GLOBE = 'shellb.maps.globe';
 const MEASURE_UNIT = 'shellb.maps.measure.unit';
+const DEEP = 'shellb.maps.deepYears';
 
 const store = {
   get<T>(k: string): T | null { try { return JSON.parse(localStorage.getItem(k) ?? 'null') as T | null; } catch { return null; } },
@@ -121,11 +127,12 @@ type Selection =
   | { kind: 'landmark'; item: Landmark }
   | AnyFeature
   | { kind: 'traverse'; traverse: Traverse; waypoint: TraverseWaypoint }
-  | { kind: 'quake'; item: Quake };
+  | { kind: 'quake'; item: Quake }
+  | { kind: 'prehistory'; item: PrehistorySite };
 
 interface Suggestion {
   id: string;
-  kind: 'coord' | 'flight' | 'landmark' | 'geocode' | 'feature' | 'satellite';
+  kind: 'coord' | 'flight' | 'landmark' | 'geocode' | 'feature' | 'satellite' | 'prehistory';
   satId?: string;
   title: string;
   subtitle?: string;
@@ -134,6 +141,7 @@ interface Suggestion {
   flight?: string;
   landmark?: Landmark;
   feature?: AnyFeature;
+  site?: PrehistorySite;
 }
 
 type Drawer = 'directions' | 'dossier' | 'bookmarks' | 'atlas' | null;
@@ -145,7 +153,13 @@ const LANDMARK_COLOR: Record<Landmark['kind'], string> = {
 };
 
 /** Curated point datasets, each one overlay. `sel` turns a hit back into a Selection. */
-const POINT_SETS: { id: OverlayId; items: (bodyId: string) => PointItem[]; color: string; labelZoom?: number; sel: (id: string, bodyId: string) => Selection | null }[] = [
+/** Prehistoric sites begun at least `cut` years ago (0 = all), in the caves or the Neolithic layer. */
+const prehistoryPoints = (caves: boolean, cut: number): PointItem[] => PREHISTORY
+  .filter(p => isCaveSite(p) === caves && yearsAgo(p) >= cut)
+  .map(p => ({ id: p.id, lat: p.lat, lon: p.lon, name: siteName(p), color: KIND_COLOR[p.kind] }));
+const prehistorySel = (id: string): Selection | null => { const item = PREHISTORY.find(p => p.id === id); return item ? { kind: 'prehistory', item } : null; };
+
+const POINT_SETS: { id: OverlayId; items: (bodyId: string, cut: number) => PointItem[]; color: string; labelZoom?: number; sel: (id: string, bodyId: string) => Selection | null }[] = [
   {
     id: 'landmarks', color: '#10b981', labelZoom: 1.5,
     items: b => getLandmarksForBody(b).map(l => ({ id: l.id, lat: l.lat, lon: l.lon, name: l.name, color: LANDMARK_COLOR[l.kind] })),
@@ -167,6 +181,8 @@ const POINT_SETS: { id: OverlayId; items: (bodyId: string) => PointItem[]; color
     id: 'webcams', color: '#f472b6', items: () => CCTV_CAMERAS.filter(c => c.lat !== 0 || c.lon !== 0),
     sel: id => { const item = CCTV_CAMERAS.find(w => w.id === id); return item ? { kind: 'cctv', item } : null; },
   },
+  { id: 'caves', color: '#e2725b', labelZoom: 4, items: (_, cut) => prehistoryPoints(true, cut), sel: prehistorySel },
+  { id: 'neolithic', color: '#cbd5e1', labelZoom: 4, items: (_, cut) => prehistoryPoints(false, cut), sel: prehistorySel },
 ];
 
 const selectionKey = (s: Selection | null): { overlay: OverlayId; id: string } | null => {
@@ -177,6 +193,7 @@ const selectionKey = (s: Selection | null): { overlay: OverlayId; id: string } |
     case 'shipwreck': return { overlay: 'shipwrecks', id: s.item.id };
     case 'launchsite': return { overlay: 'launchsites', id: s.item.id };
     case 'cctv': return { overlay: 'webcams', id: s.item.id };
+    case 'prehistory': return { overlay: isCaveSite(s.item) ? 'caves' : 'neolithic', id: s.item.id };
     default: return null;
   }
 };
@@ -209,6 +226,8 @@ export function MapsApp() {
   const [viewport, setViewport] = useState({ lat: 0, lon: 0, zoom: 2 });
   const [atlasRequest, setAtlasRequest] = useState<{ text: string; n: number } | null>(null);
   const [lightbox, setLightbox] = useState<NoteMedia | null>(null);
+  const [deepYears, setDeepYearsState] = useState<number>(() => store.get<number>(DEEP) ?? 21000);
+  const setDeepYears = (y: number) => { setDeepYearsState(y); store.set(DEEP, y); };
 
   useEffect(() => { if (drawer !== 'atlas') setAtlasRequest(null); }, [drawer]);  // a reopened Atlas shouldn't resend it
   // Cards ask Atlas and open pictures through window events (they sit a few components down)
@@ -378,11 +397,16 @@ export function MapsApp() {
   const points = useRef<Partial<Record<OverlayId, PointLayer>>>({});
   const selRef = useRef(selection);
   selRef.current = selection;
-  const pointKey = POINT_SETS.map(s => (has(s.id) ? '1' : '0')).join('');
+  // with the Ice Age coast on, the prehistory layers show only what already existed at the chosen date
+  const deepCut = has('iceage') ? deepYears : 0;
+  const deepCutRef = useRef(deepCut);
+  deepCutRef.current = deepCut;
+  const cutCount = PREHISTORY.filter(p => yearsAgo(p) >= deepCut).length;
+  const pointKey = POINT_SETS.map(s => (has(s.id) ? '1' : '0')).join('') + cutCount;
   useEffect(() => {
     if (!map) return;
     const cleanups = POINT_SETS.filter(s => has(s.id)).map(s => {
-      const items = s.items(bodyId);
+      const items = s.items(bodyId, deepCutRef.current);
       if (!items.length) return () => {};
       const layer = attachPoints(map, s.id, items, { color: s.color, labelZoom: s.labelZoom });
       points.current[s.id] = layer;
@@ -468,6 +492,27 @@ export function MapsApp() {
     if (!map || !body?.terrain || (!reliefOn && !terrain3dOn) || mapState?.body !== body.id) return;
     return own(attachRelief(map, body, { dark, shade: reliefOn, threeD: terrain3dOn }));
   }, [map, body, dark, reliefOn, terrain3dOn, own]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Ice Age coast and solstice lines ────────────────────────────────────
+  // re-attached after Relief (same deps) so the old shoreline sits above its depth tint
+  const iceOn = has('iceage');
+  const iceLayer = useRef<{ setLevel: (m: number) => void } | null>(null);
+  const deepRef = useRef(deepYears);
+  deepRef.current = deepYears;
+  useEffect(() => {
+    if (!map || !body?.terrain || !iceOn || mapState?.body !== body.id) return;
+    const layer = attachIceAge(map, body, seaLevelAt(deepRef.current), dark);
+    iceLayer.current = layer;
+    return own(() => { if (iceLayer.current === layer) iceLayer.current = null; layer.detach(); });
+  }, [map, body, dark, iceOn, reliefOn, terrain3dOn, own]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { iceLayer.current?.setLevel(seaLevelAt(deepYears)); }, [deepYears]);
+
+  const solarSite = selection?.kind === 'prehistory' && selection.item.align?.length ? selection.item : null;
+  useEffect(() => {
+    if (!map || !solarSite || mapState?.body !== 'earth') return;
+    const labels = Object.fromEntries(Object.entries(SOLAR_LABEL).map(([k, v]) => [k, t(v)])) as typeof SOLAR_LABEL;
+    return own(attachSolarLines(map, solarSite, labels));
+  }, [map, solarSite, mapState?.body, own]);
 
   // ── Day/night, grid ─────────────────────────────────────────────────────
   const dayNightOn = has('daynight');
@@ -752,6 +797,9 @@ export function MapsApp() {
         WORLD_WONDERS.filter(w => w.name.toLowerCase().includes(ql)).slice(0, 2).forEach(item => feat({ kind: 'wonder', item }, `Wonder · ${item.location}`));
         SHIPWRECKS.filter(w => w.name.toLowerCase().includes(ql)).slice(0, 2).forEach(item => feat({ kind: 'shipwreck', item }, `Shipwreck · ${item.yearSunk}`));
         LAUNCH_SITES.filter(w => w.name.toLowerCase().includes(ql) || w.operator.toLowerCase().includes(ql)).slice(0, 2).forEach(item => feat({ kind: 'launchsite', item }, `Spaceport · ${item.operator}`));
+        PREHISTORY.filter(p => [p.name, p.nameFr ?? '', p.place].some(x => x.toLowerCase().includes(ql))).slice(0, 3).forEach(p => list.push({
+          id: `pre-${p.id}`, kind: 'prehistory', title: siteName(p), subtitle: `${t(KIND_LABEL[p.kind])} · ${t(p.country)}`, lat: p.lat, lon: p.lon, site: p,
+        }));
         CCTV_CAMERAS.filter(c => (c.lat !== 0 || c.lon !== 0) && (c.name.toLowerCase().includes(ql) || c.city.toLowerCase().includes(ql))).slice(0, 2).forEach(item => feat({ kind: 'cctv', item }, `Webcam · ${item.city}`));
         // places after the curated matches, so 'Titanic' finds the wreck before a village of that name
         show();
@@ -777,7 +825,12 @@ export function MapsApp() {
       return;
     }
     if (s.lat == null || s.lon == null) return;
-    if (s.kind === 'feature' && s.feature) {
+    if (s.kind === 'prehistory' && s.site) {
+      const ov = isCaveSite(s.site) ? 'caves' : 'neolithic';
+      if (!prefs[ov]) toggleLayer(ov, true);
+      setSelection({ kind: 'prehistory', item: s.site }); setPin(null);
+      goTo({ lat: s.lat, lon: s.lon, zoom: Math.max(map?.getZoom() ?? 0, 12) });
+    } else if (s.kind === 'feature' && s.feature) {
       const ov = selectionKey(s.feature)?.overlay;
       if (ov && !prefs[ov]) toggleLayer(ov, true);
       setSelection(s.feature); setPin(null);
@@ -818,6 +871,8 @@ export function MapsApp() {
     flights: trafficOn ? planes.length : undefined,
     satellites: orbStatus?.count,
     quakes: quakeCount ?? undefined,
+    caves: PREHISTORY.filter(p => isCaveSite(p) && yearsAgo(p) >= deepCut).length,
+    neolithic: PREHISTORY.filter(p => !isCaveSite(p) && yearsAgo(p) >= deepCut).length,
   };
   const status = (has('satellites') && (orbStatus?.error ? `Spacecraft: ${orbStatus.error}` : orbStatus?.note))
     || (trafficOn && trafficErr ? `Flights: ${trafficErr}` : null);
@@ -1009,9 +1064,21 @@ export function MapsApp() {
                       onFlyTo={(la, lo, zm) => flyNear(la, lo, zm ?? 12)} onClose={clearSelection} />
                   ) : selection.kind === 'quake' ? (
                     <QuakeCard q={selection.item} onClose={clearSelection} />
+                  ) : selection.kind === 'prehistory' ? (
+                    <PrehistoryCard site={selection.item} onClose={clearSelection} onFlyTo={(la, lo) => flyNear(la, lo, 13)}
+                      onDeepTime={y => { setDeepYears(y); if (!prefs.iceage) toggleLayer('iceage', true); flyNear(selection.item.lat, selection.item.lon, 6); }} />
                   ) : (
                     <MapFeatureModal feature={selection} onClose={clearSelection} onFlyTo={(la, lo) => flyNear(la, lo, 12)} />
                   )}
+                </div>
+              )}
+
+              {hasMap && iceOn && (
+                <div className={clsx('absolute right-14 z-20', isEarth && flightQ ? 'bottom-24' : 'top-16')}>
+                  <DeepTimePanel years={deepYears} onChange={setDeepYears} onClose={() => toggleLayer('iceage', false)}
+                    shown={has('caves') || has('neolithic')
+                      ? PREHISTORY.filter(p => (has('caves') && isCaveSite(p)) || (has('neolithic') && !isCaveSite(p))).filter(p => yearsAgo(p) >= deepYears).length
+                      : null} />
                 </div>
               )}
 
@@ -1277,6 +1344,10 @@ function SuggestionIcon({ s }: { s: Suggestion }) {
   if (s.kind === 'flight') return <Radar className={clsx(c, 'text-sky-400')} />;
   if (s.kind === 'coord') return <Crosshair className={clsx(c, 'text-amber-400')} />;
   if (s.kind === 'satellite') return <Satellite className={clsx(c, 'text-sky-400')} />;
+  if (s.kind === 'prehistory' && s.site) {
+    const Icon = isCaveSite(s.site) ? Hand : Wheat;
+    return <Icon className={c} style={{ color: KIND_COLOR[s.site.kind] }} />;
+  }
   if (s.kind === 'feature') {
     const k = s.feature?.kind;
     return k === 'shipwreck' ? <Anchor className={clsx(c, 'text-cyan-400')} /> : k === 'wonder' ? <Sparkles className={clsx(c, 'text-amber-400')} />

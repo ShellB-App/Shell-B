@@ -1,12 +1,13 @@
 // The Worlds app's toggleable overlays: one table drives the Layers menu, the saved prefs and which world offers what.
 import type { LucideIcon } from 'lucide-react';
-import { Anchor, Earth, Footprints, Grid3x3, Landmark as LandmarkIcon, Mountain, MountainSnow, Plane, Rocket, Satellite, Sparkles, SunMoon, Video, Activity } from 'lucide-react';
+import { Anchor, Earth, Footprints, Grid3x3, Hand, Landmark as LandmarkIcon, Mountain, MountainSnow, Plane, Rocket, Satellite, Snowflake, Sparkles, SunMoon, Video, Wheat, Activity } from 'lucide-react';
 import { getLandmarksForBody } from './landmarks';
 import { getTraversesForBody } from './traverses';
 
 export type OverlayId =
   | 'flights' | 'satellites' | 'quakes' | 'daynight' | 'grid' | 'stars'
-  | 'landmarks' | 'traverses' | 'wonders' | 'shipwrecks' | 'launchsites' | 'webcams' | 'relief' | 'terrain3d';
+  | 'landmarks' | 'traverses' | 'wonders' | 'shipwrecks' | 'launchsites' | 'webcams' | 'relief' | 'terrain3d'
+  | 'caves' | 'neolithic' | 'iceage';
 
 /** What the current world offers beyond its id: whether elevation tiles are installed. */
 export interface WorldCtx { terrain: boolean }
@@ -35,10 +36,13 @@ export const OVERLAYS: OverlayDef[] = [
   { id: 'traverses', label: 'Rover traverses', hint: 'Routes driven and walked', icon: Footprints, color: '#a78bfa', group: 'Places', on: b => getTraversesForBody(b).length > 0, default: true },
   { id: 'wonders', label: 'Wonders', hint: 'Ancient, modern and natural', icon: Sparkles, color: '#f59e0b', group: 'Places', on: earth, default: false },
   { id: 'shipwrecks', label: 'Shipwrecks', hint: 'Famous wrecks and their depths', icon: Anchor, color: '#22d3ee', group: 'Places', on: earth, default: false },
+  { id: 'caves', label: 'Painted caves', hint: 'Ice Age art, shelters and caves', icon: Hand, color: '#e2725b', group: 'Places', on: earth, default: false },
+  { id: 'neolithic', label: 'Neolithic', hint: 'First villages, temples and megaliths', icon: Wheat, color: '#cbd5e1', group: 'Places', on: earth, default: false },
   { id: 'launchsites', label: 'Spaceports', hint: 'Orbital launch sites', icon: Rocket, color: '#fb923c', group: 'Places', on: earth, default: false },
   { id: 'webcams', label: 'Webcams', hint: 'Links to public live streams', icon: Video, color: '#f472b6', group: 'Places', on: earth, default: false },
   { id: 'relief', label: 'Relief', hint: 'Mountains, craters and the ocean floor in shade', icon: Mountain, color: '#a8a29e', group: 'Reference', on: (_, __, c) => c.terrain, default: true },
   { id: 'terrain3d', label: '3D terrain', hint: 'Real heights; tilt the map to see them', icon: MountainSnow, color: '#d6d3d1', group: 'Reference', on: (_, __, c) => c.terrain, default: false },
+  { id: 'iceage', label: 'Ice Age coast', hint: 'Lower seas, back to 80,000 years ago', icon: Snowflake, color: '#d9cfa6', group: 'Reference', on: (b, _, c) => b === 'earth' && c.terrain, default: false },
   { id: 'grid', label: 'Grid', hint: 'Latitude and longitude lines', icon: Grid3x3, color: '#94a3b8', group: 'Reference', on: () => true, default: false },
   { id: 'stars', label: 'Starfield', hint: 'Stars behind the globe', icon: Earth, color: '#c4b5fd', group: 'Reference', on: (_, globe) => globe, default: true },
 ];

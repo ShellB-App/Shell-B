@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-10-10",
+    "area": "Worlds",
+    "title": "Prehistory in Worlds: painted caves, the Neolithic and the Ice Age coast",
+    "summary": "Two new Earth layers: Painted caves (Lascaux, Chauvet, Cosquer, Altamira, Sulawesi and 25 more) and Neolithic (Göbekli Tepe, Çatalhöyük, Carnac, Newgrange, Orkney, Malta's temples and others), each with a bilingual card covering age, period, discovery and how to visit. Monuments that face the Sun draw their solstice or equinox line on the map, as aimed when they were built and as it falls today. The Ice Age coast layer lowers the sea to its level at any date back to 80,000 years ago (Doggerland, Beringia, the dry shelf below the Cosquer cave) and shows only the sites that already existed by then. Search finds them all, and there are five new tour bookmarks."
+  },
+  {
+    "date": "2026-10-10",
     "area": "Languages",
     "title": "Studio, Activity, Library and Feeds in French",
     "summary": "The Studio and Code workspaces (start page and template cards, files, history, remote, canvas, terminal), Activity with its feed, follow-ups, night shift and self-review, the Library with Media and Favorites, and Feeds follow the interface language. About 360 more strings."

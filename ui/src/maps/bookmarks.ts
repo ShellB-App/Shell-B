@@ -48,6 +48,32 @@ export const CURATED_BOOKMARKS: Bookmark[] = [
     lat: 11.3733, lon: 142.5917, zoom: 6.0, bearing: 0, pitch: 0, curated: true,
   },
 
+  {
+    id: 'c-earth-vezere', bodyId: 'earth', name: 'Vézère valley (Lascaux, Les Eyzies)',
+    desc: 'The “valley of mankind”: Lascaux, Font-de-Gaume, Cro-Magnon and dozens of Ice Age caves and shelters.',
+    lat: 44.97, lon: 1.06, zoom: 10.5, bearing: 0, pitch: 30, curated: true,
+  },
+  {
+    id: 'c-earth-carnac', bodyId: 'earth', name: 'Carnac and the Gulf of Morbihan',
+    desc: 'Over 3,000 standing stones, the broken menhir of Locmariaquer and the carved cairn of Gavrinis.',
+    lat: 47.585, lon: -3.0, zoom: 11, bearing: 0, pitch: 30, curated: true,
+  },
+  {
+    id: 'c-earth-gobekli', bodyId: 'earth', name: 'Göbekli Tepe',
+    desc: 'Carved T-pillar enclosures raised by hunter-gatherers around 9600 BC.',
+    lat: 37.2231, lon: 38.9225, zoom: 15, bearing: 0, pitch: 35, curated: true,
+  },
+  {
+    id: 'c-earth-orkney', bodyId: 'earth', name: 'Heart of Neolithic Orkney',
+    desc: 'Skara Brae, Maeshowe, the Ring of Brodgar and the Stones of Stenness.',
+    lat: 59.02, lon: -3.25, zoom: 11, bearing: 0, pitch: 30, curated: true,
+  },
+  {
+    id: 'c-earth-doggerland', bodyId: 'earth', name: 'Doggerland (North Sea)',
+    desc: 'Dry land linking Britain to Europe until about 8,000 years ago; turn on Ice Age coast to see it.',
+    lat: 54.5, lon: 3.0, zoom: 4.6, bearing: 0, pitch: 0, curated: true,
+  },
+
   // ── MOON ─────────────────────────────────────────────────────────────
   {
     id: 'c-moon-apollo11', bodyId: 'moon', name: 'Tranquility Base (Apollo 11)',

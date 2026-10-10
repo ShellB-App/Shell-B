@@ -42,7 +42,8 @@ def slug(s: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
 
 
-KINDS = r"mission|crater|volcano|mountain|canyon|plain|spaceport|sea|wonder|shipwreck|launch ?site|webcam|landmark"
+KINDS = (r"mission|crater|volcano|mountain|canyon|plain|spaceport|sea|wonder|shipwreck|launch ?site|webcam|landmark"
+         r"|painted cave|rock art|rock shelter|early village|sanctuary|megaliths?|megalithic tomb|archaeological find")
 
 
 def clean_name(feature: str) -> str:
