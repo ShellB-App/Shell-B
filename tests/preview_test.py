@@ -12,8 +12,8 @@ import devserver
 PID, OTHER = "proj-0123456789ab", "proj-ba9876543210"
 
 
-def call(qs: str = "", cookie: str = "") -> int:
-    headers = [(b"host", b"preview0.shellb.app"), (b"x-forwarded-for", b"203.0.113.9"), (b"x-forwarded-proto", b"https")]
+def call(qs: str = "", cookie: str = "", host: str = "preview.local") -> int:
+    headers = [(b"host", host.encode()), (b"x-forwarded-for", b"203.0.113.9"), (b"x-forwarded-proto", b"https")]
     if cookie:
         headers.append((b"cookie", cookie.encode()))
     scope = {"type": "http", "method": "GET", "path": "/", "query_string": qs.encode(), "headers": headers,
@@ -57,10 +57,22 @@ class PreviewTickets(unittest.TestCase):
     def test_preview_base_follows_the_setting(self):
         settings = db.kv_get("settings", {})
         try:
-            self.assertIsNone(devserver.preview_base(devserver.PORTS[2]))
+            self.assertIsNone(devserver.preview_base(PID))
             db.kv_set("settings", {**settings, "previewHost": "shellb.app"})
-            self.assertEqual(devserver.preview_base(devserver.PORTS[2]), "https://preview2.shellb.app")
-            self.assertIsNone(devserver.preview_base(None))
+            self.assertEqual(devserver.preview_base(PID), "https://p-0123456789ab.shellb.app")
+            self.assertIsNone(devserver.preview_base("proj-../x"))
+        finally:
+            db.kv_set("settings", settings)
+
+    def test_host_names_the_project(self):
+        settings = db.kv_get("settings", {})
+        try:
+            db.kv_set("settings", {**settings, "previewHost": "shellb.app"})
+            other = "p-ba9876543210.shellb.app"  # served on PORTS[0], which belongs to PID: the host wins
+            self.assertEqual(call("__pt=" + devserver.preview_ticket(OTHER), host=other), 503)
+            self.assertEqual(call("__pt=" + devserver.preview_ticket(PID), host=other), 401)
+            # a p-* host under another domain names no project, and never falls back to the port's
+            self.assertEqual(call("__pt=" + devserver.preview_ticket(PID), host="p-0123456789ab.evil.example"), 401)
         finally:
             db.kv_set("settings", settings)
 

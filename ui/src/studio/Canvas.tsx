@@ -124,7 +124,7 @@ export function Canvas({ projectId, kind, file, pages, entry, viewport, version,
     setDevLogs(r.ok ? ((await r.json()).logs || '(no output yet)') : 'Could not read the logs.');
   };
   const showLive = live && !!dev?.running && !!dev.port && (!file || file.kind === 'html');
-  // a preview host of its own when the server has one (setting previewHost: https://previewN.<host>, signed in with the
+  // a preview host of its own when the server has one (setting previewHost: https://p-<project>.<host>, signed in with the
   // ticket); otherwise this host's port, which over HTTPS (tailscale serve) is published as https on 84xx for 82xx
   const livePort = dev?.port ? (window.location.protocol === 'https:' ? dev.port + 200 : dev.port) : 0;
   const liveBase = dev?.preview || (livePort ? `${window.location.protocol}//${window.location.hostname}:${livePort}` : '');

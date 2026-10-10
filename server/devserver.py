@@ -127,7 +127,7 @@ async def status(pid: str) -> dict:
         cfg, err = None, str(e)
     up = await running(pid)
     port = port_for(pid, assign=False)
-    base = preview_base(port)
+    base = preview_base(pid)
     return {"configured": cfg is not None, "error": err, "running": up, "port": port,
             "preview": base, "ticket": preview_ticket(pid) if base else None,
             "command": cfg and cfg["command"], "idleStopsIn": max(0, int(IDLE_S - (time.time() - _last_use.get(pid, time.time()))))
@@ -222,10 +222,13 @@ def _strip_cookie(raw: str) -> str:
     return "; ".join(keep)
 
 
-# Preview hosts (setting previewHost, e.g. "shellb.app" → https://preview0.shellb.app for slot 8210): a host of its own
-# never gets the shellb_session cookie, so the Canvas hands the frame a signed ticket (?__pt=, from GET .../dev). The proxy
-# swaps it for a cookie on that preview host alone, bound to the project, so a recycled port doesn't inherit access.
+# Preview hosts (setting previewHost, e.g. "shellb.app" → https://p-<12 hex of the project id>.shellb.app): one host per
+# project, so each keeps its own origin and a stable URL. The hub edge proxy sends every p-* host to PORTS[0], and the
+# proxy takes the project from the Host header. Such a host never gets the shellb_session cookie, so the Canvas hands the
+# frame a signed ticket (?__pt=, from GET .../dev); the proxy swaps it for a cookie on that host alone, bound to the project.
 PREVIEW_COOKIE = "shellb_preview_"
+PROJECT_ID = re.compile(r"proj-[0-9a-f]{12}")
+PREVIEW_HOST = re.compile(r"p-([0-9a-f]{12})\.(.+)")
 PREVIEW_TTL = 12 * 3600
 
 
@@ -237,10 +240,20 @@ def _preview_secret() -> str:
     return s
 
 
-def preview_base(port: int | None) -> str | None:
+def _preview_domain() -> str:
     import roster
-    host = (roster.get_settings().get("previewHost") or "").strip().strip(".")
-    return f"https://preview{port - PORTS[0]}.{host}" if host and port in PORTS else None
+    return (roster.get_settings().get("previewHost") or "").strip().strip(".").lower()
+
+
+def preview_base(pid: str) -> str | None:
+    host = _preview_domain()
+    return f"https://p-{pid.removeprefix('proj-')}.{host}" if host and PROJECT_ID.fullmatch(pid) else None
+
+
+def _pid_for_host(host: str) -> str | None:
+    domain = _preview_domain()
+    m = PREVIEW_HOST.fullmatch(host.split(":")[0].lower())
+    return f"proj-{m.group(1)}" if domain and m and m.group(2) == domain else None
 
 
 def preview_ticket(pid: str) -> str:
@@ -273,7 +286,9 @@ async def proxy_app(scope, receive, send):
                 return await send({"type": "lifespan.shutdown.complete"})
     h = auth._headers(scope)
     port = (scope.get("server") or ("", 0))[1]
-    pid = pid_for_port(port)
+    # a p-<id> host names its project; one that doesn't match previewHost names none (never the port's project)
+    on_host = PREVIEW_HOST.fullmatch(h.get("host", "").split(":")[0].lower())
+    pid = _pid_for_host(h.get("host", "")) if on_host else pid_for_port(port)
     path, qs = scope["path"], scope.get("query_string", b"").decode("latin-1")
     jar = SimpleCookie()
     try:
