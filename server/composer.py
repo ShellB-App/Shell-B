@@ -40,6 +40,7 @@ TOOL_COMMANDS = {
     "remember": ("memory_save", "Save this to long-term memory"),
     "recall": ("memory_search", "Search long-term memory"),
     "library": ("library", "Look it up in the library"),
+    "translate": ("translate", "Translate this (local model)"),
 }
 REF_INLINE = 60_000
 LISTING_INLINE = 8_000

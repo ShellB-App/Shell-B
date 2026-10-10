@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
-import { AppWindow, Edit2, EyeOff, FolderInput, FolderKanban, GitFork, Link2, Loader2, MessageSquare, PanelLeftClose, Pin, PinOff, Plus, Search, Settings, SquarePen, Star, StarOff, Trash2, UsersRound, X } from 'lucide-react';
+import { AppWindow, Edit2, EyeOff, FolderInput, FolderKanban, GitFork, Link2, Loader2, MessageSquare, PanelLeftClose, Pin, PinOff, Plus, Search, Settings, SquarePen, Star, StarOff, Trash2, UsersRound, X, Share2 } from 'lucide-react';
 import type { Agent, ChatHit, ChatProject, ConversationSummary, Status } from '../types';
 import { ProjectGlyph } from './Projects';
 import { fmtBytes } from '../api';
@@ -10,6 +10,7 @@ import { openContextMenu, type MenuEntry } from './ContextMenu';
 import { chatProjectMenu } from './projectMenu';
 import { copyText } from '../quote';
 import { shellbLink } from '../links';
+import { shareLink } from '../shareLink';
 import { circlePinEntry, primeCirclePins } from './CircleCards';
 import { FavIcon, FavoriteStar } from './Favorites';
 import { req } from '../api';
@@ -111,6 +112,7 @@ export function Sidebar(p: Props) {
       'sep',
       { label: 'Copy link', icon: Link2, onSelect: () => copyText(`${location.origin}/#/c/${c.id}`, 'Link copied') },
       { label: 'Copy Shell:B link', icon: Link2, onSelect: () => copyText(shellbLink(`#/c/${c.id}`), 'Shell:B link copied') },
+      !c.incognito && { label: 'Share read-only link…', icon: Share2, onSelect: () => shareLink({ kind: 'chat', conversation: c.id }) },
       'sep',
       { label: 'Delete…', icon: Trash2, danger: true, hint: 'Del', onSelect: () => setConfirmDel(c.id) },
     ];

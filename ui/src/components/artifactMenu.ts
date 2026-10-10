@@ -1,4 +1,5 @@
-import { AppWindow, Copy, Download, ExternalLink, Link2, Star, StarOff } from 'lucide-react';
+import { AppWindow, Copy, Download, ExternalLink, Link2, Share2, Star, StarOff } from 'lucide-react';
+import { shareLink } from '../shareLink';
 import type { ArtifactType, ArtifactVersion } from '../types';
 import { api } from '../api';
 import { isFavorite, setFavorite } from '../favorites';
@@ -50,6 +51,7 @@ export function artifactMenu(a: {
     { label: COPY_LABEL[a.type] ?? 'Copy content', icon: Copy, onSelect: () => { load().then(v => copyText(v.content)).catch(fail); } },
     { label: 'Download', icon: Download, onSelect: () => { load().then(downloadArtifact).catch(fail); } },
     { label: 'Copy link', icon: Link2, onSelect: () => copyText(`${location.origin}${page}`, 'Link copied') },
+    { label: 'Share read-only link…', icon: Share2, onSelect: () => shareLink({ kind: 'artifact', conversation: a.convId, artifact: a.id, version: a.version }) },
     { label: fav ? 'Remove from Favorites' : 'Add to Favorites', icon: fav ? StarOff : Star, onSelect: () => { setFavorite('artifact', a.convId, a.id, !fav, a.title); } },
   ];
 }

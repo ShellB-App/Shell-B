@@ -12,8 +12,7 @@ import {
   Loader2,
   Pencil,
   Play,
-  RotateCcw,
-} from 'lucide-react';
+  RotateCcw, Languages, X } from 'lucide-react';
 import type { Agent, ArtifactGroup, Block, Message, ToolDisplay } from '../types';
 import { Markdown } from './Markdown';
 import { LinkContext, adoptOrphanHtml, extractDefs, plainText, type Def } from './RichLinks';
@@ -30,6 +29,8 @@ import { Outputs } from './message/Outputs';
 import { CopyButton, SpeakButton, VerifyButton } from './message/MessageActions';
 import { Copy as CopyIcon, FileText, Quote, Square as StopIcon, Volume2 } from 'lucide-react';
 import { openContextMenu, type MenuEntry } from './ContextMenu';
+import { toast } from './toast';
+import { api } from '../api';
 import { copyText, quoteInComposer } from '../quote';
 import { readAloud } from '../speech';
 import { MessageAttachments as Attachments } from './message/MessageAttachments';
@@ -138,6 +139,22 @@ interface Props {
   onReport?: () => void;
 }
 
+const TRANSLATE_TO = ['English', 'French', 'German', 'Spanish', 'Italian', 'Portuguese', 'Dutch', 'Japanese', 'Chinese (Simplified)', 'Korean', 'Arabic', 'Russian'];
+
+/** A translation under the message (server/translate.py), as Markdown, with the detected language and a close button. */
+function TranslationBlock({ t, onClose }: { t: { to: string; text: string; detected?: string; busy?: boolean }; onClose: () => void }) {
+  return (
+    <div className="my-2 w-full max-w-[85%] rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3.5 py-2.5 text-left">
+      <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)] mb-1">
+        <Languages className="w-3.5 h-3.5" />
+        <span className="flex-1">{t.busy ? `Translating to ${t.to}…` : `${t.detected ? `${t.detected} → ` : ''}${t.to} · local model`}</span>
+        <button className={btn.icon} aria-label="Close translation" onClick={onClose}><X className="w-3.5 h-3.5" /></button>
+      </div>
+      {t.busy ? <Loader2 className="w-4 h-4 animate-spin text-[var(--accent)]" /> : <Markdown text={t.text} />}
+    </div>
+  );
+}
+
 export const MessageView = memo(function MessageView({
   message,
   agent,
@@ -161,7 +178,16 @@ export const MessageView = memo(function MessageView({
   const [draft, setDraft] = useState(message.content);
   const [compactExpanded, setCompactExpanded] = useState(false);
   const [showOriginals, setShowOriginals] = useState(false);
+  const [translation, setTranslation] = useState<{ to: string; text: string; detected?: string; busy?: boolean } | null>(null);
   const feedback = useFeedback(message, onAsk, busy);
+  // right-click → Translate to…: the local utility model (server/translate.py); shown under the message until closed
+  const translateEntry = (source: string): MenuEntry => source ? {
+    label: 'Translate to…', icon: Languages, items: TRANSLATE_TO.map(to => ({ label: to, onSelect: () => {
+      setTranslation({ to, text: '', busy: true });
+      api.translate(source, to).then(r => setTranslation({ to, text: r.translation, detected: r.detected }))
+        .catch(e => { setTranslation(null); toast(`Couldn't translate: ${String(e).replace(/^Error: \d+: /, '')}`, { kind: 'error' }); });
+    } })),
+  } : null;
 
   if (message.role === 'summary') {
     const originals = message.originals ?? [];
@@ -221,6 +247,7 @@ export const MessageView = memo(function MessageView({
           { label: 'Copy message', icon: CopyIcon, onSelect: () => copyText(sel.body) },
           !picked && { label: 'Quote in reply', icon: Quote, onSelect: () => quoteInComposer(sel.body) },
           readEntry(sel.body),
+          translateEntry(sel.body),
           'sep',
           { label: 'Edit and resend', icon: Pencil, disabled: busy, onSelect: () => { setDraft(message.content); setEditing(true); } },
           onFork && { label: 'Fork from here', icon: GitFork, onSelect: () => onFork(message.id) },
@@ -237,6 +264,7 @@ export const MessageView = memo(function MessageView({
           </span>
         )}
         {message.attachments && message.attachments.length > 0 && <Attachments items={message.attachments} />}
+        {translation && <TranslationBlock t={translation} onClose={() => setTranslation(null)} />}
         {editing ? (
           <div className="w-full max-w-[85%] rounded-2xl border border-[var(--accent)]/50 bg-[var(--bg-secondary)] p-2">
             <textarea
@@ -317,6 +345,7 @@ export const MessageView = memo(function MessageView({
           { label: 'Copy as Markdown', icon: FileText, disabled: !markdown, onSelect: () => copyText(markdown, 'Markdown copied') },
           !picked && { label: 'Quote in reply', icon: Quote, disabled: !text, onSelect: () => quoteInComposer(text) },
           readEntry(text),
+          translateEntry(markdown || text),
           'sep',
           isLast && { label: 'Regenerate', icon: RotateCcw, disabled: busy || streaming, onSelect: onRegenerate },
           onFork && !streaming && { label: 'Fork from here', icon: GitFork, onSelect: () => onFork(message.id) },
@@ -350,6 +379,7 @@ export const MessageView = memo(function MessageView({
           )
         )}
 
+        {translation && <TranslationBlock t={translation} onClose={() => setTranslation(null)} />}
         {streaming && segs.length === 0 && (
           <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] py-2">
             <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--accent)]" /> Waking {message.model}…

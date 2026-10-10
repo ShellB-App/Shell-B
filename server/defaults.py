@@ -37,7 +37,7 @@ Cloud agents send the brief off this machine: use them only for problems the loc
         "effort": "medium",
         "tools": ["web_search", "web_fetch", "read_document", "view_document", "ocr", "run_code", "create_artifact", "generate_image",
                   "generate_music", "memory_save", "memory_forget", "memory_search", "recall_conversations", "ask_agent", "schedule_task", "mega_plan", "shellb_self",
-                  "leave_message", "check_messages", "find_capability", "self_findings", "feeds"],
+                  "leave_message", "check_messages", "find_capability", "self_findings", "feeds", "translate"],
         "builtin": True,
     },
     {
@@ -116,7 +116,7 @@ How to answer:
         "model": "ShellB-Swift",
         "temperature": 0.3,
         "effort": "medium",
-        "tools": ["wiki", "memory_search", "recall_conversations", "read_document", "web_search", "web_fetch", "leave_message", "check_messages", "feeds"],
+        "tools": ["wiki", "memory_search", "recall_conversations", "read_document", "web_search", "web_fetch", "leave_message", "check_messages", "feeds", "translate"],
         "builtin": True,
     },
     {
@@ -175,7 +175,7 @@ Daedalus.""",
         "model": "ShellB-Swift",
         "temperature": 0.6,
         "effort": "off",
-        "tools": ["web_search", "web_fetch", "read_document"],
+        "tools": ["web_search", "web_fetch", "read_document", "translate"],
         "builtin": True,
     },
     {
@@ -480,6 +480,7 @@ DEFAULT_SETTINGS = {
     "cloudScreen": False,      # cloud agents may look at a shared screen (screen.py); off = only local vision models can
     "adultEnabled": False,     # Aphrodite, the adult agent (adult.py): master switch, admin-only; off = the agent is hidden and refuses
     "adultImageCheckpoint": "",  # SDXL-style file in ~/comfyui/models/checkpoints for Aphrodite; "" = FLUX.1-dev
+    "shareHost": "",           # share links (shares.py) are built on https://<this>/#/s/<token>; "" = this origin (login needed)
     "modelCosts": {},          # Settings → Usage prices cloud turns: {"anthropic/claude-x": {"in": $/1M prompt tokens, "out": $/1M completion}}
     "previewHost": "",         # Studio live previews on https://p-<project>.<this> (hub edge proxy, devserver.py); "" = this host's ports
 }

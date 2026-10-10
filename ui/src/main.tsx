@@ -22,6 +22,9 @@ const KioskApp = lazy(() => import('./kiosk/KioskApp').then(m => ({ default: m.K
 const SynthDJ = lazy(() => import('./dj/SynthDJ').then(m => ({ default: m.SynthDJ })));
 // only the installed desktop app with its title bar hidden loads this (wco.ts)
 const TitleBar = lazy(() => import('./components/TitleBar').then(m => ({ default: m.TitleBar })));
+// a read-only share link (#/s/<token>, server/shares.py): rendered outside the login wall, nothing else of the app loads
+const SharedView = lazy(() => import('./components/SharedView').then(m => ({ default: m.SharedView })));
+const sharedToken = () => /^#\/s\/([0-9a-f]{32})$/.exec(location.hash)?.[1] ?? null;
 import './notify';  // notification clicks route the app; hidden-tab notifications on devices without push
 import './desktop';  // the installed app: launches, opened and shared files, install prompt, icon badge
 import { ConnectionBanner } from './components/ConnectionBanner';
@@ -29,6 +32,8 @@ import { ContextMenuHost } from './components/ContextMenu';
 
 function ShellRoot() {
   const formFactor = useFormFactor();
+  const shared = sharedToken();
+  if (shared) return <Suspense fallback={null}><SharedView token={shared} /></Suspense>;
 
   return (
     <AuthGate>

@@ -455,6 +455,8 @@ export interface Settings {
   nightShiftContext?: number;
   /** domain whose p-<project>.<domain> hosts reach this machine; "" = tailnet :8210-8217 previews (server/devserver.py) */
   previewHost?: string;
+  /** host that serves read-only share links without a login (server/shares.py) */
+  shareHost?: string;
   /** Settings → Usage: $ per million prompt (in) and completion (out) tokens, per cloud model id */
   modelCosts?: Record<string, { in?: number; out?: number }>;
   cloudEnabled: boolean;

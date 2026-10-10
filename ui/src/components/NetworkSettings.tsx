@@ -132,7 +132,10 @@ export function NetworkSettings() {
 
   return (
     <div className="space-y-6">
-      <PreviewHostRow />
+      <HostRow setting="previewHost" title="Studio preview host" placeholder="shellb.app (empty = this machine's ports 8210–8217)" example="p-<project>."
+        help="A domain whose p-<project>.<domain> names are proxied to this machine (the hub's edge proxy, behind Cloudflare Access). Leave it empty until those names resolve and have certificates: with a wrong value, Studio previews stop opening over the tailnet." />
+      <HostRow setting="shareHost" title="Share host" placeholder="share.shellb.app (empty = links need a login here)" example=""
+        help="The host read-only share links are built on: it must reach this machine without Cloudflare Access or any login in front, serving only /#/s/<token>, /api/share/* and the app's static files (see MANUAL § Share links). With it empty, a share link opens only for people who can log in." />
       {/* Top action / summary bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--border-subtle)]">
         <div>
@@ -353,34 +356,30 @@ export function NetworkSettings() {
 }
 
 
-/** Settings → Network: the domain whose `p-<project>.<domain>` names the hub edge proxies to this machine's Studio
- * previews (server/devserver.py `previewHost`). Saved with a button, not on blur: a wrong value breaks every preview. */
-function PreviewHostRow() {
+/** One host-name setting (previewHost, shareHost) with an explicit Save: a wrong value breaks a feature, so no on-blur. */
+function HostRow({ setting, title, placeholder, example, help }: { setting: 'previewHost' | 'shareHost'; title: string; placeholder: string; example: string; help: string }) {
   const [saved, setSaved] = useState('');
   const [value, setValue] = useState('');
-  useEffect(() => { api.settings().then(s => { setSaved(s.previewHost ?? ''); setValue(s.previewHost ?? ''); }).catch(() => {}); }, []);
+  useEffect(() => { api.settings().then(s => { setSaved(s[setting] ?? ''); setValue(s[setting] ?? ''); }).catch(() => {}); }, [setting]);
   const clean = value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/\.$/, '');
   const valid = clean === '' || /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(clean);
   const save = async () => {
     try {
-      const s = await api.saveSettings({ previewHost: clean });
-      setSaved(s.previewHost ?? ''); setValue(s.previewHost ?? '');
-      toast(clean ? `Studio previews open on p-<project>.${clean}` : 'Studio previews use this machine\'s ports again');
+      const s = await api.saveSettings({ [setting]: clean });
+      setSaved(s[setting] ?? ''); setValue(s[setting] ?? '');
+      toast(clean ? `${title}: ${example}${clean}` : `${title} cleared`);
     } catch (e) { toast(String(e instanceof Error ? e.message : e), { kind: 'error' }); }
   };
   return (
     <section className="rounded-xl border border-[var(--border-subtle)] p-4 space-y-2">
-      <h2 className="text-sm font-semibold text-[var(--text-primary)]">Studio preview host</h2>
-      <p className="text-xs text-[var(--text-muted)] max-w-[65ch]">
-        A domain whose <span className="font-mono">p-&lt;project&gt;.&lt;domain&gt;</span> names are proxied to this machine (the hub's edge proxy, behind Cloudflare Access).
-        Leave it empty until those names resolve and have certificates: with a wrong value, Studio previews stop opening over the tailnet.
-      </p>
+      <h2 className="text-sm font-semibold text-[var(--text-primary)]">{title}</h2>
+      <p className="text-xs text-[var(--text-muted)] max-w-[65ch]">{help}</p>
       <div className="flex flex-col sm:flex-row gap-2">
-        <input className={clsx(btn.input, 'flex-1 font-mono', !valid && 'border-red-500')} placeholder="shellb.app (empty = this machine's ports 8210–8217)"
-          value={value} onChange={e => setValue(e.target.value)} aria-label="Preview host domain" />
+        <input className={clsx(btn.input, 'flex-1 font-mono', !valid && 'border-red-500')} placeholder={placeholder}
+          value={value} onChange={e => setValue(e.target.value)} aria-label={title} />
         <button className={btn.primary} disabled={!valid || clean === saved} onClick={save}>Save</button>
       </div>
-      {saved && <div className="text-[11px] text-[var(--text-muted)]">Current: <span className="font-mono">p-&lt;project&gt;.{saved}</span></div>}
+      {saved && <div className="text-[11px] text-[var(--text-muted)]">Current: <span className="font-mono">{example}{saved}</span></div>}
     </section>
   );
 }

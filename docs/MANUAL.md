@@ -404,6 +404,28 @@ address (`_ShortNameRedirect` in app.py). Check with `tailscale serve status`; r
   The orchestrator always gets the tool in its plan chat. Code is in `server/megaplan.py` and
   `ui/src/components/MegaPlans.tsx`; the tables are `mega_plans`, `mega_steps`, `mega_events` and `mega_links`.
 
+## Share links
+
+Right-click a chat (sidebar) or an artifact → **Share read-only link…** (`server/shares.py`, `ui/src/components/
+SharedView.tsx`). A share is a **snapshot** taken at that moment (messages as text, or one artifact version) in
+`data/shares/<token>.json`; later edits and messages never show. The link is `/#/s/<32-hex token>`; `GET
+/api/share/<token>` is the only public route behind it (auth.PUBLIC) and answers 404 for anything revoked, expired
+or unknown. Incognito, guest, API-key and Aphrodite chats can't be shared. Links expire after 30 days (`days` on
+`POST /api/shares`, 0 = never); Settings → Account → **Shared links** lists them with view counts and **Revoke**.
+Making a share needs the owner's session (not localhost trust) and is audited.
+
+**Hosting.** `ai.shellb.app` sits behind Cloudflare Access, so a share link there asks the reader to log in. Settings →
+Network → **Share host** names a host that reaches this machine without Access or login in front (e.g. `share.shellb.app`
+through `hub-shellb-edge`, serving only `/`, `/assets/*`, `/#/s/*` and `/api/share/*`); links are then built on it.
+The shared page renders Markdown and sandboxes HTML/SVG exactly like the owner's view, and makes no other API calls.
+
+## Translation
+
+`translate` (tool, on for Shell:B, Spark and Mimir; `POST /api/translate {text, to, source?}`; `server/translate.py`)
+translates on the local utility model, so nothing leaves the machine. The text is framed as material to translate
+(instructions inside it are not followed), long texts go paragraph by paragraph, and the answer names the detected
+language. In a chat, right-click a message → **Translate to…**; `/translate <text>` nudges the agent to the tool.
+
 ## Feeds
 
 RSS and Atom subscriptions (`server/feeds.py`, `ui/src/components/Feeds.tsx`, app **Feeds** at `#/feeds`; also on

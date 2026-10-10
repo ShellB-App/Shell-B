@@ -41,6 +41,8 @@ import codex_secrets
 import codex_sync
 import feeds
 import hooks
+import shares
+import translate
 import media
 import generate
 import modelhub
@@ -145,6 +147,8 @@ public_api.init()
 hooks.init()
 feeds.init()
 feeds.register()
+shares.init()
+translate.register()
 mailer.init()
 studio_tools.register()
 studio_assets.register()
@@ -196,7 +200,7 @@ roster.grant_tools("tools_2026_10_10", {  # tools that reached no stored agent b
     "hephaestus": ["leave_message", "check_messages", "find_capability", "self_findings"],
     "minerva": ["leave_message", "check_messages"], "mimir": ["leave_message", "check_messages"], "daedalus": ["leave_message", "check_messages"],
     "atlas": ["find_capability"], "claude": ["find_capability"]})
-roster.grant_tools("tools_feeds_2026_10_10", {"shellb": ["feeds"], "minerva": ["feeds"], "mimir": ["feeds"]})
+roster.grant_tools("tools_feeds_2026_10_10", {"shellb": ["feeds", "translate"], "minerva": ["feeds"], "mimir": ["feeds", "translate"], "spark": ["translate"]})
 compaction.migrate_legacy()  # after episodes.init: the FTS triggers index the messages it puts back
 feedback.init()
 guests.init()
@@ -259,6 +263,9 @@ app.include_router(public_api.admin_router)
 app.include_router(hooks.router)
 app.include_router(hooks.admin_router)
 app.include_router(feeds.router)
+app.include_router(shares.router)
+app.include_router(shares.public_router)
+app.include_router(translate.router)
 app.include_router(guests.admin_router)  # owner side of Shell:B Guest; the guests' own app is guest_app.py
 app.include_router(guest_accounts.admin_router)  # guests' accounts: unlock, reset links, two-step off, sign-in log
 app.include_router(mcp_server.router)

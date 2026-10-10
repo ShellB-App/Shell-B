@@ -23,6 +23,7 @@ export interface TwoStepStatus { on: boolean; recoveryLeft: number; since: numbe
 export interface AuthSession { created: number; lastSeen: number; ip: string; userAgent: string; current: boolean }
 /** one row of the server's audit_log table (db.audit_log): admin actions, settings changes, approvals */
 export interface AuditEntry { id: number; timestamp: number; action: string; details: Record<string, unknown> | string | null; ip?: string | null }
+export interface ShareInfo { token: string; kind: 'chat' | 'artifact'; convId: string; artifactId: string | null; version: number | null; title: string; created: number; expires: number | null; views: number; revoked: boolean; url: string }
 export interface MailboxNote { id: string; from_conv: string | null; fromTitle: string; sender: string; text: string; created: number; read_at: number | null }
 let frameKey: string | null = null;
 export const setFrameKey = (k: string | null) => { frameKey = k; };
@@ -221,6 +222,12 @@ export const api = {
 
   settings: () => req<Settings>('/api/settings'),
   usage: (days = 30) => req<UsageReport>(`/api/usage?days=${days}`),
+  shares: () => req<{ shares: ShareInfo[]; host: string }>('/api/shares'),
+  createShare: (b: { kind: 'chat' | 'artifact'; conversation: string; artifact?: string; version?: number; days?: number }) =>
+    req<ShareInfo>('/api/shares', { method: 'POST', body: json(b) }),
+  revokeShare: (token: string) => req(`/api/shares/${token}`, { method: 'DELETE' }),
+  translate: (text: string, to: string, source = '') => req<{ translation: string; detected: string; to: string }>('/api/translate', { method: 'POST', body: json({ text, to, source }) }),
+  translateLanguages: () => req<{ languages: string[] }>('/api/translate/languages'),
   saveSettings: (s: Partial<Settings>) => req<Settings>('/api/settings', { method: 'PUT', body: json(s) }),
   models: () => req<ModelInfo[]>('/api/models'),
   status: () => req<Status>('/api/status'),

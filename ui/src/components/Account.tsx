@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Loader2, LogOut, ShieldCheck, ShieldAlert, KeyRound } from 'lucide-react';
-import { api, type AuditEntry, type AuthInfo, type AuthSession, type TwoStepStatus } from '../api';
+import { api, type AuditEntry, type AuthInfo, type AuthSession, type ShareInfo, type TwoStepStatus } from '../api';
 import { qrMatrix } from '../qr';
 import { btn, relTime } from './common';
 import {
@@ -87,6 +87,7 @@ export function AccountTab() {
               ))}
             </ul>
           </section>
+          <SharedLinks />
           <AuditLog />
         </>
       ) : (
@@ -372,5 +373,39 @@ function QrCode({ text }: { text: string }) {
     <svg viewBox={`0 0 ${n} ${n}`} className="w-40 h-40 rounded-lg shrink-0" role="img" shapeRendering="crispEdges" aria-label="QR code to scan with your authenticator app">
       <rect width={n} height={n} fill="#fff" /><path d={d} fill="#000" />
     </svg>
+  );
+}
+
+
+/** Settings → Account → Shared links (server/shares.py): every read-only link made so far, with views and revoke. */
+function SharedLinks() {
+  const [data, setData] = useState<{ shares: ShareInfo[]; host: string } | null>(null);
+  const load = () => api.shares().then(setData).catch(() => setData({ shares: [], host: '' }));
+  useEffect(() => { load(); }, []);
+  if (!data) return null;
+  const live = data.shares.filter(s => !s.revoked && (!s.expires || s.expires > Date.now() / 1000));
+  return (
+    <section>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-medium">Shared links</h3>
+        <span className="text-[11px] text-[var(--text-muted)]">{live.length ? `${live.length} live` : 'none live'}</span>
+      </div>
+      <p className="text-xs text-[var(--text-muted)] max-w-[65ch]">
+        Right-click a chat or an artifact → <em>Share read-only link</em>. Each link is a snapshot taken at that moment; later edits never show. Links expire after 30 days unless revoked sooner.
+        {!data.host && <> No share host is set (Settings → Network), so links open only for people who can log in here.</>}
+      </p>
+      {live.length > 0 && (
+        <ul className="mt-2 divide-y divide-[var(--border-subtle)] border border-[var(--border-subtle)] rounded-lg">
+          {live.map(s => (
+            <li key={s.token} className="px-3 py-2 flex items-center gap-3 text-[13px]">
+              <span className="min-w-0 flex-1 truncate">{s.kind === 'artifact' ? 'Artifact · ' : 'Chat · '}{s.title}</span>
+              <span className="shrink-0 text-[11px] text-[var(--text-muted)]">{s.views} view{s.views === 1 ? '' : 's'} · {s.expires ? `until ${new Date(s.expires * 1000).toLocaleDateString()}` : 'no expiry'}</span>
+              <button className={btn.ghost} onClick={() => navigator.clipboard?.writeText(s.url.startsWith('#') ? `${location.origin}/${s.url}` : s.url)}>Copy</button>
+              <button className={`${btn.ghost} text-red-400`} onClick={() => api.revokeShare(s.token).then(load)}>Revoke</button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
