@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import {
   Archive, AudioLines, Bell, BookMarked, Boxes, Brain, EyeOff, Inbox, Sparkles, Cpu, Monitor, Moon, Plus, Search, Settings as SettingsIcon, SlidersHorizontal, SquarePen, Star, Sun, Trash2, BrainCircuit, MessageSquare, KeyRound, Hash, Network, ShieldCheck, MonitorDown,
-  PictureInPicture2, History, Palette, MonitorPlay, Keyboard, Users, Globe, Plug, Rocket, ListTodo, ClipboardCheck, Store, RefreshCw, UserRound, Workflow,
+  PictureInPicture2, History, Palette, MonitorPlay, Keyboard, BarChart3, Users, Globe, Plug, Rocket, ListTodo, ClipboardCheck, Store, RefreshCw, UserRound, Workflow,
 } from 'lucide-react';
 import type { ToolsTab } from './Integrations';
 import type { Agent, ChatHit, ConversationSummary, Memory, ModelInfo, Settings, SettingsTabId, Status, ToolInfo } from '../types';
@@ -24,6 +24,7 @@ import { MemoryManager } from './MemoryManager';
 import { SpeechTab } from './SpeechSettings';
 import { SCALES, setScale, useScale } from '../uiScale';
 import { ShortcutsTab } from './ShortcutsSettings';
+import { UsageTab } from './UsageTab';
 import { promptInstall, useInstallState } from '../desktop';
 import { SystemInfoPanel } from './SystemInfo';
 import { NetworkSettings } from './NetworkSettings';
@@ -105,6 +106,7 @@ export function SettingsContent(p: SettingsProps) {
     { id: 'backups', label: 'Backups', icon: Archive },
     { id: 'changelog', label: 'Changelog', icon: History },
     { id: 'account', label: 'Account', icon: ShieldCheck },
+    { id: 'usage', label: 'Usage', icon: BarChart3 },
   ] as const;
 
   return (
@@ -130,6 +132,7 @@ export function SettingsContent(p: SettingsProps) {
         {tab === 'backups' && <BackupsTab />}
         {tab === 'changelog' && <ChangelogTab />}
         {tab === 'account' && <AccountTab />}
+        {tab === 'usage' && <UsageTab models={p.models} />}
       </div>
     </div>
   );
@@ -502,6 +505,7 @@ export function CommandPalette({ open, onClose, agents, conversations, theme, ac
       { id: 'backups', label: 'Backups', search: 'backup restore export archive', icon: <Archive className="w-4 h-4" />, run: () => actions.openSettings('backups') },
       { id: 'changelog', label: "What's new (changelog)", search: 'changes release notes version', icon: <History className="w-4 h-4" />, run: () => actions.openSettings('changelog') },
       { id: 'account', label: 'Account: password, devices, audit log', search: 'login sessions sign out security', icon: <ShieldCheck className="w-4 h-4" />, run: () => actions.openSettings('account') },
+      { id: 'usage', label: 'Usage & costs: tokens per agent, model and day', search: 'tokens cost spend dashboard statistics', icon: <BarChart3 className="w-4 h-4" />, run: () => actions.openSettings('usage') },
       ...(actions.openTools ? [
         { id: 'tools-skills', label: 'Skills', search: 'skill.md agent skills install', icon: <Sparkles className="w-4 h-4 text-amber-400" />, run: () => actions.openTools!('skills') },
         { id: 'tools-discover', label: 'Discover: community MCP servers and skills', search: 'marketplace registry community install', icon: <Globe className="w-4 h-4 text-sky-400" />, run: () => actions.openTools!('discover') },

@@ -1,6 +1,12 @@
 [
  {
   "date": "2026-10-10",
+  "area": "Settings",
+  "title": "Usage: tokens per day, agent and model, with prices",
+  "summary": "Settings → Usage charts the last 7, 30 or 90 days of tokens split into yours, guests' and API keys', lists the agents and models that used them, and totals lifetime use. Enter what your cloud models cost per million tokens and it shows what those turns added up to. Local models stay free."
+ },
+ {
+  "date": "2026-10-10",
   "area": "Codex",
   "title": "Calendar and contacts: import, export, repeats and reminders",
   "summary": "Codex → Calendar imports .ics files from Google, Apple or Outlook (times converted to your time zone, repeats and alarms included) and exports every event as one .ics you can subscribe to elsewhere; Codex → Contacts imports .vcf address books and exports yours. Importing the same file twice updates instead of doubling. Events can now repeat daily, weekly, monthly or by a custom rule, and show on every day they fall on; agents see those repeats in their upcoming-schedule block. A new Remind me field posts a reminder to Activity (and your phone, if that kind is on) before the event starts."

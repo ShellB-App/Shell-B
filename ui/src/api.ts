@@ -7,8 +7,7 @@ import type {
   ActivityItem, ActivitySummary, AskAnswer, PendingApproval, CodexCollection, CodexEntry, CodexIndex,
   CliAgent, TtsVoice, Meeting, MeetingSpeaker, MeetingUtterance, MeetingSummaryData, MeetingSummaryItem,
   BackupInfo, ChangelogEntry, BackupCreateRequest, BackupRestoreResult,
-  ChatHit,
-} from './types';
+  ChatHit, UsageReport } from './types';
 
 /** The admin key (data/admin.key on the server) unlocks MCP commands, API keys and cloud settings. */
 export const adminKey = {
@@ -221,6 +220,7 @@ export const api = {
   setTool: (id: string, enabled: boolean) => req(`/api/tools/${id}`, { method: 'PUT', body: json({ enabled }) }),
 
   settings: () => req<Settings>('/api/settings'),
+  usage: (days = 30) => req<UsageReport>(`/api/usage?days=${days}`),
   saveSettings: (s: Partial<Settings>) => req<Settings>('/api/settings', { method: 'PUT', body: json(s) }),
   models: () => req<ModelInfo[]>('/api/models'),
   status: () => req<Status>('/api/status'),

@@ -480,5 +480,6 @@ DEFAULT_SETTINGS = {
     "cloudScreen": False,      # cloud agents may look at a shared screen (screen.py); off = only local vision models can
     "adultEnabled": False,     # Aphrodite, the adult agent (adult.py): master switch, admin-only; off = the agent is hidden and refuses
     "adultImageCheckpoint": "",  # SDXL-style file in ~/comfyui/models/checkpoints for Aphrodite; "" = FLUX.1-dev
+    "modelCosts": {},          # Settings → Usage prices cloud turns: {"anthropic/claude-x": {"in": $/1M prompt tokens, "out": $/1M completion}}
     "previewHost": "",         # Studio live previews on https://p-<project>.<this> (hub edge proxy, devserver.py); "" = this host's ports
 }

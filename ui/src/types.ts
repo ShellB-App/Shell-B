@@ -455,6 +455,8 @@ export interface Settings {
   nightShiftContext?: number;
   /** domain whose p-<project>.<domain> hosts reach this machine; "" = tailnet :8210-8217 previews (server/devserver.py) */
   previewHost?: string;
+  /** Settings → Usage: $ per million prompt (in) and completion (out) tokens, per cloud model id */
+  modelCosts?: Record<string, { in?: number; out?: number }>;
   cloudEnabled: boolean;
   cloudDelegation: boolean;
   cloudMemory: boolean;
@@ -948,6 +950,18 @@ export interface BackupRestoreResult {
   safetyBackup?: BackupInfo;
 }
 
-export type SettingsTabId = 'general' | 'appearance' | 'speech' | 'network' | 'memory' | 'shortcuts' | 'system' | 'backups' | 'account' | 'apikeys' | 'notifications' | 'changelog';
+export type SettingsTabId = 'general' | 'appearance' | 'speech' | 'network' | 'memory' | 'shortcuts' | 'system' | 'backups' | 'account' | 'apikeys' | 'notifications' | 'changelog' | 'usage';
+
+/** server/tokens.py report(): Settings → Usage */
+export interface UsageRow { name: string; prompt: number; completion: number; turns: number; cost?: number }
+export interface UsageReport {
+  days: number; since: string;
+  series: { day: string; prompt: number; completion: number; turns: number; owner: number; guests: number; api: number }[];
+  agents: UsageRow[]; models: UsageRow[]; tenants: UsageRow[];
+  window: { prompt: number; completion: number; turns: number };
+  lifetime: { prompt: number; completion: number; total: number; turns: number };
+  cost: number | null;
+  costs: Record<string, { in?: number; out?: number }>;
+}
 
 export interface ChangelogEntry { date: string; area: string; title: string; summary: string }

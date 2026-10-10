@@ -23,6 +23,33 @@ class TokenCounterTest(unittest.TestCase):
         tokens.init()
         self.assertTrue(db.kv_get("token_usage_backfilled"))
 
+    def test_detail_ledger_and_report(self):
+        tokens.init()
+        tokens.record("", {"prompt": 300, "completion": 60}, "shellb", "ShellB-Swift")
+        tokens.record("guest-0123456789ab", {"prompt": 40, "completion": 10}, "spark", "ShellB-Swift")
+        tokens.record("api", {"prompt": 70, "completion": 30}, "claude", "claude-code/opus")
+        r = tokens.report(7)
+        self.assertEqual(len(r["series"]), 7)
+        today = r["series"][-1]
+        self.assertGreaterEqual(today["owner"], 360)
+        self.assertGreaterEqual(today["guests"], 50)
+        self.assertGreaterEqual(today["api"], 100)
+        by_agent = {a["name"]: a for a in r["agents"]}
+        self.assertGreaterEqual(by_agent["shellb"]["prompt"], 300)
+        self.assertIn("claude-code/opus", {m["name"] for m in r["models"]})
+        self.assertIsNone(r["cost"])  # no prices set
+        saved = db.kv_get("settings") or {}
+        try:
+            db.kv_set("settings", {**saved, "modelCosts": {"claude-code/opus": {"in": 15, "out": 75}}})
+            priced = tokens.report(7)
+            self.assertIsNotNone(priced["cost"])
+            self.assertGreaterEqual(priced["cost"], 70 / 1e6 * 15 + 30 / 1e6 * 75 - 1e-9)
+        finally:
+            db.kv_set("settings", saved)
+        res = client.get("/api/usage?days=7")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()["days"], 7)
+
     def test_me_stats_carry_tokens(self):
         r = client.get("/api/me")
         self.assertEqual(r.status_code, 200)

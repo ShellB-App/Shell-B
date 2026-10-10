@@ -404,6 +404,15 @@ address (`_ShortNameRedirect` in app.py). Check with `tailscale serve status`; r
   The orchestrator always gets the tool in its plan chat. Code is in `server/megaplan.py` and
   `ui/src/components/MegaPlans.tsx`; the tables are `mega_plans`, `mega_steps`, `mega_events` and `mega_links`.
 
+## Usage
+
+Settings → **Usage** (`server/tokens.py`, `ui/src/components/UsageTab.tsx`): every agent turn's prompt and completion
+tokens, from a ledger that survives chat deletion (`token_usage` per day and tenant, `token_usage_detail` per day,
+tenant, agent and model; both backfilled once from the messages). The page shows 7/30/90 days of tokens per day split
+into you / guests / API keys, replies, lifetime totals, tables by agent and by model, and, once you enter prices per
+million tokens for cloud models (`modelCosts`), what those turns cost. Background model calls (titles, compaction,
+memory distilling) are not counted. `GET /api/usage?days=` is the owner-only route; the Me page keeps its counters.
+
 ## Calendar and contacts interchange
 
 The Codex's events and contacts move in and out as standard files (`server/codex_sync.py`; Codex → Calendar and
