@@ -27,6 +27,7 @@ const SOURCES: Record<ActivitySource, { label: string; icon: typeof Inbox; color
   guest: { label: 'Guests', icon: Users, color: 'text-fuchsia-400' },
   calendar: { label: 'Calendar', icon: CalendarDays, color: 'text-orange-300' },
   feeds: { label: 'Feeds', icon: Rss, color: 'text-orange-400' },
+  email: { label: 'Inbox', icon: Mail, color: 'text-sky-300' },
 };
 
 const STATUS: Record<string, [string, string]> = {

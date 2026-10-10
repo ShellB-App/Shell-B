@@ -8,6 +8,7 @@ import {
 } from '../notify';
 import { Toggle, btn, relTime } from './common';
 import { EmailSection } from './EmailSettings';
+import { InboxSection } from './InboxSettings';
 
 const errText = (e: unknown) => String(e instanceof Error ? e.message : e).replace(/^Error: /, '').replace(/^\d+: /, '');
 
@@ -265,6 +266,7 @@ export function NotificationsTab() {
 
           {/* ── email ── */}
           <EmailSection onChange={st => setEmailReady(st.ready && !!st.to)} />
+          <InboxSection />
 
           {/* ── devices ── */}
           <section>

@@ -42,6 +42,7 @@ import codex_sync
 import feeds
 import gitremote
 import hooks
+import inbox
 import shares
 import translate
 import media
@@ -151,6 +152,8 @@ feeds.register()
 shares.init()
 translate.register()
 gitremote.register()
+inbox.init()
+inbox.register()
 mailer.init()
 studio_tools.register()
 studio_assets.register()
@@ -269,6 +272,7 @@ app.include_router(shares.router)
 app.include_router(shares.public_router)
 app.include_router(translate.router)
 app.include_router(gitremote.router)
+app.include_router(inbox.router)
 app.include_router(guests.admin_router)  # owner side of Shell:B Guest; the guests' own app is guest_app.py
 app.include_router(guest_accounts.admin_router)  # guests' accounts: unlock, reset links, two-step off, sign-in log
 app.include_router(mcp_server.router)
@@ -329,6 +333,7 @@ async def _start_mcp():
     commitments.start()
     codex_sync.start()  # calendar reminders (Activity source `calendar`)
     feeds.start()  # RSS/Atom refreshes (feeds.py)
+    inbox.start()  # IMAP polling (inbox.py)
     nightshift.run_turn, nightshift.abort_turn, nightshift.get_settings = _run_nightshift, _abort_turn, get_settings
     nightshift.active_convs, nightshift.busy = lambda: list(ACTIVE), _background_busy
     if not cell_boot.CELL:
@@ -364,6 +369,7 @@ async def _shutdown():
     commitments.stop()
     codex_sync.stop()
     feeds.stop()
+    inbox.stop()
     nightshift.stop()
     datasets.stop()
     watchdog.stop()
@@ -958,6 +964,7 @@ def _abort_turn(conv_id):
 
 public_api.begin_turn, public_api.ACTIVE, public_api.abort_turn, public_api.OLLAMA = begin_turn, ACTIVE, _abort_turn, OLLAMA
 hooks.begin_turn = begin_turn
+inbox.begin_turn = begin_turn
 
 
 async def _run_scheduled(t, on_conv):

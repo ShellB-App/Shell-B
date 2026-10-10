@@ -74,6 +74,7 @@ KINDS = [
     ("nightshift", "Night shift", "A night-shift research or redraft job finished or failed", "attention"),
     ("calendar", "Calendar reminders", "A Codex event with a reminder is about to start", "all"),
     ("feeds", "Feeds", "New items arrived in a feed you follow", "off"),
+    ("email", "Inbox", "New email arrived (always when an inbox rule started a turn)", "attention"),
     ("guest", "Guests", "A guest used Report to Evie, or a guest account locked after wrong passwords", "all"),
     ("circles", "Circles", "Someone flagged a circle note, or flags hid one", "all"),
 ]
@@ -81,7 +82,7 @@ KIND_IDS = {k[0] for k in KINDS}
 NOUN = {"approval": "Approval", "question": "Question", "schedule": "Scheduled task", "plan": "Mega Plan",
         "todo": "To-do", "deploy": "Self-deploy", "scout": "Asset scout", "notebook": "Notebook", "codex": "Codex draft",
         "memory": "Memory", "data": "Offline data", "health": "System health", "shopping": "Price watch",
-        "guest": "Guest report", "circles": "Circle note", "brief": "Morning brief", "nightshift": "Night-shift job", "calendar": "Event", "feeds": "Feed"}
+        "guest": "Guest report", "circles": "Circle note", "brief": "Morning brief", "nightshift": "Night-shift job", "calendar": "Event", "feeds": "Feed", "email": "Email"}
 VERB = {"done": "finished", "complete": "finished", "failed": "failed", "blocked": "is blocked", "paused": "paused",
         "interrupted": "was interrupted", "rolled-back": "rolled back", "restart-pending": "is waiting for a restart",
         "review": "needs your review", "waiting": "is waiting for you", "warning": "needs attention",

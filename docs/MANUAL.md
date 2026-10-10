@@ -410,6 +410,20 @@ address (`_ShortNameRedirect` in app.py). Check with `tailscale serve status`; r
   The orchestrator always gets the tool in its plan chat. Code is in `server/megaplan.py` and
   `ui/src/components/MegaPlans.tsx`; the tables are `mega_plans`, `mega_steps`, `mega_events` and `mega_links`.
 
+## Email inbox (IMAP)
+
+Settings → Notifications → Email → **Inbox** (`server/inbox.py`): the mailbox the agents may read. Host, port (TLS),
+user, folder, an app password (written to `data/email/imap.pass`, mode 0600, never returned) and a check interval.
+Every few minutes the headers of new messages are stored (uid, Message-ID, from, subject, date, a text snippet,
+seen/flagged, attachment names; 2000 kept) and each new message posts to Activity (source `email`, level attention by
+default). **Rules** (from/subject substrings or `/regex/`, an agent, a template with `{{from}} {{subject}} {{date}}
+{{body}} {{snippet}}`) start an unattended turn when a matching email arrives, the email handed over as the sender's
+data, not instructions; the Activity item then links to that chat. Agents in the owner's chats get `read_email`
+(unread, list, search on the server, read one message's text and attachment names, sync, mark read/unread); cloud
+models only with Cloud AI → *Let cloud agents read the inbox* (`cloudEmail`). Replies go through `send_email` with
+`in_reply_to` set to the Message-ID, so they thread. Guests and the adult agent never see mail; cells never mount it.
+Routes: `/api/email/inbox` (status, PUT config), `/test`, `/sync`, `/messages[/{uid}]`, `/rules`.
+
 ## Share links
 
 Right-click a chat (sidebar) or an artifact → **Share read-only link…** (`server/shares.py`, `ui/src/components/

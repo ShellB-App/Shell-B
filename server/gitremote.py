@@ -234,7 +234,7 @@ async def run(args, ctx, abort=None, sink=None, idx=None):
             b.pop("approval", None)
             b.update(status="running", decision=decision)
             await sink.update(idx)
-            if decision != "approve":
+            if decision not in ("allow", "allow_turn"):
                 _audit(pid, "push", False, f"not approved: {decision}", by="agent")
                 why = {"deny": "The owner declined", "timeout": "Nobody approved it within 15 minutes", "stopped": "The turn was stopped"}.get(decision, "It wasn't approved")
                 return ToolResult(f"{why}, so nothing was pushed. Don't retry unchanged; ask what to change.", error=True)

@@ -95,7 +95,7 @@ def _reserve() -> bool:
 
 
 def send(kind: str, to: list[str] | str, subject: str, text: str, html: str | None = None,
-         reply_to: str | None = None) -> dict:
+         reply_to: str | None = None, headers: dict | None = None) -> dict:
     """Send one message. Blocking (use asyncio.to_thread from async code). Never raises; returns {ok, error, ...}."""
     to = [to] if isinstance(to, str) else list(to)
     subject = re.sub(r"[\r\n]+", " ", subject).strip()[:200]
@@ -116,6 +116,8 @@ def send(kind: str, to: list[str] | str, subject: str, text: str, html: str | No
         body["html"] = html
     if reply_to and valid_address(reply_to):
         body["reply_to"] = reply_to
+    if headers:  # In-Reply-To/References for a reply (inbox.py); both providers take extra headers like this
+        body["headers"] = {str(k)[:60]: re.sub(r"[\r\n]+", " ", str(v))[:500] for k, v in headers.items() if v}
     headers = {"Authorization": f"Bearer {_token()}"}
     if resend:
         headers["Idempotency-Key"] = uuid.uuid4().hex  # a retry after a lost response can't send it twice
@@ -281,7 +283,8 @@ async def run(args, ctx, abort, sink, idx) -> ToolResult:
     owner = valid_address(config()["to"])
     title = f"Send an email to {', '.join(to)}"[:160]
     detail = "\n".join([f"From: {config()['fromName']} <{config()['from']}>", f"To: {', '.join(to)}",
-                        f"Reply-To: {owner or '(none)'}", f"Subject: {subject[:200]}", "", body])
+                        f"Reply-To: {owner or '(none)'}", f"Subject: {subject[:200]}"]
+                       + ([f"In-Reply-To: {args['in_reply_to']}"] if args.get("in_reply_to") else []) + ["", body])
     aid = uuid.uuid4().hex
     b = sink.blocks[idx]
     b.update(status="approval", approval={"id": aid, "kind": "email", "title": title, "detail": detail})
@@ -298,7 +301,9 @@ async def run(args, ctx, abort, sink, idx) -> ToolResult:
         why = {"deny": "The user declined", "timeout": "Nobody approved it in time",
                "stopped": "The turn was stopped"}.get(decision, "It wasn't approved")
         return ToolResult(f"{why}, so the email was not sent. Don't resend it unchanged; ask the user what to change.", error=True)
-    res = await asyncio.to_thread(send, "agent", to, subject, body, reply_to=owner)
+    irt = str(args.get("in_reply_to") or "").strip()
+    headers = {"In-Reply-To": irt, "References": irt} if irt.startswith("<") and irt.endswith(">") else None
+    res = await asyncio.to_thread(send, "agent", to, subject, body, reply_to=owner, headers=headers)
     if not res["ok"]:
         return ToolResult(f"The email was approved but sending failed: {res['error']}", error=True)
     return ToolResult(f"Sent to {', '.join(to)}" + (" (queued by the mail service)." if res["queued"] else "."))
@@ -319,6 +324,7 @@ def register():
                       "goes; replies go to the user. Plain text only. Use it only when the user asked for an email to be sent.",
                       {"to": {"type": "array", "items": {"type": "string"}, "description": f"1-{MAX_RECIPIENTS} email addresses"},
                        "subject": {"type": "string"},
-                       "body": {"type": "string", "description": "the plain-text message, signed as the user wants"}},
+                       "body": {"type": "string", "description": "the plain-text message, signed as the user wants"},
+                       "in_reply_to": {"type": "string", "description": "Message-ID of the email being answered (from read_email), so it threads"}},
                       ["to", "subject", "body"]),
     }

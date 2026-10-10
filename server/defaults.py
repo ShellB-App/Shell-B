@@ -476,6 +476,7 @@ DEFAULT_SETTINGS = {
     "cloudMemory": False,      # cloud agents get long-term memory (recall + memory tools)
     "cloudLibrary": False,     # cloud agents get the shared library (other projects, notebooks, artifacts; library.py)
     "cloudCodex": False,       # cloud agents get the Codex tool (the owner's notes, links, snippets and files; codex.py)
+    "cloudEmail": False,       # cloud agents may read the owner's inbox (inbox.py); mail text would leave the machine
     "cloudBrowser": False,     # cloud agents may use the browser on the owner's computer (browsing.py); page contents would leave
     "cloudScreen": False,      # cloud agents may look at a shared screen (screen.py); off = only local vision models can
     "adultEnabled": False,     # Aphrodite, the adult agent (adult.py): master switch, admin-only; off = the agent is hidden and refuses

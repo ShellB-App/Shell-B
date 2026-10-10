@@ -509,6 +509,10 @@ class Turn:
         if self.depth == 0 and self.interactive and "browser" in TOOLS and switches.get("browser", True) and browsing.available() \
                 and (not providers.is_cloud(self.model) or self.settings.get("cloudBrowser", False)):
             names.append("browser")  # browsing.py: a browser window on the owner's computer, via the Screen helper
+        if self.depth == 0 and "read_email" in TOOLS and switches.get("read_email", True) and not self.tenant:
+            import inbox
+            if inbox.tool_allowed(self.agent, self.settings, self.model):
+                names.append("read_email")  # inbox.py: the owner's IMAP inbox, read-only; replies go through send_email
         if self.depth == 0 and "send_email" in TOOLS and switches.get("send_email", True) and not self.tenant:
             import mailer
             if mailer.ready():
