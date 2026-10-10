@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react';
 // localStorage, so a phone and a desktop can differ.
 export type SplashMode = 'off' | 'session' | 'always';
 /** A built-in style, or `studio:<project id>` for a screensaver made in the Studio (a Screensaver project's index.html). */
-export type SaverStyle = 'synthwave' | 'starfield' | 'bounce' | `studio:${string}`;
+export type SaverStyle = 'synthwave' | 'starfield' | 'bounce' | SceneStyle | `studio:${string}`;
+/** Scenes built from the themes' scenery and particles (components/Screensaver.tsx, ambience.css). */
+export type SceneStyle = 'meadow' | 'aurora' | 'rain' | 'abyss' | 'sakura' | 'dunes';
 
 export interface AmbiencePrefs {
   splash: SplashMode;
@@ -23,6 +25,12 @@ export const SAVER_STYLES: { id: SaverStyle; label: string }[] = [
   { id: 'synthwave', label: 'Synthwave horizon' },
   { id: 'starfield', label: 'Starfield warp' },
   { id: 'bounce', label: 'Bouncing logo' },
+  { id: 'meadow', label: 'Firefly meadow' },
+  { id: 'aurora', label: 'Northern lights' },
+  { id: 'rain', label: 'Rain on the window' },
+  { id: 'abyss', label: 'Deep sea' },
+  { id: 'sakura', label: 'Night sakura' },
+  { id: 'dunes', label: 'Arrakis dusk' },
 ];
 export const SAVER_MINUTES = [0, 1, 2, 5, 10, 15, 30, 60];
 /** The Studio project behind a screensaver style, or null for a built-in one. */
@@ -53,6 +61,6 @@ export function useAmbience(): AmbiencePrefs {
 // Headless screenshots (?shot) and the standalone artifact viewer get neither extra.
 // For screenshots of the extras themselves: ?shot&ambience=splash, or ?shot&ambience=saver[:style] (style may be studio:<id>).
 // PREVIEW_SAVER can carry a style in its detail to preview that one instead of the saved one (the Studio's Preview button).
-export const ambienceShot = () => /[?&]ambience=([\w:]+)/.exec(location.search)?.[1] ?? '';
+export const ambienceShot = () => /[?&]ambience=([\w:-]+)/.exec(location.search)?.[1] ?? '';
 export const ambienceSuppressed = () => /[?&]shot\b/.test(location.search) || /^#\/view\//.test(location.hash);
 export const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;

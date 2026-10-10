@@ -1,4 +1,4 @@
-/* ── Pandora theme (dark only; light mode falls back to Classic light) ────────────────────────────────────────────
+/* ── Pandora theme (dark, and a light version at the end of this file) ────────────────────────────────────────────
    Night in the Pandoran rainforest. Polyphemus (the banded gas giant Pandora orbits) hangs in the sky with one of its
    moons, the Hallelujah Mountains float in the mist with vines trailing beneath them, and the forest floor glows:
    ferns and broad leaves picked out in cyan, violet and magenta bioluminescence. Woodsprites (atokirina, the seeds of
@@ -17,7 +17,7 @@
 @font-face { font-family: 'Josefin Sans'; font-weight: 300; font-display: swap; src: url('/fonts/josefin-sans-latin-300-normal.woff2') format('woff2'); }
 @font-face { font-family: 'Josefin Sans'; font-weight: 600; font-display: swap; src: url('/fonts/josefin-sans-latin-600-normal.woff2') format('woff2'); }
 
-html.dark[data-skin='pandora'] {
+html[data-skin='pandora'] {
   --pd-cyan: #3ff0e0;
   --pd-blue: #5b8cff;
   --pd-violet: #b07cff;
@@ -49,37 +49,37 @@ html.dark[data-skin='pandora'] {
 }
 
 /* ── type ────────────────────────────────────────────────────────────────── */
-html.dark[data-skin='pandora'] .prose-shellb h1,
-html.dark[data-skin='pandora'] .prose-shellb h2,
-html.dark[data-skin='pandora'] .prose-shellb h3 { font-family: var(--pd-display); font-weight: 600; letter-spacing: 0.06em; }
-html.dark[data-skin='pandora'] .prose-shellb h1 { text-shadow: 0 0 18px rgba(63, 240, 224, 0.35); }
-html.dark[data-skin='pandora'] .prose-shellb h2 { position: relative; padding-bottom: 0.35em; }
-html.dark[data-skin='pandora'] .prose-shellb h2::after {
+html[data-skin='pandora'] .prose-shellb h1,
+html[data-skin='pandora'] .prose-shellb h2,
+html[data-skin='pandora'] .prose-shellb h3 { font-family: var(--pd-display); font-weight: 600; letter-spacing: 0.06em; }
+html[data-skin='pandora'] .prose-shellb h1 { text-shadow: 0 0 18px rgba(63, 240, 224, 0.35); }
+html[data-skin='pandora'] .prose-shellb h2 { position: relative; padding-bottom: 0.35em; }
+html[data-skin='pandora'] .prose-shellb h2::after {
   content: ''; position: absolute; left: 0; bottom: 0; width: 72px; height: 2px; border-radius: 2px;
   background: linear-gradient(90deg, var(--pd-cyan), var(--pd-violet) 70%, transparent); box-shadow: 0 0 8px rgba(63, 240, 224, 0.6);
 }
-html.dark[data-skin='pandora'] .prose-shellb a { color: var(--accent-soft); text-decoration-color: rgba(63, 240, 224, 0.4); }
-html.dark[data-skin='pandora'] .prose-shellb li::marker { color: var(--pd-cyan); }
-html.dark[data-skin='pandora'] .prose-shellb blockquote { border-left: 2px solid var(--pd-violet); box-shadow: -6px 0 14px -8px var(--pd-violet); border-radius: 0 12px 12px 0; }
-html.dark[data-skin='pandora'] .prose-shellb th { font-family: var(--pd-display); font-weight: 600; letter-spacing: 0.06em; }
-html.dark[data-skin='pandora'] ::selection { background: rgba(176, 124, 255, 0.45); }
+html[data-skin='pandora'] .prose-shellb a { color: var(--accent-soft); text-decoration-color: rgba(63, 240, 224, 0.4); }
+html[data-skin='pandora'] .prose-shellb li::marker { color: var(--pd-cyan); }
+html[data-skin='pandora'] .prose-shellb blockquote { border-left: 2px solid var(--pd-violet); box-shadow: -6px 0 14px -8px var(--pd-violet); border-radius: 0 12px 12px 0; }
+html[data-skin='pandora'] .prose-shellb th { font-family: var(--pd-display); font-weight: 600; letter-spacing: 0.06em; }
+html[data-skin='pandora'] ::selection { background: rgba(176, 124, 255, 0.45); }
 
 /* ── geometry: organic, rounded, lit from within ─────────────────────────── */
-html.dark[data-skin='pandora'] :where([class*='rounded-lg'], [class*='rounded-xl'], [class*='rounded-2xl']) { border-radius: 16px !important; }
-html.dark[data-skin='pandora'] .shadow-lg, html.dark[data-skin='pandora'] .shadow-xl, html.dark[data-skin='pandora'] .shadow-2xl {
+html[data-skin='pandora'] :where([class*='rounded-lg'], [class*='rounded-xl'], [class*='rounded-2xl']) { border-radius: 16px !important; }
+html[data-skin='pandora'] .shadow-lg, html[data-skin='pandora'] .shadow-xl, html[data-skin='pandora'] .shadow-2xl {
   box-shadow: 0 16px 44px -14px rgba(0, 0, 0, 0.75), 0 0 0 1px var(--border-subtle), 0 0 30px -12px rgba(63, 240, 224, 0.4) !important;
 }
-html.dark[data-skin='pandora'] [class~='bg-[var(--accent)]'] {
+html[data-skin='pandora'] [class~='bg-[var(--accent)]'] {
   background-image: var(--sunset); border-radius: 999px !important;
   font-family: var(--pd-display); font-weight: 600; letter-spacing: 0.06em;
   box-shadow: 0 0 16px -2px rgba(63, 240, 224, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
-html.dark[data-skin='pandora'] [class~='bg-[var(--accent)]']:disabled {
+html[data-skin='pandora'] [class~='bg-[var(--accent)]']:disabled {
   background: var(--bg-tertiary) !important; background-image: none !important; color: var(--text-muted) !important; box-shadow: none; opacity: 1 !important;
 }
 
 /* ── backdrop ────────────────────────────────────────────────────────────── */
-html.dark[data-skin='pandora'] body {
+html[data-skin='pandora'] body {
   background:
     radial-gradient(1px 1px at 20px 30px, rgba(220, 255, 255, 0.35), transparent 60%) 0 0 / 223px 199px,
     radial-gradient(1px 1px at 140px 90px, rgba(200, 220, 255, 0.28), transparent 60%) 0 0 / 271px 239px,
@@ -93,7 +93,7 @@ html.dark[data-skin='pandora'] body {
 }
 
 /* Polyphemus: a blue banded giant high on the left, lit from the right; its box-shadow throws a small moon beside it */
-html.dark[data-skin='pandora'] body::before {
+html[data-skin='pandora'] body::before {
   content: ''; position: fixed; pointer-events: none; z-index: -3;
   width: 36vmin; height: 36vmin; left: 9vw; top: 5vh; border-radius: 50%;
   background:
@@ -108,7 +108,7 @@ html.dark[data-skin='pandora'] body::before {
 }
 
 /* the floating mountains: the mask is the rock, the gradient is moonlight on their crowns fading into mist */
-html.dark[data-skin='pandora'] #root::before {
+html[data-skin='pandora'] #root::before {
   content: ''; position: fixed; left: 0; right: 0; top: 6vh; height: 80vh; pointer-events: none; z-index: -2;
   background: linear-gradient(180deg, #1d4a5c 0%, #0c2734 30%, #071a24 70%, rgba(7, 26, 36, 0.4) 100%);
   -webkit-mask: url("./scenery/pandora-isles.svg") repeat-x center top / auto 100%;
@@ -117,7 +117,7 @@ html.dark[data-skin='pandora'] #root::before {
 }
 
 /* low mist, drifting slowly across */
-html.dark[data-skin='pandora'] #root::after {
+html[data-skin='pandora'] #root::after {
   content: ''; position: fixed; left: -20vw; width: 140vw; bottom: 90px; height: 34vh; pointer-events: none; z-index: -2;
   background:
     radial-gradient(ellipse 30% 45% at 20% 70%, rgba(63, 240, 224, 0.07), transparent 70%),
@@ -127,7 +127,7 @@ html.dark[data-skin='pandora'] #root::after {
 }
 
 /* the forest floor: ferns and leaves with glowing spots, and the cyan haze they give off */
-html.dark[data-skin='pandora'] body::after {
+html[data-skin='pandora'] body::after {
   content: ''; position: fixed; left: 0; right: 0; bottom: 0; height: 330px; pointer-events: none; z-index: -2;
   background:
     url("./scenery/pandora-flora.svg") repeat-x left bottom / 1600px 240px,
@@ -135,9 +135,9 @@ html.dark[data-skin='pandora'] body::after {
     radial-gradient(ellipse 35% 55% at 75% 100%, rgba(176, 124, 255, 0.12), transparent 70%);
   animation: pd-breathe 7s ease-in-out infinite;
 }
-html.dark[data-skin='pandora']:not(:has(.sf-hero)) body::before { opacity: 0.5; }
-html.dark[data-skin='pandora']:not(:has(.sf-hero)) #root::before { opacity: 0.45; }
-html.dark[data-skin='pandora']:not(:has(.sf-hero)) .shellb-ambient { opacity: 0.7; }
+html[data-skin='pandora']:not(:has(.sf-hero)) body::before { opacity: 0.5; }
+html[data-skin='pandora']:not(:has(.sf-hero)) #root::before { opacity: 0.45; }
+html[data-skin='pandora']:not(:has(.sf-hero)) .shellb-ambient { opacity: 0.7; }
 
 @keyframes pd-mist { from { transform: translateX(-6vw); } to { transform: translateX(6vw); } }
 @keyframes pd-breathe { 0%, 100% { filter: brightness(0.9); } 50% { filter: brightness(1.15); } }
@@ -145,123 +145,123 @@ html.dark[data-skin='pandora']:not(:has(.sf-hero)) .shellb-ambient { opacity: 0.
 @keyframes pd-spin { to { transform: rotate(360deg); } }
 
 /* ── chrome ──────────────────────────────────────────────────────────────── */
-html.dark[data-skin='pandora'] .sf-sidebar {
+html[data-skin='pandora'] .sf-sidebar {
   position: relative; background: color-mix(in srgb, var(--bg-secondary) 84%, transparent); backdrop-filter: blur(12px) saturate(130%);
   box-shadow: 1px 0 24px -8px rgba(63, 240, 224, 0.3);
 }
-html.dark[data-skin='pandora'] .sf-brand {
+html[data-skin='pandora'] .sf-brand {
   font-family: var(--pd-display); font-weight: 600; font-size: 1.15rem; letter-spacing: 0.2em; text-transform: uppercase;
   color: var(--text-primary) !important; display: inline-flex; align-items: center; gap: 0.55rem;
 }
 /* a woodsprite seed by the name */
-html.dark[data-skin='pandora'] .sf-brand::before {
+html[data-skin='pandora'] .sf-brand::before {
   content: ''; width: 9px; height: 9px; border-radius: 50%; background: #f2ffff;
   box-shadow: 0 0 6px 2px rgba(127, 247, 236, 0.9), 0 0 18px 6px rgba(63, 240, 224, 0.35);
   animation: pd-pulse 5s ease-in-out infinite;
 }
-html.dark[data-skin='pandora'] .sf-label {
+html[data-skin='pandora'] .sf-label {
   font-family: var(--pd-display); font-weight: 600; font-size: 11.5px !important; text-transform: uppercase; letter-spacing: 0.18em;
   display: flex; align-items: center; gap: 0.45rem;
 }
-html.dark[data-skin='pandora'] div.sf-label::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--pd-cyan); box-shadow: 0 0 6px var(--pd-cyan); }
-html.dark[data-skin='pandora'] .sf-sidebar [class*='bg-[var(--bg-hover)]'][class*='cursor-pointer'] {
+html[data-skin='pandora'] div.sf-label::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--pd-cyan); box-shadow: 0 0 6px var(--pd-cyan); }
+html[data-skin='pandora'] .sf-sidebar [class*='bg-[var(--bg-hover)]'][class*='cursor-pointer'] {
   box-shadow: inset 0 0 0 1px rgba(63, 240, 224, 0.18), 0 0 14px -6px rgba(63, 240, 224, 0.5);
   background: linear-gradient(90deg, rgba(63, 240, 224, 0.12), rgba(176, 124, 255, 0.06) 70%, transparent);
 }
-html.dark[data-skin='pandora'] .sf-topbar, html.dark[data-skin='pandora'] header.h-12 {
+html[data-skin='pandora'] .sf-topbar, html[data-skin='pandora'] header.h-12 {
   background: color-mix(in srgb, var(--bg-primary) 62%, transparent); backdrop-filter: blur(10px); position: relative; z-index: 1;
 }
-html.dark[data-skin='pandora'] .sf-topbar .text-sm.font-medium,
-html.dark[data-skin='pandora'] .sf-topbar > div > span.text-sm,
-html.dark[data-skin='pandora'] header.h-12 > div > span.font-semibold {
+html[data-skin='pandora'] .sf-topbar .text-sm.font-medium,
+html[data-skin='pandora'] .sf-topbar > div > span.text-sm,
+html[data-skin='pandora'] header.h-12 > div > span.font-semibold {
   font-family: var(--pd-display); font-weight: 600; font-size: 14px; letter-spacing: 0.14em; text-transform: uppercase;
 }
-html.dark[data-skin='pandora'] nav [class*='rounded-r-full'] { background: var(--pd-cyan) !important; box-shadow: 0 0 10px var(--pd-cyan); }
+html[data-skin='pandora'] nav [class*='rounded-r-full'] { background: var(--pd-cyan) !important; box-shadow: 0 0 10px var(--pd-cyan); }
 
 /* ── welcome ─────────────────────────────────────────────────────────────── */
 /* the agent glows like a seed of the sacred tree: a breathing halo and a slow ring of light-dots */
-html.dark[data-skin='pandora'] .sf-hero > :first-child {
+html[data-skin='pandora'] .sf-hero > :first-child {
   position: relative; overflow: visible; border-radius: 50% !important; margin-bottom: 1.7rem;
   box-shadow: 0 0 0 1px rgba(127, 247, 236, 0.5), 0 0 24px 4px rgba(63, 240, 224, 0.35), 0 0 70px 10px rgba(176, 124, 255, 0.2) !important;
 }
-html.dark[data-skin='pandora'] .sf-hero > :first-child::before,
-html.dark[data-skin='pandora'] .sf-hero > :first-child::after { content: ''; position: absolute; border-radius: 50%; pointer-events: none; }
-html.dark[data-skin='pandora'] .sf-hero > :first-child::before {
+html[data-skin='pandora'] .sf-hero > :first-child::before,
+html[data-skin='pandora'] .sf-hero > :first-child::after { content: ''; position: absolute; border-radius: 50%; pointer-events: none; }
+html[data-skin='pandora'] .sf-hero > :first-child::before {
   inset: -22px; background: radial-gradient(circle, transparent 52%, rgba(63, 240, 224, 0.18) 62%, transparent 72%);
   animation: pd-pulse 6s ease-in-out infinite;
 }
-html.dark[data-skin='pandora'] .sf-hero > :first-child::after {
+html[data-skin='pandora'] .sf-hero > :first-child::after {
   inset: -30px;
   background: repeating-conic-gradient(from 0deg, var(--pd-cyan) 0 1.2deg, transparent 1.2deg 10deg);
   -webkit-mask: radial-gradient(circle closest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
   mask: radial-gradient(circle closest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
   opacity: 0.6; filter: drop-shadow(0 0 3px var(--pd-cyan)); animation: pd-spin 90s linear infinite;
 }
-html.dark[data-skin='pandora'] .sf-hero h1 {
+html[data-skin='pandora'] .sf-hero h1 {
   font-family: var(--pd-display); font-weight: 300; text-transform: uppercase; letter-spacing: 0.22em;
   font-size: clamp(1.9rem, 4vw, 2.9rem); line-height: 1.1; margin-top: 0.4rem; padding: 0 0 0 0.22em; background: none;
   text-shadow: 0 0 24px rgba(63, 240, 224, 0.45), 0 0 2px rgba(228, 251, 255, 0.6);
 }
-html.dark[data-skin='pandora'] .sf-hero h1::after {
+html[data-skin='pandora'] .sf-hero h1::after {
   content: ''; display: block; width: 150px; height: 2px; margin: 0.9rem auto 0.2rem; border-radius: 2px;
   background: linear-gradient(90deg, transparent, var(--pd-cyan) 30%, var(--pd-violet) 70%, transparent); box-shadow: 0 0 10px rgba(63, 240, 224, 0.7);
 }
-html.dark[data-skin='pandora'] .sf-hero h1 + p > span:first-child {
+html[data-skin='pandora'] .sf-hero h1 + p > span:first-child {
   font-family: var(--pd-display); font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent-soft) !important;
 }
 
 /* quick-start cards: rounded glass with a trail of Na'vi freckles in the corner that lights on hover */
-html.dark[data-skin='pandora'] .sf-hero > div.grid { gap: 12px; }
-html.dark[data-skin='pandora'] .sf-card {
+html[data-skin='pandora'] .sf-hero > div.grid { gap: 12px; }
+html[data-skin='pandora'] .sf-card {
   position: relative; padding: 16px 18px 14px !important; border-radius: 18px !important;
   background-color: color-mix(in srgb, var(--bg-secondary) 72%, transparent) !important; backdrop-filter: blur(10px) saturate(130%);
   transition: border-color .2s, transform .2s, background-color .2s, box-shadow .2s;
 }
-html.dark[data-skin='pandora'] .sf-card::before {
+html[data-skin='pandora'] .sf-card::before {
   content: ''; position: absolute; top: 10px; right: 12px; width: 40px; height: 16px; pointer-events: none;
   background: var(--pd-dots) 0 0 / 7px 7px;
   -webkit-mask: linear-gradient(225deg, #000, transparent 75%); mask: linear-gradient(225deg, #000, transparent 75%);
   opacity: 0.35; transition: opacity .2s, filter .2s;
 }
-html.dark[data-skin='pandora'] .sf-card:hover {
+html[data-skin='pandora'] .sf-card:hover {
   transform: translateY(-2px); background-color: color-mix(in srgb, var(--bg-hover) 80%, transparent) !important;
   box-shadow: 0 0 0 1px rgba(63, 240, 224, 0.35), 0 0 26px -8px rgba(63, 240, 224, 0.55), 0 0 50px -20px rgba(176, 124, 255, 0.6);
 }
-html.dark[data-skin='pandora'] .sf-card:hover::before { opacity: 1; filter: drop-shadow(0 0 3px var(--pd-cyan)); }
-html.dark[data-skin='pandora'] .sf-card > div:first-child {
+html[data-skin='pandora'] .sf-card:hover::before { opacity: 1; filter: drop-shadow(0 0 3px var(--pd-cyan)); }
+html[data-skin='pandora'] .sf-card > div:first-child {
   font-family: var(--pd-display); font-weight: 600; font-size: 15px; letter-spacing: 0.02em; padding-right: 46px;
 }
-html.dark[data-skin='pandora'] .sf-card > div:last-child { font-size: 13px; margin-top: 5px; }
-html.dark[data-skin='pandora'] .sf-tagline {
+html[data-skin='pandora'] .sf-card > div:last-child { font-size: 13px; margin-top: 5px; }
+html[data-skin='pandora'] .sf-tagline {
   font-family: var(--pd-display); font-size: 11px !important; letter-spacing: 0.09em; text-transform: uppercase;
   padding: 4px 12px; border-radius: 999px; background: color-mix(in srgb, var(--bg-primary) 70%, transparent);
 }
 
 /* ── composer: a glass pod whose rim lights when you speak into it ───────── */
-html.dark[data-skin='pandora'] .sf-composer {
+html[data-skin='pandora'] .sf-composer {
   position: relative; z-index: 20; border-radius: 22px !important;
   background: color-mix(in srgb, var(--bg-secondary) 80%, transparent) !important; backdrop-filter: blur(16px) saturate(130%);
   box-shadow: 0 0 30px -14px rgba(63, 240, 224, 0.55);
   transition: box-shadow .3s ease, border-color .3s ease;
 }
-html.dark[data-skin='pandora'] .sf-composer:focus-within {
+html[data-skin='pandora'] .sf-composer:focus-within {
   border-color: rgba(63, 240, 224, 0.5) !important;
   box-shadow: 0 0 0 1px rgba(63, 240, 224, 0.25), 0 0 34px -8px rgba(63, 240, 224, 0.6), 0 0 70px -24px rgba(176, 124, 255, 0.7);
 }
-html.dark[data-skin='pandora'] .sf-composer :where(button[class*='rounded']) { border-radius: 999px !important; }
+html[data-skin='pandora'] .sf-composer :where(button[class*='rounded']) { border-radius: 999px !important; }
 
 /* ── the other apps ──────────────────────────────────────────────────────── */
-html.dark[data-skin='pandora'] :where(h1[class*='tracking-tight']:not([class*='text-base'])) {
+html[data-skin='pandora'] :where(h1[class*='tracking-tight']:not([class*='text-base'])) {
   font-family: var(--pd-display); font-weight: 300; letter-spacing: 0.14em; text-transform: uppercase; padding-bottom: 10px;
   background: linear-gradient(90deg, var(--pd-cyan), var(--pd-violet) 60%, transparent) no-repeat left bottom / 90px 2px;
 }
-html.dark[data-skin='pandora'] [class*='uppercase'][class*='tracking-w']:not(kbd) { font-family: var(--pd-display); font-weight: 600; letter-spacing: 0.16em; }
+html[data-skin='pandora'] [class*='uppercase'][class*='tracking-w']:not(kbd) { font-family: var(--pd-display); font-weight: 600; letter-spacing: 0.16em; }
 
 /* ── misc ────────────────────────────────────────────────────────────────── */
-html.dark[data-skin='pandora'] * { scrollbar-width: thin; scrollbar-color: rgba(63, 240, 224, 0.25) transparent; }
-html.dark[data-skin='pandora'] ::-webkit-scrollbar-thumb { border-radius: 999px; background: rgba(63, 240, 224, 0.25); background-clip: padding-box; }
-html.dark[data-skin='pandora'] .caret::after { background: var(--pd-cyan); box-shadow: 0 0 8px var(--pd-cyan); border-radius: 2px; }
-html.dark[data-skin='pandora'] .think-stream {
+html[data-skin='pandora'] * { scrollbar-width: thin; scrollbar-color: rgba(63, 240, 224, 0.25) transparent; }
+html[data-skin='pandora'] ::-webkit-scrollbar-thumb { border-radius: 999px; background: rgba(63, 240, 224, 0.25); background-clip: padding-box; }
+html[data-skin='pandora'] .caret::after { background: var(--pd-cyan); box-shadow: 0 0 8px var(--pd-cyan); border-radius: 2px; }
+html[data-skin='pandora'] .think-stream {
   background: linear-gradient(90deg, transparent 0%, rgba(63, 240, 224, 0.16) 40%, rgba(176, 124, 255, 0.14) 60%, transparent 100%);
   background-size: 200% 100%;
 }
@@ -275,10 +275,79 @@ html.dark[data-skin='pandora'] .hljs-title, html.dark[data-skin='pandora'] .hljs
 html.dark[data-skin='pandora'] .hljs-type, html.dark[data-skin='pandora'] .hljs-built_in, html.dark[data-skin='pandora'] .hljs-title.class_ { color: #9ff5a8; }
 
 @media (prefers-reduced-motion: reduce) {
-  html.dark[data-skin='pandora'] #root::after,
-  html.dark[data-skin='pandora'] body::after,
-  html.dark[data-skin='pandora'] .sf-brand::before,
-  html.dark[data-skin='pandora'] .sf-hero > :first-child::before,
-  html.dark[data-skin='pandora'] .sf-hero > :first-child::after { animation: none; }
-  html.dark[data-skin='pandora'] .sf-card { transition: none; }
+  html[data-skin='pandora'] #root::after,
+  html[data-skin='pandora'] body::after,
+  html[data-skin='pandora'] .sf-brand::before,
+  html[data-skin='pandora'] .sf-hero > :first-child::before,
+  html[data-skin='pandora'] .sf-hero > :first-child::after { animation: none; }
+  html[data-skin='pandora'] .sf-card { transition: none; }
 }
+
+/* ── light: the rainforest by day. Hazy green-blue sky with Polyphemus pale behind it, the floating mountains
+   in sunlit mist, a canopy of ferns, woodsprites drifting like seeds ────────────────────────────────────────── */
+html.light[data-skin='pandora'] {
+  --pd-cyan: #0b8077;
+  --pd-blue: #2f63d6;
+  --pd-violet: #6b3fd1;
+  --pd-magenta: #b8327f;
+  --bg-primary: #eef7f2;
+  --bg-secondary: #f7fcf9;
+  --bg-tertiary: #e0efe7;
+  --bg-hover: #d2e7dc;
+  --bg-code: #f3faf6;
+  --border-subtle: rgba(10, 90, 80, 0.14);
+  --border-strong: rgba(10, 90, 80, 0.28);
+  --text-primary: #0d2620;
+  --text-secondary: #355349;
+  --text-muted: #4c6b61;
+  --accent: #0b8077;
+  --accent-fg: #ffffff;
+  --accent-soft: #08665f;
+  --accent-glow: rgba(11, 128, 119, 0.22);
+  --brand: #6b3fd1;
+  --brand-soft: #5a32b8;
+  --neon-pink: #b8327f;
+  --neon-cyan: #0b8077;
+  --sunset: linear-gradient(100deg, #0b8077 0%, #1f78b8 55%, #5a5fd0 100%);
+  --focus-ring: #0b8077;
+  color-scheme: light;
+}
+html.light[data-skin='pandora'] body {
+  background:
+    radial-gradient(ellipse 50% 35% at 80% 8%, rgba(255, 255, 240, 0.8), transparent 70%),
+    radial-gradient(ellipse 90% 35% at 50% 100%, rgba(120, 200, 150, 0.25), transparent 70%),
+    linear-gradient(180deg, #b6dbe6 0%, #cfe8e6 35%, #e3f2ec 70%, #eef7f2 100%);
+  background-attachment: fixed;
+}
+html.light[data-skin='pandora'] body::before {
+  background:
+    radial-gradient(circle at 72% 35%, transparent 0 40%, rgba(160, 190, 220, 0.4) 75%),
+    linear-gradient(-12deg, transparent 18%, rgba(255, 255, 255, 0.35) 22%, transparent 27%, rgba(120, 160, 210, 0.25) 35%, transparent 40%,
+      rgba(255, 255, 255, 0.3) 47%, transparent 52%, rgba(120, 160, 210, 0.25) 60%, transparent 66%),
+    radial-gradient(circle at 70% 40%, #e8f1fb, #c4d7ee 55%, #a9c3e3);
+  box-shadow: -9vmin 30vmin 0 -15.6vmin #edf3f8;
+  opacity: 0.55;
+}
+html.light[data-skin='pandora'] #root::before {
+  background: linear-gradient(180deg, #4f7f62 0%, #6f957f 30%, #a6c4b6 70%, rgba(214, 234, 224, 0.4) 100%);
+  filter: none; opacity: 0.7;
+}
+html.light[data-skin='pandora'] #root::after {
+  background:
+    radial-gradient(ellipse 30% 45% at 20% 70%, rgba(255, 255, 255, 0.5), transparent 70%),
+    radial-gradient(ellipse 26% 40% at 55% 80%, rgba(240, 255, 250, 0.45), transparent 70%),
+    radial-gradient(ellipse 30% 50% at 85% 65%, rgba(255, 255, 255, 0.45), transparent 70%);
+}
+html.light[data-skin='pandora'] body::after {
+  background: linear-gradient(to top, #163d2b, #2d6447 70%);
+  -webkit-mask: url("./scenery/pandora-flora.svg") repeat-x left bottom / 1600px 240px;
+  mask: url("./scenery/pandora-flora.svg") repeat-x left bottom / 1600px 240px;
+  height: 240px; animation: none;
+}
+html.light[data-skin='pandora'] .prose-shellb h1, html.light[data-skin='pandora'] .sf-hero h1 { text-shadow: none; }
+html.light[data-skin='pandora'] .sf-hero h1 { font-weight: 300; color: #0d2620; }
+html.light[data-skin='pandora'] .shadow-lg, html.light[data-skin='pandora'] .shadow-xl, html.light[data-skin='pandora'] .shadow-2xl {
+  box-shadow: 0 14px 36px -16px rgba(13, 38, 32, 0.3), 0 0 0 1px var(--border-subtle) !important;
+}
+html.light[data-skin='pandora'] .sf-brand::before { background: #ffffff; box-shadow: 0 0 6px 2px rgba(11, 128, 119, 0.45); }
+html.light[data-skin='pandora'] ::selection { background: rgba(107, 63, 209, 0.2); }

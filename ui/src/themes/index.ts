@@ -37,7 +37,9 @@ export type { CustomTheme };
 export interface Swatch { bg: string; panel: string; text: string; inks: string[] }
 
 /** Particles behind the app (./Ambient.tsx). `extra` colours a secondary layer (Pandora's spores). */
-export interface AmbientConfig { kind: AmbientKind; colors?: string[]; extra?: string[]; density?: number }
+export interface AmbientConfig { kind: AmbientKind; colors?: string[]; extra?: string[]; density?: number;
+  /** 'normal' paints instead of adding light: glows vanish on a light page */
+  blend?: 'normal' }
 
 export interface ThemeInfo {
   id: ThemeId;
@@ -64,15 +66,21 @@ export const THEMES: ThemeInfo[] = [
     },
   },
   {
-    id: 'synthwave', label: 'Synthwave', modes: ['dark'],
-    blurb: 'Neon violet and hot pink on deep indigo, a sunset gradient and a glowing grid floor.',
-    swatch: { dark: { bg: '#120a24', panel: '#190e33', text: '#f6ecff', inks: ['#a855f7', '#ff2e97', '#ff7a3d', '#22d3ee'] } },
+    id: 'synthwave', label: 'Synthwave', modes: ['dark', 'light'],
+    blurb: 'Neon violet and hot pink on deep indigo, a sunset gradient and a glowing grid floor. Light is vaporwave daylight, a striped sun sinking into a pink grid.',
+    swatch: {
+      dark: { bg: '#120a24', panel: '#190e33', text: '#f6ecff', inks: ['#a855f7', '#ff2e97', '#ff7a3d', '#22d3ee'] },
+      light: { bg: '#fbf3ff', panel: '#fff9ff', text: '#2a1640', inks: ['#7c3aed', '#e0338a', '#f2703f', '#0e7490'] },
+    },
   },
   {
-    id: 'normandy', label: 'Normandy', modes: ['dark'], hard: true, font: "'Barlow Condensed', sans-serif",
+    id: 'normandy', label: 'Normandy', modes: ['dark', 'light'], hard: true, font: "'Barlow Condensed', sans-serif",
     blurb: 'Mass Effect shore leave: a gas giant and a lens-flared star over a dark treeline, fireflies blinking on their own, holo panels in Alliance blue and omni-tool amber.',
-    swatch: { dark: { bg: '#070b14', panel: '#0c1220', text: '#e8f1fb', inks: ['#3aa0ff', '#8fe4ff', '#ff9a1f', '#e3f77a'] } },
-    ambient: { dark: { kind: 'fireflies' } },
+    swatch: {
+      dark: { bg: '#070b14', panel: '#0c1220', text: '#e8f1fb', inks: ['#3aa0ff', '#8fe4ff', '#ff9a1f', '#e3f77a'] },
+      light: { bg: '#eef3f8', panel: '#f8fbfd', text: '#0f1d2e', inks: ['#1f6fd1', '#2b84cc', '#b35500', '#e0a520'] },
+    },
+    ambient: { dark: { kind: 'fireflies' }, light: { kind: 'motes', colors: ['#d9a441', '#c9a24f', '#9db9d6'], blend: 'normal', density: 0.7 } },
   },
   {
     id: 'sakura', label: 'Sakura', modes: ['light', 'dark'], font: "'Shippori Mincho', serif",
@@ -87,34 +95,55 @@ export const THEMES: ThemeInfo[] = [
     },
   },
   {
-    id: 'pandora', label: 'Pandora', modes: ['dark'], round: true, font: "'Josefin Sans', sans-serif",
+    id: 'pandora', label: 'Pandora', modes: ['dark', 'light'], round: true, font: "'Josefin Sans', sans-serif",
     blurb: 'Night in the Pandoran rainforest: floating mountains under Polyphemus, bioluminescent ferns, and woodsprites drifting through the spores.',
-    swatch: { dark: { bg: '#04121a', panel: '#071b25', text: '#e4fbff', inks: ['#3ff0e0', '#5b8cff', '#b07cff', '#ff5fd8'] } },
-    ambient: { dark: { kind: 'woodsprites', extra: ['#3ff0e0', '#3ff0e0', '#b07cff', '#ff5fd8'] } },
+    swatch: {
+      dark: { bg: '#04121a', panel: '#071b25', text: '#e4fbff', inks: ['#3ff0e0', '#5b8cff', '#b07cff', '#ff5fd8'] },
+      light: { bg: '#eef7f2', panel: '#f7fcf9', text: '#0d2620', inks: ['#0b8077', '#1f78b8', '#6b3fd1', '#b8327f'] },
+    },
+    ambient: {
+      dark: { kind: 'woodsprites', extra: ['#3ff0e0', '#3ff0e0', '#b07cff', '#ff5fd8'] },
+      light: { kind: 'woodsprites', colors: ['#4fb8ae', '#6cc6bd'], extra: ['#2aa79b', '#8a6fd8', '#d07ab0'], blend: 'normal', density: 0.8 },
+    },
   },
   {
-    id: 'rain', label: 'Rainy Night', modes: ['dark'], round: true, font: "'Cormorant Garamond', serif",
+    id: 'rain', label: 'Rainy Night', modes: ['dark', 'light'], round: true, font: "'Cormorant Garamond', serif",
     blurb: 'A city through a wet window: the skyline melts into bokeh, beads of rain slide down the glass, sodium amber and a red neon sign.',
-    swatch: { dark: { bg: '#0a0e17', panel: '#0f1522', text: '#ebeff6', inks: ['#ffb35c', '#ff5f7e', '#5fd4e8'] } },
-    ambient: { dark: { kind: 'rain', extra: ['#ffb347', '#ff9a4a', '#ff5a6f', '#5fd4e8', '#ffe08a', '#ff7ad9'] } },
+    swatch: {
+      dark: { bg: '#0a0e17', panel: '#0f1522', text: '#ebeff6', inks: ['#ffb35c', '#ff5f7e', '#5fd4e8'] },
+      light: { bg: '#e8ecf0', panel: '#f5f7f9', text: '#18202d', inks: ['#c0392b', '#2b6cb0', '#a5581c'] },
+    },
+    ambient: {
+      dark: { kind: 'rain', extra: ['#ffb347', '#ff9a4a', '#ff5a6f', '#5fd4e8', '#ffe08a', '#ff7ad9'] },
+      light: { kind: 'rain', colors: ['#ffffff', '#f3e6d8', '#dfe8f2'], extra: ['#e06a55', '#e8a45a', '#7aa3c8', '#d8584a'], blend: 'normal' },
+    },
   },
   {
-    id: 'abyss', label: 'Deep Sea', modes: ['dark'], round: true, font: "'Sora', sans-serif",
+    id: 'abyss', label: 'Deep Sea', modes: ['dark', 'light'], round: true, font: "'Sora', sans-serif",
     blurb: 'Three kilometres down: shafts of the last sunlight, a whale passing, jellyfish pulsing through marine snow, plankton that sparks where you move.',
-    swatch: { dark: { bg: '#020814', panel: '#061024', text: '#dcecff', inks: ['#4fd8ff', '#7fb4ff', '#b28bff', '#ff7ad9'] } },
-    ambient: { dark: { kind: 'abyss' } },
+    swatch: {
+      dark: { bg: '#020814', panel: '#061024', text: '#dcecff', inks: ['#4fd8ff', '#7fb4ff', '#b28bff', '#ff7ad9'] },
+      light: { bg: '#e7f7fb', panel: '#f4fcfe', text: '#062a3a', inks: ['#0077a8', '#1f8fc4', '#6b45c9', '#e3c99b'] },
+    },
+    ambient: { dark: { kind: 'abyss' }, light: { kind: 'shallows', colors: ['#9a7be0', '#e07ab8', '#5f9fe0'], extra: ['#ffffff', '#e8fbff'] } },
   },
   {
-    id: 'arrakis', label: 'Arrakis', modes: ['dark'], hard: true, font: "'Syncopate', sans-serif",
+    id: 'arrakis', label: 'Arrakis', modes: ['dark', 'light'], hard: true, font: "'Syncopate', sans-serif",
     blurb: 'Dune at dusk: twin moons over the Shield Wall, dunes catching the last light, sand streaming on the wind. Spice orange, blue-within-blue.',
-    swatch: { dark: { bg: '#17131d', panel: '#1f1a24', text: '#f3e6d3', inks: ['#c2551a', '#e2731d', '#f2b45a', '#4f8dff'] } },
-    ambient: { dark: { kind: 'sand' } },
+    swatch: {
+      dark: { bg: '#17131d', panel: '#1f1a24', text: '#f3e6d3', inks: ['#c2551a', '#e2731d', '#f2b45a', '#4f8dff'] },
+      light: { bg: '#f5ead8', panel: '#fbf4e8', text: '#2b1a0e', inks: ['#9a420a', '#b04d0c', '#d9a66c', '#2459c9'] },
+    },
+    ambient: { dark: { kind: 'sand' }, light: { kind: 'sand', colors: ['#b98b5a', '#a87a4a', '#caa274'] } },
   },
   {
-    id: 'borealis', label: 'Borealis', modes: ['dark'], round: true, font: "'Outfit', sans-serif",
+    id: 'borealis', label: 'Borealis', modes: ['dark', 'light'], round: true, font: "'Outfit', sans-serif",
     blurb: 'Arctic night: aurora curtains rippling green to violet over snowy mountains and pines, snow falling, frost on glass.',
-    swatch: { dark: { bg: '#071223', panel: '#0b1830', text: '#eaf4ff', inks: ['#5dffb0', '#3fe0d0', '#b07cff'] } },
-    ambient: { dark: { kind: 'aurora', extra: ['#ffffff', '#e6f2ff'], density: 0.8 } },
+    swatch: {
+      dark: { bg: '#071223', panel: '#0b1830', text: '#eaf4ff', inks: ['#5dffb0', '#3fe0d0', '#b07cff'] },
+      light: { bg: '#eef4fa', panel: '#f8fbfe', text: '#0d1e33', inks: ['#0a7a52', '#0f7f8f', '#6a3fd1'] },
+    },
+    ambient: { dark: { kind: 'aurora', extra: ['#ffffff', '#e6f2ff'], density: 0.8 }, light: { kind: 'snow', colors: ['#ffffff', '#d6e4f3'] } },
   },
   {
     id: 'ghibli', label: 'Ghibli Autumn', modes: ['light', 'dark'], round: true, font: "'Zen Maru Gothic', sans-serif",

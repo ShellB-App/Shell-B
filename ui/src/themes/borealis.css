@@ -1,4 +1,4 @@
-/* ── Borealis theme (dark only; light mode falls back to Classic light) ──────────────────────────────────────────
+/* ── Borealis theme (dark, and a light version at the end of this file) ──────────────────────────────────────────
    An arctic night. Aurora curtains fold and ripple across the sky, green at their feet and violet above, their rays
    shifting as you watch, and snow falls over a ridge of mountains and a stand of snow-laden pines (./Ambient.tsx,
    kind 'aurora'). The UI is frost on glass: rounded, blurred, lit faintly from the sky, with aurora green for anything
@@ -15,7 +15,7 @@
 @font-face { font-family: 'Outfit'; font-weight: 300; font-display: swap; src: url('/fonts/outfit-latin-300-normal.woff2') format('woff2'); }
 @font-face { font-family: 'Outfit'; font-weight: 600; font-display: swap; src: url('/fonts/outfit-latin-600-normal.woff2') format('woff2'); }
 
-html.dark[data-skin='borealis'] {
+html[data-skin='borealis'] {
   --bo-green: #5dffb0;
   --bo-teal: #3fe0d0;
   --bo-violet: #b07cff;
@@ -46,31 +46,31 @@ html.dark[data-skin='borealis'] {
 }
 
 /* ── type ────────────────────────────────────────────────────────────────── */
-html.dark[data-skin='borealis'] .prose-shellb h1,
-html.dark[data-skin='borealis'] .prose-shellb h2,
-html.dark[data-skin='borealis'] .prose-shellb h3 { font-family: var(--bo-display); font-weight: 600; letter-spacing: 0.005em; }
-html.dark[data-skin='borealis'] .prose-shellb h2 { position: relative; padding-bottom: 0.35em; }
-html.dark[data-skin='borealis'] .prose-shellb h2::after {
+html[data-skin='borealis'] .prose-shellb h1,
+html[data-skin='borealis'] .prose-shellb h2,
+html[data-skin='borealis'] .prose-shellb h3 { font-family: var(--bo-display); font-weight: 600; letter-spacing: 0.005em; }
+html[data-skin='borealis'] .prose-shellb h2 { position: relative; padding-bottom: 0.35em; }
+html[data-skin='borealis'] .prose-shellb h2::after {
   content: ''; position: absolute; left: 0; bottom: 0; width: 72px; height: 2px; border-radius: 2px;
   background: linear-gradient(90deg, var(--bo-green), var(--bo-violet)); box-shadow: 0 0 10px rgba(93, 255, 176, 0.5);
 }
-html.dark[data-skin='borealis'] .prose-shellb a { color: var(--accent-soft); text-decoration-color: rgba(93, 255, 176, 0.4); }
-html.dark[data-skin='borealis'] .prose-shellb li::marker { color: var(--bo-green); }
-html.dark[data-skin='borealis'] .prose-shellb blockquote { border-left: 2px solid var(--bo-violet); }
-html.dark[data-skin='borealis'] ::selection { background: rgba(93, 255, 176, 0.28); }
+html[data-skin='borealis'] .prose-shellb a { color: var(--accent-soft); text-decoration-color: rgba(93, 255, 176, 0.4); }
+html[data-skin='borealis'] .prose-shellb li::marker { color: var(--bo-green); }
+html[data-skin='borealis'] .prose-shellb blockquote { border-left: 2px solid var(--bo-violet); }
+html[data-skin='borealis'] ::selection { background: rgba(93, 255, 176, 0.28); }
 
 /* ── geometry: frosted glass ─────────────────────────────────────────────── */
-html.dark[data-skin='borealis'] :where([class*='rounded-lg'], [class*='rounded-xl'], [class*='rounded-2xl']) { border-radius: 14px !important; }
-html.dark[data-skin='borealis'] .shadow-lg, html.dark[data-skin='borealis'] .shadow-xl, html.dark[data-skin='borealis'] .shadow-2xl {
+html[data-skin='borealis'] :where([class*='rounded-lg'], [class*='rounded-xl'], [class*='rounded-2xl']) { border-radius: 14px !important; }
+html[data-skin='borealis'] .shadow-lg, html[data-skin='borealis'] .shadow-xl, html[data-skin='borealis'] .shadow-2xl {
   box-shadow: 0 18px 46px -16px rgba(0, 0, 0, 0.75), 0 0 0 1px var(--border-subtle), inset 0 1px 0 rgba(255, 255, 255, 0.07) !important;
 }
-html.dark[data-skin='borealis'] [class~='bg-[var(--accent)]'] {
+html[data-skin='borealis'] [class~='bg-[var(--accent)]'] {
   background-image: var(--sunset); box-shadow: 0 0 18px -4px rgba(93, 255, 176, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
-html.dark[data-skin='borealis'] [class~='bg-[var(--accent)]']:disabled { background-image: none; box-shadow: none; }
+html[data-skin='borealis'] [class~='bg-[var(--accent)]']:disabled { background-image: none; box-shadow: none; }
 
 /* ── backdrop ────────────────────────────────────────────────────────────── */
-html.dark[data-skin='borealis'] body {
+html[data-skin='borealis'] body {
   background:
     radial-gradient(1.5px 1.5px at 30px 40px, rgba(255, 255, 255, 0.7), transparent 60%) 0 0 / 263px 241px,
     radial-gradient(1px 1px at 20px 30px, rgba(255, 255, 255, 0.55), transparent 60%) 0 0 / 151px 173px,
@@ -81,14 +81,14 @@ html.dark[data-skin='borealis'] body {
   background-attachment: fixed;
 }
 /* the range: the mask is the ridges, the gradient lights their snow from the sky */
-html.dark[data-skin='borealis'] body::before {
+html[data-skin='borealis'] body::before {
   content: ''; position: fixed; left: 0; right: 0; bottom: 110px; height: 32vh; pointer-events: none; z-index: -3;
   background: linear-gradient(to bottom, rgba(190, 240, 225, 0.4), rgba(70, 110, 150, 0.45) 30%, #0e2240 75%);
   -webkit-mask: url("./scenery/mountains.svg") repeat-x left bottom / 1600px 100%;
   mask: url("./scenery/mountains.svg") repeat-x left bottom / 1600px 100%;
 }
 /* aurora light pooled along the horizon */
-html.dark[data-skin='borealis'] #root::before {
+html[data-skin='borealis'] #root::before {
   content: ''; position: fixed; inset: 0; pointer-events: none; z-index: -2;
   background:
     radial-gradient(ellipse 60% 22% at 40% 62%, rgba(93, 255, 176, 0.08), transparent 70%),
@@ -96,108 +96,156 @@ html.dark[data-skin='borealis'] #root::before {
   animation: bo-glow 12s ease-in-out infinite;
 }
 /* pines and snowfield */
-html.dark[data-skin='borealis'] body::after {
+html[data-skin='borealis'] body::after {
   content: ''; position: fixed; left: 0; right: 0; bottom: 0; height: 260px; pointer-events: none; z-index: -2;
   background: url("./scenery/snowpines.svg") repeat-x left bottom / 1600px 260px;
 }
-html.dark[data-skin='borealis']:not(:has(.sf-hero)) body::before { opacity: 0.6; }
-html.dark[data-skin='borealis']:not(:has(.sf-hero)) .shellb-ambient { opacity: 0.65; }
+html[data-skin='borealis']:not(:has(.sf-hero)) body::before { opacity: 0.6; }
+html[data-skin='borealis']:not(:has(.sf-hero)) .shellb-ambient { opacity: 0.65; }
 
 @keyframes bo-glow { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
 @keyframes bo-spin { to { transform: rotate(360deg); } }
 @keyframes bo-shimmer { from { background-position: 0% 50%; } to { background-position: 200% 50%; } }
 
 /* ── chrome ──────────────────────────────────────────────────────────────── */
-html.dark[data-skin='borealis'] .sf-sidebar {
+html[data-skin='borealis'] .sf-sidebar {
   background: color-mix(in srgb, var(--bg-secondary) 76%, transparent); backdrop-filter: blur(16px) saturate(130%);
   box-shadow: inset -1px 0 0 rgba(223, 241, 255, 0.06);
 }
-html.dark[data-skin='borealis'] .sf-brand {
+html[data-skin='borealis'] .sf-brand {
   font-family: var(--bo-display); font-weight: 600; font-size: 1.15rem; letter-spacing: 0.06em;
   color: var(--text-primary) !important; display: inline-flex; align-items: center; gap: 0.5rem;
 }
-html.dark[data-skin='borealis'] .sf-brand::before {
+html[data-skin='borealis'] .sf-brand::before {
   content: '❄'; font-size: 13px; color: var(--bo-ice); text-shadow: 0 0 8px rgba(93, 255, 176, 0.7);
 }
-html.dark[data-skin='borealis'] .sf-label { font-family: var(--bo-display); font-weight: 600; font-size: 11px !important; letter-spacing: 0.14em; text-transform: uppercase; }
-html.dark[data-skin='borealis'] .sf-sidebar [class*='bg-[var(--bg-hover)]'][class*='cursor-pointer'] {
+html[data-skin='borealis'] .sf-label { font-family: var(--bo-display); font-weight: 600; font-size: 11px !important; letter-spacing: 0.14em; text-transform: uppercase; }
+html[data-skin='borealis'] .sf-sidebar [class*='bg-[var(--bg-hover)]'][class*='cursor-pointer'] {
   box-shadow: inset 0 0 0 1px rgba(93, 255, 176, 0.16); background: linear-gradient(90deg, rgba(93, 255, 176, 0.1), rgba(176, 124, 255, 0.06) 70%, transparent);
 }
-html.dark[data-skin='borealis'] .sf-topbar, html.dark[data-skin='borealis'] header.h-12 {
+html[data-skin='borealis'] .sf-topbar, html[data-skin='borealis'] header.h-12 {
   background: color-mix(in srgb, var(--bg-primary) 58%, transparent); backdrop-filter: blur(12px); position: relative; z-index: 1;
 }
-html.dark[data-skin='borealis'] .sf-topbar .text-sm.font-medium,
-html.dark[data-skin='borealis'] .sf-topbar > div > span.text-sm,
-html.dark[data-skin='borealis'] header.h-12 > div > span.font-semibold { font-family: var(--bo-display); font-weight: 600; font-size: 15px; letter-spacing: 0.02em; }
-html.dark[data-skin='borealis'] nav [class*='rounded-r-full'] { background: var(--bo-green) !important; box-shadow: 0 0 10px var(--bo-green); }
+html[data-skin='borealis'] .sf-topbar .text-sm.font-medium,
+html[data-skin='borealis'] .sf-topbar > div > span.text-sm,
+html[data-skin='borealis'] header.h-12 > div > span.font-semibold { font-family: var(--bo-display); font-weight: 600; font-size: 15px; letter-spacing: 0.02em; }
+html[data-skin='borealis'] nav [class*='rounded-r-full'] { background: var(--bo-green) !important; box-shadow: 0 0 10px var(--bo-green); }
 
 /* ── welcome ─────────────────────────────────────────────────────────────── */
 /* the agent inside a slow ring of aurora */
-html.dark[data-skin='borealis'] .sf-hero > :first-child {
+html[data-skin='borealis'] .sf-hero > :first-child {
   position: relative; overflow: visible; border-radius: 50% !important; margin-bottom: 1.6rem;
   box-shadow: 0 0 0 1px rgba(223, 241, 255, 0.45), 0 0 28px 4px rgba(93, 255, 176, 0.25) !important;
 }
-html.dark[data-skin='borealis'] .sf-hero > :first-child::before {
+html[data-skin='borealis'] .sf-hero > :first-child::before {
   content: ''; position: absolute; inset: -16px; border-radius: 50%; pointer-events: none;
   background: conic-gradient(from 0deg, transparent, rgba(93, 255, 176, 0.9), rgba(63, 224, 208, 0.6), rgba(176, 124, 255, 0.8), transparent 70%);
   -webkit-mask: radial-gradient(circle closest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
   mask: radial-gradient(circle closest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
   filter: blur(0.6px) drop-shadow(0 0 6px rgba(93, 255, 176, 0.6)); animation: bo-spin 24s linear infinite;
 }
-html.dark[data-skin='borealis'] .sf-hero h1 {
+html[data-skin='borealis'] .sf-hero h1 {
   font-family: var(--bo-display); font-weight: 300; letter-spacing: 0.03em; font-size: clamp(2.2rem, 4.6vw, 3.4rem); line-height: 1.1;
   padding-bottom: 0; background: none; text-shadow: 0 0 30px rgba(93, 255, 176, 0.3);
 }
-html.dark[data-skin='borealis'] .sf-hero h1::after {
+html[data-skin='borealis'] .sf-hero h1::after {
   content: ''; display: block; width: 140px; height: 2px; margin: 0.9rem auto 0.2rem; border-radius: 2px;
   background: linear-gradient(90deg, var(--bo-green), var(--bo-teal), var(--bo-violet), var(--bo-teal), var(--bo-green)) 0 50% / 200% 100%;
   box-shadow: 0 0 12px rgba(93, 255, 176, 0.6); animation: bo-shimmer 6s linear infinite;
 }
-html.dark[data-skin='borealis'] .sf-hero h1 + p > span:first-child { font-family: var(--bo-display); font-weight: 600; color: var(--accent-soft) !important; }
+html[data-skin='borealis'] .sf-hero h1 + p > span:first-child { font-family: var(--bo-display); font-weight: 600; color: var(--accent-soft) !important; }
 
-html.dark[data-skin='borealis'] .sf-hero > div.grid { gap: 12px; }
-html.dark[data-skin='borealis'] .sf-card {
+html[data-skin='borealis'] .sf-hero > div.grid { gap: 12px; }
+html[data-skin='borealis'] .sf-card {
   position: relative; padding: 16px 18px 14px !important;
   background-color: color-mix(in srgb, var(--bg-secondary) 58%, transparent) !important; backdrop-filter: blur(16px) saturate(130%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transition: border-color .25s, transform .25s, background-color .25s, box-shadow .25s;
 }
-html.dark[data-skin='borealis'] .sf-card:hover {
+html[data-skin='borealis'] .sf-card:hover {
   transform: translateY(-2px); border-color: rgba(93, 255, 176, 0.35) !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 30px -12px rgba(93, 255, 176, 0.55);
 }
-html.dark[data-skin='borealis'] .sf-card > div:first-child { font-family: var(--bo-display); font-weight: 600; font-size: 15px; }
-html.dark[data-skin='borealis'] .sf-card > div:last-child { font-size: 13px; margin-top: 4px; }
-html.dark[data-skin='borealis'] .sf-tagline { font-family: var(--bo-display); font-size: 12px !important; letter-spacing: 0.04em; }
+html[data-skin='borealis'] .sf-card > div:first-child { font-family: var(--bo-display); font-weight: 600; font-size: 15px; }
+html[data-skin='borealis'] .sf-card > div:last-child { font-size: 13px; margin-top: 4px; }
+html[data-skin='borealis'] .sf-tagline { font-family: var(--bo-display); font-size: 12px !important; letter-spacing: 0.04em; }
 
 /* ── composer: frost on glass, green when it's listening ─────────────────── */
-html.dark[data-skin='borealis'] .sf-composer {
+html[data-skin='borealis'] .sf-composer {
   position: relative; z-index: 20; border-radius: 18px !important;
   background: color-mix(in srgb, var(--bg-secondary) 66%, transparent) !important; backdrop-filter: blur(18px) saturate(130%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 20px 50px -20px rgba(0, 0, 0, 0.75);
   transition: box-shadow .3s ease, border-color .3s ease;
 }
-html.dark[data-skin='borealis'] .sf-composer:focus-within {
+html[data-skin='borealis'] .sf-composer:focus-within {
   border-color: rgba(93, 255, 176, 0.45) !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 36px -12px rgba(93, 255, 176, 0.55), 0 20px 50px -20px rgba(0, 0, 0, 0.75);
 }
 
 /* ── the other apps ──────────────────────────────────────────────────────── */
-html.dark[data-skin='borealis'] :where(h1[class*='tracking-tight']:not([class*='text-base'])) {
+html[data-skin='borealis'] :where(h1[class*='tracking-tight']:not([class*='text-base'])) {
   font-family: var(--bo-display); font-weight: 300; letter-spacing: 0.02em; padding-bottom: 10px;
   background: linear-gradient(90deg, var(--bo-green), var(--bo-violet), transparent) no-repeat left bottom / 90px 2px;
 }
 
 /* ── misc ────────────────────────────────────────────────────────────────── */
-html.dark[data-skin='borealis'] * { scrollbar-width: thin; scrollbar-color: rgba(200, 230, 255, 0.22) transparent; }
-html.dark[data-skin='borealis'] .caret::after { background: var(--bo-green); box-shadow: 0 0 8px var(--bo-green); }
-html.dark[data-skin='borealis'] .think-stream {
+html[data-skin='borealis'] * { scrollbar-width: thin; scrollbar-color: rgba(200, 230, 255, 0.22) transparent; }
+html[data-skin='borealis'] .caret::after { background: var(--bo-green); box-shadow: 0 0 8px var(--bo-green); }
+html[data-skin='borealis'] .think-stream {
   background: linear-gradient(90deg, transparent 0%, rgba(93, 255, 176, 0.14) 40%, rgba(176, 124, 255, 0.12) 60%, transparent 100%);
   background-size: 200% 100%;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html.dark[data-skin='borealis'] #root::before, html.dark[data-skin='borealis'] .sf-hero > :first-child::before,
-  html.dark[data-skin='borealis'] .sf-hero h1::after { animation: none; }
-  html.dark[data-skin='borealis'] .sf-card { transition: none; }
+  html[data-skin='borealis'] #root::before, html[data-skin='borealis'] .sf-hero > :first-child::before,
+  html[data-skin='borealis'] .sf-hero h1::after { animation: none; }
+  html[data-skin='borealis'] .sf-card { transition: none; }
 }
+
+/* ── light: polar day. The sun low all day, the sky pale blue going rose at the horizon, snowfields and
+   snow-laden pines, fine snow drifting; frosted white glass ──────────────────────────────────────────────────── */
+html.light[data-skin='borealis'] {
+  --bo-green: #0a7a52;
+  --bo-teal: #0f7f8f;
+  --bo-violet: #6a3fd1;
+  --bo-ice: #2a6fb0;
+  --bg-primary: #eef4fa;
+  --bg-secondary: #f8fbfe;
+  --bg-tertiary: #e2ecf6;
+  --bg-hover: #d5e3f1;
+  --bg-code: #f3f8fc;
+  --border-subtle: rgba(30, 70, 120, 0.13);
+  --border-strong: rgba(30, 70, 120, 0.26);
+  --text-primary: #0d1e33;
+  --text-secondary: #3a5270;
+  --text-muted: #506985;
+  --accent: #0a7a52;
+  --accent-fg: #ffffff;
+  --accent-soft: #086646;
+  --accent-glow: rgba(10, 122, 82, 0.2);
+  --brand: #6a3fd1;
+  --brand-soft: #5a32b8;
+  --neon-pink: #6a3fd1;
+  --neon-cyan: #0f7f8f;
+  --sunset: linear-gradient(100deg, #0a7a52, #0f7f8f 50%, #3f66c9);
+  --focus-ring: #0a7a52;
+  color-scheme: light;
+}
+html.light[data-skin='borealis'] body {
+  background:
+    radial-gradient(ellipse 40% 22% at 78% 64%, rgba(255, 214, 190, 0.6), transparent 70%),
+    linear-gradient(180deg, #a8c6e6 0%, #c9dcef 38%, #e9e4ea 66%, #f5ede9 100%);
+  background-attachment: fixed;
+}
+html.light[data-skin='borealis'] body::before { background: linear-gradient(to bottom, #ffffff, #e3ebf4 30%, #b9c9dc 80%); }
+html.light[data-skin='borealis'] #root::before {
+  background: radial-gradient(circle at 78% 62%, rgba(255, 250, 240, 0.95) 0 3vmin, rgba(255, 220, 190, 0.45) 6vmin, transparent 22vmin);
+  animation: none;
+}
+html.light[data-skin='borealis'] .sf-hero h1 { text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6); }
+html.light[data-skin='borealis'] .sf-brand::before { text-shadow: none; }
+html.light[data-skin='borealis'] .sf-card, html.light[data-skin='borealis'] .sf-composer { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 14px 30px -18px rgba(13, 30, 51, 0.3); }
+html.light[data-skin='borealis'] .shadow-lg, html.light[data-skin='borealis'] .shadow-xl, html.light[data-skin='borealis'] .shadow-2xl {
+  box-shadow: 0 14px 36px -16px rgba(13, 30, 51, 0.3), 0 0 0 1px var(--border-subtle) !important;
+}
+html.light[data-skin='borealis'] ::selection { background: rgba(10, 122, 82, 0.2); }

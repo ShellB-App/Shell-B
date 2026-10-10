@@ -1,4 +1,4 @@
-/* Synthwave theme (dark only; light mode falls back to Classic light). Registered in ./index.ts. */
+/* Synthwave theme: neon night in dark mode, vaporwave daylight in light mode. Registered in ./index.ts. */
 
 html.dark[data-skin='synthwave'] {
   --bg-primary: #120a24;
@@ -75,3 +75,59 @@ html.dark[data-skin='synthwave'] .hljs-type, html.dark[data-skin='synthwave'] .h
 html.dark[data-skin='synthwave'] .hljs-title.class_ { color: #c084fc; }
 html.dark[data-skin='synthwave'] .hljs-attr, html.dark[data-skin='synthwave'] .hljs-attribute,
 html.dark[data-skin='synthwave'] .hljs-variable, html.dark[data-skin='synthwave'] .hljs-property { color: #ff9a5c; }
+
+/* ── light: vaporwave daylight. Pastel lavender to peach, a striped sun sinking into a pink grid ──────────────── */
+html.light[data-skin='synthwave'] {
+  --bg-primary: #fbf3ff;
+  --bg-secondary: #fff9ff;
+  --bg-tertiary: #f2e4fb;
+  --bg-hover: #ead6f6;
+  --bg-code: #fcf6ff;
+  --border-subtle: rgba(124, 58, 237, 0.14);
+  --border-strong: rgba(124, 58, 237, 0.28);
+  --text-primary: #2a1640;
+  --text-secondary: #57436f;
+  --text-muted: #6e5a88;
+  --accent: #c2185b;
+  --accent-fg: #ffffff;
+  --accent-soft: #a3154d;
+  --accent-glow: rgba(194, 24, 91, 0.22);
+  --brand: #7c3aed;
+  --brand-soft: #6d28d9;
+  --neon-pink: #d6287f;
+  --neon-cyan: #0e7490;
+  --sunset: linear-gradient(135deg, #e0338a 0%, #f2703f 100%);
+  --sunset-brand: linear-gradient(135deg, #7c3aed 0%, #e0338a 100%);
+  --focus-ring: #0e7490;
+  color-scheme: light;
+}
+html.light[data-skin='synthwave'] body {
+  background:
+    radial-gradient(ellipse 80% 40% at 50% 100%, rgba(255, 120, 190, 0.3), transparent 70%),
+    linear-gradient(180deg, #e8dcff 0%, #f6dcf3 45%, #ffe1dc 75%, #ffe9d6 100%);
+  background-attachment: fixed;
+}
+/* the sun, striped as it sinks */
+html.light[data-skin='synthwave'] body::before {
+  content: ''; position: fixed; left: 50%; bottom: 12vh; width: 40vmin; aspect-ratio: 1; transform: translate(-50%, 50%); border-radius: 50%;
+  pointer-events: none; z-index: -1; opacity: 0.6;
+  background: linear-gradient(180deg, #ffd36e 0%, #ff9a6b 45%, #ff5fa2 100%);
+  -webkit-mask: linear-gradient(180deg, #000 0 52%, transparent 52% 56%, #000 56% 63%, transparent 63% 67%, #000 67% 73%, transparent 73% 77%, #000 77% 82%, transparent 82% 86%, #000 86%);
+  mask: linear-gradient(180deg, #000 0 52%, transparent 52% 56%, #000 56% 63%, transparent 63% 67%, #000 67% 73%, transparent 73% 77%, #000 77% 82%, transparent 82% 86%, #000 86%);
+}
+html.light[data-skin='synthwave'] #root::before {
+  content: ''; position: fixed; left: -50%; right: -50%; bottom: 0; height: 38vh; pointer-events: none; z-index: 0;
+  background-color: rgba(255, 236, 246, 0.55);
+  background-image: linear-gradient(rgba(214, 40, 127, 0.35) 1px, transparent 1px), linear-gradient(90deg, rgba(214, 40, 127, 0.35) 1px, transparent 1px);
+  background-size: 56px 40px; transform: perspective(380px) rotateX(62deg); transform-origin: 50% 100%;
+  -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 85%); mask-image: linear-gradient(to top, #000 0%, transparent 85%);
+  opacity: 0.6;
+}
+html.light[data-skin='synthwave'] ::selection { background: rgba(214, 40, 127, 0.22); }
+html.light[data-skin='synthwave'] .prose-shellb a { color: var(--neon-cyan); }
+html.light[data-skin='synthwave'] .prose-shellb li::marker { color: var(--neon-pink); }
+html.light[data-skin='synthwave'] [class*='bg-[var(--accent)]'] { background-image: var(--sunset); box-shadow: 0 4px 14px -4px rgba(224, 51, 138, 0.5); }
+html.light[data-skin='synthwave'] aside { background: color-mix(in srgb, var(--bg-secondary) 86%, transparent); backdrop-filter: blur(8px); }
+html.light[data-skin='synthwave'] .think-stream {
+  background: linear-gradient(90deg, rgba(124, 58, 237, 0.04) 0%, rgba(214, 40, 127, 0.14) 50%, rgba(124, 58, 237, 0.04) 100%); background-size: 200% 100%;
+}

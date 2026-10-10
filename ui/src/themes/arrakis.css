@@ -1,4 +1,4 @@
-/* ── Arrakis theme (dark only; light mode falls back to Classic light) ──────────────────────────────────────────
+/* ── Arrakis theme (dark, and a light version at the end of this file) ──────────────────────────────────────────
    Dune at dusk. The sky goes from indigo to dust-rose to a burnt horizon, Arrakis's two moons are up, a line of
    mesas (the Shield Wall) stands behind ranks of dunes whose windward faces still catch the light while their slip
    faces fall into shadow, and sand streams across it all on the wind (./Ambient.tsx, kind 'sand'). The UI is
@@ -16,7 +16,7 @@
 @font-face { font-family: 'Syncopate'; font-weight: 400; font-display: swap; src: url('/fonts/syncopate-latin-400-normal.woff2') format('woff2'); }
 @font-face { font-family: 'Syncopate'; font-weight: 700; font-display: swap; src: url('/fonts/syncopate-latin-700-normal.woff2') format('woff2'); }
 
-html.dark[data-skin='arrakis'] {
+html[data-skin='arrakis'] {
   --ar-spice: #e2731d;
   --ar-sand: #e8c9a0;
   --ar-ibad: #4f8dff;   /* the blue-within-blue eyes */
@@ -46,31 +46,31 @@ html.dark[data-skin='arrakis'] {
 }
 
 /* ── type ────────────────────────────────────────────────────────────────── */
-html.dark[data-skin='arrakis'] .prose-shellb h1,
-html.dark[data-skin='arrakis'] .prose-shellb h2,
-html.dark[data-skin='arrakis'] .prose-shellb h3 { font-family: var(--ar-display); font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; }
-html.dark[data-skin='arrakis'] .prose-shellb h1 { font-size: 1.35em; }
-html.dark[data-skin='arrakis'] .prose-shellb h2 { font-size: 1.1em; padding-bottom: 0.4em; border-bottom: 1px solid var(--border-subtle); }
-html.dark[data-skin='arrakis'] .prose-shellb h3 { font-size: 0.95em; }
-html.dark[data-skin='arrakis'] .prose-shellb a { color: var(--accent-soft); text-decoration-color: rgba(226, 115, 29, 0.45); }
-html.dark[data-skin='arrakis'] .prose-shellb li::marker { color: var(--ar-spice); }
-html.dark[data-skin='arrakis'] .prose-shellb blockquote { border-left: 2px solid var(--ar-spice); }
-html.dark[data-skin='arrakis'] .prose-shellb th { font-family: var(--ar-display); font-weight: 400; text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.75em; }
-html.dark[data-skin='arrakis'] ::selection { background: rgba(226, 115, 29, 0.38); }
+html[data-skin='arrakis'] .prose-shellb h1,
+html[data-skin='arrakis'] .prose-shellb h2,
+html[data-skin='arrakis'] .prose-shellb h3 { font-family: var(--ar-display); font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; }
+html[data-skin='arrakis'] .prose-shellb h1 { font-size: 1.35em; }
+html[data-skin='arrakis'] .prose-shellb h2 { font-size: 1.1em; padding-bottom: 0.4em; border-bottom: 1px solid var(--border-subtle); }
+html[data-skin='arrakis'] .prose-shellb h3 { font-size: 0.95em; }
+html[data-skin='arrakis'] .prose-shellb a { color: var(--accent-soft); text-decoration-color: rgba(226, 115, 29, 0.45); }
+html[data-skin='arrakis'] .prose-shellb li::marker { color: var(--ar-spice); }
+html[data-skin='arrakis'] .prose-shellb blockquote { border-left: 2px solid var(--ar-spice); }
+html[data-skin='arrakis'] .prose-shellb th { font-family: var(--ar-display); font-weight: 400; text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.75em; }
+html[data-skin='arrakis'] ::selection { background: rgba(226, 115, 29, 0.38); }
 
 /* ── geometry: carved, nearly square ─────────────────────────────────────── */
-html.dark[data-skin='arrakis'] :where([class*='rounded-md'], [class*='rounded-lg'], [class*='rounded-xl'], [class*='rounded-2xl'], [class*='rounded-3xl']) { border-radius: 2px !important; }
-html.dark[data-skin='arrakis'] .shadow-lg, html.dark[data-skin='arrakis'] .shadow-xl, html.dark[data-skin='arrakis'] .shadow-2xl {
+html[data-skin='arrakis'] :where([class*='rounded-md'], [class*='rounded-lg'], [class*='rounded-xl'], [class*='rounded-2xl'], [class*='rounded-3xl']) { border-radius: 2px !important; }
+html[data-skin='arrakis'] .shadow-lg, html[data-skin='arrakis'] .shadow-xl, html[data-skin='arrakis'] .shadow-2xl {
   box-shadow: 0 18px 44px -16px rgba(0, 0, 0, 0.8), 0 0 0 1px var(--border-subtle) !important;
 }
-html.dark[data-skin='arrakis'] [class~='bg-[var(--accent)]'] {
+html[data-skin='arrakis'] [class~='bg-[var(--accent)]'] {
   background-image: var(--sunset); border-radius: 1px !important;
   font-family: var(--ar-display); font-weight: 700; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
 }
-html.dark[data-skin='arrakis'] [class~='bg-[var(--accent)]']:disabled { background-image: none; }
+html[data-skin='arrakis'] [class~='bg-[var(--accent)]']:disabled { background-image: none; }
 
 /* ── backdrop ────────────────────────────────────────────────────────────── */
-html.dark[data-skin='arrakis'] body {
+html[data-skin='arrakis'] body {
   background:
     radial-gradient(1px 1px at 20px 30px, rgba(255, 240, 220, 0.4), transparent 60%) 0 0 / 223px 199px,
     radial-gradient(1px 1px at 140px 90px, rgba(255, 240, 220, 0.3), transparent 60%) 0 0 / 271px 239px,
@@ -80,7 +80,7 @@ html.dark[data-skin='arrakis'] body {
   background-attachment: fixed;
 }
 /* the two moons: the first large, the second small and higher, both pale and pocked */
-html.dark[data-skin='arrakis'] body::before {
+html[data-skin='arrakis'] body::before {
   content: ''; position: fixed; inset: 0; pointer-events: none; z-index: -3;
   background:
     radial-gradient(ellipse 2.2vmin 1.6vmin at 75.5% 16.5%, rgba(150, 125, 125, 0.22), transparent 100%),
@@ -91,7 +91,7 @@ html.dark[data-skin='arrakis'] body::before {
   opacity: 0.85;
 }
 /* mesas and dunes */
-html.dark[data-skin='arrakis'] #root::before {
+html[data-skin='arrakis'] #root::before {
   content: ''; position: fixed; left: 0; right: 0; bottom: 0; height: 44vh; pointer-events: none; z-index: -2;
   background:
     linear-gradient(to top, rgba(23, 19, 29, 0.55), transparent 55%),
@@ -99,7 +99,7 @@ html.dark[data-skin='arrakis'] #root::before {
   transition: opacity 0.6s ease;
 }
 /* blown sand: a hazy band skimming the crests */
-html.dark[data-skin='arrakis'] #root::after {
+html[data-skin='arrakis'] #root::after {
   content: ''; position: fixed; left: -30vw; width: 160vw; bottom: 18vh; height: 22vh; pointer-events: none; z-index: -2;
   background:
     radial-gradient(ellipse 22% 40% at 20% 60%, rgba(232, 201, 160, 0.12), transparent 70%),
@@ -107,101 +107,165 @@ html.dark[data-skin='arrakis'] #root::after {
     radial-gradient(ellipse 22% 40% at 85% 65%, rgba(232, 201, 160, 0.12), transparent 70%);
   animation: ar-drift 40s linear infinite;
 }
-html.dark[data-skin='arrakis']:not(:has(.sf-hero)) #root::before { opacity: 0.55; }
-html.dark[data-skin='arrakis']:not(:has(.sf-hero)) .shellb-ambient { opacity: 0.6; }
+html[data-skin='arrakis']:not(:has(.sf-hero)) #root::before { opacity: 0.55; }
+html[data-skin='arrakis']:not(:has(.sf-hero)) .shellb-ambient { opacity: 0.6; }
 
 @keyframes ar-drift { from { transform: translateX(-15vw); } to { transform: translateX(15vw); } }
 @keyframes ar-eye { 0%, 100% { box-shadow: 0 0 0 1px rgba(143, 184, 255, 0.55), 0 0 22px 4px rgba(79, 141, 255, 0.4), 0 0 60px 10px rgba(79, 141, 255, 0.15); }
   50% { box-shadow: 0 0 0 1px rgba(143, 184, 255, 0.7), 0 0 30px 6px rgba(79, 141, 255, 0.55), 0 0 80px 14px rgba(79, 141, 255, 0.22); } }
 
 /* ── chrome ──────────────────────────────────────────────────────────────── */
-html.dark[data-skin='arrakis'] .sf-sidebar { background: color-mix(in srgb, var(--bg-secondary) 86%, transparent); backdrop-filter: blur(10px); }
-html.dark[data-skin='arrakis'] .sf-brand {
+html[data-skin='arrakis'] .sf-sidebar { background: color-mix(in srgb, var(--bg-secondary) 86%, transparent); backdrop-filter: blur(10px); }
+html[data-skin='arrakis'] .sf-brand {
   font-family: var(--ar-display); font-weight: 700; font-size: 0.95rem; letter-spacing: 0.32em; text-transform: uppercase;
   color: var(--text-primary) !important; display: inline-flex; align-items: center; gap: 0.6rem;
 }
-html.dark[data-skin='arrakis'] .sf-brand::before { content: ''; width: 7px; height: 7px; transform: rotate(45deg); background: var(--ar-spice); box-shadow: 0 0 8px var(--ar-spice); }
-html.dark[data-skin='arrakis'] .sf-label { font-family: var(--ar-display); font-weight: 400; font-size: 9.5px !important; letter-spacing: 0.24em; text-transform: uppercase; }
-html.dark[data-skin='arrakis'] .sf-sidebar [class*='bg-[var(--bg-hover)]'][class*='cursor-pointer'] {
+html[data-skin='arrakis'] .sf-brand::before { content: ''; width: 7px; height: 7px; transform: rotate(45deg); background: var(--ar-spice); box-shadow: 0 0 8px var(--ar-spice); }
+html[data-skin='arrakis'] .sf-label { font-family: var(--ar-display); font-weight: 400; font-size: 9.5px !important; letter-spacing: 0.24em; text-transform: uppercase; }
+html[data-skin='arrakis'] .sf-sidebar [class*='bg-[var(--bg-hover)]'][class*='cursor-pointer'] {
   box-shadow: inset 2px 0 0 var(--ar-spice); background: linear-gradient(90deg, rgba(226, 115, 29, 0.14), transparent 80%);
 }
-html.dark[data-skin='arrakis'] .sf-topbar, html.dark[data-skin='arrakis'] header.h-12 {
+html[data-skin='arrakis'] .sf-topbar, html[data-skin='arrakis'] header.h-12 {
   background: color-mix(in srgb, var(--bg-primary) 66%, transparent); backdrop-filter: blur(8px); position: relative; z-index: 1;
 }
-html.dark[data-skin='arrakis'] .sf-topbar .text-sm.font-medium,
-html.dark[data-skin='arrakis'] .sf-topbar > div > span.text-sm,
-html.dark[data-skin='arrakis'] header.h-12 > div > span.font-semibold { font-family: var(--ar-display); font-weight: 400; font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase; }
-html.dark[data-skin='arrakis'] nav [class*='rounded-r-full'] { border-radius: 0 !important; background: var(--ar-spice) !important; }
+html[data-skin='arrakis'] .sf-topbar .text-sm.font-medium,
+html[data-skin='arrakis'] .sf-topbar > div > span.text-sm,
+html[data-skin='arrakis'] header.h-12 > div > span.font-semibold { font-family: var(--ar-display); font-weight: 400; font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase; }
+html[data-skin='arrakis'] nav [class*='rounded-r-full'] { border-radius: 0 !important; background: var(--ar-spice) !important; }
 
 /* ── welcome ─────────────────────────────────────────────────────────────── */
-html.dark[data-skin='arrakis'] .sf-hero > :first-child {
+html[data-skin='arrakis'] .sf-hero > :first-child {
   position: relative; overflow: visible; border-radius: 50% !important; margin-bottom: 1.6rem; animation: ar-eye 6s ease-in-out infinite;
 }
 /* a ring of sand grains around the eyes */
-html.dark[data-skin='arrakis'] .sf-hero > :first-child::before {
+html[data-skin='arrakis'] .sf-hero > :first-child::before {
   content: ''; position: absolute; inset: -18px; border-radius: 50%; pointer-events: none;
   background: repeating-conic-gradient(from 0deg, rgba(232, 201, 160, 0.7) 0 0.8deg, transparent 0.8deg 6deg);
   -webkit-mask: radial-gradient(circle closest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
   mask: radial-gradient(circle closest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
 }
-html.dark[data-skin='arrakis'] .sf-hero h1 {
+html[data-skin='arrakis'] .sf-hero h1 {
   font-family: var(--ar-display); font-weight: 700; text-transform: uppercase; letter-spacing: 0.34em; padding-left: 0.34em;
   font-size: clamp(1.4rem, 3vw, 2.2rem); line-height: 1.2; padding-bottom: 0; background: none;
   text-shadow: 0 2px 18px rgba(0, 0, 0, 0.5);
 }
 /* a horizon line with a diamond at its centre */
-html.dark[data-skin='arrakis'] .sf-hero h1::after {
+html[data-skin='arrakis'] .sf-hero h1::after {
   content: ''; display: block; width: 220px; height: 9px; margin: 1rem auto 0.3rem;
   background:
     linear-gradient(45deg, transparent 45%, var(--ar-spice) 46% 54%, transparent 55%) center / 9px 9px no-repeat,
     linear-gradient(-45deg, transparent 45%, var(--ar-spice) 46% 54%, transparent 55%) center / 9px 9px no-repeat,
     linear-gradient(90deg, transparent, rgba(232, 201, 160, 0.6) 30% 43%, transparent 43% 57%, rgba(232, 201, 160, 0.6) 57% 70%, transparent) center / 100% 1px no-repeat;
 }
-html.dark[data-skin='arrakis'] .sf-hero h1 + p > span:first-child { font-family: var(--ar-display); font-weight: 700; font-size: 0.8em; letter-spacing: 0.2em; text-transform: uppercase; color: var(--brand-soft) !important; }
+html[data-skin='arrakis'] .sf-hero h1 + p > span:first-child { font-family: var(--ar-display); font-weight: 700; font-size: 0.8em; letter-spacing: 0.2em; text-transform: uppercase; color: var(--brand-soft) !important; }
 
-html.dark[data-skin='arrakis'] .sf-hero > div.grid { gap: 10px; }
-html.dark[data-skin='arrakis'] .sf-card {
+html[data-skin='arrakis'] .sf-hero > div.grid { gap: 10px; }
+html[data-skin='arrakis'] .sf-card {
   position: relative; padding: 16px 18px 14px !important;
   background-color: color-mix(in srgb, var(--bg-secondary) 80%, transparent) !important; backdrop-filter: blur(8px);
   transition: border-color .2s, background-color .2s;
 }
-html.dark[data-skin='arrakis'] .sf-card::before {
+html[data-skin='arrakis'] .sf-card::before {
   content: ''; position: absolute; left: -1px; right: -1px; top: -1px; height: 1px; background: var(--ar-spice);
   transform: scaleX(0); transform-origin: left; transition: transform .3s ease;
 }
-html.dark[data-skin='arrakis'] .sf-card:hover { background-color: color-mix(in srgb, var(--bg-hover) 80%, transparent) !important; }
-html.dark[data-skin='arrakis'] .sf-card:hover::before { transform: scaleX(1); }
-html.dark[data-skin='arrakis'] .sf-card > div:first-child { font-family: var(--ar-display); font-weight: 700; font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; }
-html.dark[data-skin='arrakis'] .sf-card > div:last-child { font-size: 13px; margin-top: 7px; }
-html.dark[data-skin='arrakis'] .sf-tagline {
+html[data-skin='arrakis'] .sf-card:hover { background-color: color-mix(in srgb, var(--bg-hover) 80%, transparent) !important; }
+html[data-skin='arrakis'] .sf-card:hover::before { transform: scaleX(1); }
+html[data-skin='arrakis'] .sf-card > div:first-child { font-family: var(--ar-display); font-weight: 700; font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; }
+html[data-skin='arrakis'] .sf-card > div:last-child { font-size: 13px; margin-top: 7px; }
+html[data-skin='arrakis'] .sf-tagline {
   font-family: var(--ar-display); font-size: 8px !important; letter-spacing: 0.14em; text-transform: uppercase;
   padding: 4px 12px; color: var(--text-secondary) !important; background: color-mix(in srgb, var(--bg-primary) 72%, transparent);
 }
 
 /* ── composer ────────────────────────────────────────────────────────────── */
-html.dark[data-skin='arrakis'] .sf-composer {
+html[data-skin='arrakis'] .sf-composer {
   position: relative; z-index: 20; border-radius: 2px !important;
   background: color-mix(in srgb, var(--bg-secondary) 88%, transparent) !important; backdrop-filter: blur(12px);
   box-shadow: inset 0 1px 0 rgba(240, 205, 160, 0.06), 0 20px 46px -20px rgba(0, 0, 0, 0.8);
 }
-html.dark[data-skin='arrakis'] .sf-composer:focus-within { border-color: rgba(226, 115, 29, 0.55) !important; }
+html[data-skin='arrakis'] .sf-composer:focus-within { border-color: rgba(226, 115, 29, 0.55) !important; }
 
 /* ── the other apps ──────────────────────────────────────────────────────── */
-html.dark[data-skin='arrakis'] :where(h1[class*='tracking-tight']:not([class*='text-base'])) {
+html[data-skin='arrakis'] :where(h1[class*='tracking-tight']:not([class*='text-base'])) {
   font-family: var(--ar-display); font-weight: 700; font-size: 1.35rem; letter-spacing: 0.24em; text-transform: uppercase; padding-bottom: 12px;
   background: linear-gradient(90deg, var(--ar-spice), transparent) no-repeat left bottom / 80px 1px;
 }
-html.dark[data-skin='arrakis'] [class*='uppercase'][class*='tracking-w']:not(kbd) { font-family: var(--ar-display); font-weight: 400; font-size: 9.5px; letter-spacing: 0.22em; }
+html[data-skin='arrakis'] [class*='uppercase'][class*='tracking-w']:not(kbd) { font-family: var(--ar-display); font-weight: 400; font-size: 9.5px; letter-spacing: 0.22em; }
 
 /* ── misc ────────────────────────────────────────────────────────────────── */
-html.dark[data-skin='arrakis'] * { scrollbar-width: thin; scrollbar-color: rgba(240, 205, 160, 0.22) transparent; }
-html.dark[data-skin='arrakis'] .caret::after { background: var(--ar-spice); }
-html.dark[data-skin='arrakis'] .think-stream {
+html[data-skin='arrakis'] * { scrollbar-width: thin; scrollbar-color: rgba(240, 205, 160, 0.22) transparent; }
+html[data-skin='arrakis'] .caret::after { background: var(--ar-spice); }
+html[data-skin='arrakis'] .think-stream {
   background: linear-gradient(90deg, transparent 0%, rgba(226, 115, 29, 0.16) 40%, rgba(79, 141, 255, 0.1) 60%, transparent 100%);
   background-size: 200% 100%;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html.dark[data-skin='arrakis'] #root::after, html.dark[data-skin='arrakis'] .sf-hero > :first-child { animation: none; }
-  html.dark[data-skin='arrakis'] .sf-card::before { transition: none; }
+  html[data-skin='arrakis'] #root::after, html[data-skin='arrakis'] .sf-hero > :first-child { animation: none; }
+  html[data-skin='arrakis'] .sf-card::before { transition: none; }
 }
+
+/* ── light: Arrakis at noon. A bleached, dust-white sky, the sun hard and high, a day-moon faint, the dunes
+   lit full, sand skating over them; dark umber type ───────────────────────────────────────────────────────────── */
+html.light[data-skin='arrakis'] {
+  --ar-spice: #b04d0c;
+  --ar-sand: #8a6a45;
+  --ar-ibad: #2459c9;
+  --bg-primary: #f5ead8;
+  --bg-secondary: #fbf4e8;
+  --bg-tertiary: #efe0c8;
+  --bg-hover: #e7d3b5;
+  --bg-code: #f8efe1;
+  --border-subtle: rgba(90, 50, 20, 0.15);
+  --border-strong: rgba(90, 50, 20, 0.28);
+  --text-primary: #2b1a0e;
+  --text-secondary: #5b412e;
+  --text-muted: #6f5440;
+  --accent: #b04d0c;
+  --accent-fg: #ffffff;
+  --accent-soft: #94400a;
+  --accent-glow: rgba(176, 77, 12, 0.22);
+  --brand: #2459c9;
+  --brand-soft: #1f4daf;
+  --neon-pink: #b04d0c;
+  --neon-cyan: #2459c9;
+  --sunset: linear-gradient(100deg, #9a420a, #b04d0c 55%, #c66a1c);
+  --focus-ring: #2459c9;
+  color-scheme: light;
+}
+html.light[data-skin='arrakis'] body {
+  background:
+    radial-gradient(ellipse 100% 30% at 50% 76%, rgba(240, 190, 130, 0.35), transparent 70%),
+    linear-gradient(180deg, #d8dbdc 0%, #e6e2d9 32%, #efe3cb 56%, #ecca99 76%, #d9a66c 100%);
+  background-attachment: fixed;
+}
+/* the noon sun, and a ghost of the first moon */
+html.light[data-skin='arrakis'] body::before {
+  background:
+    radial-gradient(circle at 28% 16%, rgba(245, 245, 245, 0.55) 0 2.6vmin, transparent calc(2.6vmin + 1px)),
+    radial-gradient(circle at 70% 12%, #fffef8 0 4.5vmin, rgba(255, 252, 238, 0.75) 5.5vmin, rgba(255, 244, 220, 0.3) 14vmin, transparent 32vmin);
+  opacity: 1;
+}
+html.light[data-skin='arrakis'] #root::before {
+  background: url("./scenery/dunes.svg") repeat-x center bottom / auto 100%;
+  filter: brightness(1.12) saturate(0.95);
+}
+html.light[data-skin='arrakis'] #root::after {
+  background:
+    radial-gradient(ellipse 22% 40% at 20% 60%, rgba(255, 240, 215, 0.35), transparent 70%),
+    radial-gradient(ellipse 30% 45% at 55% 55%, rgba(250, 225, 190, 0.3), transparent 70%),
+    radial-gradient(ellipse 22% 40% at 85% 65%, rgba(255, 240, 215, 0.35), transparent 70%);
+}
+html.light[data-skin='arrakis'] .sf-hero h1 { text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5); }
+html.light[data-skin='arrakis'] .sf-hero > :first-child::before { background: repeating-conic-gradient(from 0deg, rgba(138, 106, 69, 0.8) 0 0.8deg, transparent 0.8deg 6deg); }
+html.light[data-skin='arrakis'] .sf-hero h1::after {
+  background:
+    linear-gradient(45deg, transparent 45%, var(--ar-spice) 46% 54%, transparent 55%) center / 9px 9px no-repeat,
+    linear-gradient(-45deg, transparent 45%, var(--ar-spice) 46% 54%, transparent 55%) center / 9px 9px no-repeat,
+    linear-gradient(90deg, transparent, rgba(90, 60, 30, 0.5) 30% 43%, transparent 43% 57%, rgba(90, 60, 30, 0.5) 57% 70%, transparent) center / 100% 1px no-repeat;
+}
+html.light[data-skin='arrakis'] .shadow-lg, html.light[data-skin='arrakis'] .shadow-xl, html.light[data-skin='arrakis'] .shadow-2xl {
+  box-shadow: 0 14px 34px -16px rgba(43, 26, 14, 0.3), 0 0 0 1px var(--border-subtle) !important;
+}
+html.light[data-skin='arrakis'] ::selection { background: rgba(176, 77, 12, 0.22); }

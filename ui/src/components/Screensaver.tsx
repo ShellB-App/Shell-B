@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { PREVIEW_SAVER, ambienceShot, ambienceSuppressed, reducedMotion, studioSaverId, useAmbience, type SaverStyle } from '../ambience';
+import { PREVIEW_SAVER, ambienceShot, ambienceSuppressed, reducedMotion, studioSaverId, useAmbience, type SaverStyle, type SceneStyle } from '../ambience';
+import { runAmbient } from '../themes/Ambient';
+import type { AmbientConfig } from '../themes';
 import { frameRawUrl, rawUrl } from '../api';
 import { getFormFactor } from '../formFactor';
 import '../ambience.css';
@@ -103,7 +105,29 @@ function SaverClock() {
 /** A built-in style drawn here, or a Studio screensaver run in a sandboxed frame. */
 function SaverScene({ style }: { style: SaverStyle }) {
   const pid = studioSaverId(style);
-  return pid ? <StudioSaver pid={pid} /> : <SaverCanvas style={style} />;
+  if (pid) return <StudioSaver pid={pid} />;
+  if (style in SCENES) return <SceneSaver id={style as SceneStyle} />;
+  return <SaverCanvas style={style} />;
+}
+
+/** The scenes: a theme's scenery as layers (ambience.css, .sb-scene-<id>) with its particles running over them. */
+const SCENES: Record<SceneStyle, AmbientConfig> = {
+  meadow: { kind: 'fireflies', density: 1.3 },
+  aurora: { kind: 'aurora', extra: ['#ffffff', '#e6f2ff'], density: 1.1 },
+  rain: { kind: 'rain', extra: ['#ffb347', '#ff9a4a', '#ff5a6f', '#5fd4e8', '#ffe08a', '#ff7ad9'], density: 1.2 },
+  abyss: { kind: 'abyss', density: 1.2 },
+  sakura: { kind: 'petals', colors: ['#f7cdd9', '#efb3c6', '#fde3ea'], density: 1.2 },
+  dunes: { kind: 'sand', density: 1.1 },
+};
+
+function SceneSaver({ id }: { id: SceneStyle }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => runAmbient(ref.current!, SCENES[id], { always: true }), [id]);
+  return (
+    <div className={`sb-scene sb-scene-${id}`}>
+      <canvas ref={ref} className="sb-saver-canvas" />
+    </div>
+  );
 }
 
 /** A Screensaver project from the Studio: its index.html in the same sandbox as Studio previews (scripts only, no

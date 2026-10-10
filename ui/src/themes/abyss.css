@@ -1,4 +1,4 @@
-/* ── Deep Sea theme (dark only; light mode falls back to Classic light) ──────────────────────────────────────────
+/* ── Deep Sea theme (dark, and a light version at the end of this file) ──────────────────────────────────────────
    The view from a submersible's porthole on the way down. The last of the sunlight comes through in shafts from the
    surface, a whale passes far off every few minutes, and the floor below glows: kelp, coral fans and tube worms lit by
    their own light. Jellyfish pulse through falling marine snow, and plankton sparks blue wherever the pointer moves
@@ -17,7 +17,7 @@
 @font-face { font-family: 'Sora'; font-weight: 300; font-display: swap; src: url('/fonts/sora-latin-300-normal.woff2') format('woff2'); }
 @font-face { font-family: 'Sora'; font-weight: 600; font-display: swap; src: url('/fonts/sora-latin-600-normal.woff2') format('woff2'); }
 
-html.dark[data-skin='abyss'] {
+html[data-skin='abyss'] {
   --ab-cyan: #4fd8ff;
   --ab-violet: #b28bff;
   --ab-display: 'Sora', 'Inter Variable', sans-serif;
@@ -46,32 +46,32 @@ html.dark[data-skin='abyss'] {
 }
 
 /* ── type ────────────────────────────────────────────────────────────────── */
-html.dark[data-skin='abyss'] body { font-feature-settings: 'tnum' 0; }
-html.dark[data-skin='abyss'] .prose-shellb h1,
-html.dark[data-skin='abyss'] .prose-shellb h2,
-html.dark[data-skin='abyss'] .prose-shellb h3 { font-family: var(--ab-display); font-weight: 600; letter-spacing: -0.005em; }
-html.dark[data-skin='abyss'] .prose-shellb h2 { position: relative; padding-bottom: 0.35em; }
-html.dark[data-skin='abyss'] .prose-shellb h2::after {
+html[data-skin='abyss'] body { font-feature-settings: 'tnum' 0; }
+html[data-skin='abyss'] .prose-shellb h1,
+html[data-skin='abyss'] .prose-shellb h2,
+html[data-skin='abyss'] .prose-shellb h3 { font-family: var(--ab-display); font-weight: 600; letter-spacing: -0.005em; }
+html[data-skin='abyss'] .prose-shellb h2 { position: relative; padding-bottom: 0.35em; }
+html[data-skin='abyss'] .prose-shellb h2::after {
   content: ''; position: absolute; left: 0; bottom: 0; width: 80px; height: 1px; background: linear-gradient(90deg, var(--ab-cyan), transparent);
   box-shadow: 0 0 8px var(--ab-cyan);
 }
-html.dark[data-skin='abyss'] .prose-shellb a { color: var(--accent-soft); text-decoration-color: rgba(79, 216, 255, 0.4); }
-html.dark[data-skin='abyss'] .prose-shellb li::marker { color: var(--ab-cyan); }
-html.dark[data-skin='abyss'] .prose-shellb blockquote { border-left: 2px solid var(--ab-violet); box-shadow: -6px 0 14px -8px var(--ab-violet); }
-html.dark[data-skin='abyss'] ::selection { background: rgba(79, 216, 255, 0.3); }
+html[data-skin='abyss'] .prose-shellb a { color: var(--accent-soft); text-decoration-color: rgba(79, 216, 255, 0.4); }
+html[data-skin='abyss'] .prose-shellb li::marker { color: var(--ab-cyan); }
+html[data-skin='abyss'] .prose-shellb blockquote { border-left: 2px solid var(--ab-violet); box-shadow: -6px 0 14px -8px var(--ab-violet); }
+html[data-skin='abyss'] ::selection { background: rgba(79, 216, 255, 0.3); }
 
 /* ── geometry ────────────────────────────────────────────────────────────── */
-html.dark[data-skin='abyss'] :where([class*='rounded-lg'], [class*='rounded-xl'], [class*='rounded-2xl']) { border-radius: 12px !important; }
-html.dark[data-skin='abyss'] .shadow-lg, html.dark[data-skin='abyss'] .shadow-xl, html.dark[data-skin='abyss'] .shadow-2xl {
+html[data-skin='abyss'] :where([class*='rounded-lg'], [class*='rounded-xl'], [class*='rounded-2xl']) { border-radius: 12px !important; }
+html[data-skin='abyss'] .shadow-lg, html[data-skin='abyss'] .shadow-xl, html[data-skin='abyss'] .shadow-2xl {
   box-shadow: 0 18px 50px -16px rgba(0, 0, 0, 0.85), 0 0 0 1px var(--border-subtle), 0 0 30px -14px rgba(79, 216, 255, 0.35) !important;
 }
-html.dark[data-skin='abyss'] [class~='bg-[var(--accent)]'] {
+html[data-skin='abyss'] [class~='bg-[var(--accent)]'] {
   background-image: var(--sunset); box-shadow: 0 0 18px -4px rgba(79, 216, 255, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
-html.dark[data-skin='abyss'] [class~='bg-[var(--accent)]']:disabled { background-image: none; box-shadow: none; }
+html[data-skin='abyss'] [class~='bg-[var(--accent)]']:disabled { background-image: none; box-shadow: none; }
 
 /* ── backdrop ────────────────────────────────────────────────────────────── */
-html.dark[data-skin='abyss'] body {
+html[data-skin='abyss'] body {
   background:
     radial-gradient(ellipse 70% 30% at 50% -5%, rgba(110, 190, 255, 0.22), transparent 70%),
     radial-gradient(ellipse 60% 25% at 50% 105%, rgba(79, 216, 255, 0.07), transparent 70%),
@@ -79,7 +79,7 @@ html.dark[data-skin='abyss'] body {
   background-attachment: fixed;
 }
 /* sunlight shafts from the surface, fading with depth, swaying with the swell */
-html.dark[data-skin='abyss'] body::before {
+html[data-skin='abyss'] body::before {
   content: ''; position: fixed; left: -20vw; right: -20vw; top: -5vh; height: 85vh; pointer-events: none; z-index: -3;
   background:
     linear-gradient(104deg, transparent 0 18%, rgba(150, 210, 255, 0.07) 20%, transparent 23%, transparent 31%, rgba(150, 210, 255, 0.05) 33.5%,
@@ -90,14 +90,14 @@ html.dark[data-skin='abyss'] body::before {
   transform-origin: 50% 0; animation: ab-sway 14s ease-in-out infinite alternate;
 }
 /* a whale, far off, crossing every few minutes */
-html.dark[data-skin='abyss'] #root::before {
+html[data-skin='abyss'] #root::before {
   content: ''; position: fixed; top: 24vh; left: 0; width: 44vw; aspect-ratio: 580 / 130; pointer-events: none; z-index: -2;
   background: linear-gradient(180deg, #1d4a7c, #0c2650);
   -webkit-mask: url("./scenery/whale.svg") center / contain no-repeat; mask: url("./scenery/whale.svg") center / contain no-repeat;
   opacity: 0.6; animation: ab-whale 210s linear infinite;
 }
 /* the seafloor */
-html.dark[data-skin='abyss'] body::after {
+html[data-skin='abyss'] body::after {
   content: ''; position: fixed; left: 0; right: 0; bottom: 0; height: 300px; pointer-events: none; z-index: -2;
   background:
     url("./scenery/seafloor.svg") repeat-x left bottom / 1600px 260px,
@@ -105,8 +105,8 @@ html.dark[data-skin='abyss'] body::after {
     radial-gradient(ellipse 30% 50% at 78% 100%, rgba(255, 90, 106, 0.06), transparent 70%);
   animation: ab-breathe 9s ease-in-out infinite;
 }
-html.dark[data-skin='abyss']:not(:has(.sf-hero)) body::after { opacity: 0.55; }
-html.dark[data-skin='abyss']:not(:has(.sf-hero)) .shellb-ambient { opacity: 0.65; }
+html[data-skin='abyss']:not(:has(.sf-hero)) body::after { opacity: 0.55; }
+html[data-skin='abyss']:not(:has(.sf-hero)) .shellb-ambient { opacity: 0.65; }
 
 @keyframes ab-sway { from { transform: skewX(-4deg); } to { transform: skewX(4deg); } }
 @keyframes ab-whale { 0% { transform: translateX(105vw) scaleX(1); } 55% { transform: translateX(-50vw) scaleX(1); } 100% { transform: translateX(-50vw) scaleX(1); } }
@@ -114,47 +114,47 @@ html.dark[data-skin='abyss']:not(:has(.sf-hero)) .shellb-ambient { opacity: 0.65
 @keyframes ab-ping { from { transform: scale(1); opacity: 0.7; } to { transform: scale(2.4); opacity: 0; } }
 
 /* ── chrome ──────────────────────────────────────────────────────────────── */
-html.dark[data-skin='abyss'] .sf-sidebar { background: color-mix(in srgb, var(--bg-secondary) 82%, transparent); backdrop-filter: blur(12px); box-shadow: 1px 0 24px -10px rgba(79, 216, 255, 0.3); }
-html.dark[data-skin='abyss'] .sf-brand {
+html[data-skin='abyss'] .sf-sidebar { background: color-mix(in srgb, var(--bg-secondary) 82%, transparent); backdrop-filter: blur(12px); box-shadow: 1px 0 24px -10px rgba(79, 216, 255, 0.3); }
+html[data-skin='abyss'] .sf-brand {
   font-family: var(--ab-display); font-weight: 600; font-size: 1.1rem; letter-spacing: 0.04em;
   color: var(--text-primary) !important; display: inline-flex; align-items: center; gap: 0.5rem;
 }
 /* an anglerfish's lure by the name */
-html.dark[data-skin='abyss'] .sf-brand::before {
+html[data-skin='abyss'] .sf-brand::before {
   content: ''; width: 8px; height: 8px; border-radius: 50%; background: #e8fbff;
   box-shadow: 0 0 6px 2px rgba(143, 230, 255, 0.9), 0 0 16px 5px rgba(79, 216, 255, 0.35);
   animation: ab-breathe 4s ease-in-out infinite;
 }
-html.dark[data-skin='abyss'] .sf-label { font-family: var(--ab-display); font-weight: 600; font-size: 11px !important; letter-spacing: 0.12em; text-transform: uppercase; }
-html.dark[data-skin='abyss'] .sf-sidebar [class*='bg-[var(--bg-hover)]'][class*='cursor-pointer'] {
+html[data-skin='abyss'] .sf-label { font-family: var(--ab-display); font-weight: 600; font-size: 11px !important; letter-spacing: 0.12em; text-transform: uppercase; }
+html[data-skin='abyss'] .sf-sidebar [class*='bg-[var(--bg-hover)]'][class*='cursor-pointer'] {
   box-shadow: inset 2px 0 0 var(--ab-cyan); background: linear-gradient(90deg, rgba(79, 216, 255, 0.12), transparent 80%);
 }
-html.dark[data-skin='abyss'] .sf-topbar, html.dark[data-skin='abyss'] header.h-12 {
+html[data-skin='abyss'] .sf-topbar, html[data-skin='abyss'] header.h-12 {
   background: color-mix(in srgb, var(--bg-primary) 60%, transparent); backdrop-filter: blur(10px); position: relative; z-index: 1;
 }
-html.dark[data-skin='abyss'] .sf-topbar .text-sm.font-medium,
-html.dark[data-skin='abyss'] .sf-topbar > div > span.text-sm,
-html.dark[data-skin='abyss'] header.h-12 > div > span.font-semibold { font-family: var(--ab-display); font-weight: 600; font-size: 14px; letter-spacing: 0.02em; }
-html.dark[data-skin='abyss'] nav [class*='rounded-r-full'] { background: var(--ab-cyan) !important; box-shadow: 0 0 10px var(--ab-cyan); }
+html[data-skin='abyss'] .sf-topbar .text-sm.font-medium,
+html[data-skin='abyss'] .sf-topbar > div > span.text-sm,
+html[data-skin='abyss'] header.h-12 > div > span.font-semibold { font-family: var(--ab-display); font-weight: 600; font-size: 14px; letter-spacing: 0.02em; }
+html[data-skin='abyss'] nav [class*='rounded-r-full'] { background: var(--ab-cyan) !important; box-shadow: 0 0 10px var(--ab-cyan); }
 
 /* ── welcome ─────────────────────────────────────────────────────────────── */
 /* sonar: two rings pinging out from the agent */
-html.dark[data-skin='abyss'] .sf-hero > :first-child {
+html[data-skin='abyss'] .sf-hero > :first-child {
   position: relative; overflow: visible; border-radius: 50% !important; margin-bottom: 1.5rem;
   box-shadow: 0 0 0 1px rgba(143, 230, 255, 0.5), 0 0 26px 4px rgba(79, 216, 255, 0.3) !important;
 }
-html.dark[data-skin='abyss'] .sf-hero > :first-child::before,
-html.dark[data-skin='abyss'] .sf-hero > :first-child::after {
+html[data-skin='abyss'] .sf-hero > :first-child::before,
+html[data-skin='abyss'] .sf-hero > :first-child::after {
   content: ''; position: absolute; inset: -4px; border-radius: 50%; pointer-events: none;
   border: 1px solid rgba(143, 230, 255, 0.7); animation: ab-ping 4s cubic-bezier(.2, .6, .4, 1) infinite;
 }
-html.dark[data-skin='abyss'] .sf-hero > :first-child::after { animation-delay: 2s; }
-html.dark[data-skin='abyss'] .sf-hero h1 {
+html[data-skin='abyss'] .sf-hero > :first-child::after { animation-delay: 2s; }
+html[data-skin='abyss'] .sf-hero h1 {
   font-family: var(--ab-display); font-weight: 300; letter-spacing: 0.02em; font-size: clamp(2.1rem, 4.4vw, 3.2rem); line-height: 1.1;
   padding-bottom: 0; background: none; text-shadow: 0 0 26px rgba(79, 216, 255, 0.35);
 }
 /* a depth gauge under the greeting */
-html.dark[data-skin='abyss'] .sf-hero h1::after {
+html[data-skin='abyss'] .sf-hero h1::after {
   content: ''; display: block; width: 168px; height: 7px; margin: 0.9rem auto 0.2rem;
   background:
     linear-gradient(var(--ab-cyan), var(--ab-cyan)) center bottom / 2px 7px no-repeat,
@@ -162,59 +162,119 @@ html.dark[data-skin='abyss'] .sf-hero h1::after {
   -webkit-mask: linear-gradient(90deg, transparent, #000 25% 75%, transparent); mask: linear-gradient(90deg, transparent, #000 25% 75%, transparent);
   filter: drop-shadow(0 0 4px rgba(79, 216, 255, 0.7));
 }
-html.dark[data-skin='abyss'] .sf-hero h1 + p > span:first-child { font-family: var(--ab-display); font-weight: 600; color: var(--accent-soft) !important; }
+html[data-skin='abyss'] .sf-hero h1 + p > span:first-child { font-family: var(--ab-display); font-weight: 600; color: var(--accent-soft) !important; }
 
-html.dark[data-skin='abyss'] .sf-hero > div.grid { gap: 12px; }
-html.dark[data-skin='abyss'] .sf-card {
+html[data-skin='abyss'] .sf-hero > div.grid { gap: 12px; }
+html[data-skin='abyss'] .sf-card {
   position: relative; padding: 16px 18px 14px !important;
   background-color: color-mix(in srgb, var(--bg-secondary) 66%, transparent) !important; backdrop-filter: blur(14px);
   transition: border-color .25s, transform .25s, background-color .25s, box-shadow .25s;
 }
-html.dark[data-skin='abyss'] .sf-card::after {
+html[data-skin='abyss'] .sf-card::after {
   content: ''; position: absolute; left: 14px; right: 14px; bottom: -1px; height: 1px; pointer-events: none;
   background: linear-gradient(90deg, transparent, var(--ab-cyan), transparent); box-shadow: 0 0 10px var(--ab-cyan);
   opacity: 0; transition: opacity .25s;
 }
-html.dark[data-skin='abyss'] .sf-card:hover {
+html[data-skin='abyss'] .sf-card:hover {
   transform: translateY(-2px); background-color: color-mix(in srgb, var(--bg-hover) 76%, transparent) !important;
   box-shadow: 0 0 30px -12px rgba(79, 216, 255, 0.6);
 }
-html.dark[data-skin='abyss'] .sf-card:hover::after { opacity: 1; }
-html.dark[data-skin='abyss'] .sf-card > div:first-child { font-family: var(--ab-display); font-weight: 600; font-size: 14px; }
-html.dark[data-skin='abyss'] .sf-card > div:last-child { font-size: 13px; margin-top: 4px; }
+html[data-skin='abyss'] .sf-card:hover::after { opacity: 1; }
+html[data-skin='abyss'] .sf-card > div:first-child { font-family: var(--ab-display); font-weight: 600; font-size: 14px; }
+html[data-skin='abyss'] .sf-card > div:last-child { font-size: 13px; margin-top: 4px; }
 /* the depth readout */
-html.dark[data-skin='abyss'] .sf-tagline { font-family: 'JetBrains Mono Variable', monospace; font-size: 10.5px !important; letter-spacing: 0.06em; text-transform: uppercase; }
-html.dark[data-skin='abyss'] .sf-tagline::before { content: '3,812 m · '; color: var(--ab-cyan); }
+html[data-skin='abyss'] .sf-tagline { font-family: 'JetBrains Mono Variable', monospace; font-size: 10.5px !important; letter-spacing: 0.06em; text-transform: uppercase; }
+html[data-skin='abyss'] .sf-tagline::before { content: '3,812 m · '; color: var(--ab-cyan); }
 
 /* ── composer: a porthole-glass console ─────────────────────────────────── */
-html.dark[data-skin='abyss'] .sf-composer {
+html[data-skin='abyss'] .sf-composer {
   position: relative; z-index: 20; border-radius: 16px !important;
   background: color-mix(in srgb, var(--bg-secondary) 72%, transparent) !important; backdrop-filter: blur(16px);
   box-shadow: 0 0 30px -16px rgba(79, 216, 255, 0.6), inset 0 1px 0 rgba(143, 230, 255, 0.08);
   transition: box-shadow .3s ease, border-color .3s ease;
 }
-html.dark[data-skin='abyss'] .sf-composer:focus-within {
+html[data-skin='abyss'] .sf-composer:focus-within {
   border-color: rgba(79, 216, 255, 0.5) !important; box-shadow: 0 0 36px -10px rgba(79, 216, 255, 0.6), inset 0 1px 0 rgba(143, 230, 255, 0.12);
 }
 
 /* ── the other apps ──────────────────────────────────────────────────────── */
-html.dark[data-skin='abyss'] :where(h1[class*='tracking-tight']:not([class*='text-base'])) {
+html[data-skin='abyss'] :where(h1[class*='tracking-tight']:not([class*='text-base'])) {
   font-family: var(--ab-display); font-weight: 300; letter-spacing: 0.01em; padding-bottom: 10px;
   background: linear-gradient(90deg, var(--ab-cyan), transparent) no-repeat left bottom / 90px 1px;
 }
 
 /* ── misc ────────────────────────────────────────────────────────────────── */
-html.dark[data-skin='abyss'] * { scrollbar-width: thin; scrollbar-color: rgba(120, 190, 255, 0.22) transparent; }
-html.dark[data-skin='abyss'] .caret::after { background: var(--ab-cyan); box-shadow: 0 0 8px var(--ab-cyan); }
-html.dark[data-skin='abyss'] .think-stream {
+html[data-skin='abyss'] * { scrollbar-width: thin; scrollbar-color: rgba(120, 190, 255, 0.22) transparent; }
+html[data-skin='abyss'] .caret::after { background: var(--ab-cyan); box-shadow: 0 0 8px var(--ab-cyan); }
+html[data-skin='abyss'] .think-stream {
   background: linear-gradient(90deg, transparent 0%, rgba(79, 216, 255, 0.16) 40%, rgba(178, 139, 255, 0.12) 60%, transparent 100%);
   background-size: 200% 100%;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html.dark[data-skin='abyss'] body::before, html.dark[data-skin='abyss'] body::after, html.dark[data-skin='abyss'] #root::before,
-  html.dark[data-skin='abyss'] .sf-brand::before,
-  html.dark[data-skin='abyss'] .sf-hero > :first-child::before, html.dark[data-skin='abyss'] .sf-hero > :first-child::after { animation: none; }
-  html.dark[data-skin='abyss'] #root::before { transform: translateX(52vw); }
-  html.dark[data-skin='abyss'] .sf-hero > :first-child::before, html.dark[data-skin='abyss'] .sf-hero > :first-child::after { opacity: 0; }
+  html[data-skin='abyss'] body::before, html[data-skin='abyss'] body::after, html[data-skin='abyss'] #root::before,
+  html[data-skin='abyss'] .sf-brand::before,
+  html[data-skin='abyss'] .sf-hero > :first-child::before, html[data-skin='abyss'] .sf-hero > :first-child::after { animation: none; }
+  html[data-skin='abyss'] #root::before { transform: translateX(52vw); }
+  html[data-skin='abyss'] .sf-hero > :first-child::before, html[data-skin='abyss'] .sf-hero > :first-child::after { opacity: 0; }
 }
+
+/* ── light: the shallows. Sunlit turquoise water, caustic light rippling across everything, a reef below,
+   moon jellies and bubbles rising, the shadow of a whale passing over ───────────────────────────────────────── */
+html.light[data-skin='abyss'] {
+  --ab-cyan: #0077a8;
+  --ab-violet: #6b45c9;
+  --bg-primary: #e7f7fb;
+  --bg-secondary: #f4fcfe;
+  --bg-tertiary: #d6eff6;
+  --bg-hover: #c6e7f1;
+  --bg-code: #effafd;
+  --border-subtle: rgba(0, 90, 130, 0.14);
+  --border-strong: rgba(0, 90, 130, 0.28);
+  --text-primary: #062a3a;
+  --text-secondary: #2c5263;
+  --text-muted: #426878;
+  --accent: #0077a8;
+  --accent-fg: #ffffff;
+  --accent-soft: #00648e;
+  --accent-glow: rgba(0, 119, 168, 0.22);
+  --brand: #6b45c9;
+  --brand-soft: #5a37b0;
+  --neon-pink: #c2337f;
+  --neon-cyan: #0077a8;
+  --sunset: linear-gradient(100deg, #0077a8, #1f8fc4 55%, #5a6fd6);
+  --focus-ring: #0077a8;
+  color-scheme: light;
+}
+html.light[data-skin='abyss'] body {
+  background:
+    radial-gradient(ellipse 70% 30% at 50% -5%, rgba(255, 255, 255, 0.85), transparent 70%),
+    linear-gradient(180deg, #e2fbff 0%, #c7f0f9 30%, #a6e2f0 70%, #8fd6e8 100%);
+  background-attachment: fixed;
+}
+/* caustics: two nets of light sliding over each other */
+html.light[data-skin='abyss'] body::before {
+  top: 0; height: 100vh; left: 0; right: 0;
+  background: url("./scenery/caustics.svg") 0 0 / 420px 420px, url("./scenery/caustics.svg") 120px 60px / 620px 620px;
+  -webkit-mask: linear-gradient(to bottom, #000, rgba(0, 0, 0, 0.45) 70%, rgba(0, 0, 0, 0.2));
+  mask: linear-gradient(to bottom, #000, rgba(0, 0, 0, 0.45) 70%, rgba(0, 0, 0, 0.2));
+  opacity: 0.55; transform: none; animation: ab-caustics 40s linear infinite;
+}
+@keyframes ab-caustics { from { background-position: 0 0, 120px 60px; } to { background-position: 420px 210px, -500px 680px; } }
+html.light[data-skin='abyss'] #root::before { background: linear-gradient(180deg, rgba(20, 90, 120, 0.35), rgba(20, 90, 120, 0.25)); opacity: 0.5; }
+html.light[data-skin='abyss'] body::after {
+  background: linear-gradient(to top, #d9bd8f 0%, #e3c99b 20%, #3e9c8f 60%, #2f8a86 100%);
+  -webkit-mask: url("./scenery/seafloor.svg") repeat-x left bottom / 1600px 260px;
+  mask: url("./scenery/seafloor.svg") repeat-x left bottom / 1600px 260px;
+  height: 260px; animation: none; opacity: 0.85;
+}
+html.light[data-skin='abyss'] .sf-hero h1 { text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5); }
+html.light[data-skin='abyss'] .sf-hero > :first-child::before,
+html.light[data-skin='abyss'] .sf-hero > :first-child::after { border-color: rgba(0, 119, 168, 0.55); }
+html.light[data-skin='abyss'] .sf-tagline::before { content: '12 m · '; }
+html.light[data-skin='abyss'] .shadow-lg, html.light[data-skin='abyss'] .shadow-xl, html.light[data-skin='abyss'] .shadow-2xl {
+  box-shadow: 0 14px 36px -16px rgba(6, 42, 58, 0.3), 0 0 0 1px var(--border-subtle) !important;
+}
+html.light[data-skin='abyss'] .sf-brand::before { background: #ffffff; box-shadow: 0 0 6px 2px rgba(0, 119, 168, 0.45); }
+html.light[data-skin='abyss'] ::selection { background: rgba(0, 119, 168, 0.2); }
+@media (prefers-reduced-motion: reduce) { html.light[data-skin='abyss'] body::before { animation: none; } }

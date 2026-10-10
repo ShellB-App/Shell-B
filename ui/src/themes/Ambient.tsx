@@ -160,11 +160,12 @@ const KINDS = {
   marinesnow: { colors: ['#cfe6ff', '#e8f3ff'], per: 9000, min: 40, max: 160, size: [3, 12], additive: false },
   plankton: { colors: ['#4fd8ff', '#7fb4ff', '#6dffd8'], per: 1e9, min: 0, max: 0, size: [8, 22], additive: true },
   sand: { colors: ['#e9c99a', '#d9a86c', '#f3dcb8'], per: 7000, min: 50, max: 220, size: [4, 11], additive: false },
+  motes: { colors: ['#fff3c4', '#ffe7a0', '#ffffff'], per: 22000, min: 24, max: 80, size: [4, 14], additive: true },
 } as const;
 type SpriteKind = keyof typeof KINDS;
 /** What a theme can ask for. rain = city bokeh + streaks + drops on the glass; abyss = marine snow + jellyfish + plankton
- *  that lights where the pointer moves; aurora = curtains + snow. */
-export type AmbientKind = Exclude<SpriteKind, 'spores' | 'marinesnow' | 'plankton'> | 'rain' | 'abyss' | 'aurora';
+ *  that lights where the pointer moves; aurora = curtains + snow; shallows = bubbles + jellyfish in daylight water. */
+export type AmbientKind = Exclude<SpriteKind, 'spores' | 'marinesnow' | 'plankton'> | 'rain' | 'abyss' | 'aurora' | 'shallows';
 
 function paintFor(kind: SpriteKind, color: string) {
   switch (kind) {
@@ -187,8 +188,9 @@ const okColors = (c: readonly string[] | undefined, d: readonly string[]) => {
 };
 
 /** A sprite particle system. */
-function system(kind: SpriteKind, cfg: { colors?: readonly string[]; density?: number }): System {
+function system(kind: SpriteKind, cfg: { colors?: readonly string[]; density?: number; blend?: 'normal' }): System {
   const k = KINDS[kind];
+  const additive = cfg.blend === 'normal' ? false : k.additive;
   const sheets = okColors(cfg.colors, k.colors).map(c => sprites(kind === 'woodsprites' ? 128 : kind === 'bokeh' ? 96 : 64, paintFor(kind, c)));
   const density = Math.min(2, Math.max(0.2, cfg.density ?? 1));
   const falls = kind === 'petals' || kind === 'snow' || kind === 'leaves' || kind === 'marinesnow';
@@ -253,6 +255,12 @@ function system(kind: SpriteKind, cfg: { colors?: readonly string[]; density?: n
         p.vy = -(kind === 'embers' ? 30 : 9) * near;
         p.glow = kind === 'embers' ? 0.55 + 0.45 * Math.abs(Math.sin(p.t * 9 + p.flip)) : 0.35 + 0.65 * Math.max(0, Math.sin(p.t * 1.3 + p.flip));
         break;
+      case 'motes':
+        // dust in a sunbeam: hanging, turning over slowly, catching the light now and then
+        p.sway += dt * 0.5; p.t += dt;
+        p.vx = Math.sin(p.sway + p.flip) * 5 * near + env.wind * 0.15; p.vy = Math.cos(p.sway * 0.7 + p.flip) * 3 * near - 1.5;
+        p.glow = 0.3 + 0.7 * Math.pow(0.5 + 0.5 * Math.sin(p.t * 0.9 + p.flip * 3), 3);
+        break;
       case 'bubbles':
         p.sway += dt * 1.6;
         p.vx = Math.sin(p.sway) * 10 * near; p.vy = -22 * near;
@@ -293,7 +301,7 @@ function system(kind: SpriteKind, cfg: { colors?: readonly string[]; density?: n
 
   const draw = (g: Ctx, dpr: number) => {
     const home = () => g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    g.globalCompositeOperation = k.additive ? 'lighter' : 'source-over';
+    g.globalCompositeOperation = additive ? 'lighter' : 'source-over';
     for (const p of ps) {
       const sheet = sheets[p.v], sp = sheet[kind === 'bokeh' ? (p.z < 0.4 ? 1 : 2) : blurOf(p.z)];
       const size = k.size[0] + p.z * (k.size[1] - k.size[0]);
@@ -301,7 +309,7 @@ function system(kind: SpriteKind, cfg: { colors?: readonly string[]; density?: n
       const scale = size / s0, full = sp.width * scale;
       let a: number;
       if (kind === 'fireflies') a = (0.05 + 0.95 * p.glow) * (0.95 - p.z * 0.5);
-      else if (kind === 'spores' || kind === 'embers') a = p.glow * (0.9 - p.z * 0.4);
+      else if (kind === 'spores' || kind === 'embers' || kind === 'motes') a = p.glow * (0.9 - p.z * 0.4);
       else if (kind === 'woodsprites') a = p.glow * (0.95 - p.z * 0.45);
       else if (kind === 'bokeh') a = p.glow * (0.75 - p.z * 0.35);
       else if (kind === 'marinesnow') a = 0.55 - p.z * 0.25;
@@ -370,7 +378,7 @@ function bead(tint: string): Sprite {
 
 interface Drop { x: number; y: number; r: number; v: number; sliding: boolean; life: number; trail: number; wob: number; s: number }
 
-function rainOnGlass(cfg: { colors?: readonly string[]; density?: number }): System {
+function rainOnGlass(cfg: { colors?: readonly string[]; density?: number; blend?: 'normal' }): System {
   const tints = okColors(cfg.colors, ['#ffc27a', '#ff8a7a', '#9fdcff', '#ffd9a8']);
   const beads = tints.map(bead);
   const density = Math.min(2, Math.max(0.2, cfg.density ?? 1));
@@ -414,8 +422,10 @@ function rainOnGlass(cfg: { colors?: readonly string[]; density?: number }): Sys
       for (const d of drops) if (d.r < 1.6 && d.life > rand(10, 30)) Object.assign(d, mk(false), { life: 0 });
     },
     draw: (g) => {
-      g.globalCompositeOperation = 'lighter';
-      g.strokeStyle = '#bcd8ff'; g.lineWidth = 1; g.lineCap = 'round';
+      // streaks of rain beyond the glass: light on a night sky, a little darker than the sky by day
+      const day = cfg.blend === 'normal';
+      g.globalCompositeOperation = day ? 'source-over' : 'lighter';
+      g.strokeStyle = day ? '#6d7c90' : '#bcd8ff'; g.lineWidth = 1; g.lineCap = 'round';
       for (const s of streaks) { g.globalAlpha = s.a; g.beginPath(); g.moveTo(s.x, s.y); g.lineTo(s.x - s.len * 0.08, s.y - s.len); g.stroke(); }
       g.globalCompositeOperation = 'source-over';
       for (const d of drops) {
@@ -432,7 +442,7 @@ function rainOnGlass(cfg: { colors?: readonly string[]; density?: number }): Sys
 // ── the abyss: jellyfish ─────────────────────────────────────────────────────
 interface Jelly { x: number; y: number; s: number; ph: number; period: number; vx: number; vy: number; tilt: number; c: string; n: number; seed: number }
 
-function jellyfish(cfg: { colors?: readonly string[]; density?: number }): System {
+function jellyfish(cfg: { colors?: readonly string[]; density?: number; blend?: 'normal' }): System {
   const colors = okColors(cfg.colors, ['#7fb4ff', '#ff7ad9', '#6dffd8', '#b28bff']);
   const halos = colors.map(c => sprites(64, glow(c))[2]);
   let w = 0, h = 0, js: Jelly[] = [];
@@ -466,7 +476,7 @@ function jellyfish(cfg: { colors?: readonly string[]; density?: number }): Syste
     },
     draw: (g, dpr) => {
       const t = performance.now() / 1000;
-      g.globalCompositeOperation = 'lighter';
+      g.globalCompositeOperation = cfg.blend === 'normal' ? 'source-over' : 'lighter';
       for (const j of js) {
         // the bell squeezes fast and relaxes slowly
         const q = j.ph < 0.25 ? j.ph / 0.25 : 1 - (j.ph - 0.25) / 0.75;
@@ -587,12 +597,97 @@ function aurora(cfg: { colors?: readonly string[]; density?: number }): System {
 function systemsFor(cfg: AmbientConfig): System[] {
   const d = cfg.density;
   switch (cfg.kind) {
-    case 'woodsprites': return [system('spores', { colors: cfg.extra, density: d }), system('woodsprites', cfg)];
-    case 'rain': return [system('bokeh', { colors: cfg.extra, density: d }), rainOnGlass(cfg)];
+    case 'woodsprites': return [system('spores', { colors: cfg.extra, density: d, blend: cfg.blend }), system('woodsprites', cfg)];
+    case 'rain': return [system('bokeh', { colors: cfg.extra, density: d, blend: cfg.blend }), rainOnGlass(cfg)];
     case 'abyss': return [system('marinesnow', { density: d }), jellyfish(cfg), plankton({ colors: cfg.extra })];
     case 'aurora': return [aurora(cfg), system('snow', { colors: cfg.extra, density: d })];
-    default: return [system(cfg.kind, cfg)];
+    case 'shallows': return [system('bubbles', { colors: cfg.extra, density: d }), jellyfish({ ...cfg, blend: 'normal' })];
+    default: return [system(cfg.kind as SpriteKind, cfg)];
   }
+}
+
+/** Run a config's systems on a canvas until the returned stop() is called. The page's backdrop (Ambient below) and the
+ *  screensaver's scenes (components/Screensaver.tsx) both use it. `always` keeps it drawing while Shell:B FM plays. */
+export function runAmbient(cv: HTMLCanvasElement, cfg: AmbientConfig, opts: { always?: boolean } = {}): () => void {
+  const ctx = cv.getContext('2d')!;
+  const html = document.documentElement;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const systems = systemsFor(cfg);
+  const env: Env = { wind: 0, mx: -1e4, my: -1e4, mvx: 0, mvy: 0, t: 0 };
+  let w = 0, h = 0, raf = 0, last = 0, gust = 0;
+  let nextSync = performance.now() + rand(14e3, 26e3);
+
+  const resize = () => {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    // innerWidth/Height, not the element box: under the UI scale's CSS zoom the two disagree (see .dj-canvas)
+    w = window.innerWidth; h = window.innerHeight;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    systems.forEach(s => s.resize(w, h));
+  };
+  const draw = () => {
+    const dpr = cv.width / (w || 1);
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    systems.forEach(s => s.draw(ctx, dpr));
+  };
+  const active = () => (opts.always || !html.classList.contains('dj-live')) && !document.hidden;
+
+  const frame = (now: number) => {
+    raf = 0;
+    if (!active()) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); return; }
+    const dt = Math.min(0.05, (now - last) / 1000 || 0.016); last = now; env.t += dt;
+    // wind: a slow swell with an occasional gust
+    if (Math.random() < dt / 9) gust = rand(25, 60) * (Math.random() < 0.7 ? 1 : -1);
+    gust *= Math.pow(0.35, dt);
+    env.wind = Math.sin(env.t * 0.21) * 10 + Math.sin(env.t * 0.53) * 5 + gust;
+    env.mvx *= Math.pow(0.02, dt); env.mvy *= Math.pow(0.02, dt);
+    if (now > nextSync) {
+      nextSync = now + rand(22e3, 40e3);
+      const ox = rand(0.2, 0.8) * w, oy = rand(0.5, 0.95) * h;
+      systems.forEach(s => s.ripple?.(ox, oy));
+    }
+    systems.forEach(s => s.step(dt, env));
+    draw();
+    raf = requestAnimationFrame(frame);
+  };
+  const wake = () => {
+    if (reduce.matches) { draw(); return; }
+    if (!raf && active()) { last = performance.now(); raf = requestAnimationFrame(frame); }
+  };
+
+  resize();
+  if (reduce.matches) {
+    systems.forEach(s => s.still());
+    // procedural systems need a moment of simulation to look like anything
+    for (let i = 0; i < 90; i++) systems.forEach(s => s.step(1 / 30, env));
+  }
+  wake();
+
+  let lx = 0, ly = 0, lt = 0;
+  const onMove = (e: PointerEvent) => {
+    const t = performance.now(), dt = Math.max(16, t - lt) / 1000;
+    if (lt && t - lt < 200) { env.mvx = (e.clientX - lx) / dt; env.mvy = (e.clientY - ly) / dt; }
+    env.mvx = Math.max(-600, Math.min(600, env.mvx)); env.mvy = Math.max(-600, Math.min(600, env.mvy));
+    lx = env.mx = e.clientX; ly = env.my = e.clientY; lt = t;
+  };
+  const onLeave = () => { env.mx = env.my = -1e4; };
+  const onResize = () => { resize(); wake(); };
+  const mo = new MutationObserver(wake);
+  mo.observe(html, { attributes: true, attributeFilter: ['class'] });
+  window.addEventListener('pointermove', onMove, { passive: true });
+  document.addEventListener('pointerleave', onLeave);
+  window.addEventListener('resize', onResize);
+  document.addEventListener('visibilitychange', wake);
+  reduce.addEventListener('change', wake);
+  return () => {
+    cancelAnimationFrame(raf); mo.disconnect();
+    window.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerleave', onLeave);
+    window.removeEventListener('resize', onResize);
+    document.removeEventListener('visibilitychange', wake);
+    reduce.removeEventListener('change', wake);
+  };
 }
 
 export function Ambient() {
@@ -609,88 +704,7 @@ export function Ambient() {
     return () => { mo.disconnect(); window.removeEventListener('shellb:themes', update); };
   }, []);
 
-  useEffect(() => {
-    if (!cfg) return;
-    const cv = ref.current!, ctx = cv.getContext('2d')!;
-    const html = document.documentElement;
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const systems = systemsFor(cfg);
-    const env: Env = { wind: 0, mx: -1e4, my: -1e4, mvx: 0, mvy: 0, t: 0 };
-    let w = 0, h = 0, raf = 0, last = 0, gust = 0;
-    let nextSync = performance.now() + rand(14e3, 26e3);
-
-    const resize = () => {
-      const dpr = Math.min(2, window.devicePixelRatio || 1);
-      // innerWidth/Height, not the element box: under the UI scale's CSS zoom the two disagree (see .dj-canvas)
-      w = window.innerWidth; h = window.innerHeight;
-      cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      systems.forEach(s => s.resize(w, h));
-    };
-    const draw = () => {
-      const dpr = cv.width / (w || 1);
-      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      systems.forEach(s => s.draw(ctx, dpr));
-    };
-    const active = () => !html.classList.contains('dj-live') && !document.hidden;
-
-    const frame = (now: number) => {
-      raf = 0;
-      if (!active()) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); return; }
-      const dt = Math.min(0.05, (now - last) / 1000 || 0.016); last = now; env.t += dt;
-      // wind: a slow swell with an occasional gust
-      if (Math.random() < dt / 9) gust = rand(25, 60) * (Math.random() < 0.7 ? 1 : -1);
-      gust *= Math.pow(0.35, dt);
-      env.wind = Math.sin(env.t * 0.21) * 10 + Math.sin(env.t * 0.53) * 5 + gust;
-      env.mvx *= Math.pow(0.02, dt); env.mvy *= Math.pow(0.02, dt);
-      if (now > nextSync) {
-        nextSync = now + rand(22e3, 40e3);
-        const ox = rand(0.2, 0.8) * w, oy = rand(0.5, 0.95) * h;
-        systems.forEach(s => s.ripple?.(ox, oy));
-      }
-      systems.forEach(s => s.step(dt, env));
-      draw();
-      raf = requestAnimationFrame(frame);
-    };
-    const wake = () => {
-      if (reduce.matches) { draw(); return; }
-      if (!raf && active()) { last = performance.now(); raf = requestAnimationFrame(frame); }
-    };
-
-    resize();
-    if (reduce.matches) {
-      systems.forEach(s => s.still());
-      // procedural systems need a moment of simulation to look like anything
-      for (let i = 0; i < 90; i++) systems.forEach(s => s.step(1 / 30, env));
-    }
-    wake();
-
-    let lx = 0, ly = 0, lt = 0;
-    const onMove = (e: PointerEvent) => {
-      const t = performance.now(), dt = Math.max(16, t - lt) / 1000;
-      if (lt && t - lt < 200) { env.mvx = (e.clientX - lx) / dt; env.mvy = (e.clientY - ly) / dt; }
-      env.mvx = Math.max(-600, Math.min(600, env.mvx)); env.mvy = Math.max(-600, Math.min(600, env.mvy));
-      lx = env.mx = e.clientX; ly = env.my = e.clientY; lt = t;
-    };
-    const onLeave = () => { env.mx = env.my = -1e4; };
-    const onResize = () => { resize(); wake(); };
-    const mo = new MutationObserver(wake);
-    mo.observe(html, { attributes: true, attributeFilter: ['class'] });
-    window.addEventListener('pointermove', onMove, { passive: true });
-    document.addEventListener('pointerleave', onLeave);
-    window.addEventListener('resize', onResize);
-    document.addEventListener('visibilitychange', wake);
-    reduce.addEventListener('change', wake);
-    return () => {
-      cancelAnimationFrame(raf); mo.disconnect();
-      window.removeEventListener('pointermove', onMove);
-      document.removeEventListener('pointerleave', onLeave);
-      window.removeEventListener('resize', onResize);
-      document.removeEventListener('visibilitychange', wake);
-      reduce.removeEventListener('change', wake);
-    };
-  }, [key]);  // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => (cfg ? runAmbient(ref.current!, cfg) : undefined), [key]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   return cfg ? <canvas key={key} ref={ref} className="shellb-ambient" data-kind={cfg.kind} aria-hidden /> : null;
 }

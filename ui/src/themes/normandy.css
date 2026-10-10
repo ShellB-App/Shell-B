@@ -1,4 +1,4 @@
-/* ── Normandy theme (dark only; light mode falls back to Classic light) ───────────────────────────────────────────
+/* ── Normandy theme (dark, and a light version at the end of this file) ───────────────────────────────────────────
    Mass Effect × fireflies. Shore leave at night: a ringless gas giant hangs in the sky, a blue anamorphic flare
    streaks off a near star, the galaxy's dust band crosses overhead, and fireflies drift over a dark treeline (the
    ME3 dream forest, minus the ghosts). The UI is the ship's holographic layer: Alliance blue panels with scanlines and
@@ -13,7 +13,7 @@
      body::after   -2  treeline + horizon glow
      .shellb-ambient -1  the swarm                                                                               */
 
-html.dark[data-skin='normandy'] {
+html[data-skin='normandy'] {
   --nm-void: #04070e;
   --nm-blue: #3aa0ff;      /* Alliance / Paragon */
   --nm-ice: #8fe4ff;       /* hologram highlight */
@@ -51,58 +51,58 @@ html.dark[data-skin='normandy'] {
 }
 
 /* ── type ────────────────────────────────────────────────────────────────── */
-html.dark[data-skin='normandy'] body { font-family: var(--nm-body); font-size: 15px; }
-html.dark[data-skin='normandy'] .prose-shellb { font-size: 1rem; line-height: 1.65; }
-html.dark[data-skin='normandy'] .prose-shellb h1,
-html.dark[data-skin='normandy'] .prose-shellb h2,
-html.dark[data-skin='normandy'] .prose-shellb h3 {
+html[data-skin='normandy'] body { font-family: var(--nm-body); font-size: 15px; }
+html[data-skin='normandy'] .prose-shellb { font-size: 1rem; line-height: 1.65; }
+html[data-skin='normandy'] .prose-shellb h1,
+html[data-skin='normandy'] .prose-shellb h2,
+html[data-skin='normandy'] .prose-shellb h3 {
   font-family: var(--nm-display); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
 }
-html.dark[data-skin='normandy'] .prose-shellb h1 { font-size: 1.6em; text-shadow: 0 0 16px rgba(58, 160, 255, 0.4); }
-html.dark[data-skin='normandy'] .prose-shellb h2 { font-size: 1.35em; padding-bottom: 0.3em; border-bottom: 1px solid var(--border-subtle); position: relative; }
-html.dark[data-skin='normandy'] .prose-shellb h2::after {
+html[data-skin='normandy'] .prose-shellb h1 { font-size: 1.6em; text-shadow: 0 0 16px rgba(58, 160, 255, 0.4); }
+html[data-skin='normandy'] .prose-shellb h2 { font-size: 1.35em; padding-bottom: 0.3em; border-bottom: 1px solid var(--border-subtle); position: relative; }
+html[data-skin='normandy'] .prose-shellb h2::after {
   content: ''; position: absolute; left: 0; bottom: -1px; width: 56px; height: 2px; background: var(--nm-blue); box-shadow: 0 0 8px var(--nm-blue);
 }
-html.dark[data-skin='normandy'] .prose-shellb h3::before { content: '// '; color: var(--nm-blue); letter-spacing: 0; }
-html.dark[data-skin='normandy'] .prose-shellb a { color: var(--nm-ice); text-decoration-color: rgba(143, 228, 255, 0.4); }
-html.dark[data-skin='normandy'] .prose-shellb li::marker { color: var(--nm-amber); }
-html.dark[data-skin='normandy'] .prose-shellb blockquote {
+html[data-skin='normandy'] .prose-shellb h3::before { content: '// '; color: var(--nm-blue); letter-spacing: 0; }
+html[data-skin='normandy'] .prose-shellb a { color: var(--nm-ice); text-decoration-color: rgba(143, 228, 255, 0.4); }
+html[data-skin='normandy'] .prose-shellb li::marker { color: var(--nm-amber); }
+html[data-skin='normandy'] .prose-shellb blockquote {
   border-left: 2px solid var(--nm-blue); box-shadow: -6px 0 14px -8px var(--nm-blue);
   background: linear-gradient(90deg, rgba(58, 160, 255, 0.07), transparent 70%);
 }
-html.dark[data-skin='normandy'] .prose-shellb th {
+html[data-skin='normandy'] .prose-shellb th {
   font-family: var(--nm-display); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.85em;
 }
-html.dark[data-skin='normandy'] .prose-shellb hr { border-color: var(--border-subtle); position: relative; overflow: visible; }
-html.dark[data-skin='normandy'] .prose-shellb pre,
-html.dark[data-skin='normandy'] .prose-shellb :not(pre) > code { border-radius: var(--nm-radius); }
-html.dark[data-skin='normandy'] ::selection { background: rgba(58, 160, 255, 0.42); }
-html.dark[data-skin='normandy'] kbd { font-family: var(--nm-mono); border-radius: 2px; letter-spacing: 0; text-transform: none; }
+html[data-skin='normandy'] .prose-shellb hr { border-color: var(--border-subtle); position: relative; overflow: visible; }
+html[data-skin='normandy'] .prose-shellb pre,
+html[data-skin='normandy'] .prose-shellb :not(pre) > code { border-radius: var(--nm-radius); }
+html[data-skin='normandy'] ::selection { background: rgba(58, 160, 255, 0.42); }
+html[data-skin='normandy'] kbd { font-family: var(--nm-mono); border-radius: 2px; letter-spacing: 0; text-transform: none; }
 
 /* ── geometry: soft cards become hard-edged holo panels ──────────────────── */
-html.dark[data-skin='normandy'] :where([class*='rounded-md'], [class*='rounded-lg'], [class*='rounded-xl'], [class*='rounded-2xl'],
+html[data-skin='normandy'] :where([class*='rounded-md'], [class*='rounded-lg'], [class*='rounded-xl'], [class*='rounded-2xl'],
   [class*='rounded-3xl'], [class*='rounded-[20px]']) { border-radius: var(--nm-radius) !important; }
-html.dark[data-skin='normandy'] .shadow-lg, html.dark[data-skin='normandy'] .shadow-xl, html.dark[data-skin='normandy'] .shadow-2xl {
+html[data-skin='normandy'] .shadow-lg, html[data-skin='normandy'] .shadow-xl, html[data-skin='normandy'] .shadow-2xl {
   box-shadow: 0 14px 44px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px var(--border-subtle), 0 0 26px -10px rgba(58, 160, 255, 0.4) !important;
 }
 
 /* primary buttons: an omni-tool slab with one chamfered corner. ~= matches the exact class only so tints stay tints */
-html.dark[data-skin='normandy'] [class~='bg-[var(--accent)]'] {
+html[data-skin='normandy'] [class~='bg-[var(--accent)]'] {
   background-image: var(--sunset);
   border-radius: 0 !important;
   clip-path: polygon(0 0, calc(100% - var(--nm-chamfer)) 0, 100% var(--nm-chamfer), 100% 100%, 0 100%);
   font-family: var(--nm-display); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
   filter: drop-shadow(0 0 9px rgba(255, 154, 31, 0.45));
 }
-html.dark[data-skin='normandy'] [class~='bg-[var(--accent)]'][class*='rounded-full'] { clip-path: none; border-radius: var(--nm-radius) !important; }
-html.dark[data-skin='normandy'] [class~='bg-[var(--accent)]']:disabled {
+html[data-skin='normandy'] [class~='bg-[var(--accent)]'][class*='rounded-full'] { clip-path: none; border-radius: var(--nm-radius) !important; }
+html[data-skin='normandy'] [class~='bg-[var(--accent)]']:disabled {
   background: var(--bg-tertiary) !important; background-image: none !important; color: var(--text-muted) !important;
   filter: none !important; opacity: 1 !important; cursor: not-allowed;
 }
 
 /* ── backdrop ────────────────────────────────────────────────────────────── */
 /* the sky: scattered faint stars (three tiled layers so they cover any size), the galaxy's dust band, nebula washes */
-html.dark[data-skin='normandy'] body {
+html[data-skin='normandy'] body {
   background:
     radial-gradient(1px 1px at 9% 14%, rgba(255,255,255,.75), transparent 60%),
     radial-gradient(1px 1px at 38% 27%, rgba(255,255,255,.5), transparent 60%),
@@ -125,7 +125,7 @@ html.dark[data-skin='normandy'] body {
 }
 
 /* bright stars twinkling in phase, and one near star with a blue anamorphic lens flare (the series' signature) */
-html.dark[data-skin='normandy'] body::before {
+html[data-skin='normandy'] body::before {
   content: ''; position: fixed; inset: 0; pointer-events: none; z-index: -3;
   background:
     radial-gradient(2.5px 2.5px at 16% 18%, #fff, transparent 70%),
@@ -141,10 +141,10 @@ html.dark[data-skin='normandy'] body::before {
   animation: nm-twinkle 6s ease-in-out infinite alternate;
 }
 /* filter, not opacity: the twinkle animates opacity */
-html.dark[data-skin='normandy']:not(:has(.sf-hero)) body::before { filter: opacity(0.4); }
+html[data-skin='normandy']:not(:has(.sf-hero)) body::before { filter: opacity(0.4); }
 
 /* the planet: a gas giant rising over the upper right, lit from the lower left, a thin blue atmosphere on the lit limb */
-html.dark[data-skin='normandy'] #root::before {
+html[data-skin='normandy'] #root::before {
   content: ''; position: fixed; pointer-events: none; z-index: -2;
   width: 84vmin; height: 84vmin; right: -30vmin; top: -40vmin; border-radius: 50%;
   background:
@@ -160,21 +160,21 @@ html.dark[data-skin='normandy'] #root::before {
   transition: opacity 0.6s ease;
 }
 /* dimmer behind busy screens; full only on the welcome screen */
-html.dark[data-skin='normandy']:not(:has(.sf-hero)) #root::before { opacity: 0.55; }
+html[data-skin='normandy']:not(:has(.sf-hero)) #root::before { opacity: 0.55; }
 
 /* the treeline, with a cold horizon glow behind it */
-html.dark[data-skin='normandy'] body::after {
+html[data-skin='normandy'] body::after {
   content: ''; position: fixed; left: 0; right: 0; bottom: 0; height: 280px; pointer-events: none; z-index: -2;
   background:
-    url('./scenery/normandy-treeline.svg') repeat-x left bottom / 1600px 150px,
+    url("./scenery/normandy-treeline.svg") repeat-x left bottom / 1600px 150px,
     radial-gradient(ellipse 45% 70% at 28% 100%, rgba(227, 247, 122, 0.06), transparent 70%),
     linear-gradient(to top, rgba(58, 160, 255, 0.13), rgba(58, 160, 255, 0.04) 45%, transparent 75%);
   transition: opacity 0.6s ease;
 }
-html.dark[data-skin='normandy']:not(:has(.sf-hero)) body::after { opacity: 0.6; }
+html[data-skin='normandy']:not(:has(.sf-hero)) body::after { opacity: 0.6; }
 
 /* the fireflies (canvas, ./Ambient.tsx) */
-html.dark[data-skin='normandy']:not(:has(.sf-hero)) .shellb-ambient { opacity: 0.75; }
+html[data-skin='normandy']:not(:has(.sf-hero)) .shellb-ambient { opacity: 0.75; }
 
 @keyframes nm-twinkle { 0% { opacity: 0.45; } 100% { opacity: 1; } }
 @keyframes nm-pulse { 0%, 100% { opacity: 0.3; } 45% { opacity: 1; } 70% { opacity: 0.6; } }
@@ -183,72 +183,72 @@ html.dark[data-skin='normandy']:not(:has(.sf-hero)) .shellb-ambient { opacity: 0
 @keyframes nm-sweep { 0% { background-position: -40% 0; } 100% { background-position: 140% 0; } }
 
 /* ── chrome ──────────────────────────────────────────────────────────────── */
-html.dark[data-skin='normandy'] .sf-sidebar {
+html[data-skin='normandy'] .sf-sidebar {
   position: relative; box-shadow: 1px 0 22px -6px rgba(58, 160, 255, 0.24);
   background: var(--nm-scan), color-mix(in srgb, var(--bg-secondary) 88%, transparent); backdrop-filter: blur(10px);
 }
-html.dark[data-skin='normandy'] .sf-sidebar::before {
+html[data-skin='normandy'] .sf-sidebar::before {
   content: ''; position: absolute; top: 0; right: -1px; width: 2px; height: 96px; z-index: 1;
   background: linear-gradient(180deg, var(--nm-ice), var(--nm-blue) 60%, transparent); box-shadow: 0 0 8px var(--nm-blue);
 }
-html.dark[data-skin='normandy'] .sf-brand {
+html[data-skin='normandy'] .sf-brand {
   font-family: var(--nm-display); font-weight: 700; font-size: 1.2rem; letter-spacing: 0.18em; text-transform: uppercase;
   color: var(--text-primary) !important; display: inline-flex; align-items: center; gap: 0.5rem;
 }
 /* a firefly lives next to the name */
-html.dark[data-skin='normandy'] .sf-brand::before {
+html[data-skin='normandy'] .sf-brand::before {
   content: ''; width: 8px; height: 8px; border-radius: 50%; background: #f6ffd0;
   box-shadow: 0 0 6px 2px var(--nm-glow), 0 0 16px 4px rgba(227, 247, 122, 0.45);
   animation: nm-pulse 3.7s ease-in-out infinite;
 }
-html.dark[data-skin='normandy'] .sf-label {
+html[data-skin='normandy'] .sf-label {
   font-family: var(--nm-display); font-weight: 600; font-size: 11.5px !important; text-transform: uppercase; letter-spacing: 0.16em;
   display: flex; align-items: center; gap: 0.4rem;
 }
-html.dark[data-skin='normandy'] div.sf-label::before { content: ''; width: 6px; height: 6px; border: 1px solid var(--nm-blue); transform: rotate(45deg); box-shadow: 0 0 5px var(--nm-blue); }
-html.dark[data-skin='normandy'] div.sf-label::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--border-strong), transparent); margin-left: 0.3rem; }
+html[data-skin='normandy'] div.sf-label::before { content: ''; width: 6px; height: 6px; border: 1px solid var(--nm-blue); transform: rotate(45deg); box-shadow: 0 0 5px var(--nm-blue); }
+html[data-skin='normandy'] div.sf-label::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--border-strong), transparent); margin-left: 0.3rem; }
 
 /* active conversation: a lit blue rail on the left edge */
-html.dark[data-skin='normandy'] .sf-sidebar [class*='bg-[var(--bg-hover)]'][class*='cursor-pointer'] {
+html[data-skin='normandy'] .sf-sidebar [class*='bg-[var(--bg-hover)]'][class*='cursor-pointer'] {
   box-shadow: inset 2px 0 0 var(--nm-blue); background: linear-gradient(90deg, color-mix(in srgb, var(--nm-blue) 18%, transparent), transparent 80%);
 }
 
 /* top bar: glass, with a slow highlight sweeping along its bottom edge */
-html.dark[data-skin='normandy'] .sf-topbar,
-html.dark[data-skin='normandy'] header.h-12 {
+html[data-skin='normandy'] .sf-topbar,
+html[data-skin='normandy'] header.h-12 {
   background: color-mix(in srgb, var(--bg-primary) 66%, transparent); backdrop-filter: blur(8px); position: relative; z-index: 1;
 }
-html.dark[data-skin='normandy'] .sf-topbar::after {
+html[data-skin='normandy'] .sf-topbar::after {
   content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; pointer-events: none;
   background: linear-gradient(90deg, transparent, var(--nm-ice), transparent) no-repeat; background-size: 22% 100%;
   animation: nm-sweep 9s ease-in-out infinite; opacity: 0.6;
 }
-html.dark[data-skin='normandy'] .sf-topbar .text-sm.font-medium,
-html.dark[data-skin='normandy'] .sf-topbar > div > span.text-sm,
-html.dark[data-skin='normandy'] header.h-12 > div > span.font-semibold {
+html[data-skin='normandy'] .sf-topbar .text-sm.font-medium,
+html[data-skin='normandy'] .sf-topbar > div > span.text-sm,
+html[data-skin='normandy'] header.h-12 > div > span.font-semibold {
   font-family: var(--nm-display); font-weight: 600; font-size: 15px; letter-spacing: 0.1em; text-transform: uppercase;
 }
-html.dark[data-skin='normandy'] nav [class*='rounded-r-full'] { border-radius: 0 !important; background: var(--nm-amber) !important; width: 3px; box-shadow: 0 0 8px var(--nm-amber); }
+html[data-skin='normandy'] nav [class*='rounded-r-full'] { border-radius: 0 !important; background: var(--nm-amber) !important; width: 3px; box-shadow: 0 0 8px var(--nm-amber); }
 
 /* ── welcome ─────────────────────────────────────────────────────────────── */
 /* the agent sits in a galaxy-map orbit: a dashed ring and a sweeping arc turning opposite ways */
-html.dark[data-skin='normandy'] .sf-hero > :first-child {
+html[data-skin='normandy'] .sf-hero > :first-child {
   position: relative; overflow: visible; border-radius: 50% !important; margin-bottom: 1.6rem;
   box-shadow: 0 0 0 1px var(--border-strong), 0 0 0 6px var(--bg-primary), 0 0 0 7px var(--border-subtle), 0 0 34px 6px rgba(58, 160, 255, 0.35) !important;
 }
-html.dark[data-skin='normandy'] .sf-hero > :first-child::before,
-html.dark[data-skin='normandy'] .sf-hero > :first-child::after { content: ''; position: absolute; border-radius: 50%; pointer-events: none; }
-html.dark[data-skin='normandy'] .sf-hero > :first-child::before {
+html[data-skin='normandy'] .sf-hero > :first-child::before,
+html[data-skin='normandy'] .sf-hero > :first-child::after { content: ''; position: absolute; border-radius: 50%; pointer-events: none; }
+html[data-skin='normandy'] .sf-hero > :first-child::before {
   inset: -20px; border: 1px dashed rgba(143, 228, 255, 0.32); animation: nm-spin 60s linear infinite;
 }
-html.dark[data-skin='normandy'] .sf-hero > :first-child::after {
+html[data-skin='normandy'] .sf-hero > :first-child::after {
   inset: -34px;
   background: conic-gradient(from 0deg, transparent 0 62%, rgba(143, 228, 255, 0.15) 70%, var(--nm-ice) 84%, transparent 84.5% 100%);
   -webkit-mask: radial-gradient(circle closest-side, transparent calc(100% - 1.5px), #000 calc(100% - 1px));
   mask: radial-gradient(circle closest-side, transparent calc(100% - 1.5px), #000 calc(100% - 1px));
   animation: nm-spin-back 14s linear infinite;
 }
-html.dark[data-skin='normandy'] .sf-hero h1 {
+html[data-skin='normandy'] .sf-hero h1 {
   font-family: var(--nm-display); font-weight: 600; text-transform: uppercase; letter-spacing: 0.16em;
   font-size: clamp(2rem, 4.2vw, 3.1rem); line-height: 1.05; margin-top: 0.5rem; padding: 0.15em 0.6em 0;
   text-shadow: 0 0 22px rgba(58, 160, 255, 0.5);
@@ -256,20 +256,20 @@ html.dark[data-skin='normandy'] .sf-hero h1 {
   background: radial-gradient(ellipse 50% 3px at 50% 52%, rgba(143, 228, 255, 0.45), transparent 100%),
     radial-gradient(ellipse 22% 20% at 50% 52%, rgba(58, 160, 255, 0.12), transparent 100%);
 }
-html.dark[data-skin='normandy'] .sf-hero h1::after {
+html[data-skin='normandy'] .sf-hero h1::after {
   content: ''; display: block; width: 132px; height: 3px; margin: 0.9rem auto 0.2rem;
   background: linear-gradient(90deg, transparent, var(--nm-blue) 20% 80%, transparent); box-shadow: 0 0 10px var(--nm-blue);
   clip-path: polygon(4px 0, calc(100% - 4px) 0, 100% 100%, 0 100%);
 }
-html.dark[data-skin='normandy'] .sf-hero h1 + p { font-size: 14.5px; }
-html.dark[data-skin='normandy'] .sf-hero h1 + p > span:first-child {
+html[data-skin='normandy'] .sf-hero h1 + p { font-size: 14.5px; }
+html[data-skin='normandy'] .sf-hero h1 + p > span:first-child {
   font-family: var(--nm-display); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; font-size: 1.05em; color: var(--nm-ice) !important;
 }
 
 /* quick-start cards: codex panels. Chamfered top-left and bottom-right (the cut edges redrawn as lines), scanlines,
    a mission number, and an omni-tool rail that lights on hover */
-html.dark[data-skin='normandy'] .sf-hero > div.grid { counter-reset: nm-mission; gap: 12px; }
-html.dark[data-skin='normandy'] .sf-card {
+html[data-skin='normandy'] .sf-hero > div.grid { counter-reset: nm-mission; gap: 12px; }
+html[data-skin='normandy'] .sf-card {
   position: relative; counter-increment: nm-mission; padding: 16px 16px 14px 18px !important;
   border-radius: 0 !important; backdrop-filter: blur(6px);
   clip-path: polygon(var(--nm-chamfer) 0, 100% 0, 100% calc(100% - var(--nm-chamfer)), calc(100% - var(--nm-chamfer)) 100%, 0 100%, 0 var(--nm-chamfer));
@@ -284,70 +284,70 @@ html.dark[data-skin='normandy'] .sf-card {
   background-position: left top, right bottom, 0 0 !important;
   transition: border-color .15s, transform .15s, background-color .15s, filter .15s;
 }
-html.dark[data-skin='normandy'] .sf-card::before {
+html[data-skin='normandy'] .sf-card::before {
   content: '0' counter(nm-mission); position: absolute; top: 14px; right: 16px;
   font-family: var(--nm-mono); font-size: 10px; letter-spacing: 0.1em; color: var(--text-muted);
 }
-html.dark[data-skin='normandy'] .sf-card::after {
+html[data-skin='normandy'] .sf-card::after {
   content: ''; position: absolute; left: 0; top: var(--nm-chamfer); bottom: 0; width: 2px; background: var(--nm-amber); box-shadow: 0 0 8px var(--nm-amber);
   transform: scaleY(0); transform-origin: top; transition: transform .2s ease;
 }
-html.dark[data-skin='normandy'] .sf-card:hover {
+html[data-skin='normandy'] .sf-card:hover {
   transform: translateY(-1px); background-color: color-mix(in srgb, var(--bg-hover) 86%, transparent) !important;
   filter: drop-shadow(0 0 12px rgba(58, 160, 255, 0.35));
 }
-html.dark[data-skin='normandy'] .sf-card:hover::before { color: var(--nm-amber); }
-html.dark[data-skin='normandy'] .sf-card:hover::after { transform: scaleY(1); }
-html.dark[data-skin='normandy'] .sf-card > div:first-child {
+html[data-skin='normandy'] .sf-card:hover::before { color: var(--nm-amber); }
+html[data-skin='normandy'] .sf-card:hover::after { transform: scaleY(1); }
+html[data-skin='normandy'] .sf-card > div:first-child {
   font-family: var(--nm-display); font-weight: 600; font-size: 14px; letter-spacing: 0.12em; text-transform: uppercase; padding-right: 28px;
 }
-html.dark[data-skin='normandy'] .sf-card > div:last-child { font-size: 13px; margin-top: 4px; }
+html[data-skin='normandy'] .sf-card > div:last-child { font-size: 13px; margin-top: 4px; }
 
-html.dark[data-skin='normandy'] .sf-tagline {
+html[data-skin='normandy'] .sf-tagline {
   font-family: var(--nm-mono); font-size: 10.5px !important; letter-spacing: 0.08em; text-transform: uppercase;
   padding: 3px 10px; background: color-mix(in srgb, var(--bg-primary) 78%, transparent);
 }
-html.dark[data-skin='normandy'] .sf-tagline::before { content: '◢ '; color: var(--nm-amber); }
+html[data-skin='normandy'] .sf-tagline::before { content: '◢ '; color: var(--nm-amber); }
 
 /* ── composer: the omni-tool console. Blue at rest, amber when it's live ─── */
-html.dark[data-skin='normandy'] .sf-composer {
+html[data-skin='normandy'] .sf-composer {
   /* backdrop-filter makes a stacking context that would trap the agent menu and pop-ups: lift the whole composer */
   position: relative; z-index: 20; border-radius: 0 !important;
   background: var(--nm-scan), color-mix(in srgb, var(--bg-secondary) 90%, transparent) !important; backdrop-filter: blur(14px);
   box-shadow: 0 0 28px -12px rgba(58, 160, 255, 0.55);
   transition: box-shadow .2s ease, border-color .2s ease;
 }
-html.dark[data-skin='normandy'] .sf-composer:focus-within {
+html[data-skin='normandy'] .sf-composer:focus-within {
   border-color: rgba(255, 154, 31, 0.45) !important;
   box-shadow: 0 0 30px -10px rgba(255, 154, 31, 0.45), inset 0 0 40px -28px rgba(255, 154, 31, 0.6);
 }
-html.dark[data-skin='normandy'] .sf-composer::before {
+html[data-skin='normandy'] .sf-composer::before {
   content: ''; position: absolute; left: -1px; top: -1px; width: 64px; height: 2px; background: var(--nm-blue); box-shadow: 0 0 8px var(--nm-blue);
   transition: width .3s ease, background .2s ease, box-shadow .2s ease;
 }
-html.dark[data-skin='normandy'] .sf-composer:focus-within::before { width: 120px; background: var(--nm-amber); box-shadow: 0 0 10px var(--nm-amber); }
-html.dark[data-skin='normandy'] .sf-composer::after {
+html[data-skin='normandy'] .sf-composer:focus-within::before { width: 120px; background: var(--nm-amber); box-shadow: 0 0 10px var(--nm-amber); }
+html[data-skin='normandy'] .sf-composer::after {
   content: ''; position: absolute; right: -1px; bottom: -1px; width: 12px; height: 12px; pointer-events: none;
   border-right: 1px solid var(--nm-ice); border-bottom: 1px solid var(--nm-ice);
 }
-html.dark[data-skin='normandy'] .sf-composer:focus-within::after { border-color: var(--nm-amber); }
-html.dark[data-skin='normandy'] .sf-composer textarea { font-family: var(--nm-body); font-size: 15px; }
+html[data-skin='normandy'] .sf-composer:focus-within::after { border-color: var(--nm-amber); }
+html[data-skin='normandy'] .sf-composer textarea { font-family: var(--nm-body); font-size: 15px; }
 
 /* ── the other apps ──────────────────────────────────────────────────────── */
-html.dark[data-skin='normandy'] :where(h1[class*='tracking-tight']:not([class*='text-base'])) {
+html[data-skin='normandy'] :where(h1[class*='tracking-tight']:not([class*='text-base'])) {
   font-family: var(--nm-display); font-weight: 600; font-size: 1.85rem; letter-spacing: 0.1em; text-transform: uppercase;
   line-height: 1.15; padding-bottom: 10px;
   background: linear-gradient(90deg, var(--nm-blue), transparent) no-repeat left bottom / 80px 2px;
 }
-html.dark[data-skin='normandy'] [class*='uppercase'][class*='tracking-w']:not(kbd) { font-family: var(--nm-display); font-weight: 600; letter-spacing: 0.16em; }
-html.dark[data-skin='normandy'] h2[class*='uppercase'][class*='tracking-w'] { font-size: 12.5px; }
+html[data-skin='normandy'] [class*='uppercase'][class*='tracking-w']:not(kbd) { font-family: var(--nm-display); font-weight: 600; letter-spacing: 0.16em; }
+html[data-skin='normandy'] h2[class*='uppercase'][class*='tracking-w'] { font-size: 12.5px; }
 
 /* ── motion & misc ───────────────────────────────────────────────────────── */
-html.dark[data-skin='normandy'] * { scrollbar-width: thin; scrollbar-color: rgba(143, 228, 255, 0.22) transparent; }
-html.dark[data-skin='normandy'] ::-webkit-scrollbar-thumb { border-radius: 0; background: rgba(143, 228, 255, 0.22); background-clip: padding-box; }
-html.dark[data-skin='normandy'] ::-webkit-scrollbar-thumb:hover { background: var(--nm-amber); background-clip: padding-box; }
-html.dark[data-skin='normandy'] .caret::after { background: var(--nm-amber); width: 0.55em; box-shadow: 0 0 8px var(--nm-amber); }
-html.dark[data-skin='normandy'] .think-stream {
+html[data-skin='normandy'] * { scrollbar-width: thin; scrollbar-color: rgba(143, 228, 255, 0.22) transparent; }
+html[data-skin='normandy'] ::-webkit-scrollbar-thumb { border-radius: 0; background: rgba(143, 228, 255, 0.22); background-clip: padding-box; }
+html[data-skin='normandy'] ::-webkit-scrollbar-thumb:hover { background: var(--nm-amber); background-clip: padding-box; }
+html[data-skin='normandy'] .caret::after { background: var(--nm-amber); width: 0.55em; box-shadow: 0 0 8px var(--nm-amber); }
+html[data-skin='normandy'] .think-stream {
   background: linear-gradient(90deg, transparent 0%, rgba(58, 160, 255, 0.16) 40%, rgba(227, 247, 122, 0.1) 60%, transparent 100%);
   background-size: 200% 100%;
 }
@@ -370,10 +370,84 @@ html.dark[data-skin='normandy'] .hljs-attr, html.dark[data-skin='normandy'] .hlj
 html.dark[data-skin='normandy'] .hljs-variable, html.dark[data-skin='normandy'] .hljs-property { color: #e6f0fb; }
 
 @media (prefers-reduced-motion: reduce) {
-  html.dark[data-skin='normandy'] body::before,
-  html.dark[data-skin='normandy'] .sf-topbar::after,
-  html.dark[data-skin='normandy'] .sf-hero > :first-child::before,
-  html.dark[data-skin='normandy'] .sf-hero > :first-child::after,
-  html.dark[data-skin='normandy'] .sf-brand::before { animation: none; }
-  html.dark[data-skin='normandy'] .sf-card, html.dark[data-skin='normandy'] .sf-card::after { transition: none; }
+  html[data-skin='normandy'] body::before,
+  html[data-skin='normandy'] .sf-topbar::after,
+  html[data-skin='normandy'] .sf-hero > :first-child::before,
+  html[data-skin='normandy'] .sf-hero > :first-child::after,
+  html[data-skin='normandy'] .sf-brand::before { animation: none; }
+  html[data-skin='normandy'] .sf-card, html[data-skin='normandy'] .sf-card::after { transition: none; }
 }
+
+/* ── light: the Presidium by day. Bright Citadel sky, a pale daytime planet, sun-flare, dust motes in the light,
+   white holo panels with Alliance-blue hairlines and omni-tool amber ─────────────────────────────────────────── */
+html.light[data-skin='normandy'] {
+  --nm-blue: #1f6fd1;
+  --nm-ice: #2b84cc;
+  --nm-amber: #b35500;
+  --nm-glow: #e0a520;
+  --nm-scan: repeating-linear-gradient(0deg, rgba(31, 111, 209, 0.035) 0 1px, transparent 1px 3px);
+  --bg-primary: #eef3f8;
+  --bg-secondary: #f8fbfd;
+  --bg-tertiary: #e3ebf3;
+  --bg-hover: #d8e3ee;
+  --bg-code: #f4f7fa;
+  --border-subtle: rgba(20, 60, 110, 0.13);
+  --border-strong: rgba(20, 60, 110, 0.26);
+  --text-primary: #0f1d2e;
+  --text-secondary: #3e5168;
+  --text-muted: #56677e;
+  --accent: #b35500;
+  --accent-fg: #ffffff;
+  --accent-soft: #9a4800;
+  --accent-glow: rgba(179, 85, 0, 0.22);
+  --brand: #1f6fd1;
+  --brand-soft: #1a5fb4;
+  --neon-pink: #c0392b;
+  --neon-cyan: #1f6fd1;
+  --sunset: linear-gradient(100deg, #b35500 0%, #c96a10 55%, #d88a2a 100%);
+  --focus-ring: #1f6fd1;
+  color-scheme: light;
+}
+html.light[data-skin='normandy'] body {
+  background:
+    radial-gradient(ellipse 50% 30% at 16% 14%, rgba(255, 252, 240, 0.8), transparent 70%),
+    radial-gradient(ellipse 80% 30% at 50% 100%, rgba(31, 111, 209, 0.08), transparent 70%),
+    linear-gradient(180deg, #b9d3ec 0%, #d6e5f2 38%, #eaf1f7 70%, #eef3f8 100%);
+  background-attachment: fixed;
+}
+/* the sun and its anamorphic streak */
+html.light[data-skin='normandy'] body::before {
+  background:
+    radial-gradient(circle 46px at 16% 14%, #ffffff, rgba(255, 255, 255, 0) 70%),
+    radial-gradient(30vw 1.6px at 16% 14%, rgba(255, 255, 255, 0.95), transparent 70%),
+    radial-gradient(10vw 5px at 16% 14%, rgba(255, 250, 230, 0.5), transparent 70%),
+    radial-gradient(circle 260px at 16% 14%, rgba(255, 244, 214, 0.5), transparent 70%);
+  animation: none;
+}
+/* the planet, pale in the daylight */
+html.light[data-skin='normandy'] #root::before {
+  background:
+    radial-gradient(circle at 18% 82%, transparent 0 30%, rgba(170, 195, 222, 0.5) 60%, rgba(150, 178, 210, 0.75) 78%),
+    linear-gradient(-22deg, transparent 30%, rgba(255, 255, 255, 0.35) 36%, transparent 40%, rgba(255, 255, 255, 0.25) 52%, transparent 56%),
+    radial-gradient(circle at 22% 78%, #f1f6fb, #d8e5f2 50%, #bfd2e6);
+  box-shadow: inset 12px -12px 24px -12px rgba(255, 255, 255, 0.9);
+  opacity: 0.55;
+}
+/* the treeline, blue with distance */
+html.light[data-skin='normandy'] body::after {
+  background: linear-gradient(to top, #7f9cbc, #a7bdd5);
+  -webkit-mask: url("./scenery/normandy-treeline.svg") repeat-x left bottom / 1600px 150px;
+  mask: url("./scenery/normandy-treeline.svg") repeat-x left bottom / 1600px 150px;
+  height: 150px; opacity: 0.8;
+}
+html.light[data-skin='normandy'] .prose-shellb h1, html.light[data-skin='normandy'] .sf-hero h1 { text-shadow: none; }
+html.light[data-skin='normandy'] .sf-hero h1 {
+  background: radial-gradient(ellipse 50% 3px at 50% 52%, rgba(31, 111, 209, 0.35), transparent 100%),
+    radial-gradient(ellipse 22% 20% at 50% 52%, rgba(255, 255, 255, 0.7), transparent 100%);
+}
+html.light[data-skin='normandy'] .shadow-lg, html.light[data-skin='normandy'] .shadow-xl, html.light[data-skin='normandy'] .shadow-2xl {
+  box-shadow: 0 12px 34px -14px rgba(15, 29, 46, 0.3), 0 0 0 1px var(--border-subtle) !important;
+}
+html.light[data-skin='normandy'] [class~='bg-[var(--accent)]'] { filter: drop-shadow(0 2px 6px rgba(179, 85, 0, 0.3)); }
+html.light[data-skin='normandy'] .sf-brand::before { background: #ffd56b; box-shadow: 0 0 6px 1px rgba(224, 165, 32, 0.7); }
+html.light[data-skin='normandy'] ::selection { background: rgba(31, 111, 209, 0.22); }
