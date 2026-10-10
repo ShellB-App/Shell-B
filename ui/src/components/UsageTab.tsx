@@ -91,7 +91,7 @@ export function UsageTab({ models }: { models: ModelInfo[] }) {
         <Table title="By model" rows={r.models} total={total} priced={r.cost !== null} />
       </div>
 
-      <Costs models={models} costs={r.costs} onSaved={() => api.usage(days).then(setR).catch(() => {})} />
+      <Costs models={models} used={r.models.map(m => m.name)} costs={r.costs} onSaved={() => api.usage(days).then(setR).catch(() => {})} />
     </div>
   );
 }
@@ -129,13 +129,20 @@ function Table({ title, rows, total, priced }: { title: string; rows: UsageRow[]
 }
 
 /** Prices per million tokens for cloud models (local ones cost electricity, not dollars). Saved in `modelCosts`. */
-function Costs({ models, costs, onSaved }: { models: ModelInfo[]; costs: UsageReport['costs']; onSaved: () => void }) {
+function Costs({ models, used, costs, onSaved }: { models: ModelInfo[]; used: string[]; costs: UsageReport['costs']; onSaved: () => void }) {
   const cloud = useMemo(() => models.filter(m => m.cloud).map(m => m.name), [models]);
-  const names = useMemo(() => Array.from(new Set([...cloud, ...Object.keys(costs)])).sort(), [cloud, costs]);
+  // the catalog lists every cloud model a provider offers (dozens); by default price only the ones this period used
+  // or that already have a price, and let the full list be opened
+  const [all, setAll] = useState(false);
+  const names = useMemo(() => {
+    const pick = all ? cloud : cloud.filter(n => used.includes(n));
+    return Array.from(new Set([...pick, ...Object.keys(costs)])).sort();
+  }, [all, cloud, used, costs]);
   const [draft, setDraft] = useState<Record<string, { in?: number; out?: number }>>(costs);
   const [busy, setBusy] = useState(false);
   useEffect(() => setDraft(costs), [costs]);
-  if (!names.length) return <p className="text-[11px] text-[var(--text-muted)]">Prices apply to cloud models; none are configured (Tools & Connectors → Cloud AI).</p>;
+  if (!cloud.length && !Object.keys(costs).length) return <p className="text-[11px] text-[var(--text-muted)]">Prices apply to cloud models; none are configured (Tools & Connectors → Cloud AI).</p>;
+  const hidden = cloud.length - names.filter(n => cloud.includes(n)).length;
   const set = (name: string, k: 'in' | 'out', v: string) => setDraft(d => ({ ...d, [name]: { ...d[name], [k]: v === '' ? undefined : Math.max(0, Number(v)) } }));
   const save = async () => {
     setBusy(true);
@@ -148,6 +155,7 @@ function Costs({ models, costs, onSaved }: { models: ModelInfo[]; costs: UsageRe
   return (
     <section className="space-y-2">
       <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Prices for cloud models ($ per million tokens)</h4>
+      {!names.length && <p className="text-[11px] text-[var(--text-muted)]">No cloud model was used in this period.</p>}
       <div className="space-y-1.5">
         {names.map(n => (
           <div key={n} className="flex flex-wrap items-center gap-2 text-[12px]">
@@ -157,7 +165,11 @@ function Costs({ models, costs, onSaved }: { models: ModelInfo[]; costs: UsageRe
           </div>
         ))}
       </div>
-      <button className={btn.subtle} onClick={save} disabled={busy}>{busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}Save prices</button>
+      <div className="flex flex-wrap items-center gap-2">
+        {names.length > 0 && <button className={btn.subtle} onClick={save} disabled={busy}>{busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}Save prices</button>}
+        {hidden > 0 && !all && <button className={btn.ghost} onClick={() => setAll(true)}>Show all cloud models ({hidden} more)</button>}
+        {all && <button className={btn.ghost} onClick={() => setAll(false)}>Only models used in this period</button>}
+      </div>
     </section>
   );
 }

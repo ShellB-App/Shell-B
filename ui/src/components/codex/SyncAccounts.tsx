@@ -17,6 +17,11 @@ export function SyncAccountsDialog({ kind, onClose, onChanged }: { kind: 'caldav
   const [err, setErr] = useState('');
   const load = () => req<{ accounts: Account[] }>('/api/codex/sync').then(r => setAccts(r.accounts.filter(a => a.kind === kind))).catch(e => { setErr(errText(e)); setAccts([]); });
   useEffect(() => { load(); }, [kind]);  // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); onClose(); } };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
   const act = async (what: string, f: () => Promise<unknown>, done?: string) => {
     setBusy(what); setErr('');
     try { await f(); await load(); onChanged(); if (done) toast(done); } catch (e) { setErr(errText(e)); } finally { setBusy(''); }

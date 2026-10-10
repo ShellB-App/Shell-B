@@ -11,6 +11,9 @@ export async function shareLink(b: { kind: 'chat' | 'artifact'; conversation: st
     copyText(url, 'Share link copied (read-only, 30 days)');
     if (s.url.startsWith('#')) toast('No share host is set (Settings → Network), so this link opens only for people who can log in here.');
   } catch (e) {
-    toast(`Couldn't share: ${String(e).replace(/^Error: \d+: /, '')}`, { kind: 'error' });
+    const msg = String(e).replace(/^Error: \d+: /, '');
+    toast(/login-required|admin-key-required/.test(msg)
+      ? 'Share links need the owner login: sign in from the HTTPS address (plain localhost access is not enough).'
+      : `Couldn't share: ${msg}`, { kind: 'error' });
   }
 }

@@ -35,7 +35,10 @@ export function Feeds() {
     return req<{ items: Item[] }>(`/api/feeds/items?${p}`).then(r => setItems(r.items)).catch(toastError('Feeds'));
   }, [sel, unreadOnly, q]);
   useEffect(() => { loadFeeds(); }, [loadFeeds]);
-  useEffect(() => { loadItems(); }, [loadItems]);
+  // actions reload through this counter rather than by calling loadItems() directly: a subscribe changes sel and
+  // unreadOnly, and the stale closure's fetch could land after the fresh one and blank the list
+  const [tick, setTick] = useState(0);
+  useEffect(() => { loadItems(); }, [loadItems, tick]);
   useEffect(() => {
     const onHash = () => setSel(route());
     window.addEventListener('hashchange', onHash);
@@ -43,12 +46,14 @@ export function Feeds() {
   }, []);
   const pick = (id: string) => { setSel(id); setOpen(null); history.replaceState(null, '', id ? `#/feeds/${id}` : '#/feeds'); };
 
-  const act = async (what: string, f: () => Promise<unknown>) => { setBusy(what); try { await f(); await loadFeeds(); await loadItems(); } catch (e) { toastError('Feeds')(e); } finally { setBusy(''); } };
+  const act = async (what: string, f: () => Promise<unknown>) => { setBusy(what); try { await f(); await loadFeeds(); setTick(t => t + 1); } catch (e) { toastError('Feeds')(e); } finally { setBusy(''); } };
   const subscribe = (e: React.FormEvent) => {
     e.preventDefault();
     act('add', async () => {
       const r = await req<Feed & { existing: boolean; items?: number }>('/api/feeds', { method: 'POST', body: JSON.stringify({ url }) });
-      toast(r.existing ? `Already following ${r.title}` : `Following ${r.title}`);
+      // a new subscription starts read (the backlog isn't news), so show everything or the reader looks empty
+      toast(r.existing ? `Already following ${r.title}` : `Following ${r.title}${r.items ? ` · ${r.items} items so far` : ''}`);
+      if (!r.existing) setUnreadOnly(false);
       setUrl(''); setAdding(false); pick(r.id);
     });
   };
@@ -128,7 +133,11 @@ export function Feeds() {
         <div className="flex-1 min-h-0 flex">
           <div className={clsx('overflow-y-auto min-h-0', open ? 'hidden md:block md:w-80 lg:w-96 shrink-0 border-r border-[var(--border-subtle)]' : 'flex-1')}>
             {items === null && <div className="p-4 text-xs text-[var(--text-muted)]">Loading…</div>}
-            {items?.length === 0 && <div className="p-6 text-sm text-[var(--text-muted)] text-center">{unreadOnly && !q ? 'All caught up.' : 'Nothing here.'}</div>}
+            {items?.length === 0 && (
+              <div className="p-6 text-sm text-[var(--text-muted)] text-center">
+                {unreadOnly && !q ? <>All caught up. <button type="button" className="underline hover:text-[var(--text-primary)]" onClick={() => setUnreadOnly(false)}>Show everything</button></> : 'Nothing here.'}
+              </div>
+            )}
             {items?.map(it => (
               <button key={it.id} onClick={() => openItem(it)} className={clsx('w-full text-left px-4 py-2.5 border-b border-[var(--border-subtle)] hover:bg-[var(--bg-tertiary)]', open?.id === it.id && 'bg-[var(--bg-hover)]')}>
                 <div className="flex items-start gap-2">

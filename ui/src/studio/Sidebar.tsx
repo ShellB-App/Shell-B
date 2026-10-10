@@ -360,12 +360,14 @@ export function RemotePanel({ projectId, onChanged }: { projectId: string; onCha
   const [edit, setEdit] = useState<{ url: string; branch: string; secretId: string } | null>(null);
   const [busy, setBusy] = useState('');
   const [err, setErr] = useState('');
-  const load = useCallback(() => req<RemoteInfo>(`/api/projects/${projectId}/git`).then(setInfo).catch(e => { setErr(errText(e)); setInfo({ remote: null }); }), [projectId]);
+  // owner-only routes: from plain localhost without a login the server answers admin-key-required, which is not a thing to show raw
+  const friendly = (e: unknown) => { const t = errText(e); return /admin-key-required|login-required/.test(t) ? 'Remotes are managed by the owner: sign in (Settings → Account) from the HTTPS address; plain localhost access is not enough.' : t; };
+  const load = useCallback(() => req<RemoteInfo>(`/api/projects/${projectId}/git`).then(setInfo).catch(e => { setErr(friendly(e)); setInfo({ remote: null }); }), [projectId]);
   useEffect(() => { load(); req<{ id: string; title: string }[]>('/api/codex/entries?kind=secret').then(r => setSecrets(r.map(x => ({ id: x.id, title: x.title })))).catch(() => {}); }, [load]);
   const act = async (what: string, f: () => Promise<RemoteInfo | unknown>) => {
     setBusy(what); setErr('');
     try { const r = await f(); if (r && typeof r === 'object' && 'remote' in (r as RemoteInfo)) setInfo(r as RemoteInfo); else await load(); onChanged(); }
-    catch (e) { setErr(errText(e)); } finally { setBusy(''); }
+    catch (e) { setErr(friendly(e)); } finally { setBusy(''); }
   };
   if (!info) return <div className="p-3 text-xs text-[var(--text-muted)]">Loading…</div>;
   const r = info.remote;

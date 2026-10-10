@@ -1,4 +1,4 @@
-import { StrictMode, Suspense, lazy } from 'react';
+import { StrictMode, Suspense, lazy, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '@fontsource-variable/inter';
 import '@fontsource-variable/jetbrains-mono';
@@ -32,7 +32,13 @@ import { ContextMenuHost } from './components/ContextMenu';
 
 function ShellRoot() {
   const formFactor = useFormFactor();
-  const shared = sharedToken();
+  // re-read on hashchange too: a share link opened from inside the app (same tab) must still show the read-only view
+  const [shared, setShared] = useState(sharedToken);
+  useEffect(() => {
+    const onHash = () => setShared(sharedToken());
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
   if (shared) return <Suspense fallback={null}><SharedView token={shared} /></Suspense>;
 
   return (
