@@ -16,7 +16,7 @@ from fastapi import APIRouter, HTTPException, Request
 import db
 
 router = APIRouter(prefix="/api/activity")
-SOURCES = ("schedule", "todo", "plan", "scout", "notebook", "deploy", "codex", "memory", "data", "brief", "health", "nightshift", "circles", "shopping", "guest", "calendar")
+SOURCES = ("schedule", "todo", "plan", "scout", "notebook", "deploy", "codex", "memory", "data", "brief", "health", "nightshift", "circles", "shopping", "guest", "calendar", "feeds")
 ATTENTION = ("failed", "blocked", "paused", "interrupted", "rolled-back", "restart-pending", "review", "warning", "due")
 KEEP = 2000           # events kept; the oldest read ones go first
 BODY_LIMIT = 600

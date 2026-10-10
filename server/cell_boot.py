@@ -25,11 +25,11 @@ FRAME_SECRET = os.environ.get("SHELLB_CELL_FRAME_SECRET", "")
 
 # modules whose routers a cell never mounts (matched by the module of the router's endpoints)
 HOST_ROUTERS = frozenset({
-    "auth", "backup", "community", "datasets", "gibberlink", "guest_accounts", "guests", "hooks", "mcp_router", "mcp_server",
+    "auth", "backup", "community", "datasets", "feeds", "gibberlink", "guest_accounts", "guests", "hooks", "mcp_router", "mcp_server",
     "modelhub", "modelstore", "network", "nightshift", "public_api", "remote", "screen", "secretary", "selfmod",
     "selfreview", "sysinfo", "watchdog",
 })
-HOST_TOOL_MODULES = frozenset({"adult", "browsing", "community", "nightshift", "screen", "selfmod", "selfreview"})
+HOST_TOOL_MODULES = frozenset({"adult", "browsing", "community", "feeds", "nightshift", "screen", "selfmod", "selfreview"})
 HOST_PATHS = ("/api/cli-agents", "/api/cli-bridge/", "/api/adult/")
 # settings re-applied at every boot, because a cell can't do these whatever the guest sets
 FORCED = {"cloudEnabled": False, "nightShift": False, "adultEnabled": False}

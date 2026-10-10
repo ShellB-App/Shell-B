@@ -502,7 +502,7 @@ export interface DownloadItem {
   done: number; total: number; rate: number | null; note?: string | null; started?: number; link: string;
 }
 
-export type ActivitySource = 'schedule' | 'todo' | 'plan' | 'scout' | 'notebook' | 'deploy' | 'codex' | 'memory' | 'data' | 'brief' | 'health' | 'shopping' | 'nightshift' | 'circles' | 'guest' | 'calendar';
+export type ActivitySource = 'schedule' | 'todo' | 'plan' | 'scout' | 'notebook' | 'deploy' | 'codex' | 'memory' | 'data' | 'brief' | 'health' | 'shopping' | 'nightshift' | 'circles' | 'guest' | 'calendar' | 'feeds';
 
 /** Unread events, how many of them need the owner, and approvals agents are waiting on right now. */
 export interface ActivitySummary { unread: number; attention: number; pending: number }

@@ -39,6 +39,7 @@ import favorites
 import codex
 import codex_secrets
 import codex_sync
+import feeds
 import hooks
 import media
 import generate
@@ -142,6 +143,8 @@ activity.init()
 auth.init()
 public_api.init()
 hooks.init()
+feeds.init()
+feeds.register()
 mailer.init()
 studio_tools.register()
 studio_assets.register()
@@ -193,6 +196,7 @@ roster.grant_tools("tools_2026_10_10", {  # tools that reached no stored agent b
     "hephaestus": ["leave_message", "check_messages", "find_capability", "self_findings"],
     "minerva": ["leave_message", "check_messages"], "mimir": ["leave_message", "check_messages"], "daedalus": ["leave_message", "check_messages"],
     "atlas": ["find_capability"], "claude": ["find_capability"]})
+roster.grant_tools("tools_feeds_2026_10_10", {"shellb": ["feeds"], "minerva": ["feeds"], "mimir": ["feeds"]})
 compaction.migrate_legacy()  # after episodes.init: the FTS triggers index the messages it puts back
 feedback.init()
 guests.init()
@@ -254,6 +258,7 @@ app.include_router(public_api.router)
 app.include_router(public_api.admin_router)
 app.include_router(hooks.router)
 app.include_router(hooks.admin_router)
+app.include_router(feeds.router)
 app.include_router(guests.admin_router)  # owner side of Shell:B Guest; the guests' own app is guest_app.py
 app.include_router(guest_accounts.admin_router)  # guests' accounts: unlock, reset links, two-step off, sign-in log
 app.include_router(mcp_server.router)
@@ -313,6 +318,7 @@ async def _start_mcp():
     commitments.busy = lambda: bool(ACTIVE)
     commitments.start()
     codex_sync.start()  # calendar reminders (Activity source `calendar`)
+    feeds.start()  # RSS/Atom refreshes (feeds.py)
     nightshift.run_turn, nightshift.abort_turn, nightshift.get_settings = _run_nightshift, _abort_turn, get_settings
     nightshift.active_convs, nightshift.busy = lambda: list(ACTIVE), _background_busy
     if not cell_boot.CELL:
@@ -347,6 +353,7 @@ async def _shutdown():
     suggestions.stop()
     commitments.stop()
     codex_sync.stop()
+    feeds.stop()
     nightshift.stop()
     datasets.stop()
     watchdog.stop()

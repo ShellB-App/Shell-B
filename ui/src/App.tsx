@@ -48,6 +48,7 @@ const OfflineData = lazy(() => import('./components/OfflineData').then(m => ({ d
 const Generate = lazy(() => import('./components/Generate').then(m => ({ default: m.Generate })));
 const Shopping = lazy(() => import('./components/Shopping').then(m => ({ default: m.Shopping })));
 const Circles = lazy(() => import('./components/Circles').then(m => ({ default: m.Circles })));
+const Feeds = lazy(() => import('./components/Feeds').then(m => ({ default: m.Feeds })));
 const ResearchBoardView = lazy(() => import('./components/Research').then(m => ({ default: m.ResearchBoardView })));
 const ResearchIndex = lazy(() => import('./components/Research').then(m => ({ default: m.ResearchIndex })));
 const MegaPlanBoard = lazy(() => import('./components/MegaPlans').then(m => ({ default: m.MegaPlanBoard })));
@@ -124,6 +125,7 @@ const readData = () => /^#\/data\b/.test(location.hash);
 const readGenerate = () => /^#\/generate\b/.test(location.hash);
 const readShop = () => /^#\/shop\b/.test(location.hash);
 const readCircles = () => /^#\/circles\b/.test(location.hash);
+const readFeeds = () => /^#\/feeds\b/.test(location.hash);
 const readCodex = () => { const m = /^#\/codex(?:\/(.*))?$/.exec(location.hash); return m ? m[1] ?? '' : null; };
 const readResearch = () => { const m = /^#\/research(?:\/([\w-]+))?/.exec(location.hash); return m ? { boardId: m[1] } : null; };
 const readAssets = () => { const m = /^#\/assets(?:\/([\w-]+))?/.exec(location.hash); return m ? { libId: m[1] } : null; };
@@ -159,6 +161,7 @@ export function App() {
   const [generateRoute, setGenerateRoute] = useState(readGenerate);
   const [shopRoute, setShopRoute] = useState(readShop);
   const [circlesRoute, setCirclesRoute] = useState(readCircles);
+  const [feedsRoute, setFeedsRoute] = useState(readFeeds);
   const [research, setResearch] = useState(readResearch);
   const [plans, setPlans] = useState(readPlans);
   const [assetRoute, setAssetRoute] = useState(readAssets);
@@ -307,6 +310,7 @@ export function App() {
       setGenerateRoute(readGenerate());
       setShopRoute(readShop());
       setCirclesRoute(readCircles());
+      setFeedsRoute(readFeeds());
       setModal(m => (m === 'palette' ? m : null));  // following a link out of Settings or the Agent Lab closes it
       if (/^#\/memory\b/.test(location.hash)) {  // #/memory (Activity links) opens Settings → Memory over the current chat
         setSettingsTab('memory'); setModal('settings');
@@ -352,6 +356,7 @@ export function App() {
     setDataRoute(false);
     setGenerateRoute(false);
     setShopRoute(false);
+    setFeedsRoute(false);
     setGroupRoute(null);
     pendingGroup.current = null;
     setPanel(null);
@@ -631,7 +636,7 @@ export function App() {
   // the chat page (not one of the apps): chat-only panels and header buttons must not linger over Worlds, Wiki, etc.
   const onChatPage = !plans && !research && !groupRoute && !library && !scheduled && !activity && codexRoute === null
     && !modelsRoute && !assetRoute && !radioRoute && !mapsRoute && wikiRoute === null && !secretaryRoute && !gibberlinkRoute
-    && !dataRoute && !generateRoute && !shopRoute && !circlesRoute;
+    && !dataRoute && !generateRoute && !shopRoute && !circlesRoute && !feedsRoute;
   // the chat's research board: from the server, or from a research_board call made during this session
   const chatBoard = conv?.researchBoard?.id ?? [...messages].reverse().flatMap(m => (m.blocks ?? []).flatMap(b => (b.type === 'tool' && b.display?.board ? [b.display.board.id] : [])))[0];
 
@@ -659,7 +664,7 @@ export function App() {
                 <Radio className="w-4 h-4 text-[#ff2e97]" />
                 Shell:B FM · Radio &amp; DJ Workstation
               </span>
-            ) : secretaryRoute ? <span className="text-sm font-medium">Secretary</span> : gibberlinkRoute ? <span className="text-sm font-medium">Gibberlink</span> : mapsRoute ? <span className="text-sm font-medium">Worlds</span> : wikiRoute !== null ? <span className="text-sm font-medium">Wiki</span> : dataRoute ? <span className="text-sm font-medium">Offline data</span> : generateRoute ? <span className="text-sm font-medium">Generate</span> : shopRoute ? <span className="text-sm font-medium">Shopping</span> : circlesRoute ? <span className="text-sm font-medium">Circles</span> : assetRoute ? (
+            ) : secretaryRoute ? <span className="text-sm font-medium">Secretary</span> : gibberlinkRoute ? <span className="text-sm font-medium">Gibberlink</span> : mapsRoute ? <span className="text-sm font-medium">Worlds</span> : wikiRoute !== null ? <span className="text-sm font-medium">Wiki</span> : dataRoute ? <span className="text-sm font-medium">Offline data</span> : generateRoute ? <span className="text-sm font-medium">Generate</span> : shopRoute ? <span className="text-sm font-medium">Shopping</span> : circlesRoute ? <span className="text-sm font-medium">Circles</span> : feedsRoute ? <span className="text-sm font-medium">Feeds</span> : assetRoute ? (
               <button className="text-sm font-medium hover:text-[var(--accent)] flex items-center gap-1.5" onClick={() => openAssets()}>
                 <Shapes className="w-4 h-4 text-lime-500" />Assets
               </button>
@@ -774,6 +779,8 @@ export function App() {
           <div className="flex-1 min-h-0"><Shopping /></div>
         ) : circlesRoute ? (
           <div className="flex-1 min-h-0"><Circles /></div>
+        ) : feedsRoute ? (
+          <div className="flex-1 min-h-0"><Feeds /></div>
         ) : assetRoute ? (
           <div className="flex-1 min-h-0">
             {assetRoute.libId ? (

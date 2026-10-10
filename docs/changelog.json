@@ -1,6 +1,12 @@
 [
  {
   "date": "2026-10-10",
+  "area": "Feeds",
+  "title": "Feeds: follow sites by RSS or Atom",
+  "summary": "A Feeds app: paste a site's address and Shell:B finds its feed; read what's new in folders, search, mark read, and hand any item to a chat with Ask about this. Agents can read your feeds too, and the morning brief mentions the headlines that arrived overnight. Import or export OPML to move subscriptions from another reader."
+ },
+ {
+  "date": "2026-10-10",
   "area": "API",
   "title": "Webhooks in and out",
   "summary": "Tools & Connectors → API → Webhooks. Inbound: give n8n, GitHub, Home Assistant or a cron job a URL and a secret; each call starts a turn for the agent you chose, with the payload shaped by a template (or passed through), unattended like a scheduled run. Outbound: Shell:B posts what happened (a plan finished, a reminder is due, something waits for your approval, a service went down…) as signed JSON to a URL you run, with retries and a delivery log. Outbound targets must be on the public internet."

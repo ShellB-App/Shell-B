@@ -44,6 +44,7 @@ import { Gibberlink } from '../components/Gibberlink';
 import { Secretary } from '../components/Secretary';
 import { Shopping } from '../components/Shopping';
 import { Circles } from '../components/Circles';
+import { Feeds } from '../components/Feeds';
 import { MapsApp } from '../maps/MapsApp';
 import { RadioApp } from '../radio/RadioApp';
 import { AgentLab } from '../components/AgentLab';
@@ -1042,6 +1043,10 @@ export function KioskApp() {
                   ) : win.appId === 'shop' ? (
                     <div className="h-full overflow-y-auto bg-[var(--bg-primary)]">
                       <Shopping />
+                    </div>
+                  ) : win.appId === 'feeds' ? (
+                    <div className="h-full overflow-hidden bg-[var(--bg-primary)]">
+                      <Feeds />
                     </div>
                   ) : win.appId === 'circles' ? (
                     <div className="h-full overflow-hidden bg-[var(--bg-primary)]">

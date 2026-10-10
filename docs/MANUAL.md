@@ -404,6 +404,20 @@ address (`_ShortNameRedirect` in app.py). Check with `tailscale serve status`; r
   The orchestrator always gets the tool in its plan chat. Code is in `server/megaplan.py` and
   `ui/src/components/MegaPlans.tsx`; the tables are `mega_plans`, `mega_steps`, `mega_events` and `mega_links`.
 
+## Feeds
+
+RSS and Atom subscriptions (`server/feeds.py`, `ui/src/components/Feeds.tsx`, app **Feeds** at `#/feeds`; also on
+phones and the kiosk). Paste a site or feed address: a page's `<link rel="alternate">` finds its feed. Items are stored
+as text (never rendered as HTML), 300 per feed, with unread state, folders and a per-feed check interval (hourly by
+default, 15 minutes at least); fetches follow web_fetch's rules (public addresses only, 5 MB, conditional GETs). New
+items post one Activity event per feed per day (source `feeds`, notification level off by default) and the morning
+brief names up to three headlines that arrived since the last brief. **Ask about this** drops an item into a new chat.
+Agents with the `feeds` tool (Shell:B, Minerva, Mimir by default) can list what's unread, read an item (its stored
+text, framed as the publisher's data, not instructions), search, subscribe and mark read; `web_fetch` on the link gets
+the full article. OPML import/export moves subscriptions between readers. Guest cells don't get feeds (no network).
+API: `/api/feeds`, `/api/feeds/items`, `/api/feeds/items/read`, `/api/feeds/{id}/refresh`, `/api/feeds/refresh`,
+`/api/feeds/import`, `/api/feeds/export.opml`.
+
 ## Usage
 
 Settings → **Usage** (`server/tokens.py`, `ui/src/components/UsageTab.tsx`): every agent turn's prompt and completion

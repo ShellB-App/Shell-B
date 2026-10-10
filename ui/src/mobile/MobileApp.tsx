@@ -62,6 +62,7 @@ const Studio = lazy(() => import('../studio/Studio'));
 const Code = lazy(() => import('../code/Code'));
 const Circles = lazy(() => import('../components/Circles').then(m => ({ default: m.Circles })));
 const Shopping = lazy(() => import('../components/Shopping').then(m => ({ default: m.Shopping })));
+const Feeds = lazy(() => import('../components/Feeds').then(m => ({ default: m.Feeds })));
 
 const QUICK: Record<string, { title: string; prompt: string }[]> = {
   shellb: [
@@ -122,6 +123,7 @@ const readModels = () => /^#\/models\b/.test(location.hash);
 const readGenerate = () => /^#\/generate\b/.test(location.hash);
 const readCircles = () => /^#\/circles\b/.test(location.hash);
 const readShop = () => /^#\/shop\b/.test(location.hash);
+const readFeeds = () => /^#\/feeds\b/.test(location.hash);
 const readSecretary = () => /^#\/secretary\b/.test(location.hash);
 const readGibberlink = () => /^#\/gibberlink\b/.test(location.hash);
 const readMaps = () => /^#\/(worlds|maps)\b/.test(location.hash);
@@ -160,6 +162,7 @@ export function MobileApp() {
   const [generateRoute, setGenerateRoute] = useState(readGenerate);
   const [circlesRoute, setCirclesRoute] = useState(readCircles);
   const [shopRoute, setShopRoute] = useState(readShop);
+  const [feedsRoute, setFeedsRoute] = useState(readFeeds);
   const [incognitoDraft, setIncognitoDraft] = useState(false);  // the next new chat is incognito (palette → New incognito chat)
   const [secretaryRoute, setSecretaryRoute] = useState(readSecretary);
   const [gibberlinkRoute, setGibberlinkRoute] = useState(readGibberlink);
@@ -312,6 +315,7 @@ export function MobileApp() {
       setGenerateRoute(readGenerate());
       setCirclesRoute(readCircles());
       setShopRoute(readShop());
+      setFeedsRoute(readFeeds());
       setSecretaryRoute(readSecretary());
       setGibberlinkRoute(readGibberlink());
       setRadioRoute(readRadio());
@@ -341,6 +345,7 @@ export function MobileApp() {
     setModelsRoute(false);
     setGenerateRoute(false);
     setShopRoute(false);
+    setFeedsRoute(false);
     setSecretaryRoute(false);
     setResearch(null);
     setPlans(null);
@@ -535,6 +540,7 @@ export function MobileApp() {
     generateRoute ||
     circlesRoute ||
     shopRoute ||
+    feedsRoute ||
     codexRoute !== null ||
     activity ||
     scheduled ||
@@ -555,6 +561,7 @@ export function MobileApp() {
   else if (generateRoute) currentAppTitle = 'Generate';
   else if (circlesRoute) currentAppTitle = 'Circles';
   else if (shopRoute) currentAppTitle = 'Shopping';
+  else if (feedsRoute) currentAppTitle = 'Feeds';
   else if (codexRoute !== null) currentAppTitle = /^me\b/.test(codexRoute) ? 'Me' : /^notes\b/.test(codexRoute) ? 'Notes' : 'Codex';
   else if (activity) currentAppTitle = 'Activity';
   else if (scheduled) currentAppTitle = 'Scheduled';
@@ -743,6 +750,10 @@ export function MobileApp() {
         ) : shopRoute ? (
           <div className="flex-1 min-h-0 overflow-y-auto">
             <Shopping />
+          </div>
+        ) : feedsRoute ? (
+          <div className="flex-1 min-h-0">
+            <Feeds />
           </div>
         ) : codexRoute !== null ? (
           <div className="flex-1 min-h-0 overflow-y-auto">

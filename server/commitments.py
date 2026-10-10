@@ -735,8 +735,17 @@ async def gather(settings=None) -> dict:
         "soon": [{"id": c["id"], "text": c["text"], "due": _fmt_due(c["due"], today)} for c in soon[:4]],
         "openCount": len(mine), "undatedCount": len(undated),
         "events": _events(settings), "overnight": _overnight(since), "waiting": _waiting(),
-        "weather": await _weather(settings),
+        "weather": await _weather(settings), "feeds": _feeds(since),
     }
+
+
+def _feeds(since: float) -> list[str]:
+    """Headlines that arrived in the feeds since the last brief (feeds.py), newest first."""
+    try:
+        import feeds
+        return [f"{i['feed']}: {i['title']}" for i in feeds.since(since, limit=6)]
+    except Exception:  # noqa: BLE001
+        return []
 
 
 def _plural(n, word):
@@ -769,6 +778,8 @@ def fallback_text(d: dict) -> str:
         wx = d["weather"]
         parts.append(f"{wx['place']}: {wx['summary']}, {wx['low']}–{wx['high']}{wx['unit']}"
                      + (f", {wx['rain']}% chance of rain" if wx.get("rain") else "") + ".")
+    if d.get("feeds"):
+        parts.append("In your feeds: " + "; ".join(d["feeds"][:3]) + ".")
     if len(parts) == 1:
         parts.append("Nothing is due and nothing ran overnight. A clear day.")
     return " ".join(parts)
@@ -778,7 +789,7 @@ BRIEF_PROMPT = """Write {who}'s morning brief for {day}. Use ONLY these facts:
 
 {facts}
 
-Rules: one short paragraph, at most 80 words, plain text (no Markdown, no lists, no headings). Start with a brief greeting{named}. Cover ONLY the sections present in the facts, in this order: overdue, today, soon, events, overnight (failures first; routine successes only as a count), waitingForHer, weather. A section that is missing from the facts must not be mentioned at all (never say the calendar is clear or nothing is waiting). Never invent tasks, times or numbers. Warm but brisk, like a good chief of staff.
+Rules: one short paragraph, at most 80 words, plain text (no Markdown, no lists, no headings). Start with a brief greeting{named}. Cover ONLY the sections present in the facts, in this order: overdue, today, soon, events, overnight (failures first; routine successes only as a count), waitingForHer, weather, feeds (at most three headlines, named by feed). A section that is missing from the facts must not be mentioned at all (never say the calendar is clear or nothing is waiting). Never invent tasks, times or numbers. Warm but brisk, like a good chief of staff.
 
 Reply with JSON only: {{"brief": "..."}}"""
 
@@ -786,7 +797,7 @@ Reply with JSON only: {{"brief": "..."}}"""
 async def compose(settings=None, use_model=True) -> dict:
     settings = settings or _settings()
     d = await gather(settings)
-    facts = {k: d[k] for k in ("overdue", "today", "soon", "openCount", "events", "overnight", "weather")}
+    facts = {k: d[k] for k in ("overdue", "today", "soon", "openCount", "events", "overnight", "weather", "feeds")}
     facts["waitingForHer"] = {"approvals": d["waiting"]["approvals"], "memoriesToReview": d["waiting"]["memories"]}
     facts["waitingForHer"] = {k: v for k, v in facts["waitingForHer"].items() if v}
     facts = {k: v for k, v in facts.items() if v}  # the model narrates empty sections ("nothing due today") if it sees them
