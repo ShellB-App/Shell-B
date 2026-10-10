@@ -471,7 +471,7 @@ async def _wiki(args, ctx):
 
 def register():
     TOOLS["wiki"] = {
-        "fn": _wiki, "service": None, "scope": "global",
+        "fn": _wiki, "service": None, "scope": "global", "auto": "when an offline wiki archive is installed",
         "ui": {"displayName": "Offline Wiki", "icon": "BookOpen", "category": "knowledge",
                "description": "Search and read offline Wikipedia, technical Q&A, textbooks, and reference archives."},
         "schema": _fn("wiki",

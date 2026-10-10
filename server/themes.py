@@ -223,7 +223,7 @@ async def design_theme(args, ctx) -> ToolResult:
 def register():
     hexd = {"type": "string", "description": "hex colour, e.g. #1b2433"}
     TOOLS["design_theme"] = {
-        "fn": design_theme, "service": None, "scope": "global",
+        "fn": design_theme, "service": None, "scope": "global", "auto": "in live chats",
         "ui": {"displayName": "Design Theme", "icon": "Palette", "category": "creative",
                "description": "Agents can design custom UI themes for Shell:B; you apply them from a card in the chat."},
         "schema": _fn(

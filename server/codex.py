@@ -1092,7 +1092,7 @@ async def codex_tool(args, ctx):
 
 def register():
     TOOLS["codex"] = {
-        "fn": codex_tool, "service": None, "scope": "global",
+        "fn": codex_tool, "service": None, "scope": "global", "auto": "for every agent (cloud agents need Cloud → Codex)",
         "ui": {"displayName": "Codex", "icon": "BookMarked", "category": "memory",
                "description": "The owner's long-term reference shelf: notes, saved links, snippets, files, contacts and calendar events. Agents search and "
                               "read it, and can add drafts for the owner to accept."},

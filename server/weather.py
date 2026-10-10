@@ -230,7 +230,7 @@ async def tle(sat: str = "iss"):
 
 def register():
     TOOLS["geocode"] = {
-        "fn": geocode_tool, "service": None, "scope": "global",
+        "fn": geocode_tool, "service": None, "scope": "global", "auto": "when the agent has Web Search",
         "ui": {"displayName": "Place Lookup", "icon": "MapPin", "category": "web",
                "description": "Finds coordinates for places, landmarks and addresses (OpenStreetMap Nominatim)."},
         "schema": _fn("geocode", "Look up the exact coordinates of a place, landmark or address. Use it before putting "
@@ -239,7 +239,7 @@ def register():
                       ["query"]),
     }
     TOOLS["weather"] = {
-        "fn": weather_tool, "service": None, "scope": "global",
+        "fn": weather_tool, "service": None, "scope": "global", "auto": "when the agent has Web Search",
         "ui": {"displayName": "Weather", "icon": "CloudSun", "category": "web",
                "description": "Current conditions and a 7-day forecast for any place (Open-Meteo)."},
         "schema": _fn("weather", "Current weather and 7-day forecast for a place. Then show it with a ```weather``` block "

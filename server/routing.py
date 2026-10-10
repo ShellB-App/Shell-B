@@ -129,7 +129,7 @@ async def directions_tool(args, ctx):
 
 def register():
     TOOLS["directions"] = {
-        "fn": directions_tool, "service": None, "scope": "global",
+        "fn": directions_tool, "service": None, "scope": "global", "auto": "when an offline routing region is installed",
         "ui": {"displayName": "Directions", "icon": "Route", "category": "web",
                "description": "Offline turn-by-turn directions (Valhalla) for driving, cycling and walking."},
         "schema": _fn("directions",

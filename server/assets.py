@@ -1032,7 +1032,7 @@ async def asset_library(args, ctx):
 
 def register():
     TOOLS["asset_library"] = {
-        "fn": asset_library, "service": None, "scope": "global",
+        "fn": asset_library, "service": None, "scope": "global", "auto": "for every agent (cloud agents need Cloud → Library)",
         "ui": {"displayName": "Asset Libraries", "icon": "Shapes", "category": "library",
                "description": "Every agent can search, view, import, add and curate reusable assets (sounds, textures, "
                               "sprites, pictures, models, fonts), fork libraries, and dispatch asset scouts."},

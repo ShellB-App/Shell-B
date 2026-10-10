@@ -523,7 +523,7 @@ async def follow_ups_tool(args, ctx):
 def register():
     from tools import TOOLS, _fn
     TOOLS["follow_ups"] = {
-        "fn": follow_ups_tool, "service": None, "scope": "global",
+        "fn": follow_ups_tool, "service": None, "scope": "global", "auto": "when Follow-ups is on (cloud agents also need Cloud → Memory)",
         "ui": {"displayName": "Follow-ups", "icon": "ListTodo", "category": "memory",
                "description": "The owner's follow-ups: things she said she'd do or asked to be reminded of, and things an agent "
                               "promised. They show in Activity and in the morning brief."},

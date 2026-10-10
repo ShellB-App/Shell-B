@@ -325,7 +325,7 @@ async def project_save_file(args, ctx):
 
 
 def register():
-    common = {"service": None, "scope": "group"}
+    common = {"service": None, "scope": "group", "auto": "in chats inside a chat Project"}
     TOOLS["project_search"] = {**common, "fn": project_search,
         "ui": {"displayName": "Search Project", "icon": "FolderSearch", "category": "project",
                "description": "Semantic search over the project's knowledge files. Added in project chats."},

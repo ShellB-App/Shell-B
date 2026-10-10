@@ -1097,7 +1097,7 @@ GUIDE = ("- shop finds and compares prices and keeps the owner's shopping basket
 def register():
     from tools import TOOLS
     TOOLS["shop"] = {
-        "fn": shop_tool, "service": "searxng",
+        "fn": shop_tool, "service": "searxng", "scope": "global", "auto": "when the agent has Web Search",
         "ui": {"displayName": "Shopping", "icon": "ShoppingCart", "category": "web",
                "description": "Compares prices across online stores, keeps a basket with add-to-cart links, and watches prices."},
         "schema": _fn("shop",

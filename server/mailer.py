@@ -310,7 +310,7 @@ async def _live_only(args, ctx):
 
 def register():
     TOOLS["send_email"] = {
-        "fn": _live_only, "service": None, "scope": "global",
+        "fn": _live_only, "service": None, "scope": "global", "auto": "in live owner chats once email is set up (every email waits for your approval)",
         "ui": {"displayName": "Send email", "icon": "Mail",
                "description": "Agents can write emails from your Shell:B address. Each one waits for your approval with the "
                               "full text, and replies come to you."},

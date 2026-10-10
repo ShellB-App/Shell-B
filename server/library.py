@@ -433,7 +433,7 @@ GUIDE = ("- library reaches everything Shell:B has made, from any chat or projec
 
 def register():
     TOOLS["library"] = {
-        "fn": library, "service": None, "scope": "global",
+        "fn": library, "service": None, "scope": "global", "auto": "for every agent (cloud agents need Cloud → Library)",
         "ui": {"displayName": "Shared Library", "icon": "Library", "category": "library",
                "description": "Every agent can find, read, view and import work from any Studio design, Code workspace, "
                               "research notebook, chat Project or artifact."},

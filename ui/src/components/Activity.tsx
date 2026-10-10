@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { BookMarked, Brain, CalendarClock, Check, CheckCheck, ChevronDown, HardDrive, Inbox, ListTodo, Loader2, Mail, MessageSquare, Rocket, Shapes, ShieldQuestion,
-  Sunrise, Telescope, Trash2, Workflow, XCircle, HeartPulse, ShoppingCart, Moon } from 'lucide-react';
+  Sunrise, Telescope, Trash2, Workflow, XCircle, HeartPulse, ShoppingCart, Moon, UsersRound, Users } from 'lucide-react';
 import { api } from '../api';
 import type { ActivityItem, ActivitySource, ActivitySummary, PendingApproval } from '../types';
 import { btn, relTime } from './common';
@@ -23,6 +23,8 @@ const SOURCES: Record<ActivitySource, { label: string; icon: typeof Inbox; color
   health: { label: 'Health', icon: HeartPulse, color: 'text-red-400' },
   shopping: { label: 'Price watch', icon: ShoppingCart, color: 'text-emerald-400' },
   nightshift: { label: 'Night shift', icon: Moon, color: 'text-indigo-300' },
+  circles: { label: 'Circles', icon: UsersRound, color: 'text-blue-400' },
+  guest: { label: 'Guests', icon: Users, color: 'text-fuchsia-400' },
 };
 
 const STATUS: Record<string, [string, string]> = {

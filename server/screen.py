@@ -388,7 +388,7 @@ async def look_at_screen(args, ctx) -> ToolResult:
 
 def register():
     TOOLS["look_at_screen"] = {
-        "fn": look_at_screen, "service": None, "scope": "global",
+        "fn": look_at_screen, "service": None, "scope": "global", "auto": "in live chats while a screen is shared, for vision models (cloud agents need Cloud → Screen)",
         "ui": {"displayName": "Look at Screen", "icon": "MonitorUp", "category": "media",
                "description": "While you share your screen (from the chat, or with the Shell:B Screen helper), agents that can see "
                               "may take a look when it helps."},

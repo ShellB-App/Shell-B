@@ -233,7 +233,7 @@ async def _live_only(args, ctx):
 
 def register():
     TOOLS["browser"] = {
-        "fn": _live_only, "service": None, "scope": "global",
+        "fn": _live_only, "service": None, "scope": "global", "auto": "in live chats while a paired helper with a browser is connected (cloud agents need Cloud → Browser)",
         "ui": {"displayName": "Browser on your computer", "icon": "Globe",
                "description": "With the Shell:B Screen helper running, agents use a Chrome window on your computer: read pages "
                               "and fill forms. Anything that submits, sends, buys or deletes waits for your approval."},

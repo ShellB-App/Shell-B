@@ -484,7 +484,7 @@ def _resolve(gid, key):
 
 def register():
     TOOLS["project_todos"] = {
-        "fn": project_todos, "service": None, "scope": "group",
+        "fn": project_todos, "service": None, "scope": "group", "auto": "in chats inside a chat Project",
         "ui": {"displayName": "Project To-dos", "icon": "ListChecks", "category": "project",
                "description": "Reads and edits the project's to-do list and starts it running. Added in project chats."},
         "schema": _fn("project_todos",

@@ -16,9 +16,9 @@ interface Job {
 interface Overview {
   jobs: Job[]; queued: number; idleSeconds: number; blocked: string | null;
   running: { job: string; conv: string | null; title: string; since: number; model: string } | null;
-  settings: { enabled: boolean; window: string; idleMinutes: number; model: string; redrafts: boolean };
+  settings: { enabled: boolean; window: string; idleMinutes: number; model: string; redrafts: boolean; context: number };
 }
-type Settings = Partial<{ nightShift: boolean; nightShiftWindow: string; nightShiftIdleMinutes: number; nightShiftModel: string; nightShiftRedrafts: boolean }>;
+type Settings = Partial<{ nightShift: boolean; nightShiftWindow: string; nightShiftIdleMinutes: number; nightShiftModel: string; nightShiftRedrafts: boolean; nightShiftContext: number }>;
 
 const J = (b: unknown) => JSON.stringify(b);
 const ns = {
@@ -150,6 +150,9 @@ export function NightShiftPanel() {
           <label className="block"><span className="block text-xs text-[var(--text-secondary)] mb-1">Model</span>
             <input className={btn.input} defaultValue={o.settings.model}
               onBlur={e => { const v = e.target.value.trim(); if (v && v !== o.settings.model) save({ nightShiftModel: v }); }} /></label>
+          <label className="block"><span className="block text-xs text-[var(--text-secondary)] mb-1">Context window (tokens)</span>
+            <input type="number" min={8192} max={262144} step={8192} className={btn.input} defaultValue={o.settings.context}
+              onBlur={e => { const n = Math.max(8192, Math.min(262144, Number(e.target.value) || 65536)); if (n !== o.settings.context) save({ nightShiftContext: n }); }} /></label>
         </div>
         <p className="text-[11px] text-[var(--text-muted)] max-w-[65ch]">While a job runs, the everyday model is unloaded to make room. Start a chat and the job stops at once, the big model leaves memory, and the job carries on in the same chat the next time you're away.</p>
       </section>

@@ -13,6 +13,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { api, fmtBytes, type NetworkInfo, type NetworkInterfaceInfo } from '../api';
+import { toast } from './toast';
 import { btn } from './common';
 
 const H = 'text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2';
@@ -131,6 +132,7 @@ export function NetworkSettings() {
 
   return (
     <div className="space-y-6">
+      <PreviewHostRow />
       {/* Top action / summary bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--border-subtle)]">
         <div>
@@ -347,5 +349,38 @@ export function NetworkSettings() {
         )}
       </SectionCard>
     </div>
+  );
+}
+
+
+/** Settings → Network: the domain whose `p-<project>.<domain>` names the hub edge proxies to this machine's Studio
+ * previews (server/devserver.py `previewHost`). Saved with a button, not on blur: a wrong value breaks every preview. */
+function PreviewHostRow() {
+  const [saved, setSaved] = useState('');
+  const [value, setValue] = useState('');
+  useEffect(() => { api.settings().then(s => { setSaved(s.previewHost ?? ''); setValue(s.previewHost ?? ''); }).catch(() => {}); }, []);
+  const clean = value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/\.$/, '');
+  const valid = clean === '' || /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(clean);
+  const save = async () => {
+    try {
+      const s = await api.saveSettings({ previewHost: clean });
+      setSaved(s.previewHost ?? ''); setValue(s.previewHost ?? '');
+      toast(clean ? `Studio previews open on p-<project>.${clean}` : 'Studio previews use this machine\'s ports again');
+    } catch (e) { toast(String(e instanceof Error ? e.message : e), { kind: 'error' }); }
+  };
+  return (
+    <section className="rounded-xl border border-[var(--border-subtle)] p-4 space-y-2">
+      <h2 className="text-sm font-semibold text-[var(--text-primary)]">Studio preview host</h2>
+      <p className="text-xs text-[var(--text-muted)] max-w-[65ch]">
+        A domain whose <span className="font-mono">p-&lt;project&gt;.&lt;domain&gt;</span> names are proxied to this machine (the hub's edge proxy, behind Cloudflare Access).
+        Leave it empty until those names resolve and have certificates: with a wrong value, Studio previews stop opening over the tailnet.
+      </p>
+      <div className="flex flex-col sm:flex-row gap-2">
+        <input className={clsx(btn.input, 'flex-1 font-mono', !valid && 'border-red-500')} placeholder="shellb.app (empty = this machine's ports 8210–8217)"
+          value={value} onChange={e => setValue(e.target.value)} aria-label="Preview host domain" />
+        <button className={btn.primary} disabled={!valid || clean === saved} onClick={save}>Save</button>
+      </div>
+      {saved && <div className="text-[11px] text-[var(--text-muted)]">Current: <span className="font-mono">p-&lt;project&gt;.{saved}</span></div>}
+    </section>
   );
 }

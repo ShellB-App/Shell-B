@@ -47,7 +47,9 @@ export interface ToolInfo {
   enabled: boolean;
   available: boolean;
   service: string | null;
-  scope?: 'global' | 'project' | 'skills';
+  /** agent: picked per agent in the Agent Lab; the others are added by server/agent.py's rules (`auto` says when) */
+  scope?: 'agent' | 'global' | 'group' | 'project' | 'skills';
+  auto?: string;
   cloud?: boolean;
 }
 
@@ -441,8 +443,18 @@ export interface Settings {
   incognitoHours?: number;
   promptSuggestions: boolean;
   maxToolRounds: number;
+  /** ceiling the loop guard may extend maxToolRounds to (server/agent.py) */
+  maxToolRoundsHardCap?: number;
   runawayLoopChecker?: boolean;
   loopCheckInterval?: number;
+  /** end a local turn when Ollama sends nothing for this long */
+  streamStallMinutes?: number;
+  /** rewrite the empty-chat starter cards every few hours (server/suggestions.py) */
+  suggestionsRefresh?: boolean;
+  /** context window (tokens) for night-shift jobs on the big model */
+  nightShiftContext?: number;
+  /** domain whose p-<project>.<domain> hosts reach this machine; "" = tailnet :8210-8217 previews (server/devserver.py) */
+  previewHost?: string;
   cloudEnabled: boolean;
   cloudDelegation: boolean;
   cloudMemory: boolean;
@@ -488,7 +500,7 @@ export interface DownloadItem {
   done: number; total: number; rate: number | null; note?: string | null; started?: number; link: string;
 }
 
-export type ActivitySource = 'schedule' | 'todo' | 'plan' | 'scout' | 'notebook' | 'deploy' | 'codex' | 'memory' | 'data' | 'brief' | 'health' | 'shopping' | 'nightshift';
+export type ActivitySource = 'schedule' | 'todo' | 'plan' | 'scout' | 'notebook' | 'deploy' | 'codex' | 'memory' | 'data' | 'brief' | 'health' | 'shopping' | 'nightshift' | 'circles' | 'guest';
 
 /** Unread events, how many of them need the owner, and approvals agents are waiting on right now. */
 export interface ActivitySummary { unread: number; attention: number; pending: number }

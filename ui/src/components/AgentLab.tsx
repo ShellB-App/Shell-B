@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
-import { BrainCircuit, Cloud, Copy, Cpu, Network, Plus, RotateCcw, Save, Sparkles, Terminal, Trash2 } from 'lucide-react';
+import { BrainCircuit, Cloud, Copy, Cpu, Network, Plus, RotateCcw, Save, Sparkles, Trash2 } from 'lucide-react';
 import type { Agent, Effort, ModelInfo, Skill, ToolInfo } from '../types';
 import { api, fmtBytes } from '../api';
 import { AgentAvatar, Modal, btn, toolIcon } from './common';
@@ -8,20 +8,14 @@ import { connectorIcon } from './Integrations';
 
 const isCloudModel = (m: string) => /^(anthropic|gemini|openai|mammouth|claude-code|antigravity|codex)\//.test(m);
 
-/** Where an agent's model runs. SSH and Swarm are scaffolding: their model ids will be `ssh/<host>/<model>` and `swarm/<model>`. */
-type ModelSource = 'local' | 'cloud' | 'ssh' | 'swarm';
-const SOURCES: { id: ModelSource; label: string; icon: typeof Cpu; ready: boolean }[] = [
-  { id: 'local', label: 'Local', icon: Cpu, ready: true },
-  { id: 'cloud', label: 'Cloud', icon: Cloud, ready: true },
-  { id: 'ssh', label: 'SSH', icon: Terminal, ready: false },
-  { id: 'swarm', label: 'Swarm', icon: Network, ready: false },
+/** Where an agent's model runs. Models on other machines are not a separate source: Models → Fleet routes local model
+ * calls to them by name, so they appear under Local. */
+type ModelSource = 'local' | 'cloud';
+const SOURCES: { id: ModelSource; label: string; icon: typeof Cpu }[] = [
+  { id: 'local', label: 'Local', icon: Cpu },
+  { id: 'cloud', label: 'Cloud', icon: Cloud },
 ];
-const sourceOf = (m: string): ModelSource =>
-  m.startsWith('ssh/') ? 'ssh' : m.startsWith('swarm/') ? 'swarm' : isCloudModel(m) ? 'cloud' : 'local';
-const SOURCE_NOTE: Partial<Record<ModelSource, string>> = {
-  ssh: 'Coming soon: run this agent on a model served by another machine you reach over SSH (Ollama tunnelled to this host). The agent keeps its current model until then.',
-  swarm: 'Coming soon: fan tasks out in parallel across other local AI machines on your network. The agent keeps its current model until then.',
-};
+const sourceOf = (m: string): ModelSource => isCloudModel(m) ? 'cloud' : 'local';
 
 const PALETTE: [string, string][] = [
   ['#c96442', '#da7756'], ['#0284c7', '#4f46e5'], ['#059669', '#0f766e'], ['#7c3aed', '#2563eb'],
@@ -146,11 +140,8 @@ export function AgentLab({ open, onClose, agents, tools, models, initialId, onCh
             <label className="block text-[11px] text-[var(--text-muted)]">Model
               <div className="flex gap-2">
                 <select className={clsx(btn.input, 'w-28 shrink-0')} value={source} onChange={e => pickSource(e.target.value as ModelSource)} aria-label="Model source">
-                  {SOURCES.map(o => <option key={o.id} value={o.id}>{o.label}{o.ready ? '' : ' (soon)'}</option>)}
+                  {SOURCES.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
                 </select>
-                {SOURCE_NOTE[source] ? (
-                  <select className={btn.input} disabled value=""><option value="">No {SOURCES.find(o => o.id === source)!.label} hosts yet</option></select>
-                ) : (
                   <select className={btn.input} value={model?.name ?? draft.model} onChange={e => set('model', e.target.value)}>
                     {!model && sourceOf(draft.model) === source && <option value={draft.model}>{draft.model} ({source === 'cloud' ? 'cloud AI off or no key' : 'not installed'})</option>}
                     {sourceOf(draft.model) !== source && <option value={draft.model} disabled>Pick a {source} model</option>}
@@ -161,12 +152,11 @@ export function AgentLab({ open, onClose, agents, tools, models, initialId, onCh
                       </option>
                     ))}
                   </select>
-                )}
               </div>
-              {SOURCE_NOTE[source] && (
-                <span className="mt-1 flex items-start gap-1 text-[10px] text-amber-400">
-                  {source === 'ssh' ? <Terminal className="w-3 h-3 shrink-0 mt-px" /> : <Network className="w-3 h-3 shrink-0 mt-px" />}
-                  {SOURCE_NOTE[source]} Current: <span className="font-mono">{draft.model}</span>
+              {source === 'local' && (
+                <span className="mt-1 flex items-start gap-1 text-[10px] text-[var(--text-muted)]">
+                  <Network className="w-3 h-3 shrink-0 mt-px" />
+                  Other machines run these same models through <a className="underline hover:text-[var(--text-primary)]" href="#/models/fleet">Models → Fleet</a>.
                 </span>
               )}
               {isCloudModel(draft.model) && (
@@ -207,7 +197,7 @@ export function AgentLab({ open, onClose, agents, tools, models, initialId, onCh
           <div>
             <div className="text-[11px] text-[var(--text-muted)] mb-1.5">Tools <span className="opacity-75">(file and screenshot tools are added automatically in Studio projects)</span> {model && !model.capabilities.includes('tools') && <span className="text-amber-400">— this model can't call tools</span>}</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-              {tools.filter(t => t.scope !== 'project' && t.scope !== 'skills').map(t => {
+              {tools.filter(t => t.scope === 'agent' || t.category === 'mcp').map(t => {
                 const Icon = t.category === 'mcp' ? connectorIcon(t.icon) : toolIcon(t.id);
                 const on = draft.tools.includes(t.id);
                 return (
@@ -229,6 +219,22 @@ export function AgentLab({ open, onClose, agents, tools, models, initialId, onCh
                 );
               })}
             </div>
+            {tools.some(t => t.scope === 'global' || t.scope === 'group') && (
+              <details className="mt-2 text-[11px] text-[var(--text-muted)]">
+                <summary className="cursor-pointer select-none hover:text-[var(--text-primary)]">Added automatically ({tools.filter(t => t.scope === 'global' || t.scope === 'group').length} tools)</summary>
+                <ul className="mt-1.5 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
+                  {tools.filter(t => t.scope === 'global' || t.scope === 'group').map(t => {
+                    const Icon = toolIcon(t.id);
+                    return (
+                      <li key={t.id} className="flex items-start gap-1.5 leading-snug">
+                        <Icon className="w-3 h-3 mt-0.5 shrink-0 text-[var(--text-muted)]" />
+                        <span><span className="text-[var(--text-secondary)]">{t.displayName}</span>{t.auto ? ` · ${t.auto}` : ''}{!t.enabled && ' (disabled globally)'}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </details>
+            )}
           </div>
 
           <div>

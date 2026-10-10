@@ -19,7 +19,7 @@ import { ArtifactPanel } from './components/ArtifactPanel';
 import { AgentLab } from './components/AgentLab';
 import { CommandPalette, SettingsModal } from './components/Panels';
 import { IncognitoMark, IncognitoNote, IncognitoStrip } from './components/Incognito';
-import { IntegrationsModal } from './components/Integrations';
+import { IntegrationsModal, type ToolsTab } from './components/Integrations';
 import { NewProjectDialog, ProjectGlyph, ProjectPage, ProjectsIndex } from './components/Projects';
 import { AgentAvatar, btn } from './components/common';
 import { WorkspaceFiles } from './components/WorkspaceFiles';
@@ -497,6 +497,7 @@ export function App() {
       else if (mod && e.shiftKey && e.key.toLowerCase() === 'o') { e.preventDefault(); newChat(); }
       else if (mod && e.shiftKey && e.key.toLowerCase() === 'y' && overlaySupported()) { e.preventDefault(); toggleOverlay().catch(err => toast(String(err), { kind: 'error' })); }
       else if (mod && !e.shiftKey && e.key.toLowerCase() === 'b' && !(e.target instanceof HTMLTextAreaElement)) { e.preventDefault(); setSidebar(s => !s); }
+      else if (e.key === '?' && !mod && !e.altKey && !(e.target instanceof HTMLTextAreaElement) && !(e.target instanceof HTMLInputElement) && !(e.target as HTMLElement | null)?.isContentEditable) { e.preventDefault(); setSettingsTab('shortcuts'); setModal('settings'); }
       else if (e.key === 'Escape' && !modal && panel) setPanel(null);
     };
     window.addEventListener('keydown', onKey);
@@ -552,9 +553,11 @@ export function App() {
     else { location.hash = appById(app).hash!; setSidebar(false); }
   }, [newChat, agentId]);
 
+  const [toolsTab, setToolsTab] = useState<ToolsTab | undefined>(() => /[?&]tab=(connectors|servers|skills|tools|cloud)/.exec(location.search)?.[1] as ToolsTab | undefined);
   const paletteActions = useMemo(() => ({
     newChat, openConversation, toggleTheme, toggleSkin, openApp,
     openSettings: (tab: SettingsTabId = 'general') => { setSettingsTab(tab); setModal('settings'); },
+    openTools: (tab?: ToolsTab) => { setToolsTab(tab); setModal('tools'); },
     openFormFactor: () => setFormFactorOpen(true),
   }), [newChat, openConversation, toggleTheme, toggleSkin, openApp]);
 
@@ -570,11 +573,11 @@ export function App() {
 
   const modals = (
     <>
-      <CommandPalette open={modal === 'palette'} onClose={() => setModal(null)} agents={chatAgents} conversations={convs} theme={theme} actions={paletteActions} />
+      <CommandPalette open={modal === 'palette'} onClose={() => setModal(null)} agents={chatAgents} conversations={convs} theme={theme} actions={paletteActions} settings={settings} />
       <AgentLab open={modal === 'agents'} onClose={() => setModal(null)} agents={agents} tools={tools} models={models} initialId={labAgent}
         onChanged={id => { loadAgents(); if (id) setLabAgent(id); }} />
-      <IntegrationsModal open={modal === 'tools'} onClose={() => setModal(null)} tools={tools} settings={settings} onChanged={loadIntegrations}
-        tab={/[?&]tab=(connectors|servers|skills|tools|cloud)/.exec(location.search)?.[1] as 'connectors' | undefined} />
+      <IntegrationsModal open={modal === 'tools'} onClose={() => { setModal(null); setToolsTab(undefined); }} tools={tools} settings={settings} onChanged={loadIntegrations}
+        tab={toolsTab} />
       <NewProjectDialog open={newProject} onClose={() => setNewProject(false)}
         onCreated={g => { setNewProject(false); loadGroups(); openGroup(g.id); }} />
       <SettingsModal open={modal === 'settings'} onClose={() => setModal(null)} settings={settings} agents={chatAgents} models={models}

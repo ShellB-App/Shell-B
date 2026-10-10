@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { FileText, Pencil, Plus, Trash2, Variable } from 'lucide-react';
 import { composerApi, type ComposerCatalog, type ComposerPrompt, type ComposerVariable } from '../composerApi';
 import { btn } from './common';
+import { KeyboardShortcutsSection } from './KeyboardShortcuts';
 
 /** Settings → Shortcuts: saved #variables and /prompt templates for the composer (see ComposerShortcuts.tsx). */
 export function ShortcutsTab() {
@@ -102,6 +103,7 @@ export function ShortcutsTab() {
           {cat && !cat.variables.length && !editVar && <div className="text-xs text-[var(--text-muted)]">No saved variables yet.</div>}
         </div>
       </section>
+      <KeyboardShortcutsSection />
     </div>
   );
 }

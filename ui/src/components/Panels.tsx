@@ -2,8 +2,9 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import {
   Archive, AudioLines, Bell, BookMarked, Boxes, Brain, EyeOff, Inbox, Sparkles, Cpu, Monitor, Moon, Plus, Search, Settings as SettingsIcon, SlidersHorizontal, SquarePen, Star, Sun, Trash2, BrainCircuit, MessageSquare, KeyRound, Hash, Network, ShieldCheck, MonitorDown,
-  PictureInPicture2, History, Palette, MonitorPlay,
+  PictureInPicture2, History, Palette, MonitorPlay, Keyboard, Users, Globe, Plug, Rocket, ListTodo, ClipboardCheck, Store, RefreshCw, UserRound, Workflow,
 } from 'lucide-react';
+import type { ToolsTab } from './Integrations';
 import type { Agent, ChatHit, ConversationSummary, Memory, ModelInfo, Settings, SettingsTabId, Status, ToolInfo } from '../types';
 import { api, fmtBytes } from '../api';
 import { AgentAvatar, Modal, Toggle, btn, relTime, toolIcon, Snippet } from './common';
@@ -203,6 +204,9 @@ function General({ settings, agents, models, onSaved, onOpenTab }: SettingsProps
       <Row label="Suggest replies" hint="After each reply, the utility model guesses your next message; Tab accepts it">
         <Toggle on={settings.promptSuggestions ?? true} onChange={v => save({ promptSuggestions: v })} label="Suggest replies" />
       </Row>
+      <Row label="Fresh starter cards" hint="Every 12 hours, while nobody is chatting, the utility model writes new suggestions for the empty-chat screen">
+        <Toggle on={settings.suggestionsRefresh ?? true} onChange={v => save({ suggestionsRefresh: v })} label="Fresh starter cards" />
+      </Row>
       <Row label="API Keys" hint="Credentials for external services and cloud AI providers">
         <button className={btn.subtle} onClick={() => onOpenTab?.('apikeys')}><KeyRound className="w-3.5 h-3.5 text-rose-400" />API keys & external services</button>
       </Row>
@@ -212,9 +216,18 @@ function General({ settings, agents, models, onSaved, onOpenTab }: SettingsProps
       <Row label="Network" hint="Wi-Fi, Ethernet, and active VPN tunnels">
         <button className={btn.subtle} onClick={() => onOpenTab?.('network')}><Network className="w-3.5 h-3.5" />Network settings</button>
       </Row>
-      <Row label="Max tool rounds" hint="Safety cap on tool calls per reply">
-        <input type="number" min={1} max={50} className={clsx(btn.input, 'w-24')} value={settings.maxToolRounds}
-          onChange={e => save({ maxToolRounds: Math.max(1, Math.min(50, Number(e.target.value) || 16)) })} />
+      <Row label="Max tool rounds" hint="Safety cap on tool calls per reply; the loop guard may extend it up to the hard cap">
+        <div className="flex items-center gap-2">
+          <input type="number" min={1} max={50} className={clsx(btn.input, 'w-24')} value={settings.maxToolRounds}
+            onChange={e => save({ maxToolRounds: Math.max(1, Math.min(50, Number(e.target.value) || 16)) })} />
+          <span className="text-xs text-[var(--text-muted)]">hard cap</span>
+          <input type="number" min={20} max={500} className={clsx(btn.input, 'w-20 text-center')} value={settings.maxToolRoundsHardCap ?? 100}
+            onChange={e => save({ maxToolRoundsHardCap: Math.max(20, Math.min(500, Number(e.target.value) || 100)) })} />
+        </div>
+      </Row>
+      <Row label="Stream stall" hint="End a local turn when the model sends nothing for this long (minutes)">
+        <input type="number" min={2} max={60} className={clsx(btn.input, 'w-24')} value={settings.streamStallMinutes ?? 10}
+          onChange={e => save({ streamStallMinutes: Math.max(2, Math.min(60, Number(e.target.value) || 10)) })} />
       </Row>
       <Row label="Loop guard" hint="Evaluates progress every X turns: auto-extends budget, prevents runaway loops">
         <div className="flex items-center gap-2">
@@ -424,10 +437,14 @@ interface PaletteProps {
   actions: {
     newChat: (agentId?: string, incognito?: boolean) => void; openConversation: (id: string) => void; toggleTheme: () => void; toggleSkin: () => void;
     openApp: (app: AppId) => void; openSettings: (tab?: SettingsTabId) => void;
+    /** Tools & Connectors on a given tab (desktop only; the kiosk opens the modal on its default tab) */
+    openTools?: (tab?: ToolsTab) => void;
   };
+  /** for entries that exist only when a feature is on (Aphrodite's tab) */
+  settings?: Settings;
 }
 
-export function CommandPalette({ open, onClose, agents, conversations, theme, actions }: PaletteProps) {
+export function CommandPalette({ open, onClose, agents, conversations, theme, actions, settings }: PaletteProps) {
   const [q, setQ] = useState('');
   const [sel, setSel] = useState(0);
   const [msgHits, setMsgHits] = useState<ChatHit[]>([]);
@@ -478,6 +495,29 @@ export function CommandPalette({ open, onClose, agents, conversations, theme, ac
       { id: 'apikeys', label: 'API Keys & External Services', search: 'api keys secrets tokens credentials external services', icon: <KeyRound className="w-4 h-4 text-rose-400" />, run: () => actions.openSettings('apikeys') },
       { id: 'codex-secrets', label: 'Codex: API Keys & Secrets', search: 'codex secrets api keys external tokens', icon: <KeyRound className="w-4 h-4 text-rose-400" />, run: () => { location.hash = '#/codex/secrets'; } },
       { id: 'settings', label: 'Settings', icon: <SettingsIcon className="w-4 h-4" />, run: () => actions.openSettings() },
+      { id: 'speech', label: 'Speech & voices', search: 'tts voice read aloud dictation whisper kokoro clone', icon: <AudioLines className="w-4 h-4" />, run: () => actions.openSettings('speech') },
+      { id: 'shortcuts', label: 'Shortcuts: /prompts, #variables and keys', search: 'composer templates variables keyboard hotkeys', icon: <Hash className="w-4 h-4" />, run: () => actions.openSettings('shortcuts') },
+      { id: 'keys', label: 'Keyboard shortcuts', hint: '?', search: 'hotkeys keys bindings', icon: <Keyboard className="w-4 h-4" />, run: () => actions.openSettings('shortcuts') },
+      { id: 'notifications', label: 'Notifications', search: 'push devices alerts email', icon: <Bell className="w-4 h-4" />, run: () => actions.openSettings('notifications') },
+      { id: 'backups', label: 'Backups', search: 'backup restore export archive', icon: <Archive className="w-4 h-4" />, run: () => actions.openSettings('backups') },
+      { id: 'changelog', label: "What's new (changelog)", search: 'changes release notes version', icon: <History className="w-4 h-4" />, run: () => actions.openSettings('changelog') },
+      { id: 'account', label: 'Account: password, devices, audit log', search: 'login sessions sign out security', icon: <ShieldCheck className="w-4 h-4" />, run: () => actions.openSettings('account') },
+      ...(actions.openTools ? [
+        { id: 'tools-skills', label: 'Skills', search: 'skill.md agent skills install', icon: <Sparkles className="w-4 h-4 text-amber-400" />, run: () => actions.openTools!('skills') },
+        { id: 'tools-discover', label: 'Discover: community MCP servers and skills', search: 'marketplace registry community install', icon: <Globe className="w-4 h-4 text-sky-400" />, run: () => actions.openTools!('discover') },
+        { id: 'tools-servers', label: 'MCP servers & connectors', search: 'mcp connectors servers integrations', icon: <Plug className="w-4 h-4 text-sky-400" />, run: () => actions.openTools!('servers') },
+        { id: 'tools-api', label: 'Shell:B API keys & webhooks', search: 'api v1 keys mcp server openai compatible', icon: <KeyRound className="w-4 h-4 text-rose-400" />, run: () => actions.openTools!('api') },
+        { id: 'tools-guests', label: 'Guests: invites, accounts, containers', search: 'guest invite cells reports', icon: <Users className="w-4 h-4 text-fuchsia-400" />, run: () => actions.openTools!('guests') },
+        { id: 'tools-screen', label: 'Screen & browser helper', search: 'screen share pair computer browser helper', icon: <MonitorPlay className="w-4 h-4" />, run: () => actions.openTools!('screen') },
+        { id: 'tools-cloud', label: 'Cloud AI', search: 'claude gemini openai cloud keys', icon: <Rocket className="w-4 h-4" />, run: () => actions.openTools!('cloud') },
+        ...(settings?.adultEnabled ? [{ id: 'tools-adult', label: 'Aphrodite settings', search: 'adult after dark', icon: <UserRound className="w-4 h-4 text-rose-400" />, run: () => actions.openTools!('adult') }] : []),
+      ] : []),
+      { id: 'followups', label: 'Follow-ups and the morning brief', search: 'reminders todo commitments brief', icon: <ListTodo className="w-4 h-4 text-orange-400" />, run: () => { location.hash = '#/activity/follow-ups'; } },
+      { id: 'nightshift', label: 'Night shift queue', search: 'overnight research redraft big model', icon: <Moon className="w-4 h-4 text-indigo-300" />, run: () => { location.hash = '#/activity/night-shift'; } },
+      { id: 'findings', label: 'Self-review findings', search: 'audit review ledger bugs', icon: <ClipboardCheck className="w-4 h-4 text-rose-400" />, run: () => { location.hash = '#/activity/findings'; } },
+      { id: 'model-store', label: 'Model Store', search: 'download models ollama hugging face', icon: <Store className="w-4 h-4 text-cyan-400" />, run: () => { location.hash = '#/models/store'; } },
+      { id: 'model-updates', label: 'Model updates', search: 'newer model versions', icon: <RefreshCw className="w-4 h-4 text-cyan-400" />, run: () => { location.hash = '#/models/updates'; } },
+      { id: 'fleet', label: 'Fleet: other machines running models', search: 'nodes machines spread overflow', icon: <Workflow className="w-4 h-4 text-cyan-400" />, run: () => { location.hash = '#/models/fleet'; } },
     ] as Item[]).filter(c => `${c.label} ${c.search ?? ''}`.toLowerCase().includes(ql));
     const stars: Item[] = favs.filter(f => `${f.title} ${f.subtitle}`.toLowerCase().includes(ql)).slice(0, q ? 12 : 8)
       .map(f => ({ id: `fav-${f.kind}-${f.ref}-${f.sub}`, label: f.title, hint: `★ ${FAV_LABEL[f.kind]}`, icon: <FavIcon f={f} agents={agents} />, run: () => { location.hash = f.href; } }));

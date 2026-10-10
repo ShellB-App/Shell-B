@@ -280,7 +280,7 @@ async def track_flight(args, ctx):
 
 def register():
     TOOLS["track_flight"] = {
-        "fn": track_flight, "service": None, "scope": "global",
+        "fn": track_flight, "service": None, "scope": "global", "auto": "when the agent has Web Search",
         "ui": {"displayName": "Flight Tracker", "icon": "Plane", "category": "web",
                "description": "Live aircraft positions, routes and trails from the community ADS-B feeds."},
         "schema": _fn("track_flight",

@@ -223,7 +223,7 @@ async def _legal(args, ctx):
 
 def register():
     TOOLS["legal"] = {
-        "fn": _legal, "service": None, "scope": "global",
+        "fn": _legal, "service": None, "scope": "global", "auto": "when the legal index is built",
         "ui": {"displayName": "Offline Law", "icon": "Scale", "category": "knowledge",
                "description": "Search and read US and EU law offline: statutes, regulations, export controls, tariffs, EU acts, restricted-party lists."},
         "schema": _fn("legal",

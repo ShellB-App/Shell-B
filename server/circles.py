@@ -929,7 +929,7 @@ async def circles_tool(args, ctx):
 def register():
     from tools import TOOLS, _fn
     TOOLS["circles"] = {
-        "fn": circles_tool, "service": None, "scope": "global",
+        "fn": circles_tool, "service": None, "scope": "global", "auto": "when the agent has memory tools",
         "ui": {"displayName": "Circles", "icon": "UsersRound", "category": "memory",
                "description": "The user's circles (Family, Friends, Work…): search the notes members shared, and draft "
                               "notes for the user to publish."},

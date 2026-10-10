@@ -143,7 +143,7 @@ async def _live_only(args, ctx):
 
 def register():
     TOOLS["ask_user"] = {
-        "fn": _live_only, "service": None, "scope": "global",
+        "fn": _live_only, "service": None, "scope": "global", "auto": "in live chats",
         "ui": {"displayName": "Ask the User", "icon": "MessageCircleQuestion", "category": "subagent",
                "description": "Agents can pause a chat to ask you multiple-choice questions (you can always type your own answer)."},
         "schema": _fn("ask_user",

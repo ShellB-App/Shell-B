@@ -519,7 +519,8 @@ def overview() -> dict:
             "idleSeconds": int(idle_seconds()), "queued": sum(j["status"] == "queued" for j in items),
             "settings": {"enabled": s.get("nightShift", True), "window": s.get("nightShiftWindow", ""),
                          "idleMinutes": s.get("nightShiftIdleMinutes", 20), "model": _model(),
-                         "redrafts": s.get("nightShiftRedrafts", True)}}
+                         "redrafts": s.get("nightShiftRedrafts", True),
+                         "context": int(s.get("nightShiftContext") or 65536)}}
 
 
 # ── agent tool ──────────────────────────────────────────────────────────────
@@ -554,7 +555,7 @@ def tool_allowed(agent: dict, settings: dict) -> bool:
 
 def register():
     TOOLS["night_shift"] = {
-        "fn": night_shift_tool, "service": None, "scope": "global",
+        "fn": night_shift_tool, "service": None, "scope": "global", "auto": "for local models while Night shift is on",
         "ui": {"displayName": "Night Shift", "icon": "Moon", "category": "memory",
                "description": "Queues deep research for the big local model to do while the owner is away."},
         "schema": _fn("night_shift",

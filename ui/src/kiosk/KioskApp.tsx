@@ -42,6 +42,8 @@ import { MegaPlanBoard, MegaPlansIndex } from '../components/MegaPlans';
 import { AssetLibraryView, AssetsIndex } from '../components/Assets';
 import { Gibberlink } from '../components/Gibberlink';
 import { Secretary } from '../components/Secretary';
+import { Shopping } from '../components/Shopping';
+import { Circles } from '../components/Circles';
 import { MapsApp } from '../maps/MapsApp';
 import { RadioApp } from '../radio/RadioApp';
 import { AgentLab } from '../components/AgentLab';
@@ -548,8 +550,10 @@ export function KioskApp() {
     return () => window.removeEventListener('hashchange', onHash);
   }, [openApp, openConversation]);
 
+  const [incognitoDraft, setIncognitoDraft] = useState(false);  // the next new chat is incognito (palette or /incognito)
   const newChat = useCallback(
-    (aid?: string) => {
+    (aid?: string, incognito = false) => {
+      setIncognitoDraft(incognito);
       setConv(null);
       setAgentId(aid ?? settings?.defaultAgent ?? 'shellb');
       setFocusTick(t => t + 1);
@@ -560,16 +564,32 @@ export function KioskApp() {
     [settings, windows, focusWindow, openApp, setConv]
   );
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (kioskLocked) return;
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setModal(m => (m === 'palette' ? null : 'palette'));
+      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'o') {
+        e.preventDefault();
+        newChat();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [kioskLocked, newChat]);
+
+
   const ensureConversation = useCallback(async () => {
     if (convRef.current) return convRef.current.id;
-    const c = await api.createConversation(agentId, pendingGroup.current ?? undefined);
+    const c = await api.createConversation(agentId, pendingGroup.current ?? undefined, !pendingGroup.current && incognitoDraft);
     pendingGroup.current = null;
     const full: Conversation = { ...c, messages: [], artifacts: [] };
     convRef.current = full;
     setConv(full);
     setConvs(prev => [c, ...prev]);
     return c.id;
-  }, [agentId, setConv, convRef]);
+  }, [agentId, incognitoDraft, setConv, convRef]);
 
   const send = useCallback(
     async (
@@ -868,7 +888,7 @@ export function KioskApp() {
                           onSend={(t, a, o) => send(t, a, undefined, o?.agentId, o?.mode)}
                           onStop={stop}
                           convId={conv?.id}
-                          onCommand={() => newChat()}
+                          onCommand={c => newChat(undefined, c === 'incognito')}
                           planMode={planMode}
                           onPlanMode={setPlanMode}
                           ensureConversation={ensureConversation}
@@ -1018,6 +1038,14 @@ export function KioskApp() {
                           onOpenProject={() => {}}
                         />
                       </Suspense>
+                    </div>
+                  ) : win.appId === 'shop' ? (
+                    <div className="h-full overflow-y-auto bg-[var(--bg-primary)]">
+                      <Shopping />
+                    </div>
+                  ) : win.appId === 'circles' ? (
+                    <div className="h-full overflow-hidden bg-[var(--bg-primary)]">
+                      <Circles />
                     </div>
                   ) : win.appId === 'settings' ? (
                     <div className="h-full overflow-hidden bg-[var(--bg-primary)]">

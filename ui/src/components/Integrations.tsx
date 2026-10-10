@@ -23,7 +23,8 @@ const SERVICE_NAMES: Record<string, string> = {
 };
 const SECRET = '__secret__';
 
-type Tab = 'connectors' | 'servers' | 'skills' | 'discover' | 'tools' | 'cloud' | 'screen' | 'api' | 'guests' | 'adult';
+export type ToolsTab = 'connectors' | 'servers' | 'skills' | 'discover' | 'tools' | 'cloud' | 'screen' | 'api' | 'guests' | 'adult';
+type Tab = ToolsTab;
 
 interface Props {
   open: boolean;
@@ -382,6 +383,7 @@ function BuiltinTools({ tools, onChanged }: { tools: ToolInfo[]; onChanged: () =
                 <span className="text-sm font-medium">{t.displayName}</span>
                 <span className="text-[10px] font-mono text-[var(--text-muted)]">{t.id}</span>
                 {t.scope === 'project' && <span className="px-1.5 py-0.5 rounded text-[10px] bg-rose-500/10 text-rose-400 border border-rose-500/20">Studio</span>}
+                {(t.scope === 'global' || t.scope === 'group') && <span className="px-1.5 py-0.5 rounded text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/20" title={t.auto ? `Added ${t.auto}` : 'Added by Shell:B, not per agent'}>Auto</span>}
               </div>
               <div className="text-xs text-[var(--text-muted)]">{t.description}</div>
               {!t.available && <div className="text-[11px] text-amber-400 mt-0.5">Backing service is offline: {SERVICE_NAMES[t.service ?? ''] ?? t.service}</div>}

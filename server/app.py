@@ -82,6 +82,7 @@ import mailer
 import compaction
 import composer
 import planmode
+import roster
 import sysinfo
 import network
 import changelog
@@ -184,6 +185,11 @@ memory.init()
 episodes.init()
 chatmail.init()
 chatmail.register()
+roster.grant_tools("tools_2026_10_10", {  # tools that reached no stored agent before (chat mail, Discover, the findings ledger)
+    "shellb": ["leave_message", "check_messages", "find_capability", "self_findings"],
+    "hephaestus": ["leave_message", "check_messages", "find_capability", "self_findings"],
+    "minerva": ["leave_message", "check_messages"], "mimir": ["leave_message", "check_messages"], "daedalus": ["leave_message", "check_messages"],
+    "atlas": ["find_capability"], "claude": ["find_capability"]})
 compaction.migrate_legacy()  # after episodes.init: the FTS triggers index the messages it puts back
 feedback.init()
 guests.init()
@@ -1056,15 +1062,18 @@ async def tools_list():
         if t.get("hidden"):
             continue
         svc = t["service"]
-        out.append({"id": tid, **t["ui"], "enabled": switches.get(tid, True), "scope": t.get("scope", "global"),
-                    "service": svc, "available": True if svc is None else status.get(svc, {}).get("ok", False)})
+        # scope: "agent" (listed per agent in the Agent Lab), "global"/"group"/"project"/"skills" (added by agent.py's
+        # rules; `auto` says when). Ticking a non-agent tool on an agent does nothing, so the UI shows those read-only.
+        out.append({"id": tid, **t["ui"], "enabled": switches.get(tid, True), "scope": t.get("scope", "agent"),
+                    "auto": t.get("auto", ""), "service": svc,
+                    "available": True if svc is None else status.get(svc, {}).get("ok", False)})
     for cfg in mcp_hub.configs():
         st = mcp_hub.server_status(cfg["id"])
         conn = mcp_hub.CONNECTOR_BY_ID.get(cfg.get("connector"), {})
         n = sum(1 for t in st["tools"] if t["enabled"])
         out.append({"id": f"mcp:{cfg['id']}", "displayName": cfg["name"], "icon": conn.get("icon", "Plug"), "category": "mcp",
                     "description": f"{conn.get('name', 'MCP server')} · " + (f"{n} tools" if st["status"] == "ready" else st["status"]),
-                    "enabled": bool(cfg.get("enabled")), "scope": "global", "service": "mcp",
+                    "enabled": bool(cfg.get("enabled")), "scope": "agent", "auto": "", "service": "mcp",
                     "available": st["status"] == "ready", "cloud": conn.get("local") is False})
     return out
 
