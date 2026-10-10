@@ -4,6 +4,7 @@ import { FolderOpen, Loader2, RefreshCw } from 'lucide-react';
 import { api } from '../api';
 import type { WorkspaceFile } from '../types';
 import { DownloadChip } from './MessageView';
+import { docTarget } from '../docView';
 
 /** Header button + dropdown listing every file in the chat's /work folder (uploads and everything the agents wrote). */
 export function WorkspaceFiles({ convId, refreshKey }: { convId: string; refreshKey?: unknown }) {
@@ -43,7 +44,7 @@ export function WorkspaceFiles({ convId, refreshKey }: { convId: string; refresh
           </div>
           <div className="flex flex-col gap-1">
             {files.map(f => (
-              <div key={f.path} className="flex flex-col min-w-0">
+              <div key={f.path} className="flex flex-col min-w-0" onClick={() => { if (docTarget(f.url)) setOpen(false); }}>
                 <DownloadChip file={f} />
                 {f.path.includes('/') && <span className="pl-2 pt-0.5 text-[10px] font-mono text-[var(--text-muted)] truncate">/work/{f.path}</span>}
               </div>
