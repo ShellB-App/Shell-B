@@ -1,4 +1,4 @@
-"""Email from Shell:B through Cloudflare Email Sending (REST API): notifications, guest links, and agent mail.
+"""Email from Shell:B through Resend (default) or Cloudflare Email Sending: notifications, guest links, agent mail.
 
 Three senders, one door:
 - **Notifications** (notify.py): a channel next to Web Push with its own per-kind level (`notify_prefs.email`), off
@@ -8,12 +8,12 @@ Three senders, one door:
 - **Agents**: the `send_email` tool. Every message waits for the owner's approval with the full text shown (like the
   browser tool's submits), and replies go to the owner (Reply-To). Never in guest turns or the adult agent.
 
-Config (kv `email`, admin-only to change): Cloudflare account id, the From address on an onboarded sending domain,
-the owner's own address (`to`) and the app's public URL for links. The API token lives in data/email/cf.token (0600)
-and is never returned by any route. Every send is logged in `email_log` (90 days), and SEND_CAP per hour bounds what
+Config (kv `email`, admin-only to change): the provider (`resend`, whose free tier suits this; `cloudflare` needs a paid
+plan and its account id), the From address on a domain verified with that provider, the owner's own address (`to`) and
+the app's public URL for links. The API key lives in data/email/api.token (0600) and is never returned by any route. Every send is logged in `email_log` (90 days), and SEND_CAP per hour bounds what
 a runaway loop could send.
 
-Privacy: mail leaves through Cloudflare and lands in the recipient's provider. Notification mail follows the same
+Privacy: mail leaves through the provider and lands in the recipient's provider. Notification mail follows the same
 `details` preference as push: by default only a generic subject ("Mega Plan finished") and a link go out.
 """
 import asyncio
@@ -31,9 +31,10 @@ from tools import TOOLS, ToolResult, _fn
 
 router = APIRouter(prefix="/api/email")
 DIR = db.DATA / "email"
-TOKEN = DIR / "cf.token"
-API = "https://api.cloudflare.com/client/v4/accounts/{account}/email/sending/send"
-DEFAULTS = {"accountId": "", "from": "notify@shellb.app", "fromName": "Shell:B", "to": "", "appUrl": "https://ai.shellb.app"}
+TOKEN = DIR / "api.token"
+PROVIDERS = {"resend": "https://api.resend.com/emails",
+             "cloudflare": "https://api.cloudflare.com/client/v4/accounts/{account}/email/sending/send"}
+DEFAULTS = {"provider": "resend", "accountId": "", "from": "notify@shellb.app", "fromName": "Shell:B", "to": "", "appUrl": "https://ai.shellb.app"}
 SEND_CAP = 40              # emails per rolling hour, all senders together
 EMAIL_GRACE = 120          # seconds an approval stays unanswered before it is emailed
 MAX_RECIPIENTS = 10
@@ -68,7 +69,8 @@ def _token() -> str:
 
 def ready() -> bool:
     cfg = config()
-    return bool(ACCOUNT.match(cfg["accountId"]) and ADDRESS.match(cfg["from"]) and _token())
+    account_ok = cfg["provider"] != "cloudflare" or ACCOUNT.match(cfg["accountId"])
+    return bool(cfg["provider"] in PROVIDERS and account_ok and ADDRESS.match(cfg["from"]) and _token())
 
 
 def valid_address(value) -> str | None:
@@ -106,23 +108,28 @@ def send(kind: str, to: list[str] | str, subject: str, text: str, html: str | No
         _log(kind, to, subject, False, "hourly cap")
         return {"ok": False, "error": f"Shell:B already sent {SEND_CAP} emails this hour. Try again later."}
     cfg = config()
-    body = {"to": to, "from": {"address": cfg["from"], "name": cfg["fromName"] or "Shell:B"},
-            "subject": subject, "text": text}
+    resend = cfg["provider"] == "resend"
+    name = cfg["fromName"] or "Shell:B"
+    body = {"to": to, "subject": subject, "text": text,
+            "from": f"{name} <{cfg['from']}>" if resend else {"address": cfg["from"], "name": name}}
     if html:
         body["html"] = html
     if reply_to and valid_address(reply_to):
         body["reply_to"] = reply_to
+    headers = {"Authorization": f"Bearer {_token()}"}
+    if resend:
+        headers["Idempotency-Key"] = uuid.uuid4().hex  # a retry after a lost response can't send it twice
     err, result = "", {}
     for attempt in range(3):
         try:
-            r = httpx.post(API.format(account=cfg["accountId"]), json=body, timeout=20, follow_redirects=False,
-                           headers={"Authorization": f"Bearer {_token()}"})
+            r = httpx.post(PROVIDERS[cfg["provider"]].format(account=cfg["accountId"]), json=body, timeout=20,
+                           follow_redirects=False, headers=headers)
             data = r.json() if r.headers.get("content-type", "").startswith("application/json") else {}
-            if r.status_code < 300 and data.get("success"):
-                result = data.get("result") or {}
+            if r.status_code < 300 and (data.get("id") if resend else data.get("success")):
+                result = {} if resend else data.get("result") or {}
                 err = ""
                 break
-            errs = data.get("errors") or [{"message": r.text[:200]}]
+            errs = data.get("errors") or [{"message": data.get("message") or r.text[:200]}]
             err = f"{r.status_code} " + "; ".join(str(e.get("message", e)) for e in errs)[:250]
             if r.status_code not in RETRYABLE:
                 break
@@ -137,7 +144,7 @@ def send(kind: str, to: list[str] | str, subject: str, text: str, html: str | No
 
 
 def send_later(kind: str, to, subject: str, text: str, **kw):
-    """Fire and forget from sync code (notify's timers, request handlers that mustn't wait on Cloudflare)."""
+    """Fire and forget from sync code (notify's timers, request handlers that mustn't wait on the mail service)."""
     threading.Thread(target=send, args=(kind, to, subject, text), kwargs=kw, name="mailer", daemon=True).start()
 
 
@@ -187,6 +194,10 @@ async def api_config(req: Request):
     _owner(req)
     body = await req.json()
     cur = {k: v for k, v in config().items() if k in DEFAULTS}
+    if "provider" in body:
+        if body["provider"] not in PROVIDERS:
+            raise HTTPException(400, f"Provider must be one of: {', '.join(PROVIDERS)}.")
+        cur["provider"] = body["provider"]
     if "accountId" in body:
         v = str(body["accountId"] or "").strip().lower()
         if v and not ACCOUNT.match(v):
@@ -214,7 +225,7 @@ async def api_token(req: Request):
     _owner(req)
     token = str((await req.json()).get("token") or "").strip()
     if not re.match(r"^[A-Za-z0-9_-]{30,200}$", token):
-        raise HTTPException(400, "That doesn't look like a Cloudflare API token.")
+        raise HTTPException(400, "That doesn't look like an API key.")
     DIR.mkdir(parents=True, exist_ok=True)
     fd = os.open(TOKEN, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w") as f:

@@ -33,7 +33,7 @@ class MailBase(Base):
     def setUp(self):
         super().setUp()
         mailer.init()
-        db.kv_set("email", {"accountId": ACCOUNT, "from": "notify@shellb.app", "to": "owner@example.com"})
+        db.kv_set("email", {"provider": "cloudflare", "accountId": ACCOUNT, "from": "notify@shellb.app", "to": "owner@example.com"})
         mailer.TOKEN.write_text("t" * 40)
         mailer._sent.clear()
         self.fake = Fake()
@@ -58,6 +58,22 @@ class Sending(MailBase):
         self.assertEqual(call["headers"]["Authorization"], "Bearer " + "t" * 40)
         self.assertEqual(call["json"]["subject"], "Hi Bcc: x@evil.com")  # no header injection through the subject
         self.assertEqual(call["json"]["from"]["address"], "notify@shellb.app")
+
+    def test_resend(self):
+        db.kv_set("email", {"provider": "resend", "from": "notify@shellb.app", "to": "owner@example.com"})
+        self.fake.script = [(503, {"message": "busy"}), (200, {"id": "49a3999c"})]
+        res = mailer.send("test", ["a@example.com"], "Hi", "body", reply_to="owner@example.com")
+        self.assertTrue(res["ok"], res)
+        first, second = self.fake.calls
+        self.assertEqual(first["url"], "https://api.resend.com/emails")
+        self.assertEqual(first["json"]["from"], "Shell:B <notify@shellb.app>")
+        self.assertEqual(first["json"]["reply_to"], "owner@example.com")
+        self.assertEqual(first["headers"]["Idempotency-Key"], second["headers"]["Idempotency-Key"])  # a retry can't duplicate
+        self.fake.calls.clear()
+        self.fake.script = [(422, {"statusCode": 422, "message": "The shellb.app domain is not verified."})]
+        res = mailer.send("test", "a@example.com", "s", "b")
+        self.assertIn("not verified", res["error"])
+        self.assertEqual(len(self.fake.calls), 1)
 
     def test_not_ready_without_token(self):
         mailer.TOKEN.unlink()
