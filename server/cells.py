@@ -193,7 +193,7 @@ async def _prepare(cell: Cell):
 def _run_args(cell: Cell, guest: dict) -> list[str]:
     d, s = _dir(cell.gid), get_settings()
     models = {"models": allowed_models(), "embeddingModel": s.get("embeddingModel"), "utilityModel": s.get("utilityModel"),
-              "visionFallbackModel": s.get("visionFallbackModel")}
+              "visionFallbackModel": s.get("visionFallbackModel"), "language": (guest.get("config") or {}).get("language", "")}
     env = {"SHELLB_CELL": "1", "SHELLB_CELL_SECRET": cell.secret, "SHELLB_CELL_FRAME_SECRET": guests.frame_secret(cell.gid),
            "SHELLB_CELL_GUEST": guest["name"], "SHELLB_CELL_MODELS": json.dumps(models), "SHELLB_DEV_DIR": "/run/web/dev",
            "SHELLB_CELL_FORWARD": ",".join(f"{port}:{svc}" for svc, (port, _up) in SERVICES.items()),

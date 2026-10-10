@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
 import {
@@ -213,7 +214,7 @@ export function ComposerMenus({
           <button
             onClick={() => canThink && setMenu(menu === 'effort' ? null : 'effort')}
             disabled={!canThink}
-            title={canThink ? 'Reasoning effort' : `${model?.name} doesn't have a thinking mode`}
+            title={canThink ? t('Reasoning effort') : t("{model} doesn't have a thinking mode", { model: model?.name ?? '' })}
             className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover)] border border-[var(--border-subtle)] text-xs text-[var(--text-secondary)] transition disabled:opacity-40 disabled:hover:bg-[var(--bg-tertiary)]"
           >
             <Brain
@@ -222,7 +223,7 @@ export function ComposerMenus({
                 canThink && (effort === 'medium' || effort === 'high') ? 'text-[var(--accent)]' : ''
               )}
             />
-            <span>{canThink ? EFFORTS.find(e => e.id === effort)?.label : 'No thinking'}</span>
+            <span>{canThink ? t(EFFORTS.find(e => e.id === effort)?.label ?? '') : t('No thinking')}</span>
           </button>
           {menu === 'effort' && (
             <div
@@ -243,8 +244,8 @@ export function ComposerMenus({
                     e.id === effort ? 'bg-[var(--accent)]/15' : 'hover:bg-[var(--bg-hover)]'
                   )}
                 >
-                  <span className="text-xs font-medium">{e.label}</span>
-                  <span className="text-[11px] text-[var(--text-muted)]">{e.hint}</span>
+                  <span className="text-xs font-medium">{t(e.label)}</span>
+                  <span className="text-[11px] text-[var(--text-muted)]">{t(e.hint)}</span>
                 </button>
               ))}
             </div>
@@ -258,8 +259,8 @@ export function ComposerMenus({
             aria-pressed={!!planMode}
             title={
               planMode
-                ? 'Plan mode is on: read-only research, then a plan for you to approve (Shift+Tab to turn off)'
-                : 'Plan mode: research read-only and propose a plan before changing anything (Shift+Tab)'
+                ? t('Plan mode is on: read-only research, then a plan for you to approve (Shift+Tab to turn off)')
+                : t('Plan mode: research read-only and propose a plan before changing anything (Shift+Tab)')
             }
             className={clsx(
               'flex items-center gap-1 px-2 py-1 rounded-lg border text-xs transition',
@@ -269,7 +270,7 @@ export function ComposerMenus({
             )}
           >
             <ListChecks className="w-3 h-3" />
-            <span>Plan</span>
+            <span>{t('Plan')}</span>
           </button>
         )}
       </div>

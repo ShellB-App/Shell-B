@@ -424,6 +424,8 @@ export interface Conversation extends ConversationSummary {
 }
 
 export interface Settings {
+  /** interface and reply language: '' follows the browser (ui/src/i18n) */
+  language?: '' | 'en' | 'fr';
   defaultAgent: string;
   visionFallbackModel: string;
   utilityModel: string;

@@ -11,6 +11,7 @@ import { Toaster } from '../components/toast';
 import { ContextMenuHost } from '../components/ContextMenu';
 import { GuestGate } from './GuestGate';
 import { linkRoute } from '../links';
+import { useLocale } from '../i18n';
 
 // shellb:// links opened from other apps (manifest protocol_handlers) arrive as /?link=<url>: go to their route
 const launchRoute = (u: URL) => { const l = u.searchParams.get('link'); return l === null ? null : linkRoute(l) ?? '#/'; };
@@ -25,10 +26,11 @@ const GuestApp = lazy(() => import('./GuestApp').then(m => ({ default: m.GuestAp
 // the radio's station engine and mini player (it keeps playing while the guest chats)
 const SynthDJ = lazy(() => import('../dj/SynthDJ').then(m => ({ default: m.SynthDJ })));
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
+function Root() {
+  const locale = useLocale();  // a language change remounts the gate so every label re-renders
+  return (
     <ErrorBoundary>
-      <GuestGate>
+      <GuestGate key={locale}>
         {(me, refresh) => (
           <Suspense fallback={null}>
             <GuestApp key={me.id} me={me} refresh={refresh} />
@@ -40,8 +42,10 @@ createRoot(document.getElementById('root')!).render(
       <Toaster />
       <ContextMenuHost />
     </ErrorBoundary>
-  </StrictMode>
-);
+  );
+}
+
+createRoot(document.getElementById('root')!).render(<StrictMode><Root /></StrictMode>);
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

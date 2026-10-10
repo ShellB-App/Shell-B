@@ -14,6 +14,7 @@ import { Ambient } from './themes/Ambient';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Toaster } from './components/toast';
 import { useWindowControlsOverlay } from './wco';
+import { useLocale } from './i18n';
 
 // Each device loads only its own shell, and the radio (2.6k-line audio engine) comes after the first paint.
 const App = lazy(() => import('./App').then(m => ({ default: m.App })));
@@ -32,6 +33,7 @@ import { ContextMenuHost } from './components/ContextMenu';
 
 function ShellRoot() {
   const formFactor = useFormFactor();
+  const locale = useLocale();  // a language change remounts the shell so every label re-renders
   // re-read on hashchange too: a share link opened from inside the app (same tab) must still show the read-only view
   const [shared, setShared] = useState(sharedToken);
   useEffect(() => {
@@ -42,7 +44,7 @@ function ShellRoot() {
   if (shared) return <Suspense fallback={null}><SharedView token={shared} /></Suspense>;
 
   return (
-    <AuthGate>
+    <AuthGate key={locale}>
       <ErrorBoundary>
         <Suspense fallback={null}>
           {formFactor === 'mobile' ? (

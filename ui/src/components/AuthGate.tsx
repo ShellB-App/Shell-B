@@ -8,6 +8,7 @@ import { guestApi, type CellState } from '../guest/guestApi';
 import { loginWithPasskey, passkeysSupported } from '../webauthn';
 import { btn } from './common';
 import { reducedMotion } from '../ambience';
+import { setLocalePref, t, type LocalePref } from '../i18n';
 import '../ambience.css';
 
 const errText = (e: unknown) => String(e).replace(/^Error: \d+: /, '');
@@ -22,6 +23,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   const accept = useCallback((i: AuthInfo) => {
     setInfo(i);
+    if (i.language !== undefined) setLocalePref((i.language || '') as LocalePref);  // the server's choice for this person
     if (i.authenticated) {
       setFrameKey(i.frameKey);
       setCell(i.cell ? { id: i.guest?.id, name: i.cell.guest, username: i.guest?.username } : null);
@@ -83,15 +85,14 @@ export function AuthGate({ children }: { children: ReactNode }) {
       <div className="flex items-start gap-3">
         <WifiOff className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
         <div className="space-y-1.5">
-          <p className="text-sm font-medium text-[var(--text-primary)]">Can’t reach Shell:B</p>
+          <p className="text-sm font-medium text-[var(--text-primary)]">{t('Can’t reach Shell:B')}</p>
           <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-            {navigator.onLine ? 'The Spark may be asleep, restarting or on another network.' : 'This device is offline.'} Shell:B
-            will connect by itself as soon as it answers.
+            {navigator.onLine ? t('The Spark may be asleep, restarting or on another network.') : t('This device is offline.')} {t('Shell:B will connect by itself as soon as it answers.')}
           </p>
           <p className="text-[11px] text-[var(--text-muted)] break-words">{failed}</p>
         </div>
       </div>
-      <button className={clsx(btn.subtle, 'mt-4 w-full justify-center')} onClick={retry}><RefreshCw className="w-3.5 h-3.5" />Try again</button>
+      <button className={clsx(btn.subtle, 'mt-4 w-full justify-center')} onClick={retry}><RefreshCw className="w-3.5 h-3.5" />{t('Try again')}</button>
     </Screen>
   );
   if (!info) return <div className="h-dvh flex items-center justify-center"><LoginBackdrop /><Loader2 className="relative w-5 h-5 animate-spin text-white/60" /></div>;
@@ -102,13 +103,13 @@ export function AuthGate({ children }: { children: ReactNode }) {
         <div className="flex items-start gap-3">
           {err ? <WifiOff className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" /> : <Loader2 className="w-4 h-4 animate-spin text-[var(--accent)] shrink-0 mt-0.5" />}
           <div className="space-y-1.5">
-            <p className="text-sm font-medium text-[var(--text-primary)]">{err ? "Your Shell:B couldn't start" : 'Starting your Shell:B…'}</p>
+            <p className="text-sm font-medium text-[var(--text-primary)]">{err ? t("Your Shell:B couldn't start") : t('Starting your Shell:B…')}</p>
             <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-              {err ? err : `Hi ${info.cell.guest}. Your own Shell:B runs in its own container on Evie's machine; it takes a few seconds to wake up.`}
+              {err ? err : t("Hi {name}. Your own Shell:B runs in its own container on Evie's machine; it takes a few seconds to wake up.", { name: info.cell.guest })}
             </p>
           </div>
         </div>
-        {err && <button className={clsx(btn.subtle, 'mt-4 w-full justify-center')} onClick={startCell}><RefreshCw className="w-3.5 h-3.5" />Try again</button>}
+        {err && <button className={clsx(btn.subtle, 'mt-4 w-full justify-center')} onClick={startCell}><RefreshCw className="w-3.5 h-3.5" />{t('Try again')}</button>}
       </Screen>
     );
   }
@@ -162,7 +163,7 @@ function LoginForm({ setup, onDone }: { setup: boolean; onDone: (i: AuthInfo) =>
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (setup && password !== again) { setError("The passwords don't match."); return; }
+    if (setup && password !== again) { setError(t("The passwords don't match.")); return; }
     setBusy(true); setError('');
     try {
       const r = setup ? await api.authSetup(adminKey.trim(), password) : await api.login(password);
@@ -189,40 +190,40 @@ function LoginForm({ setup, onDone }: { setup: boolean; onDone: (i: AuthInfo) =>
   if (pending) return (
     <form onSubmit={submitCode} className="space-y-3">
       <div>
-        <h1 className="text-base font-semibold flex items-center gap-2"><LockKeyhole className="w-4 h-4" />Two-step verification</h1>
-        <p className="text-xs text-[var(--text-muted)] mt-1">Enter the 6-digit code from your authenticator app, or one of your recovery codes.</p>
+        <h1 className="text-base font-semibold flex items-center gap-2"><LockKeyhole className="w-4 h-4" />{t('Two-step verification')}</h1>
+        <p className="text-xs text-[var(--text-muted)] mt-1">{t('Enter the 6-digit code from your authenticator app, or one of your recovery codes.')}</p>
       </div>
       <input className={btn.input} inputMode="numeric" autoComplete="one-time-code" placeholder="123 456" value={code} onChange={e => setCode(e.target.value)} autoFocus />
       {error && <p className="text-xs text-red-400">{error}</p>}
       <button type="submit" className={`${btn.primary} w-full py-2`} disabled={busy || code.trim().length < 6}>
-        {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}Continue
+        {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}{t('Continue')}
       </button>
-      <button type="button" className={`${btn.ghost} w-full justify-center`} onClick={() => { setPending(''); setCode(''); setError(''); }}>Back</button>
+      <button type="button" className={`${btn.ghost} w-full justify-center`} onClick={() => { setPending(''); setCode(''); setError(''); }}>{t('Back')}</button>
     </form>
   );
 
   return (
     <form onSubmit={submit} className="space-y-3">
       <div>
-        <h1 className="text-base font-semibold flex items-center gap-2"><LockKeyhole className="w-4 h-4" />{setup ? 'Choose a password' : 'Log in'}</h1>
+        <h1 className="text-base font-semibold flex items-center gap-2"><LockKeyhole className="w-4 h-4" />{setup ? t('Choose a password') : t('Log in')}</h1>
         <p className="text-xs text-[var(--text-muted)] mt-1">
-          {setup ? <>Prove you own this machine with the admin key. Get it with <code className="font-mono">cat ~/shellb/web/data/admin.key</code>.</>
-            : 'Sessions last 30 days from your last visit.'}
+          {setup ? <>{t('Prove you own this machine with the admin key. Get it with')} <code className="font-mono">cat ~/shellb/web/data/admin.key</code>.</>
+            : t('Sessions last 30 days from your last visit.')}
         </p>
       </div>
-      {setup && <input className={btn.input} placeholder="Admin key" autoComplete="off" value={adminKey} onChange={e => setAdminKey(e.target.value)} autoFocus />}
+      {setup && <input className={btn.input} placeholder={t('Admin key')} autoComplete="off" value={adminKey} onChange={e => setAdminKey(e.target.value)} autoFocus />}
       {/* a hidden username lets password managers save the login */}
       <input type="text" name="username" value="owner" autoComplete="username" readOnly hidden />
-      <input className={btn.input} type="password" placeholder={setup ? 'New password (8+ characters)' : 'Password'}
+      <input className={btn.input} type="password" placeholder={setup ? t('New password (8+ characters)') : t('Password')}
         autoComplete={setup ? 'new-password' : 'current-password'} value={password} onChange={e => setPassword(e.target.value)} autoFocus={!setup} />
-      {setup && <input className={btn.input} type="password" placeholder="New password again" autoComplete="new-password" value={again} onChange={e => setAgain(e.target.value)} />}
+      {setup && <input className={btn.input} type="password" placeholder={t('New password again')} autoComplete="new-password" value={again} onChange={e => setAgain(e.target.value)} />}
       {error && <p className="text-xs text-red-400">{error}</p>}
       <button type="submit" className={`${btn.primary} w-full py-2`} disabled={busy || !password || (setup && (!adminKey || !again))}>
-        {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}{setup ? 'Set password and log in' : 'Log in'}
+        {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}{setup ? t('Set password and log in') : t('Log in')}
       </button>
       {!setup && passkey && (
         <button type="button" className={`${btn.subtle} w-full py-2 justify-center`} disabled={busy} onClick={usePasskey}>
-          <KeyRound className="w-3.5 h-3.5" />Use a passkey instead
+          <KeyRound className="w-3.5 h-3.5" />{t('Use a passkey instead')}
         </button>
       )}
     </form>

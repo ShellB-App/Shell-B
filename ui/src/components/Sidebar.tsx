@@ -16,6 +16,7 @@ import { cellGuest } from '../cell';
 import { FavIcon, FavoriteStar } from './Favorites';
 import { req } from '../api';
 import { jumpToMessage } from '../jump';
+import { fmtDate, t, tn } from '../i18n';
 
 interface Props {
   conversations: ConversationSummary[];
@@ -47,11 +48,11 @@ function bucket(ts: number) {
   const d = new Date(ts), now = new Date();
   const day = 86400000;
   const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  if (ts >= startToday) return 'Today';
-  if (ts >= startToday - day) return 'Yesterday';
-  if (ts >= startToday - 7 * day) return 'Previous 7 days';
-  if (ts >= startToday - 30 * day) return 'Previous 30 days';
-  return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  if (ts >= startToday) return t('Today');
+  if (ts >= startToday - day) return t('Yesterday');
+  if (ts >= startToday - 7 * day) return t('Previous 7 days');
+  if (ts >= startToday - 30 * day) return t('Previous 30 days');
+  return fmtDate(d, { month: 'long', year: 'numeric' });
 }
 
 export function Sidebar(p: Props) {
@@ -94,29 +95,29 @@ export function Sidebar(p: Props) {
   const menu = (c: ConversationSummary): MenuEntry[] => {
     const fav = isFavorite('chat', c.id);
     return [
-      { label: 'Open', icon: MessageSquare, onSelect: () => p.onSelect(c.id) },
-      { label: 'Open in new window', icon: AppWindow, onSelect: () => window.open(`/#/c/${c.id}`, '_blank', 'noopener') },
+      { label: t('Open'), icon: MessageSquare, onSelect: () => p.onSelect(c.id) },
+      { label: t('Open in new window'), icon: AppWindow, onSelect: () => window.open(`/#/c/${c.id}`, '_blank', 'noopener') },
       'sep',
-      { label: 'Rename', icon: Edit2, hint: 'F2', onSelect: () => { setEditing(c.id); setDraft(c.title); } },
-      { label: c.pinned ? 'Unpin' : 'Pin', icon: c.pinned ? PinOff : Pin, onSelect: () => p.onPin(c.id, !c.pinned) },
-      { label: fav ? 'Remove from Favorites' : 'Add to Favorites', icon: fav ? StarOff : Star, onSelect: () => { setFavorite('chat', c.id, '', !fav, c.title); } },
-      p.onFork && { label: 'Fork chat', icon: GitFork, onSelect: () => p.onFork?.(c.id) },
-      !c.incognito && { label: 'Move to project', icon: FolderInput, items: [
+      { label: t('Rename'), icon: Edit2, hint: 'F2', onSelect: () => { setEditing(c.id); setDraft(c.title); } },
+      { label: c.pinned ? t('Unpin') : t('Pin'), icon: c.pinned ? PinOff : Pin, onSelect: () => p.onPin(c.id, !c.pinned) },
+      { label: fav ? t('Remove from Favorites') : t('Add to Favorites'), icon: fav ? StarOff : Star, onSelect: () => { setFavorite('chat', c.id, '', !fav, c.title); } },
+      p.onFork && { label: t('Fork chat'), icon: GitFork, onSelect: () => p.onFork?.(c.id) },
+      !c.incognito && { label: t('Move to project'), icon: FolderInput, items: [
         ...p.groups.map(g => ({ label: `${g.emoji ? `${g.emoji} ` : ''}${g.name}`, checked: g.id === c.groupId, disabled: g.id === c.groupId,
           onSelect: () => p.onMoveToGroup(c.id, g.id) })),
-        !p.groups.length && { label: 'No projects yet', disabled: true },
+        !p.groups.length && { label: t('No projects yet'), disabled: true },
         'sep',
-        c.groupId && { label: 'Remove from project', icon: X, onSelect: () => p.onMoveToGroup(c.id, null) },
-        { label: 'New project…', icon: Plus, onSelect: p.onNewGroup },
+        c.groupId && { label: t('Remove from project'), icon: X, onSelect: () => p.onMoveToGroup(c.id, null) },
+        { label: t('New project…'), icon: Plus, onSelect: p.onNewGroup },
       ] },
       !c.incognito && circlePinEntry('c', c.id, UsersRound),
       'sep',
-      { label: 'Copy link', icon: Link2, onSelect: () => copyText(`${location.origin}/#/c/${c.id}`, 'Link copied') },
-      { label: 'Copy Shell:B link', icon: Link2, onSelect: () => copyText(shellbLink(`#/c/${c.id}`), 'Shell:B link copied') },
-      !c.incognito && { label: 'Share read-only link…', icon: Share2, onSelect: () => shareLink({ kind: 'chat', conversation: c.id }) },
-      !c.incognito && { label: 'Share to a circle…', icon: UsersRound, onSelect: () => openShareToCircle({ kind: 'chat', conv: c.id, title: c.title }) },
+      { label: t('Copy link'), icon: Link2, onSelect: () => copyText(`${location.origin}/#/c/${c.id}`, t('Link copied')) },
+      { label: t('Copy Shell:B link'), icon: Link2, onSelect: () => copyText(shellbLink(`#/c/${c.id}`), t('Shell:B link copied')) },
+      !c.incognito && { label: t('Share read-only link…'), icon: Share2, onSelect: () => shareLink({ kind: 'chat', conversation: c.id }) },
+      !c.incognito && { label: t('Share to a circle…'), icon: UsersRound, onSelect: () => openShareToCircle({ kind: 'chat', conv: c.id, title: c.title }) },
       'sep',
-      { label: 'Delete…', icon: Trash2, danger: true, hint: 'Del', onSelect: () => setConfirmDel(c.id) },
+      { label: t('Delete…'), icon: Trash2, danger: true, hint: 'Del', onSelect: () => setConfirmDel(c.id) },
     ];
   };
 
@@ -147,36 +148,36 @@ export function Sidebar(p: Props) {
           <span className="flex-1 min-w-0 truncate">{c.title}</span>
         )}
         {c.incognito && editing !== c.id && (
-          <span title="Incognito: not remembered, deleted after 24 h" className="shrink-0"><EyeOff className="w-3 h-3 text-slate-500 dark:text-slate-400" aria-label="Incognito" /></span>
+          <span title={t('Incognito: not remembered, deleted after 24 h')} className="shrink-0"><EyeOff className="w-3 h-3 text-slate-500 dark:text-slate-400" aria-label={t('Incognito')} /></span>
         )}
         {c.groupId && editing !== c.id && <span title={p.groups.find(g => g.id === c.groupId)?.name}><ProjectGlyph project={p.groups.find(g => g.id === c.groupId)} size={14} /></span>}
         {c.streaming && <Loader2 className="w-3 h-3 animate-spin text-[var(--accent)] shrink-0" />}
         {editing !== c.id && (
           confirmDel === c.id ? (
             <span className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-              <button className="px-1.5 py-0.5 rounded text-[10px] bg-red-500/20 text-red-300 hover:bg-red-500/30" onClick={() => { p.onDelete(c.id); setConfirmDel(null); }}>Delete</button>
-              <button className="px-1.5 py-0.5 rounded text-[10px] hover:bg-[var(--bg-hover)]" onClick={() => setConfirmDel(null)}>Keep</button>
+              <button className="px-1.5 py-0.5 rounded text-[10px] bg-red-500/20 text-red-300 hover:bg-red-500/30" onClick={() => { p.onDelete(c.id); setConfirmDel(null); }}>{t('Delete')}</button>
+              <button className="px-1.5 py-0.5 rounded text-[10px] hover:bg-[var(--bg-hover)]" onClick={() => setConfirmDel(null)}>{t('Keep')}</button>
             </span>
           ) : (
             <span className="hidden group-hover:flex group-focus-within:flex items-center shrink-0" onClick={e => e.stopPropagation()}>
               <FavoriteStar kind="chat" id={c.id} title={c.title} size={12} />
-              <button className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--accent)]" title={c.pinned ? 'Unpin' : 'Pin'} onClick={() => p.onPin(c.id, !c.pinned)}>
+              <button className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--accent)]" title={c.pinned ? t('Unpin') : t('Pin')} onClick={() => p.onPin(c.id, !c.pinned)}>
                 <Pin className={clsx('w-3 h-3', c.pinned && 'fill-[var(--accent)] text-[var(--accent)]')} />
               </button>
               {!c.incognito && (
-                <button className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)]" title="Move to project" onClick={() => setMoving(moving === c.id ? null : c.id)}>
+                <button className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)]" title={t('Move to project')} onClick={() => setMoving(moving === c.id ? null : c.id)}>
                   <FolderInput className="w-3 h-3" />
                 </button>
               )}
               {p.onFork && (
-                <button className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)]" title="Fork chat" onClick={() => p.onFork?.(c.id)}>
+                <button className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)]" title={t('Fork chat')} onClick={() => p.onFork?.(c.id)}>
                   <GitFork className="w-3 h-3" />
                 </button>
               )}
-              <button className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)]" title="Rename" onClick={() => { setEditing(c.id); setDraft(c.title); }}>
+              <button className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)]" title={t('Rename')} onClick={() => { setEditing(c.id); setDraft(c.title); }}>
                 <Edit2 className="w-3 h-3" />
               </button>
-              <button className="p-1 rounded text-[var(--text-muted)] hover:text-red-400" title="Delete" onClick={() => setConfirmDel(c.id)}>
+              <button className="p-1 rounded text-[var(--text-muted)] hover:text-red-400" title={t('Delete')} onClick={() => setConfirmDel(c.id)}>
                 <Trash2 className="w-3 h-3" />
               </button>
             </span>
@@ -185,18 +186,18 @@ export function Sidebar(p: Props) {
         {moving === c.id && (
           <div className="absolute right-1 top-full mt-0.5 z-50 w-52 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-xl shadow-2xl p-1"
             onClick={e => e.stopPropagation()} onMouseLeave={() => setMoving(null)}>
-            <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Move to project</div>
+            <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)]">{t('Move to project')}</div>
             {p.groups.map(g => (
               <button key={g.id} disabled={g.id === c.groupId} onClick={() => { p.onMoveToGroup(c.id, g.id); setMoving(null); }}
                 className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-left hover:bg-[var(--bg-hover)] disabled:opacity-50">
                 <ProjectGlyph project={g} size={16} /><span className="truncate">{g.name}</span>
               </button>
             ))}
-            {p.groups.length === 0 && <div className="px-2 py-1.5 text-[11px] text-[var(--text-muted)]">No projects yet</div>}
+            {p.groups.length === 0 && <div className="px-2 py-1.5 text-[11px] text-[var(--text-muted)]">{t('No projects yet')}</div>}
             {c.groupId && (
               <button onClick={() => { p.onMoveToGroup(c.id, null); setMoving(null); }}
                 className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-left hover:bg-[var(--bg-hover)] border-t border-[var(--border-subtle)] mt-1">
-                <X className="w-3.5 h-3.5" />Remove from project
+                <X className="w-3.5 h-3.5" />{t('Remove from project')}
               </button>
             )}
           </div>
@@ -215,19 +216,19 @@ export function Sidebar(p: Props) {
           <div className="flex items-center justify-between h-7">
             <div className="flex items-center gap-2">
               <span className="sf-brand font-semibold tracking-tight text-[var(--brand-soft)]">Shell:B</span>
-              {cellGuest() && <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)] truncate max-w-[9rem]" title={`${cellGuest()!.name}'s own Shell:B`}>{cellGuest()!.name}</span>}
+              {cellGuest() && <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)] truncate max-w-[9rem]" title={t("{name}'s own Shell:B", { name: cellGuest()!.name })}>{cellGuest()!.name}</span>}
             </div>
-            <button onClick={p.onClose} className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" title="Hide sidebar (Ctrl+B)">
+            <button onClick={p.onClose} className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" title={t('Hide sidebar (Ctrl+B)')}>
               <PanelLeftClose className="w-4 h-4" />
             </button>
           </div>
           <div className="flex items-stretch gap-2">
             <button onClick={p.onNew} className="flex-1 min-w-0 flex items-center justify-between px-3 py-2 rounded-xl bg-[var(--accent)] hover:brightness-110 text-[var(--accent-fg)] text-sm font-medium transition shadow-md">
-              <span className="flex items-center gap-2"><SquarePen className="w-4 h-4" />New chat</span>
+              <span className="flex items-center gap-2"><SquarePen className="w-4 h-4" />{t('New chat')}</span>
               <kbd className="text-[10px] opacity-75 font-mono hidden md:inline">Ctrl ⇧ O</kbd>
             </button>
             {p.onNewIncognito && (
-              <button onClick={p.onNewIncognito} title="New incognito chat: not remembered, deleted after 24 h" aria-label="New incognito chat"
+              <button onClick={p.onNewIncognito} title={t('New incognito chat: not remembered, deleted after 24 h')} aria-label={t('New incognito chat')}
                 className="shrink-0 px-2.5 rounded-xl border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/60 transition">
                 <EyeOff className="w-4 h-4" />
               </button>
@@ -235,17 +236,17 @@ export function Sidebar(p: Props) {
           </div>
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search chats, messages and favorites"
+            <input value={q} onChange={e => setQ(e.target.value)} placeholder={t('Search chats, messages and favorites')}
               className="w-full pl-8 pr-2.5 py-1.5 text-[13px] rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]/60" />
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-2 pb-2 space-y-4" aria-label="Conversations">
+        <nav className="flex-1 overflow-y-auto px-2 pb-2 space-y-4" aria-label={t('Conversations')}>
           {(favs.length > 0 || p.favoritesActive) && (
             <div>
               <a href="#/library/favorites" onClick={() => window.innerWidth < 768 && p.onClose()}
                 className={clsx('sf-label px-2 py-1 text-[11px] font-medium flex items-center gap-1 hover:text-[var(--text-primary)]', p.favoritesActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)]')}>
-                <Star className="w-3 h-3" />Favorites
+                <Star className="w-3 h-3" />{t('Favorites')}
               </a>
               {favList.slice(0, 8).map(f => (
                 <a key={`${f.kind}:${f.ref}:${f.sub}`} href={f.href} title={f.subtitle ? `${f.title} · ${f.subtitle}` : f.title}
@@ -257,16 +258,16 @@ export function Sidebar(p: Props) {
                   <FavoriteStar kind={f.kind} id={f.ref} sub={f.sub} size={12} className="opacity-0 group-hover:opacity-100 focus:opacity-100" />
                 </a>
               ))}
-              {favList.length > 8 && <a href="#/library/favorites" className="block pl-8 py-1 text-[11px] text-[var(--text-muted)] hover:text-[var(--text-primary)]">All {favList.length} favorites…</a>}
-              {q && favs.length > 0 && favList.length === 0 && <div className="pl-8 py-1 text-[11px] text-[var(--text-muted)]">No matching favorites</div>}
+              {favList.length > 8 && <a href="#/library/favorites" className="block pl-8 py-1 text-[11px] text-[var(--text-muted)] hover:text-[var(--text-primary)]">{t('All {n} favorites…', { n: favList.length })}</a>}
+              {q && favs.length > 0 && favList.length === 0 && <div className="pl-8 py-1 text-[11px] text-[var(--text-muted)]">{t('No matching favorites')}</div>}
             </div>
           )}
           <div>
             <div className="flex items-center justify-between pr-1">
               <button onClick={() => p.onOpenGroup()} className={clsx('sf-label px-2 py-1 text-[11px] font-medium flex items-center gap-1 hover:text-[var(--text-primary)]', p.activeGroupId === '' ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)]')}>
-                <FolderKanban className="w-3 h-3" />Projects
+                <FolderKanban className="w-3 h-3" />{t('Projects')}
               </button>
-              <button onClick={p.onNewGroup} className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" title="New project"><Plus className="w-3.5 h-3.5" /></button>
+              <button onClick={p.onNewGroup} className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" title={t('New project')}><Plus className="w-3.5 h-3.5" /></button>
             </div>
             {p.groups.slice(0, 6).map(g => (
               <button key={g.id} onClick={() => p.onOpenGroup(g.id)}
@@ -278,12 +279,12 @@ export function Sidebar(p: Props) {
                 {!!g.chatCount && <span className="text-[10px] text-[var(--text-muted)] font-mono">{g.chatCount}</span>}
               </button>
             ))}
-            {p.groups.length > 6 && <button onClick={() => p.onOpenGroup()} className="w-full text-left pl-8 py-1 text-[11px] text-[var(--text-muted)] hover:text-[var(--text-primary)]">All {p.groups.length} projects…</button>}
-            {p.groups.length === 0 && <button onClick={p.onNewGroup} className="w-full text-left pl-2 py-1 text-[11px] text-[var(--text-muted)] hover:text-[var(--text-primary)]">+ Group chats, files and instructions</button>}
+            {p.groups.length > 6 && <button onClick={() => p.onOpenGroup()} className="w-full text-left pl-8 py-1 text-[11px] text-[var(--text-muted)] hover:text-[var(--text-primary)]">{t('All {n} projects…', { n: p.groups.length })}</button>}
+            {p.groups.length === 0 && <button onClick={p.onNewGroup} className="w-full text-left pl-2 py-1 text-[11px] text-[var(--text-muted)] hover:text-[var(--text-primary)]">{t('+ Group chats, files and instructions')}</button>}
           </div>
           {pinned.length > 0 && (
             <div>
-              <div className="sf-label px-2 py-1 text-[11px] font-medium text-[var(--text-muted)] flex items-center gap-1"><Pin className="w-3 h-3" />Pinned</div>
+              <div className="sf-label px-2 py-1 text-[11px] font-medium text-[var(--text-muted)] flex items-center gap-1"><Pin className="w-3 h-3" />{t('Pinned')}</div>
               {pinned.map(item)}
             </div>
           )}
@@ -295,7 +296,7 @@ export function Sidebar(p: Props) {
           ))}
           {hits.length > 0 && (
             <div>
-              <div className="sf-label px-2 py-1 text-[11px] font-medium text-[var(--text-muted)] flex items-center gap-1"><Search className="w-3 h-3" />In messages</div>
+              <div className="sf-label px-2 py-1 text-[11px] font-medium text-[var(--text-muted)] flex items-center gap-1"><Search className="w-3 h-3" />{t('In messages')}</div>
               {hits.map(h => (
                 <a key={h.convId} href={h.href} title={h.title}
                   onClick={() => { if (h.hits[0]) jumpToMessage(h.hits[0].msgId); if (window.innerWidth < 768) p.onClose(); }}
@@ -309,15 +310,15 @@ export function Sidebar(p: Props) {
               ))}
             </div>
           )}
-          {list.length === 0 && !hits.length && <div className="text-xs text-[var(--text-muted)] text-center py-8">{q ? 'No matches' : 'No conversations yet'}</div>}
+          {list.length === 0 && !hits.length && <div className="text-xs text-[var(--text-muted)] text-center py-8">{q ? t('No matches') : t('No conversations yet')}</div>}
         </nav>
 
         <div className="p-2 border-t border-[var(--border-subtle)] space-y-0.5">
-          <button onClick={p.onOpenSettings} className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-[var(--bg-hover)] group" title="System status">
+          <button onClick={p.onOpenSettings} className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-[var(--bg-hover)] group" title={t('System status')}>
             <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)]">
               <span className="flex items-center gap-1.5">
                 <span className={clsx('w-1.5 h-1.5 rounded-full', !p.status ? 'bg-neutral-500' : down.length ? 'bg-amber-400' : 'bg-emerald-400')} />
-                {!p.status ? 'Connecting…' : down.length ? `${down.length} service${down.length > 1 ? 's' : ''} offline` : 'All systems local'}
+                {!p.status ? t('Connecting…') : down.length ? tn(down.length, '{n} service offline', '{n} services offline') : t('All systems local')}
               </span>
               <Settings className="w-3.5 h-3.5 group-hover:text-[var(--text-primary)]" />
             </div>
@@ -327,10 +328,10 @@ export function Sidebar(p: Props) {
                   <div className={clsx('h-full rounded-full', usedPct > 88 ? 'bg-red-400' : usedPct > 75 ? 'bg-amber-400' : 'bg-[var(--accent)]')} style={{ width: `${usedPct}%` }} />
                 </div>
                 <div className="mt-1 text-[10px] font-mono text-[var(--text-muted)] whitespace-nowrap">
-                  {fmtBytes(mem.MemTotal - mem.MemAvailable)} of {fmtBytes(mem.MemTotal)} unified memory
+                  {t('{used} of {total} unified memory', { used: fmtBytes(mem.MemTotal - mem.MemAvailable), total: fmtBytes(mem.MemTotal) })}
                 </div>
-                <div className="text-[10px] text-[var(--text-muted)] truncate" title="Loaded models">
-                  {p.status?.loaded.map(m => m.name.replace('ShellB-', '').replace(/:latest$/, '')).join(' · ') || 'No models loaded'}
+                <div className="text-[10px] text-[var(--text-muted)] truncate" title={t('Loaded models')}>
+                  {p.status?.loaded.map(m => m.name.replace('ShellB-', '').replace(/:latest$/, '')).join(' · ') || t('No models loaded')}
                 </div>
               </div>
             )}

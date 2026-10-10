@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { memo, useState } from 'react';
 import clsx from 'clsx';
 import {
@@ -99,8 +100,8 @@ function selectionIn(el: Element) {
 // one reading at a time from the context menu, so the next menu can offer to stop it
 let stopReading: (() => void) | null = null;
 function readEntry(text: string): MenuEntry {
-  if (stopReading) return { label: 'Stop reading', icon: StopIcon, onSelect: () => { stopReading?.(); stopReading = null; } };
-  return { label: 'Read aloud', icon: Volume2, disabled: !text, onSelect: () => {
+  if (stopReading) return { label: t('Stop reading'), icon: StopIcon, onSelect: () => { stopReading?.(); stopReading = null; } };
+  return { label: t('Read aloud'), icon: Volume2, disabled: !text, onSelect: () => {
     let stop: (() => void) | null = null;
     stop = readAloud(text, st => { if (st === 'idle' && stopReading === stop) stopReading = null; });
     stopReading = stop;
@@ -109,8 +110,8 @@ function readEntry(text: string): MenuEntry {
 
 /** What every message's menu starts with when text is selected in it. */
 const selectionEntries = (sel: string): MenuEntry[] => sel ? [
-  { label: 'Copy selection', icon: CopyIcon, hint: 'Ctrl C', onSelect: () => copyText(sel) },
-  { label: 'Quote selection in reply', icon: Quote, onSelect: () => quoteInComposer(sel) },
+  { label: t('Copy selection'), icon: CopyIcon, hint: 'Ctrl C', onSelect: () => copyText(sel) },
+  { label: t('Quote selection in reply'), icon: Quote, onSelect: () => quoteInComposer(sel) },
   'sep',
 ] : [];
 
@@ -142,15 +143,15 @@ interface Props {
 const TRANSLATE_TO = ['English', 'French', 'German', 'Spanish', 'Italian', 'Portuguese', 'Dutch', 'Japanese', 'Chinese (Simplified)', 'Korean', 'Arabic', 'Russian'];
 
 /** A translation under the message (server/translate.py), as Markdown, with the detected language and a close button. */
-function TranslationBlock({ t, onClose }: { t: { to: string; text: string; detected?: string; busy?: boolean }; onClose: () => void }) {
+function TranslationBlock({ t: tr, onClose }: { t: { to: string; text: string; detected?: string; busy?: boolean }; onClose: () => void }) {
   return (
     <div className="my-2 w-full max-w-[85%] rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3.5 py-2.5 text-left">
       <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)] mb-1">
         <Languages className="w-3.5 h-3.5" />
-        <span className="flex-1">{t.busy ? `Translating to ${t.to}…` : `${t.detected ? `${t.detected} → ` : ''}${t.to} · local model`}</span>
-        <button className={btn.icon} aria-label="Close translation" onClick={onClose}><X className="w-3.5 h-3.5" /></button>
+        <span className="flex-1">{tr.busy ? t('Translating to {lang}…', { lang: t(tr.to) }) : `${tr.detected ? `${t(tr.detected)} → ` : ''}${t(tr.to)} · ${t('local model')}`}</span>
+        <button className={btn.icon} aria-label={t('Close translation')} onClick={onClose}><X className="w-3.5 h-3.5" /></button>
       </div>
-      {t.busy ? <Loader2 className="w-4 h-4 animate-spin text-[var(--accent)]" /> : <Markdown text={t.text} />}
+      {tr.busy ? <Loader2 className="w-4 h-4 animate-spin text-[var(--accent)]" /> : <Markdown text={tr.text} />}
     </div>
   );
 }
@@ -182,10 +183,10 @@ export const MessageView = memo(function MessageView({
   const feedback = useFeedback(message, onAsk, busy);
   // right-click → Translate to…: the local utility model (server/translate.py); shown under the message until closed
   const translateEntry = (source: string): MenuEntry => source ? {
-    label: 'Translate to…', icon: Languages, items: TRANSLATE_TO.map(to => ({ label: to, onSelect: () => {
+    label: t('Translate to…'), icon: Languages, items: TRANSLATE_TO.map(to => ({ label: t(to), onSelect: () => {
       setTranslation({ to, text: '', busy: true });
       api.translate(source, to).then(r => setTranslation({ to, text: r.translation, detected: r.detected }))
-        .catch(e => { setTranslation(null); toast(`Couldn't translate: ${String(e).replace(/^Error: \d+: /, '')}`, { kind: 'error' }); });
+        .catch(e => { setTranslation(null); toast(t("Couldn't translate: {error}", { error: String(e).replace(/^Error: \d+: /, '') }), { kind: 'error' }); });
     } })),
   } : null;
 
@@ -203,12 +204,12 @@ export const MessageView = memo(function MessageView({
           <span className="ml-auto flex gap-3">
             <button className="text-[var(--accent-soft)] hover:underline" onClick={() => setCompactExpanded(v => !v)}
               aria-expanded={compactExpanded}>
-              {compactExpanded ? 'Hide summary' : 'Show summary'}
+              {compactExpanded ? t('Hide summary') : t('Show summary')}
             </button>
             {originals.length > 0 && (
               <button className="text-[var(--accent-soft)] hover:underline flex items-center gap-1" onClick={() => setShowOriginals(v => !v)}
                 aria-expanded={showOriginals}>
-                {showOriginals ? 'Hide originals' : `Show ${originals.length} originals`}
+                {showOriginals ? t('Hide originals') : t('Show {n} originals', { n: originals.length })}
                 <ChevronDown className={clsx('w-3.5 h-3.5 transition-transform', showOriginals && 'rotate-180')} aria-hidden />
               </button>
             )}
@@ -224,7 +225,7 @@ export const MessageView = memo(function MessageView({
             {originals.map(m => (
               <div key={m.id} className="text-xs p-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)]">
                 <div className="flex items-center justify-between mb-1 text-[11px] text-[var(--text-muted)] font-medium">
-                  <span>{m.role === 'user' ? 'You' : 'Assistant'}</span>
+                  <span>{m.role === 'user' ? t('You') : t('Assistant')}</span>
                   {m.timestamp && <span className="font-mono text-[10px]">{relTime(m.timestamp)}</span>}
                 </div>
                 <div className="whitespace-pre-wrap break-words">{m.content}</div>
@@ -244,23 +245,23 @@ export const MessageView = memo(function MessageView({
         const picked = selectionIn(e.currentTarget);
         openContextMenu(e, [
           ...selectionEntries(picked),
-          { label: 'Copy message', icon: CopyIcon, onSelect: () => copyText(sel.body) },
-          !picked && { label: 'Quote in reply', icon: Quote, onSelect: () => quoteInComposer(sel.body) },
+          { label: t('Copy message'), icon: CopyIcon, onSelect: () => copyText(sel.body) },
+          !picked && { label: t('Quote in reply'), icon: Quote, onSelect: () => quoteInComposer(sel.body) },
           readEntry(sel.body),
           translateEntry(sel.body),
           'sep',
-          { label: 'Edit and resend', icon: Pencil, disabled: busy, onSelect: () => { setDraft(message.content); setEditing(true); } },
-          onFork && { label: 'Fork from here', icon: GitFork, onSelect: () => onFork(message.id) },
+          { label: t('Edit and resend'), icon: Pencil, disabled: busy, onSelect: () => { setDraft(message.content); setEditing(true); } },
+          onFork && { label: t('Fork from here'), icon: GitFork, onSelect: () => onFork(message.id) },
         ]);
       }}>
         {message.mode === 'plan' && (
           <span className="flex items-center gap-1 mb-1 text-[10px] uppercase tracking-wide text-[var(--accent-soft)]">
-            <ListChecks className="w-3 h-3" />Plan mode
+            <ListChecks className="w-3 h-3" />{t('Plan mode')}
           </span>
         )}
         {message.voice && (
-          <span className="flex items-center gap-1 mb-1 text-[10px] uppercase tracking-wide text-[var(--text-muted)]" title="Spoken in voice mode and transcribed">
-            <AudioLines className="w-3 h-3" />Spoken
+          <span className="flex items-center gap-1 mb-1 text-[10px] uppercase tracking-wide text-[var(--text-muted)]" title={t('Spoken in voice mode and transcribed')}>
+            <AudioLines className="w-3 h-3" />{t('Spoken')}
           </span>
         )}
         {message.attachments && message.attachments.length > 0 && <Attachments items={message.attachments} />}
@@ -283,8 +284,8 @@ export const MessageView = memo(function MessageView({
               }}
             />
             <div className="flex justify-end gap-1.5">
-              <button className={btn.subtle} onClick={() => setEditing(false)}>Cancel</button>
-              <button className={btn.primary} disabled={!draft.trim() || busy} onClick={() => { setEditing(false); onEdit(draft); }}>Send</button>
+              <button className={btn.subtle} onClick={() => setEditing(false)}>{t('Cancel')}</button>
+              <button className={btn.primary} disabled={!draft.trim() || busy} onClick={() => { setEditing(false); onEdit(draft); }}>{t('Send')}</button>
             </div>
           </div>
         ) : (
@@ -304,11 +305,11 @@ export const MessageView = memo(function MessageView({
         {!editing && (
           <div className="flex gap-0.5 mt-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition">
             <CopyButton text={message.content} />
-            <button className={btn.icon} title="Edit and resend" disabled={busy} onClick={() => { setDraft(message.content); setEditing(true); }}>
+            <button className={btn.icon} title={t('Edit and resend')} disabled={busy} onClick={() => { setDraft(message.content); setEditing(true); }}>
               <Pencil className="w-3.5 h-3.5" />
             </button>
             {onFork && (
-              <button className={btn.icon} title="Fork conversation from here" onClick={() => onFork(message.id)}>
+              <button className={btn.icon} title={t('Fork conversation from here')} onClick={() => onFork(message.id)}>
                 <GitFork className="w-3.5 h-3.5" />
               </button>
             )}
@@ -341,14 +342,14 @@ export const MessageView = memo(function MessageView({
         const markdown = textSegs.map(t => t.text).join('\n\n').trim();
         openContextMenu(e, [
           ...selectionEntries(picked),
-          { label: 'Copy', icon: CopyIcon, disabled: !text, onSelect: () => copyText(text) },
-          { label: 'Copy as Markdown', icon: FileText, disabled: !markdown, onSelect: () => copyText(markdown, 'Markdown copied') },
-          !picked && { label: 'Quote in reply', icon: Quote, disabled: !text, onSelect: () => quoteInComposer(text) },
+          { label: t('Copy'), icon: CopyIcon, disabled: !text, onSelect: () => copyText(text) },
+          { label: t('Copy as Markdown'), icon: FileText, disabled: !markdown, onSelect: () => copyText(markdown, t('Markdown copied')) },
+          !picked && { label: t('Quote in reply'), icon: Quote, disabled: !text, onSelect: () => quoteInComposer(text) },
           readEntry(text),
           translateEntry(markdown || text),
           'sep',
-          isLast && { label: 'Regenerate', icon: RotateCcw, disabled: busy || streaming, onSelect: onRegenerate },
-          onFork && !streaming && { label: 'Fork from here', icon: GitFork, onSelect: () => onFork(message.id) },
+          isLast && { label: t('Regenerate'), icon: RotateCcw, disabled: busy || streaming, onSelect: onRegenerate },
+          onFork && !streaming && { label: t('Fork from here'), icon: GitFork, onSelect: () => onFork(message.id) },
         ]);
       }}>
         <div className="flex items-center gap-2 mb-1.5 select-none">
@@ -356,11 +357,11 @@ export const MessageView = memo(function MessageView({
           <span className={clsx('text-xs font-semibold', !agent && 'text-[var(--brand-soft)]')}>{agent?.name ?? 'Shell:B'}</span>
           <span className="text-[10px] font-mono text-[var(--text-muted)]">{message.model}</span>
           {/^(anthropic|gemini|openai|mammouth|claude-code|antigravity|codex)\//.test(message.model ?? '') && (
-            <span className="px-1.5 rounded text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/20" title="This reply came from a cloud model">cloud</span>
+            <span className="px-1.5 rounded text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/20" title={t('This reply came from a cloud model')}>cloud</span>
           )}
           {message.mode === 'plan' && (
             <span className="flex items-center gap-1 px-1.5 rounded text-[10px] bg-[var(--accent)]/10 text-[var(--accent-soft)] border border-[var(--accent)]/25"
-              title="Plan mode: researched with read-only tools; nothing was changed">
+              title={t('Plan mode: researched with read-only tools; nothing was changed')}>
               <ListChecks className="w-3 h-3" />plan
             </span>
           )}
@@ -390,20 +391,20 @@ export const MessageView = memo(function MessageView({
         {message.status === 'error' && (
           <div className="my-2 flex items-start gap-2 p-3 rounded-xl border border-red-500/30 bg-red-500/10 text-xs text-red-300">
             <AlertTriangle className="w-4 h-4 shrink-0" />
-            <span className="flex-1 break-words">{message.error || 'Something went wrong.'}</span>
-            {onVerify && <VerifyButton verifiers={verifiers} busy={busy} onVerify={onVerify} label="Diagnose" />}
+            <span className="flex-1 break-words">{message.error || t('Something went wrong.')}</span>
+            {onVerify && <VerifyButton verifiers={verifiers} busy={busy} onVerify={onVerify} label={t('Diagnose')} />}
           </div>
         )}
-        {message.status === 'stopped' && <div className="mt-1 text-[11px] text-[var(--text-muted)] italic">Stopped.</div>}
+        {message.status === 'stopped' && <div className="mt-1 text-[11px] text-[var(--text-muted)] italic">{t('Stopped.')}</div>}
 
         {message.mode === 'plan' && isLast && message.status === 'complete' && onPlan && (
           <div className="mt-3 flex flex-wrap items-center gap-2 p-3 rounded-xl border border-[var(--accent)]/35 bg-[var(--accent)]/[0.07]">
             <ListChecks className="w-4 h-4 text-[var(--accent)] shrink-0" />
             <span className="flex-1 min-w-[12rem] text-xs text-[var(--text-secondary)]">
-              Nothing has changed yet. Approve to run this plan with all of {agent?.name ?? 'the agent'}’s tools, or keep planning and say what to change.
+              {t('Nothing has changed yet. Approve to run this plan with all of {name}’s tools, or keep planning and say what to change.', { name: agent?.name ?? t('the agent') })}
             </span>
-            <button className={btn.subtle} disabled={busy} onClick={() => onPlan('revise')}>Keep planning</button>
-            <button className={btn.primary} disabled={busy} onClick={() => onPlan('approve')}><Play className="w-3.5 h-3.5" />Approve and run</button>
+            <button className={btn.subtle} disabled={busy} onClick={() => onPlan('revise')}>{t('Keep planning')}</button>
+            <button className={btn.primary} disabled={busy} onClick={() => onPlan('approve')}><Play className="w-3.5 h-3.5" />{t('Approve and run')}</button>
           </div>
         )}
 
@@ -412,10 +413,10 @@ export const MessageView = memo(function MessageView({
             {text && <CopyButton text={text} />}
             {text && <SpeakButton text={text} />}
             {!guest && feedback.buttons}
-            {onReport && <button className={btn.icon} title="Report a problem with this reply to Evie" onClick={onReport}><Flag className="w-3.5 h-3.5" /></button>}
-            {isLast && <button className={btn.icon} title="Regenerate" disabled={busy} onClick={onRegenerate}><RotateCcw className="w-3.5 h-3.5" /></button>}
+            {onReport && <button className={btn.icon} title={t('Report a problem with this reply to Evie')} onClick={onReport}><Flag className="w-3.5 h-3.5" /></button>}
+            {isLast && <button className={btn.icon} title={t('Regenerate')} disabled={busy} onClick={onRegenerate}><RotateCcw className="w-3.5 h-3.5" /></button>}
             {onFork && (
-              <button className={btn.icon} title="Fork conversation from here" onClick={() => onFork(message.id)}>
+              <button className={btn.icon} title={t('Fork conversation from here')} onClick={() => onFork(message.id)}>
                 <GitFork className="w-3.5 h-3.5" />
               </button>
             )}
@@ -423,7 +424,7 @@ export const MessageView = memo(function MessageView({
             <span className="ml-2 text-[10px] font-mono text-[var(--text-muted)]">
               {secs && `${secs}s`}
               {message.usage?.completion ? ` · ${message.usage.completion.toLocaleString()} tok` : ''}
-              {message.usage?.node && <span title="Written on this fleet machine (Models → Fleet)"> · on {message.usage.node}</span>}
+              {message.usage?.node && <span title={t('Written on this fleet machine (Models → Fleet)')}> · {t('on {node}', { node: message.usage.node })}</span>}
             </span>
           </div>
         )}

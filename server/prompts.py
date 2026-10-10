@@ -159,6 +159,19 @@ CODE_TOOLCHAIN = ("Python 3.12 (pytest, hypothesis, ruff, mypy, black, numpy, pa
 
 # ── prompt builders ─────────────────────────────────────────────────────────
 
+LANGUAGES = {"en": "English", "fr": "French"}
+
+
+def language_note(lang: str) -> str:
+    """The interface language (settings `language`, a guest's config): agents answer in it unless the person writes
+    in another one. English needs no note; the models default to it."""
+    name = LANGUAGES.get((lang or "").split("-")[0].lower())
+    if not name or name == "English":
+        return ""
+    return (f"## Language\nThis person uses Shell:B in {name}. Reply in {name} unless they write to you in another language or "
+            f"ask for a different one. Keep code, commands, file names and quoted text as they are.")
+
+
 def build_system(agent, tool_names, effort, artifacts, memories, agents, settings, project_id=None, group_id=None, conv_id=None, user_text=None,
                  owner_context=True):
     """`owner_context=False` (persona API turns) leaves out the owner's calendar and contacts."""
@@ -181,6 +194,10 @@ system. Your tools still run on Shell:B's own machine; your reasoning runs on {p
   syntax-highlighted code blocks and LaTeX math ($…$ inline, $$…$$ display).
 - Uploaded files are copied into the sandbox working directory /work.""", QUICK_REPLIES, maps.prompt_note(MAP_CARDS), RICH_LINKS + (ARTIFACT_LINK if "create_artifact" in tool_names else "")
               + ("" if project_id else FILE_LINK)]
+
+    lang_note = language_note(settings.get("language") or "")
+    if lang_note:
+        parts.append(lang_note)
 
     try:
         cal_note = codex.upcoming_schedule_prompt(now, days=14) if owner_context else None

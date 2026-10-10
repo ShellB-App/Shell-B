@@ -6,6 +6,7 @@ import { APPS, DEFAULT_PINS, DOCKED, GROUP_LABEL, PINNABLE, setPins, setRailOrde
 import { djLive } from '../dj/live';
 import { cellGuest, type GuestPanel } from '../cell';
 import { GUEST_ENTRIES, signOutGuest, toPanel } from './CellGuest';
+import { t, tn } from '../i18n';
 
 interface Props {
   active: AppId;
@@ -108,14 +109,14 @@ function AppRow({ app, live, current, pinned, note, onOpen, onPin }: {
         className="flex-1 min-w-0 flex items-start gap-2.5 px-2.5 py-2 text-left focus:outline-none">
         <span className="mt-0.5 shrink-0"><AppIcon app={app} live={live} /></span>
         <span className="min-w-0">
-          <span className="block text-sm font-medium text-[var(--text-primary)]">{live?.label ?? app.label}</span>
-          <span className="block text-[11px] text-[var(--text-secondary)] leading-snug">{app.hint}</span>
+          <span className="block text-sm font-medium text-[var(--text-primary)]">{live?.label ? t(live.label) : t(app.label)}</span>
+          <span className="block text-[11px] text-[var(--text-secondary)] leading-snug">{t(app.hint)}</span>
         </span>
       </button>
       {note && <span className="shrink-0 mr-1 text-[10px] text-[var(--text-muted)]">{note}</span>}
       {onPin && (
-        <button data-nav onClick={onPin} aria-label={pinned ? `Unpin ${app.label} from the rail` : `Pin ${app.label} to the rail`} aria-pressed={pinned}
-          title={pinned ? 'Unpin from the rail' : 'Pin to the rail'}
+        <button data-nav onClick={onPin} aria-label={pinned ? t('Unpin {app} from the rail', { app: t(app.label) }) : t('Pin {app} to the rail', { app: t(app.label) })} aria-pressed={pinned}
+          title={pinned ? t('Unpin from the rail') : t('Pin to the rail')}
           className={clsx('shrink-0 mr-1.5 w-7 h-7 flex items-center justify-center rounded-md hover:bg-[var(--bg-tertiary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent)]',
             pinned ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)] opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100 focus:opacity-100')}>
           <Pin className={clsx('w-3.5 h-3.5', pinned && 'fill-current')} />
@@ -246,11 +247,11 @@ export function AppRail({ active, status, onOpen, onGuest }: Props) {
     const l = live(a);
     const i = railIds.indexOf(a.id);
     const why = overflow.has(a.id)
-      ? 'pinned, but the window is too short for its tile'
+      ? t('pinned, but the window is too short for its tile')
       : running.has(a.id) && active !== a.id
-        ? `${a.id === 'radio' && djState.playing ? 'playing on air' : 'running'}, right-click to pin`
-        : 'not pinned, right-click to pin';
-    return tile(a.id, l?.label ?? a.label, isVisiting ? `${a.hint} · ${why}` : a.hint,
+        ? t('{state}, right-click to pin', { state: a.id === 'radio' && djState.playing ? t('playing on air') : t('running') })
+        : t('not pinned, right-click to pin');
+    return tile(a.id, l?.label ? t(l.label) : t(a.label), isVisiting ? `${t(a.hint)} · ${why}` : t(a.hint),
       <AppIcon app={a} live={l} quiet on={active === a.id} />, active === a.id, () => onOpen(a.id), {
         visiting: isVisiting, keys: i >= 0 && i < 9 ? shortcutLabel(i) : undefined,
         onContextMenu: e => { e.preventDefault(); setPopup({ kind: 'pin', app: a.id, anchor: anchorFor(e.currentTarget, 'top', 96), owner: e.currentTarget }); },
@@ -263,8 +264,8 @@ export function AppRail({ active, status, onOpen, onGuest }: Props) {
   const found = APPS.filter(a => a.group !== 'chat' && matches(a));
 
   return (
-    <nav ref={navRef} aria-label="Apps" className="shrink-0 w-12 md:w-14 h-full flex flex-col items-center gap-2 py-3 bg-[var(--bg-tertiary)] border-r border-[var(--border-subtle)] overflow-y-auto md:overflow-visible relative z-50">
-      {tile(chat.id, chat.label, chat.hint, (
+    <nav ref={navRef} aria-label={t('Apps')} className="shrink-0 w-12 md:w-14 h-full flex flex-col items-center gap-2 py-3 bg-[var(--bg-tertiary)] border-r border-[var(--border-subtle)] overflow-y-auto md:overflow-visible relative z-50">
+      {tile(chat.id, t(chat.label), t(chat.hint), (
         <span className="w-full h-full rounded-[inherit] flex items-center justify-center text-white text-sm font-bold" style={{ background: 'var(--sunset-brand, linear-gradient(135deg,#7c3aed,#a78bfa))' }}>B</span>
       ), active === chat.id, () => onOpen(chat.id))}
       <div className="w-8 h-px bg-[var(--border-subtle)] my-0.5" />
@@ -275,20 +276,20 @@ export function AppRail({ active, status, onOpen, onGuest }: Props) {
           {visitingApps.map(a => appTile(a, true))}
         </>
       )}
-      {tile('all', 'All apps', offRail.length ? `Everything else: ${offRail.map(a => a.label).join(', ')}` : 'Find any app and choose what is pinned here',
+      {tile('all', t('All apps'), offRail.length ? t('Everything else: {apps}', { apps: offRail.map(a => t(a.label)).join(', ') }) : t('Find any app and choose what is pinned here'),
         <span className="relative flex" style={{ '--tint': 'var(--accent)' } as CSSProperties}><LayoutGrid className={ICON} /><Badges live={allLive} /></span>,
         false, () => toggle('all'), { button: allBtn, expanded: popup?.kind === 'all' })}
       <div className="flex-1" />
-      {tile(docked.id, live(docked)?.label ?? docked.label, docked.hint, <AppIcon app={docked} live={live(docked)} quiet on={active === docked.id} />,
+      {tile(docked.id, live(docked)?.label ? t(live(docked)!.label!) : t(docked.label), t(docked.hint), <AppIcon app={docked} live={live(docked)} quiet on={active === docked.id} />,
         active === docked.id, () => onOpen(docked.id), { keys: railIds.length <= 9 ? shortcutLabel(railIds.length - 1) : undefined })}
       <div className="w-8 h-px bg-[var(--border-subtle)] my-0.5" />
-      {tile('system', systemDot ? 'System · needs a look' : 'System', system.map(a => a.label).join(', '),
+      {tile('system', systemDot ? t('System · needs a look') : t('System'), system.map(a => t(a.label)).join(', '),
         <span className="relative flex"><Settings className={ICON} />
           {systemDot && <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 border border-[var(--bg-tertiary)]" />}</span>,
         systemActive, () => toggle('system'), { button: gearBtn, expanded: popup?.kind === 'system' })}
 
       {popup?.kind === 'system' && (
-        <Popover anchor={popup.anchor} owner={gearBtn.current} label="System" className="w-64 p-1.5 overflow-y-auto" onClose={close}>
+        <Popover anchor={popup.anchor} owner={gearBtn.current} label={t('System')} className="w-64 p-1.5 overflow-y-auto" onClose={close}>
           {system.map(a => <AppRow key={a.id} app={a} live={live(a)} current={active === a.id} onOpen={() => open(a.id)} />)}
           {onGuest && cellGuest() && (
             <>
@@ -299,14 +300,14 @@ export function AppRail({ active, status, onOpen, onGuest }: Props) {
                   className="w-full flex items-start gap-2.5 px-2.5 py-2 rounded-lg text-left hover:bg-[var(--bg-hover)] focus:outline-none focus-visible:bg-[var(--bg-hover)]">
                   <e.icon className={clsx(ICON, 'mt-0.5 shrink-0 text-[var(--text-muted)]')} />
                   <span className="min-w-0">
-                    <span className="block text-sm font-medium text-[var(--text-primary)]">{e.label}</span>
-                    <span className="block text-[11px] text-[var(--text-secondary)] leading-snug">{e.hint}</span>
+                    <span className="block text-sm font-medium text-[var(--text-primary)]">{t(e.label)}</span>
+                    <span className="block text-[11px] text-[var(--text-secondary)] leading-snug">{t(e.hint)}</span>
                   </span>
                 </button>
               ))}
               <button data-nav onClick={() => { close(); signOutGuest(); }}
                 className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left text-sm text-red-400 hover:bg-[var(--bg-hover)] focus:outline-none focus-visible:bg-[var(--bg-hover)]">
-                <LogOut className={ICON} />Sign out of this device
+                <LogOut className={ICON} />{t('Sign out of this device')}
               </button>
             </>
           )}
@@ -314,10 +315,10 @@ export function AppRail({ active, status, onOpen, onGuest }: Props) {
       )}
 
       {popup?.kind === 'all' && (
-        <Popover anchor={popup.anchor} owner={allBtn.current} label="All apps" className="w-[340px] max-w-[calc(100vw-4rem)]" onClose={close}>
+        <Popover anchor={popup.anchor} owner={allBtn.current} label={t('All apps')} className="w-[340px] max-w-[calc(100vw-4rem)]" onClose={close}>
           <div className="flex items-center gap-2 px-3 border-b border-[var(--border-subtle)] shrink-0">
             <Search className="w-4 h-4 text-[var(--text-muted)]" />
-            <input data-nav value={q} onChange={e => setQ(e.target.value)} placeholder="Find an app…" aria-label="Find an app"
+            <input data-nav value={q} onChange={e => setQ(e.target.value)} placeholder={t('Find an app…')} aria-label={t('Find an app')}
               onKeyDown={e => { if (e.key === 'Enter' && found[0]) open(found[0].id); }}
               className="flex-1 bg-transparent py-2.5 text-sm focus:outline-none" />
           </div>
@@ -326,26 +327,26 @@ export function AppRail({ active, status, onOpen, onGuest }: Props) {
               const apps = found.filter(a => a.group === g);
               if (!apps.length) return null;
               return (
-                <section key={g} aria-label={GROUP_LABEL[g]} className="mb-1 last:mb-0">
+                <section key={g} aria-label={t(GROUP_LABEL[g])} className="mb-1 last:mb-0">
                   <h3 className="px-2.5 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                    {GROUP_LABEL[g]}{g === 'system' && <span className="normal-case tracking-normal font-normal"> · in the gear menu</span>}
+                    {t(GROUP_LABEL[g])}{g === 'system' && <span className="normal-case tracking-normal font-normal"> · {t('in the gear menu')}</span>}
                   </h3>
                   {apps.map(a => (
                     <AppRow key={a.id} app={a} live={live(a)} current={active === a.id} pinned={pinned.has(a.id)}
                       note={railIds.indexOf(a.id) >= 0 && railIds.indexOf(a.id) < 9 ? <Kbd>{shortcutLabel(railIds.indexOf(a.id))}</Kbd>
-                        : overflow.has(a.id) ? 'no room' : undefined}
+                        : overflow.has(a.id) ? t('no room') : undefined}
                       onOpen={() => open(a.id)} onPin={PINNABLE.has(a.id) ? () => togglePin(a.id) : undefined} />
                   ))}
                 </section>
               );
             })}
-            {found.length === 0 && <div className="text-xs text-[var(--text-muted)] text-center py-6">No app matches “{q}”</div>}
+            {found.length === 0 && <div className="text-xs text-[var(--text-muted)] text-center py-6">{t('No app matches “{q}”', { q })}</div>}
           </div>
           <div className="shrink-0 px-3 py-2 border-t border-[var(--border-subtle)] flex items-center justify-between text-[11px] text-[var(--text-muted)]">
-            <span>{overflow.size ? `${overflow.size} pinned ${overflow.size === 1 ? 'app doesn’t' : 'apps don’t'} fit this window` : 'Pin apps to keep them on the rail'}</span>
+            <span>{overflow.size ? tn(overflow.size, '{n} pinned app doesn’t fit this window', '{n} pinned apps don’t fit this window') : t('Pin apps to keep them on the rail')}</span>
             {pins.join() !== DEFAULT_PINS.join() && (
               <button onClick={() => setPins(null)}
-                className="hover:text-[var(--text-primary)] underline-offset-2 hover:underline">Reset</button>
+                className="hover:text-[var(--text-primary)] underline-offset-2 hover:underline">{t('Reset')}</button>
             )}
           </div>
         </Popover>
@@ -355,15 +356,15 @@ export function AppRail({ active, status, onOpen, onGuest }: Props) {
         const a = APPS.find(x => x.id === popup.app)!;
         const isPinned = pinned.has(a.id);
         return (
-          <Popover anchor={popup.anchor} owner={popup.owner} label={a.label} className="w-52 p-1.5" onClose={close}>
+          <Popover anchor={popup.anchor} owner={popup.owner} label={t(a.label)} className="w-52 p-1.5" onClose={close}>
             <button data-nav onClick={() => open(a.id)}
               className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-sm hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)] focus:outline-none">
-              <AppIcon app={a} /> Open {a.label}
+              <AppIcon app={a} /> {t('Open {app}', { app: t(a.label) })}
             </button>
             <button data-nav onClick={() => { togglePin(a.id); close(); }}
               className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-sm hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)] focus:outline-none">
               {isPinned ? <PinOff className={clsx(ICON, 'text-[var(--text-muted)]')} /> : <Pin className={clsx(ICON, 'text-[var(--text-muted)]')} />}
-              {isPinned ? 'Unpin from the rail' : 'Pin to the rail'}
+              {isPinned ? t('Unpin from the rail') : t('Pin to the rail')}
             </button>
           </Popover>
         );

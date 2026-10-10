@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, Eye, EyeOff, KeyRound, Loader2, LogOut, Mail, Sh
 import { AUTH_LOST, setFrameKey } from '../api';
 import { btn } from '../components/common';
 import { errText, guestApi, type CodeInfo, type GuestMe, type SignInResult } from './guestApi';
+import { setLocalePref, t, type LocalePref } from '../i18n';
 
 // Signing in to Shell:B Guest (server/guest_accounts.py). An invite link (#invite=) makes the account, a reset link
 // (#reset=) sets a new password, and a device code signs in one more device. Accounts made before passwords existed
@@ -14,7 +15,7 @@ const linkInHash = (): { kind: 'invite' | 'reset'; code: string } | null => {
   return m ? { kind: m[1] as 'invite' | 'reset', code: m[2] } : null;
 };
 const clearHash = () => history.replaceState(null, '', location.pathname);
-const PASSWORD_HINT = 'At least 10 characters. A few unrelated words make a strong one that is easy to remember.';
+const passwordHint = () => t('At least 10 characters. A few unrelated words make a strong one that is easy to remember.');
 
 /** Signed in, or the screens that get there. */
 export function GuestGate({ children }: { children: (me: GuestMe, refresh: () => void) => ReactNode }) {
@@ -25,6 +26,7 @@ export function GuestGate({ children }: { children: (me: GuestMe, refresh: () =>
   const check = useCallback(async () => {
     try {
       const info = await guestApi.authMe();
+      if (info.language !== undefined) setLocalePref((info.language || '') as LocalePref);
       if (!info.authenticated) { setFrameKey(null); setMe(null); setState('out'); return; }
       if (info.needsAccount) { setFrameKey(null); setName(info.guest?.name ?? ''); setState('setup'); return; }
       if (info.cell) { location.replace('/'); return; }  // their own Shell:B: the gateway now serves its full UI
@@ -55,7 +57,7 @@ function Shell({ children, footer }: { children: ReactNode; footer?: ReactNode }
   return (
     <main className="min-h-full flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-sm">
-        <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Private AI on a friend's machine</p>
+        <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-muted)]">{t("Private AI on a friend's machine")}</p>
         <h1 className="mt-2 text-4xl font-semibold tracking-tight leading-[1.1] text-[var(--text-primary)]">Shell:B</h1>
         {children}
         {footer && (
@@ -90,7 +92,7 @@ function PasswordInput({ id, value, onChange, fresh, autoFocus }: {
         autoComplete={fresh ? 'new-password' : 'current-password'} minLength={fresh ? 10 : undefined} maxLength={256}
         className={`${btn.input} pr-9`} autoFocus={autoFocus} spellCheck={false} />
       <button type="button" onClick={() => setShow(v => !v)} className={`${btn.icon} absolute right-1 top-1/2 -translate-y-1/2`}
-        aria-label={show ? 'Hide password' : 'Show password'} aria-pressed={show}>
+        aria-label={show ? t('Hide password') : t('Show password')} aria-pressed={show}>
         {show ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
       </button>
     </div>
@@ -101,7 +103,7 @@ function Remember({ value, onChange }: { value: boolean; onChange: (v: boolean) 
   return (
     <label className="flex items-start gap-2.5 text-xs leading-relaxed text-[var(--text-secondary)] cursor-pointer">
       <input type="checkbox" checked={value} onChange={e => onChange(e.target.checked)} className="mt-0.5 accent-[var(--accent)]" />
-      <span>Remember me on this device for 30 days. Leave it off on a shared computer: you'll be signed out after 12 hours.</span>
+      <span>{t("Remember me on this device for 30 days. Leave it off on a shared computer: you'll be signed out after 12 hours.")}</span>
     </label>
   );
 }
@@ -128,7 +130,7 @@ type Screen =
 
 function Welcome({ offline, onIn }: { offline: boolean; onIn: () => void }) {
   const [screen, setScreen] = useState<Screen>(() => (linkInHash() ? { at: 'link' } : { at: 'signin' }));
-  const [error, setError] = useState(offline ? "Can't reach Shell:B right now. The machine may be asleep: try again in a bit." : '');
+  const [error, setError] = useState(offline ? t("Can't reach Shell:B right now. The machine may be asleep: try again in a bit.") : '');
   const [busy, setBusy] = useState(false);
 
   // a link opens the form it's for, greeting the guest by name; nothing is spent until they submit
@@ -138,7 +140,7 @@ function Welcome({ offline, onIn }: { offline: boolean; onIn: () => void }) {
     guestApi.codeInfo(link.code).then((info: CodeInfo) => {
       if (info.kind === 'invite') setScreen({ at: 'invite', code: link.code, name: info.name });
       else if (info.kind === 'reset') setScreen({ at: 'reset', code: link.code, name: info.name, username: info.username });
-      else { clearHash(); setScreen({ at: 'signin', username: info.username ?? '', note: `Welcome back, ${info.name}. Your account is already set up: sign in with it.` }); }
+      else { clearHash(); setScreen({ at: 'signin', username: info.username ?? '', note: t('Welcome back, {name}. Your account is already set up: sign in with it.', { name: info.name }) }); }
     }, e => { clearHash(); setError(errText(e)); setScreen({ at: 'signin' }); });
   }, [offline]);
 
@@ -180,25 +182,25 @@ function SignIn({ initial, note, busy, error, step, toDevice, toForgot }: {
   const [remember, setRemember] = useState(true);
   const submit = (e: FormEvent) => { e.preventDefault(); step(() => guestApi.login(username.trim(), password, remember)); };
   return (
-    <Shell footer="New here? You need an invite from Evie.">
+    <Shell footer={t('New here? You need an invite from Evie.')}>
       <p className="mt-4 text-[0.9375rem] leading-relaxed text-[var(--text-secondary)] max-w-[40ch]">
-        {note ?? "Chat, draw, compose music and run code on Evie's DGX Spark. Your space here is your own."}
+        {note ?? t("Chat, draw, compose music and run code on Evie's DGX Spark. Your space here is your own.")}
       </p>
       <form className="mt-8 space-y-4" onSubmit={submit}>
-        <Field label="Username">
+        <Field label={t('Username')}>
           {id => <input id={id} value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" required
             autoCapitalize="none" spellCheck={false} className={btn.input} autoFocus={!initial} />}
         </Field>
-        <Field label="Password">{id => <PasswordInput id={id} value={password} onChange={setPassword} autoFocus={!!initial} />}</Field>
+        <Field label={t('Password')}>{id => <PasswordInput id={id} value={password} onChange={setPassword} autoFocus={!!initial} />}</Field>
         <Remember value={remember} onChange={setRemember} />
         <Alert text={error} />
-        <Submit busy={busy} disabled={!username.trim() || !password}>Sign in</Submit>
+        <Submit busy={busy} disabled={!username.trim() || !password}>{t('Sign in')}</Submit>
       </form>
       <button type="button" onClick={toDevice} className={`${btn.ghost} mt-3 -ml-2.5`}>
-        <KeyRound className="w-3.5 h-3.5" />Use a device code from your other device
+        <KeyRound className="w-3.5 h-3.5" />{t('Use a device code from your other device')}
       </button>
       <button type="button" onClick={() => toForgot(username.trim())} className={`${btn.ghost} -ml-2.5`}>
-        <Mail className="w-3.5 h-3.5" />Forgot your password?
+        <Mail className="w-3.5 h-3.5" />{t('Forgot your password?')}
       </button>
     </Shell>
   );
@@ -219,23 +221,23 @@ function Forgot({ initial, back }: { initial?: string; back: () => void }) {
     setBusy(false);
   };
   return (
-    <Shell footer="The link works once, within 24 hours. Using it signs you out on your other devices. No email address on your account? Ask Evie for a reset link.">
+    <Shell footer={t('The link works once, within 24 hours. Using it signs you out on your other devices. No email address on your account? Ask Evie for a reset link.')}>
       <p className="mt-4 text-[0.9375rem] leading-relaxed text-[var(--text-secondary)] max-w-[40ch]">
-        Enter your username or the email address on your account, and Shell:B emails you a link to choose a new password.
+        {t('Enter your username or the email address on your account, and Shell:B emails you a link to choose a new password.')}
       </p>
       {done ? (
         <p role="status" className="mt-8 text-sm leading-relaxed text-[var(--text-primary)]">{done}</p>
       ) : (
         <form className="mt-8 space-y-4" onSubmit={submit}>
-          <Field label="Username or email">
+          <Field label={t('Username or email')}>
             {id => <input id={id} value={who} onChange={e => setWho(e.target.value)} autoComplete="username" required
               autoCapitalize="none" spellCheck={false} className={btn.input} autoFocus />}
           </Field>
           <Alert text={error} />
-          <Submit busy={busy} disabled={!who.trim()}>Email me a reset link</Submit>
+          <Submit busy={busy} disabled={!who.trim()}>{t('Email me a reset link')}</Submit>
         </form>
       )}
-      <button type="button" onClick={back} className={`${btn.ghost} mt-3 -ml-2.5`}><ArrowLeft className="w-3.5 h-3.5" />Back to sign in</button>
+      <button type="button" onClick={back} className={`${btn.ghost} mt-3 -ml-2.5`}><ArrowLeft className="w-3.5 h-3.5" />{t('Back to sign in')}</button>
     </Shell>
   );
 }
@@ -247,23 +249,23 @@ function TwoStep({ ticket, busy, error, step, back }: { ticket: string; busy: bo
   return (
     <Shell>
       <p className="mt-4 text-[0.9375rem] leading-relaxed text-[var(--text-secondary)] max-w-[40ch]">
-        {recovery ? 'Enter one of the recovery codes you saved when you turned on two-step sign-in. Each works once.'
-          : 'Open your authenticator app and enter the 6-digit code for Shell:B Guest.'}
+        {recovery ? t('Enter one of the recovery codes you saved when you turned on two-step sign-in. Each works once.')
+          : t('Open your authenticator app and enter the 6-digit code for Shell:B Guest.')}
       </p>
       <form className="mt-8 space-y-4" onSubmit={submit}>
-        <Field label={recovery ? 'Recovery code' : 'Code'}>
+        <Field label={recovery ? t('Recovery code') : t('Code')}>
           {id => <input id={id} key={String(recovery)} value={code} onChange={e => setCode(e.target.value)} required autoFocus
             autoComplete={recovery ? 'off' : 'one-time-code'} inputMode={recovery ? 'text' : 'numeric'} spellCheck={false}
             placeholder={recovery ? 'abcde-fghjk' : '123456'} maxLength={recovery ? 16 : 7}
             className={`${btn.input} font-mono tracking-[0.2em]`} />}
         </Field>
         <Alert text={error} />
-        <Submit busy={busy} disabled={!code.trim()}>Continue</Submit>
+        <Submit busy={busy} disabled={!code.trim()}>{t('Continue')}</Submit>
       </form>
       <div className="mt-3 flex items-center justify-between">
-        <button type="button" onClick={back} className={`${btn.ghost} -ml-2.5`}><ArrowLeft className="w-3.5 h-3.5" />Back</button>
+        <button type="button" onClick={back} className={`${btn.ghost} -ml-2.5`}><ArrowLeft className="w-3.5 h-3.5" />{t('Back')}</button>
         <button type="button" onClick={() => { setRecovery(v => !v); setCode(''); }} className={btn.ghost}>
-          {recovery ? 'Use the app instead' : 'Use a recovery code'}
+          {recovery ? t('Use the app instead') : t('Use a recovery code')}
         </button>
       </div>
     </Shell>
@@ -280,22 +282,22 @@ function CreateAccount({ code, name, busy, error, step }: { code: string; name: 
     step(() => guestApi.signup({ code, username: username.trim(), password, email: email.trim() || undefined, remember }));
   };
   return (
-    <Shell footer="Your chats, files and memories are kept apart from Evie's and from other guests'. The invite works once; it's spent when you create the account.">
+    <Shell footer={t("Your chats, files and memories are kept apart from Evie's and from other guests'. The invite works once; it's spent when you create the account.")}>
       <p className="mt-4 text-[0.9375rem] leading-relaxed text-[var(--text-secondary)] max-w-[40ch]">
-        Welcome, {name}. Evie invited you to your own space on her Shell:B. Choose how you'll sign in.
+        {t("Welcome, {name}. Evie invited you to your own space on her Shell:B. Choose how you'll sign in.", { name })}
       </p>
       <form className="mt-8 space-y-4" onSubmit={submit}>
-        <Field label="Username" hint="3 to 32 letters, digits, dots, dashes or underscores. Not case-sensitive.">
+        <Field label={t('Username')} hint={t('3 to 32 letters, digits, dots, dashes or underscores. Not case-sensitive.')}>
           {id => <input id={id} value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" required
             autoCapitalize="none" spellCheck={false} pattern="[A-Za-z0-9][A-Za-z0-9._\-]{2,31}" className={btn.input} autoFocus />}
         </Field>
-        <Field label="Password" hint={PASSWORD_HINT}>{id => <PasswordInput id={id} value={password} onChange={setPassword} fresh />}</Field>
-        <Field label="Email (optional)" hint="Only Evie sees it, so she can reach you. Shell:B never sends email.">
+        <Field label={t('Password')} hint={passwordHint()}>{id => <PasswordInput id={id} value={password} onChange={setPassword} fresh />}</Field>
+        <Field label={t('Email (optional)')} hint={t('Only Evie sees it, so she can reach you; password reset links go there too.')}>
           {id => <input id={id} type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" className={btn.input} />}
         </Field>
         <Remember value={remember} onChange={setRemember} />
         <Alert text={error} />
-        <Submit busy={busy} disabled={!username.trim() || password.length < 10}>Create account</Submit>
+        <Submit busy={busy} disabled={!username.trim() || password.length < 10}>{t('Create account')}</Submit>
       </form>
     </Shell>
   );
@@ -308,16 +310,16 @@ function ResetPassword({ code, name, username, busy, error, step }: {
   const [remember, setRemember] = useState(true);
   const submit = (e: FormEvent) => { e.preventDefault(); step(() => guestApi.reset(code, password, remember)); };
   return (
-    <Shell footer="Setting a new password signs you out on every other device. If you use two-step sign-in, you'll need a code next.">
+    <Shell footer={t("Setting a new password signs you out on every other device. If you use two-step sign-in, you'll need a code next.")}>
       <p className="mt-4 text-[0.9375rem] leading-relaxed text-[var(--text-secondary)] max-w-[40ch]">
-        Choose a new password, {name}.{username && <> Your username is <span className="font-mono text-[var(--text-primary)]">{username}</span>.</>}
+        {t('Choose a new password, {name}.', { name })}{username && <> {t('Your username is')} <span className="font-mono text-[var(--text-primary)]">{username}</span>.</>}
       </p>
       <form className="mt-8 space-y-4" onSubmit={submit}>
         <input type="text" name="username" autoComplete="username" value={username ?? ''} readOnly hidden />
-        <Field label="New password" hint={PASSWORD_HINT}>{id => <PasswordInput id={id} value={password} onChange={setPassword} fresh autoFocus />}</Field>
+        <Field label={t('New password')} hint={passwordHint()}>{id => <PasswordInput id={id} value={password} onChange={setPassword} fresh autoFocus />}</Field>
         <Remember value={remember} onChange={setRemember} />
         <Alert text={error} />
-        <Submit busy={busy} disabled={password.length < 10}>Set password and sign in</Submit>
+        <Submit busy={busy} disabled={password.length < 10}>{t('Set password and sign in')}</Submit>
       </form>
     </Shell>
   );
@@ -340,12 +342,12 @@ function DeviceCode({ error: initialError, back, onIn }: { error: string; back: 
     }
   };
   return (
-    <Shell footer="Make a device code on a device where you signed in with your password: account menu → Your devices. Codes work once, for 10 minutes.">
+    <Shell footer={t('Make a device code on a device where you signed in with your password: account menu → Your devices. Codes work once, for 10 minutes.')}>
       <p className="mt-4 text-[0.9375rem] leading-relaxed text-[var(--text-secondary)] max-w-[40ch]">
-        Sign in this device with a code from one that's already signed in, without typing your password here.
+        {t("Sign in this device with a code from one that's already signed in, without typing your password here.")}
       </p>
       <form className="mt-8 space-y-4" onSubmit={submit}>
-        <Field label="Device code">
+        <Field label={t('Device code')}>
           {id => (
             <div className="relative">
               <KeyRound className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden />
@@ -355,9 +357,9 @@ function DeviceCode({ error: initialError, back, onIn }: { error: string; back: 
           )}
         </Field>
         <Alert text={error} />
-        <Submit busy={busy} disabled={!code.trim()}>Sign in</Submit>
+        <Submit busy={busy} disabled={!code.trim()}>{t('Sign in')}</Submit>
       </form>
-      <button type="button" onClick={back} className={`${btn.ghost} mt-3 -ml-2.5`}><ArrowLeft className="w-3.5 h-3.5" />Sign in with a password</button>
+      <button type="button" onClick={back} className={`${btn.ghost} mt-3 -ml-2.5`}><ArrowLeft className="w-3.5 h-3.5" />{t('Sign in with a password')}</button>
     </Shell>
   );
 }
@@ -382,24 +384,24 @@ function ChooseAccount({ name, onDone }: { name: string; onDone: () => void }) {
     }
   };
   return (
-    <Shell footer="Your chats, notes and memories are all still here. This only adds a way to sign in on new devices without an invite.">
+    <Shell footer={t('Your chats, notes and memories are all still here. This only adds a way to sign in on new devices without an invite.')}>
       <p className="mt-4 text-[0.9375rem] leading-relaxed text-[var(--text-secondary)] max-w-[40ch]">
-        {name ? `Hi ${name}. ` : ''}Shell:B Guest has proper accounts now. Choose a username and password to keep going.
+        {name ? t('Hi {name}.', { name }) + ' ' : ''}{t('Shell:B Guest has proper accounts now. Choose a username and password to keep going.')}
       </p>
       <form className="mt-8 space-y-4" onSubmit={submit}>
-        <Field label="Username" hint="3 to 32 letters, digits, dots, dashes or underscores. Not case-sensitive.">
+        <Field label={t('Username')} hint={t('3 to 32 letters, digits, dots, dashes or underscores. Not case-sensitive.')}>
           {id => <input id={id} value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" required
             autoCapitalize="none" spellCheck={false} pattern="[A-Za-z0-9][A-Za-z0-9._\-]{2,31}" className={btn.input} autoFocus />}
         </Field>
-        <Field label="Password" hint={PASSWORD_HINT}>{id => <PasswordInput id={id} value={password} onChange={setPassword} fresh />}</Field>
-        <Field label="Email (optional)" hint="Only Evie sees it. Shell:B never sends email.">
+        <Field label={t('Password')} hint={passwordHint()}>{id => <PasswordInput id={id} value={password} onChange={setPassword} fresh />}</Field>
+        <Field label={t('Email (optional)')} hint={t('Only Evie sees it; password reset links go there.')}>
           {id => <input id={id} type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" className={btn.input} />}
         </Field>
         <Alert text={error} />
-        <Submit busy={busy} disabled={!username.trim() || password.length < 10}>Save and continue</Submit>
+        <Submit busy={busy} disabled={!username.trim() || password.length < 10}>{t('Save and continue')}</Submit>
       </form>
       <button type="button" onClick={() => { guestApi.logout().finally(onDone); }} className={`${btn.ghost} mt-3 -ml-2.5`}>
-        <LogOut className="w-3.5 h-3.5" />Sign out
+        <LogOut className="w-3.5 h-3.5" />{t('Sign out')}
       </button>
     </Shell>
   );

@@ -591,7 +591,17 @@ def _mail(to: str, subject: str, lines: list[str]):
     mailer.send_later("guest", to, subject, "\n".join(lines + ["", "— Shell:B"]))
 
 
+def _lang(g: dict) -> str:
+    return (g.get("config") or {}).get("language", "") or ""
+
+
 def mail_invite(g: dict, to: str, link: str):
+    if _lang(g) == "fr":
+        _mail(to, "Votre invitation à Shell:B", [
+            f"Bonjour {g['name']},", "", "Evie vous invite sur Shell:B, son espace d'IA privé.",
+            "Ouvrez ce lien pour choisir un nom d'utilisateur et un mot de passe (il fonctionne une fois et expire dans 7 jours) :",
+            "", link, "", "Si vous n'attendiez pas ce message, vous pouvez l'ignorer."])
+        return
     _mail(to, "Your invite to Shell:B", [
         f"Hi {g['name']},", "", "Evie invited you to Shell:B, her private AI workspace.",
         "Open this link to choose a username and password (it works once and expires in 7 days):", "", link, "",
@@ -599,6 +609,15 @@ def mail_invite(g: dict, to: str, link: str):
 
 
 def mail_reset(g: dict, link: str, requested: bool):
+    if _lang(g) == "fr":
+        why = "Quelqu'un (vous, espérons-le) a demandé à réinitialiser votre mot de passe Shell:B." if requested \
+            else "Evie a créé un lien de réinitialisation du mot de passe pour votre compte Shell:B."
+        _mail(g["email"], "Réinitialisez votre mot de passe Shell:B", [
+            f"Bonjour {g['name']},", "", why,
+            "Ouvrez ce lien pour choisir un nouveau mot de passe (il fonctionne une fois et expire dans 24 heures) :",
+            "", link, "", "L'utiliser vous déconnecte de vos autres appareils. La connexion en deux étapes reste en place.",
+            "Si vous n'êtes pas à l'origine de cette demande, ignorez ce message : votre mot de passe reste le même."])
+        return
     why = "Someone (hopefully you) asked to reset your Shell:B password." if requested \
         else "Evie made a password reset link for your Shell:B account."
     _mail(g["email"], "Reset your Shell:B password", [

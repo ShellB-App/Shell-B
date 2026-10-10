@@ -462,6 +462,23 @@ Network → **Share host** names a host that reaches this machine without Access
 `/api/share/*` with cookies stripped; links are built on it.
 The shared page renders Markdown and sandboxes HTML/SVG exactly like the owner's view, and makes no other API calls.
 
+## Languages
+
+Shell:B speaks English and French. The language applies to the interface and to the agents' replies: when it is
+French, every agent gets a note to answer in French unless you write to it in another language or ask for one.
+
+- **Yours**: Settings → General → Language. *Automatic* follows the browser; pick a language to fix it. The choice
+  is remembered per browser so the login screen comes up in it on the next visit, and the server tells every device
+  through the auth check once you are logged in.
+- **A guest's**: Tools & Connectors → Guests → their limits panel → Language. On the guest page it sets their
+  interface and their agents' replies outright; in their own Shell:B it is the starting choice, and they can change
+  it in their Settings. Invite and password-reset emails go out in that language.
+- **What is translated**: the login and guest sign-in screens, the guest page, the chat (sidebar, rail, composer,
+  message menus, greeting), the mobile bar and the Settings tab names, with dates and relative times in the language.
+  Panels deeper in (Studio, Codex, Activity, the Settings pages themselves) are still English; translations live in
+  `ui/src/i18n/fr.json`, keyed by the English text, and `tests/i18n_test.py` keeps them complete for every string the
+  code wraps in `t()`. Adding a language is a catalog file plus one line in `ui/src/i18n/index.ts`.
+
 ## Translation
 
 `translate` (tool, on for Shell:B, Spark and Mimir; `POST /api/translate {text, to, source?}`; `server/translate.py`)

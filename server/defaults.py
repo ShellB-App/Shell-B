@@ -484,5 +484,6 @@ DEFAULT_SETTINGS = {
     "shareHost": "",           # share links (shares.py) are built on https://<this>/#/s/<token>; "" = this origin (login needed)
     "editCheckpoint": "",      # edit_image inpaint without FLUX.1-dev: an SDXL checkpoint file in ~/comfyui/models/checkpoints
     "modelCosts": {},          # Settings → Usage prices cloud turns: {"anthropic/claude-x": {"in": $/1M prompt tokens, "out": $/1M completion}}
+    "language": "",            # interface and reply language: "" follows the browser, else "en" | "fr" (ui/src/i18n)
     "previewHost": "",         # Studio live previews on https://p-<project>.<this> (hub edge proxy, devserver.py); "" = this host's ports
 }

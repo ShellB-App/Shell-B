@@ -33,6 +33,8 @@ export interface GuestAuthMe {
   /** this guest has their own Shell:B in a container (server/cells.py): the gateway serves the full UI instead */
   cell?: { guest: string };
   guest?: { id: string; name: string; username: string | null };
+  /** the guest's interface language from their config ('' = browser), see ui/src/i18n */
+  language?: string;
 }
 /** A sign-in step's answer: signed in, or a ticket for the two-step code. */
 export type SignInResult = { ok: true; name: string } | { twoStep: true; ticket: string };

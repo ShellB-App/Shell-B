@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { useState, useRef, useEffect, type ChangeEvent } from 'react';
 import clsx from 'clsx';
 import {
@@ -204,7 +205,7 @@ export function MobileComposer({
               title="Reasoning effort"
             >
               <Brain className="w-3 h-3" />
-              <span>{EFFORTS.find(e => e.id === effort)?.label ?? 'Think'}</span>
+              <span>{t(EFFORTS.find(e => e.id === effort)?.label ?? 'Think')}</span>
             </button>
           )}
 
@@ -221,7 +222,7 @@ export function MobileComposer({
               title="Plan Mode"
             >
               <Workflow className="w-3 h-3" />
-              <span>Plan</span>
+              <span>{t('Plan')}</span>
             </button>
           )}
 
@@ -307,7 +308,7 @@ export function MobileComposer({
                 }
               }
             }}
-            placeholder={`Message ${agent.name}…`}
+            placeholder={t('Message {name}…', { name: agent.name })}
             rows={1}
             className="w-full bg-transparent border-0 resize-none text-[15px] sm:text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none py-1.5 px-1 leading-relaxed"
           />

@@ -1,3 +1,4 @@
+import { t } from './i18n';
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Archive, ArrowDown, Download, GitFork, Moon, PanelLeft, PanelRight, Printer, Radio, Search, Shapes, Smartphone, Sun, Telescope, Workflow } from 'lucide-react';
@@ -105,7 +106,7 @@ const QUICK: Record<string, { title: string; prompt: string }[]> = {
 
 function greeting() {
   const h = new Date().getHours();
-  return h < 5 ? 'Burning the midnight oil' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  return h < 5 ? t('Burning the midnight oil') : h < 12 ? t('Good morning') : h < 18 ? t('Good afternoon') : t('Good evening');
 }
 
 const readHash = () => /^#\/c\/([\w-]+)/.exec(location.hash)?.[1];
@@ -665,7 +666,7 @@ export function App() {
 
       <main className="flex-1 flex flex-col min-w-0 h-full">
         <header className="sf-topbar h-12 shrink-0 flex items-center gap-2 px-3 border-b border-[var(--border-subtle)]">
-          {!sidebar && <button className={btn.icon} onClick={() => setSidebar(true)} title="Show sidebar (Ctrl+B)"><PanelLeft className="w-4 h-4" /></button>}
+          {!sidebar && <button className={btn.icon} onClick={() => setSidebar(true)} title={t('Show sidebar (Ctrl+B)')}><PanelLeft className="w-4 h-4" /></button>}
           <div className="flex-1 flex items-center gap-2 min-w-0">
             {radioRoute ? (
               <span className="text-sm font-medium flex items-center gap-2">
@@ -699,17 +700,17 @@ export function App() {
                   </button>
                 )}
                 <AgentAvatar agent={agent} size={18} />
-                <span className="text-sm font-medium truncate">{conv?.title ?? (incognito ? `Incognito chat with ${agent.name}` : `New chat with ${agent.name}`)}</span>
+                <span className="text-sm font-medium truncate">{conv?.title ?? (incognito ? t('Incognito chat with {name}', { name: agent.name }) : t('New chat with {name}', { name: agent.name }))}</span>
                 {incognito && <IncognitoMark />}
                 {conv && <FavoriteStar kind="chat" id={conv.id} title={conv.title} />}
                 {conv && !incognito && <Mailbox convId={conv.id} tick={conv.messages.length} />}
                 {conv && (
                   <div className="flex items-center gap-0.5 ml-1">
-                    <button className={btn.icon} onClick={() => forkChat(conv.id)} title="Fork this conversation">
+                    <button className={btn.icon} onClick={() => forkChat(conv.id)} title={t('Fork this conversation')}>
                       <GitFork className="w-3.5 h-3.5 text-[var(--text-muted)] hover:text-[var(--text-primary)]" />
                     </button>
                     {messages.length > 4 && (
-                      <button className={btn.icon} onClick={() => compactChat(conv.id)} title="Compact conversation (summarize older history to save context)">
+                      <button className={btn.icon} onClick={() => compactChat(conv.id)} title={t('Compact conversation (summarize older history to save context)')}>
                         <Archive className="w-3.5 h-3.5 text-[var(--text-muted)] hover:text-[var(--text-primary)]" />
                       </button>
                     )}
@@ -720,10 +721,10 @@ export function App() {
           </div>
           <Downloads initial={status?.downloads} />
           <button onClick={() => setModal('palette')} className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-[var(--bg-secondary)] hover:bg-[var(--bg-hover)] border border-[var(--border-subtle)] text-xs text-[var(--text-muted)]">
-            <Search className="w-3.5 h-3.5" /><span>Search</span>
+            <Search className="w-3.5 h-3.5" /><span>{t('Search')}</span>
             <kbd className="text-[9px] font-mono px-1 py-0.5 rounded bg-[var(--bg-tertiary)] border border-[var(--border-subtle)]">Ctrl K</kbd>
           </button>
-          <button onClick={() => setModal('palette')} className={clsx(btn.icon, 'sm:hidden')} aria-label="Search"><Search className="w-4 h-4" /></button>
+          <button onClick={() => setModal('palette')} className={clsx(btn.icon, 'sm:hidden')} aria-label={t('Search')}><Search className="w-4 h-4" /></button>
           {conv?.megaPlan && onChatPage && (
             <button onClick={() => openPlans(conv.megaPlan!.id)} title={`This chat is ${conv.megaPlan.role === 'step' ? 'a step' : conv.megaPlan.role === 'orchestrator' ? 'the orchestrator' : 'the creator'} of the mega plan "${conv.megaPlan.title}"`}
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-violet-500/40 text-xs text-violet-600 dark:text-violet-300 bg-violet-500/10 hover:bg-violet-500/20 transition">
@@ -760,12 +761,12 @@ export function App() {
                 a.download = `${(conv.title || 'Conversation').replace(/[^a-z0-9_-]/gi, '_')}.md`;
                 a.click();
                 URL.revokeObjectURL(url);
-              }} title="Export as Markdown"><Download className="w-4 h-4" /></button>
-              <button className={btn.icon} onClick={() => window.print()} title="Print / Export to PDF"><Printer className="w-4 h-4" /></button>
+              }} title={t('Export as Markdown')}><Download className="w-4 h-4" /></button>
+              <button className={btn.icon} onClick={() => window.print()} title={t('Print / Export to PDF')}><Printer className="w-4 h-4" /></button>
             </div>
           )}
-          <button className={btn.icon} onClick={() => setFormFactorOpen(true)} title="Display Form Factor (Desktop / Mobile / Kiosk)"><Smartphone className="w-4 h-4" /></button>
-          <button className={btn.icon} onClick={toggleTheme} title="Toggle theme">{theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}</button>
+          <button className={btn.icon} onClick={() => setFormFactorOpen(true)} title={t('Display Form Factor (Desktop / Mobile / Kiosk)')}><Smartphone className="w-4 h-4" /></button>
+          <button className={btn.icon} onClick={toggleTheme} title={t('Toggle theme')}>{theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}</button>
         </header>
 
         <Suspense fallback={<div className="flex-1 flex items-center justify-center text-sm text-[var(--text-muted)]">Opening…</div>}>
@@ -874,7 +875,7 @@ export function App() {
                     </button>
                   ))}
                 </div>
-                <p className="sf-tagline mt-8 text-[11px] text-[var(--text-muted)]">Overthink. Overcomplicate. Overengineer.</p>
+                <p className="sf-tagline mt-8 text-[11px] text-[var(--text-muted)]">{t('Overthink. Overcomplicate. Overengineer.')}</p>
               </div>
             ) : (
               <div className="max-w-3xl mx-auto px-4 py-6 space-y-7">
@@ -930,7 +931,7 @@ export function App() {
             <div className="text-center text-[10px] text-[var(--text-muted)] mt-1.5">
               {activeModel}{agent.cloud ? '' : ' · local'}
               {lastAssistant?.context && <> · <ContextMeter info={lastAssistant.context} /></>}
-              {' · '}Shell:B can make mistakes; check anything important.
+              {' · '}{t('Shell:B can make mistakes; check anything important.')}
             </div>
           </div>
         </div>

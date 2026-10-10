@@ -7,6 +7,7 @@ import {
   Settings,
 } from 'lucide-react';
 import type { Status } from '../types';
+import { t } from '../i18n';
 
 export type MobileTab = 'chat' | 'recents' | 'apps' | 'activity' | 'more';
 
@@ -68,7 +69,7 @@ export function MobileBottomNav({ activeTab, onTabChange, status }: Props) {
                 )}
               </div>
               <span className={clsx('text-[10px] mt-0.5 tracking-tight', active ? 'font-semibold' : 'font-normal')}>
-                {tab.label}
+                {t(tab.label)}
               </span>
             </button>
           );

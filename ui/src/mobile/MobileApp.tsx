@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { ArrowDown, Boxes, Workflow } from 'lucide-react';
@@ -108,7 +109,7 @@ const QUICK: Record<string, { title: string; prompt: string }[]> = {
 
 function greeting() {
   const h = new Date().getHours();
-  return h < 5 ? 'Burning the midnight oil' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  return h < 5 ? t('Burning the midnight oil') : h < 12 ? t('Good morning') : h < 18 ? t('Good afternoon') : t('Good evening');
 }
 
 const readHash = () => /^#\/c\/([\w-]+)/.exec(location.hash)?.[1];
@@ -552,25 +553,25 @@ export function MobileApp() {
     groupRoute;
 
   let currentAppTitle: string | undefined;
-  if (radioRoute) currentAppTitle = 'Shell:B FM · Radio & DJ';
-  else if (secretaryRoute) currentAppTitle = 'Secretary';
-  else if (gibberlinkRoute) currentAppTitle = 'Gibberlink';
-  else if (mapsRoute) currentAppTitle = 'Worlds (Maps)';
-  else if (wikiRoute !== null) currentAppTitle = 'Wiki';
-  else if (dataRoute) currentAppTitle = 'Offline Data';
-  else if (assetRoute) currentAppTitle = 'Assets';
-  else if (plans) currentAppTitle = 'Mega Plans';
-  else if (research) currentAppTitle = 'Research';
-  else if (modelsRoute) currentAppTitle = 'Models';
-  else if (generateRoute) currentAppTitle = 'Generate';
-  else if (circlesRoute) currentAppTitle = 'Circles';
-  else if (shopRoute) currentAppTitle = 'Shopping';
-  else if (feedsRoute) currentAppTitle = 'Feeds';
+  if (radioRoute) currentAppTitle = t('Shell:B FM · Radio & DJ');
+  else if (secretaryRoute) currentAppTitle = t('Secretary');
+  else if (gibberlinkRoute) currentAppTitle = t('Gibberlink');
+  else if (mapsRoute) currentAppTitle = t('Worlds (Maps)');
+  else if (wikiRoute !== null) currentAppTitle = t('Wiki');
+  else if (dataRoute) currentAppTitle = t('Offline Data');
+  else if (assetRoute) currentAppTitle = t('Assets');
+  else if (plans) currentAppTitle = t('Mega Plans');
+  else if (research) currentAppTitle = t('Research');
+  else if (modelsRoute) currentAppTitle = t('Models');
+  else if (generateRoute) currentAppTitle = t('Generate');
+  else if (circlesRoute) currentAppTitle = t('Circles');
+  else if (shopRoute) currentAppTitle = t('Shopping');
+  else if (feedsRoute) currentAppTitle = t('Feeds');
   else if (codexRoute !== null) currentAppTitle = /^me\b/.test(codexRoute) ? 'Me' : /^notes\b/.test(codexRoute) ? 'Notes' : 'Codex';
-  else if (activity) currentAppTitle = 'Activity';
-  else if (scheduled) currentAppTitle = 'Scheduled';
+  else if (activity) currentAppTitle = t('Activity');
+  else if (scheduled) currentAppTitle = t('Scheduled');
   else if (library) currentAppTitle = library === 'favorites' ? 'Favorites' : 'Library';
-  else if (groupRoute) currentAppTitle = 'Projects';
+  else if (groupRoute) currentAppTitle = t('Projects');
 
   const currentTab: MobileTab = isAppActive
     ? activity
@@ -928,7 +929,7 @@ export function MobileApp() {
                   </div>
 
                   <p className="mt-6 text-[10px] text-[var(--text-muted)]">
-                    Overthink. Overcomplicate. Overengineer.
+                    {t('Overthink. Overcomplicate. Overengineer.')}
                   </p>
                 </div>
               ) : (

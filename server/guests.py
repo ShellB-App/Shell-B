@@ -210,6 +210,7 @@ def clean_config(cfg: dict | None) -> dict:
     out["tools"] = [t for t in cfg.get("tools") or [] if t in GUEST_TOOLS]
     # their own full Shell:B in a container (cells.py), the default since 2026-10-10; off = the lighter guest app (guest_app.py)
     out["cell"] = bool(cfg.get("cell", True))
+    out["language"] = cfg.get("language") if cfg.get("language") in ("en", "fr") else ""  # "" = the browser's (ui/src/i18n)
     return out
 
 
@@ -280,7 +281,9 @@ def turn_api(guest: dict) -> dict:
 
 
 def note(guest: dict) -> str:
-    return NOTE.format(name=guest["name"])
+    from prompts import language_note  # here, not at the top: prompts imports this module
+    lang = language_note((guest.get("config") or {}).get("language", ""))
+    return NOTE.format(name=guest["name"]) + (f"\n\n{lang}" if lang else "")
 
 
 # ── guests (owner side) ─────────────────────────────────────────────────────

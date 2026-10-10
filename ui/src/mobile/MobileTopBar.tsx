@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { useState } from 'react';
 import clsx from 'clsx';
 import {
@@ -123,7 +124,7 @@ export function MobileTopBar({
                   <span>/</span>
                 </button>
               )}
-              <span className="truncate">{conv?.title ?? 'New conversation'}</span>
+              <span className="truncate">{!conv?.title || conv.title === 'New conversation' ? t('New conversation') : conv.title}</span>
             </div>
           </div>
         )}

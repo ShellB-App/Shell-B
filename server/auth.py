@@ -568,7 +568,8 @@ def _me(req: Request, sess: dict | None = None) -> dict:
     how = req.scope.get("shellb_auth")
     return {"authenticated": bool(sess) or how == "local", "via": "session" if sess else how,
             "passwordSet": has_password(),
-            "frameKey": sess["frame_key"] if sess else local_frame_secret() if how == "local" else None}
+            "frameKey": sess["frame_key"] if sess else local_frame_secret() if how == "local" else None,
+            "language": (db.kv_get("settings", {}) or {}).get("language", "")}  # ui/src/i18n: "" = the browser's
 
 
 # ── routes ──────────────────────────────────────────────────────────────────

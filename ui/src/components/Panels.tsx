@@ -1,3 +1,4 @@
+import { LOCALES, setLocalePref, t, type LocalePref } from '../i18n';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import {
@@ -120,10 +121,10 @@ export function SettingsContent(p: SettingsProps) {
   return (
     <div className="flex-1 min-h-0 flex flex-col sm:flex-row h-full">
       <div className="sm:w-44 shrink-0 p-2 flex sm:flex-col gap-1 border-b sm:border-b-0 sm:border-r border-[var(--border-subtle)] overflow-x-auto">
-        {tabs.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className={clsx('flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[13px] transition whitespace-nowrap', tab === t.id ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]')}>
-            <t.icon className="w-4 h-4 shrink-0" />{t.label}
+        {tabs.map(tb => (
+          <button key={tb.id} onClick={() => setTab(tb.id)}
+            className={clsx('flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[13px] transition whitespace-nowrap', tab === tb.id ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]')}>
+            <tb.icon className="w-4 h-4 shrink-0" />{t(tb.label)}
           </button>
         ))}
       </div>
@@ -148,7 +149,7 @@ export function SettingsContent(p: SettingsProps) {
 
 export function SettingsModal(p: SettingsProps) {
   return (
-    <Modal open={p.open ?? false} onClose={p.onClose ?? (() => {})} title="Settings" icon={<SettingsIcon className="w-4 h-4" />} wide>
+    <Modal open={p.open ?? false} onClose={p.onClose ?? (() => {})} title={t('Settings')} icon={<SettingsIcon className="w-4 h-4" />} wide>
       <SettingsContent {...p} />
     </Modal>
   );
@@ -192,6 +193,12 @@ function General({ settings, agents, models, onSaved, onOpenTab }: SettingsProps
       <Row label="Default agent" hint="Used for new chats">
         <select className={btn.input} value={settings.defaultAgent} onChange={e => save({ defaultAgent: e.target.value })}>
           {agents.map(a => <option key={a.id} value={a.id}>{a.name} — {a.title}</option>)}
+        </select>
+      </Row>
+      <Row label={t('Language')} hint={t('Interface and replies. Automatic follows the browser')}>
+        <select className={btn.input} value={settings.language ?? ''} onChange={e => { const v = e.target.value as LocalePref; save({ language: v }); setLocalePref(v); }}>
+          <option value="">{t('Automatic')}</option>
+          {LOCALES.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
         </select>
       </Row>
       <Row label="Vision fallback" hint="Handles images when the agent's model can't see">

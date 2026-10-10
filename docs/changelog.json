@@ -1,326 +1,332 @@
 [
- {
-  "date": "2026-10-10",
-  "area": "Guests",
-  "title": "Dev servers and screenshots in guests' own Shell:B",
-  "summary": "A guest's Studio and Code projects can now run their live back-end (devserver.json) and their agents can take screenshots: the host runs the container and the browser for them through the broker, bound to that one project, and the preview opens on the project's own preview host."
- },
- {
-  "date": "2026-10-10",
-  "area": "UI",
-  "title": "Click-through polish for the new panels",
-  "summary": "A fresh feed subscription now shows its backlog instead of an empty “All caught up” (and that empty state offers “Show everything”); the CalDAV/CardDAV sync dialog closes on Escape; Settings → Usage prices list only the cloud models used in the period, with a show-all toggle; share links opened from inside the app render the read-only view; the Code sidebar’s Remote panel and the share-link toast explain the owner sign-in instead of showing a raw server error."
- },
- {
-  "date": "2026-10-10",
-  "area": "Guests",
-  "title": "Guests get their own full Shell:B",
-  "summary": "Every guest now opens the complete Shell:B as their own instance in a sealed container: Studio, Code, Codex, Library, Research, Shopping, Circles, their own agents, memory and themes. The UI knows it is a guest's (no host apps or tabs; Account and security, Your devices, About and limits and Report to Evie in the gear menu, Settings and the palette; a Report flag on every reply) and shows “Starting your Shell:B…” while the container boots. The lighter guest app stays one untick away per guest in Tools & Connectors → Guests."
- },
- {
-  "date": "2026-10-10",
-  "area": "Security",
-  "title": "Passkeys for the owner login",
-  "summary": "Settings → Account → Passkeys: sign in with your device's screen lock or a security key instead of the password. A passkey is tied to the address you make it at and counts as its own second step."
- },
- {
-  "date": "2026-10-10",
-  "area": "Codex",
-  "title": "Calendar and contacts sync with CalDAV and CardDAV",
-  "summary": "Codex → Calendar → Sync… and Contacts → Sync… keep a Nextcloud, Fastmail, iCloud or Radicale calendar and address book in step with the Codex every few minutes: your edits go up, their changes come down, matched by UID. Deletions aren't synced."
- },
- {
-  "date": "2026-10-10",
-  "area": "Media",
-  "title": "YouTube and streaming links transcribe too",
-  "summary": "The transcribe tool, Secretary and research notebooks now take YouTube, Vimeo and SoundCloud links: the audio is fetched on the Spark (one video at a time, up to four hours) and transcribed like a file."
- },
- {
-  "date": "2026-10-10",
-  "area": "Sharing",
-  "title": "share.shellb.app carries read-only links",
-  "summary": "Share links now open on share.shellb.app without a login, for anyone who has the link. The host serves only the shared page and nothing else of the app."
- },
- {
-  "date": "2026-10-10",
-  "area": "Law",
-  "title": "Federal Register and federal case law join the law index",
-  "summary": "The legal tool's index is growing overnight with Federal Register issues from 2020 on, the EU court's judgments that were downloaded but never indexed, and published opinions of the Supreme Court and the federal courts of appeals from CourtListener."
- },
- {
-  "date": "2026-10-10",
-  "area": "Circles",
-  "title": "Circles: share chats and artifacts, and mail each other",
-  "summary": "Right-click a chat or an artifact → Share to a circle: a copy of it goes to one circle with a line from you, where members can read it, keep their own copy, and their agents can use it as background. Circles also got mail: short messages between people who share a circle, read by their agents as information and answerable from the chat when you ask. Shares expire after 90 days and can be retracted."
- },
- {
-  "date": "2026-10-10",
-  "area": "Guests",
-  "title": "Guest containers: code sandbox and web access",
-  "summary": "A guest's own container can now run code (the host runs the sandbox for it, with only that chat's folder visible) and reach the web through a filtered proxy on this machine, so Studio, Code, Research, Shopping and web reading work for guests in containers. Their daily turn and token caps now apply there too, and their storage count includes the container's files."
- },
- {
-  "date": "2026-10-10",
-  "area": "Media",
-  "title": "Transcribe audio and video, edit pictures, LoRAs, Gemini import",
-  "summary": "Agents can transcribe audio and video files (and Secretary takes video recordings): ffmpeg in the sandbox extracts the sound, Whisper writes a timestamped transcript saved next to the file. NYX and Daedalus got edit_image: cut a subject out, upscale with an ESRGAN model from the Model Store, or inpaint a masked area from a prompt. generate_image can apply a LoRA from the Model Store. Import history now reads a Google Takeout of Gemini activity. The API gained artifact content, image inputs, library search and (per key) memory, and the MCP server the matching tools."
- },
- {
-  "date": "2026-10-10",
-  "area": "Email",
-  "title": "Read your inbox: IMAP, rules that start a turn, threaded replies",
-  "summary": "Settings → Notifications → Email → Inbox connects a mailbox over IMAP with an app password. New mail shows in Activity, agents in your chats can read and search it (read_email), and rules can hand a matching email to an agent the moment it arrives (an invoice to file, a request to answer). Replies through send_email thread under the original. Cloud agents stay out of the inbox unless you allow it."
- },
- {
-  "date": "2026-10-10",
-  "area": "Code",
-  "title": "Git remotes: fetch, pull and push from a Code workspace",
-  "summary": "The Code and Studio sidebar has a Remote tab: give it the https address of a GitHub, GitLab or Gitea repository, a branch, and a Codex secret holding your token, then Fetch, Pull (fast-forward only) and Push. Agents working in the project can fetch and pull themselves; when one wants to push, an approval card lists the commits and waits for you."
- },
- {
-  "date": "2026-10-10",
-  "area": "Sharing",
-  "title": "Read-only share links for chats and artifacts",
-  "summary": "Right-click a chat or an artifact → Share read-only link. The link opens a frozen copy (what was there when you shared it) for anyone who has it, for 30 days or until you revoke it in Settings → Account → Shared links. Set a share host in Settings → Network so the links work without a login; incognito and guest chats can't be shared."
- },
- {
-  "date": "2026-10-10",
-  "area": "Chat",
-  "title": "Translate any message, locally",
-  "summary": "Right-click a message → Translate to… renders a translation under it, made by the local utility model (nothing leaves the Spark). Agents got a translate tool for the same job, and /translate nudges them to use it."
- },
- {
-  "date": "2026-10-10",
-  "area": "Feeds",
-  "title": "Feeds: follow sites by RSS or Atom",
-  "summary": "A Feeds app: paste a site's address and Shell:B finds its feed; read what's new in folders, search, mark read, and hand any item to a chat with Ask about this. Agents can read your feeds too, and the morning brief mentions the headlines that arrived overnight. Import or export OPML to move subscriptions from another reader."
- },
- {
-  "date": "2026-10-10",
-  "area": "API",
-  "title": "Webhooks in and out",
-  "summary": "Tools & Connectors → API → Webhooks. Inbound: give n8n, GitHub, Home Assistant or a cron job a URL and a secret; each call starts a turn for the agent you chose, with the payload shaped by a template (or passed through), unattended like a scheduled run. Outbound: Shell:B posts what happened (a plan finished, a reminder is due, something waits for your approval, a service went down…) as signed JSON to a URL you run, with retries and a delivery log. Outbound targets must be on the public internet."
- },
- {
-  "date": "2026-10-10",
-  "area": "Settings",
-  "title": "Usage: tokens per day, agent and model, with prices",
-  "summary": "Settings → Usage charts the last 7, 30 or 90 days of tokens split into yours, guests' and API keys', lists the agents and models that used them, and totals lifetime use. Enter what your cloud models cost per million tokens and it shows what those turns added up to. Local models stay free."
- },
- {
-  "date": "2026-10-10",
-  "area": "Codex",
-  "title": "Calendar and contacts: import, export, repeats and reminders",
-  "summary": "Codex → Calendar imports .ics files from Google, Apple or Outlook (times converted to your time zone, repeats and alarms included) and exports every event as one .ics you can subscribe to elsewhere; Codex → Contacts imports .vcf address books and exports yours. Importing the same file twice updates instead of doubling. Events can now repeat daily, weekly, monthly or by a custom rule, and show on every day they fall on; agents see those repeats in their upcoming-schedule block. A new Remind me field posts a reminder to Activity (and your phone, if that kind is on) before the event starts."
- },
- {
-  "date": "2026-10-10",
-  "area": "Security",
-  "title": "Two-step verification for the owner login",
-  "summary": "Settings → Account → Two-step verification: after your password, the app asks for the 6-digit code from an authenticator app (the same kind guests already had). Setup scans a QR code and gives you ten recovery codes for a lost phone; from the Spark's shell, auth.py disable-2fa turns it off. Wrong codes slow logins down like wrong passwords, and a code is never accepted twice."
- },
- {
-  "date": "2026-10-10",
-  "area": "Security",
-  "title": "Self-review findings fixed",
-  "summary": "Self-deploys now sync and diff against the branch the live tree has checked out (they fetched main while deploying into public-release). Aphrodite screens attached files like the typed message and takes no pictures as input. Community MCP servers each get their own package cache, so one can't plant code in another, and a marketplace plugin path can't point outside its repository. The Model Store refuses a download that would overwrite a ComfyUI model with the same name. The kiosk lock screen lost its URL bypass, warns while the default PIN is in use and shows real memory and service status. Notes report failed searches, opens and relinks instead of staying silent. Chats got a mailbox envelope, Settings → Account an audit log, and the Agent Lab the thumbs per agent."
- },
- {
-  "date": "2026-10-10",
-  "area": "Agents",
-  "title": "Agent Lab shows which tools Shell:B adds on her own",
-  "summary": "Sixteen tools (weather, shopping, wiki, law, follow-ups, circles, the library and Codex, the browser and screen…) are added to agents by rules, not by ticking them, and the Agent Lab now lists them under \"Added automatically\" with the rule instead of showing checkboxes that did nothing. Tools & Connectors marks them Auto. The \"SSH\" and \"Swarm\" model sources that were never built are gone; Models → Fleet is how other machines run models. Shell:B, Hephaestus, Minerva, Mimir and Daedalus can now leave notes for other chats, Shell:B, Hephaestus, Atlas and Claude can look up community MCP servers and skills (find_capability), and Shell:B and Hephaestus see the findings ledger."
- },
- {
-  "date": "2026-10-10",
-  "area": "UI",
-  "title": "Shopping and Circles on phones and the kiosk, more in the palette",
-  "summary": "Shopping opens on the mobile layout and Shopping and Circles open as kiosk windows (they came up blank). New incognito chat works from the palette on mobile and the kiosk, and the kiosk answers Ctrl+K and Ctrl+Shift+O. The command palette reaches every Settings tab, every Tools & Connectors tab, Follow-ups, Night shift, Findings, the Model Store, Updates and Fleet. Settings → Shortcuts lists the keyboard shortcuts (press ? anywhere). Settings gained the controls that were missing: fresh starter cards, the tool-round hard cap, the stream stall timeout, the night-shift context window and the Studio preview host. Activity can filter Shopping, Guests and Circles, and the morning brief and night-shift jobs can notify."
- },
- {
-  "date": "2026-10-09",
-  "area": "Circles",
-  "title": "Circles",
-  "summary": "Family, Friends and Work to start: short notes you share with the people in one circle, and that their agents can use as background, labelled with who wrote them. Nobody sees a circle they aren't in. Agents can draft a note for you to publish from a card in the chat; personal memories have Share to a circle. Right-click a chat or project → Circle notes from… to keep it to one circle. You add people in Circles → Manage or Tools & Connectors → Guests."
- },
- {
-  "date": "2026-10-09",
-  "area": "Models",
-  "title": "Fleet: more machines share the work",
-  "summary": "Other computers with Ollama can now run Shell:B's local models. Add one in Models → Fleet, run the one-line setup command it shows on that machine, and copy the models it should run (Shell:B-built models like ShellB-Swift are rebuilt there exactly). Overflow sends requests elsewhere only while the Spark is full; Spread balances every request. Replies show which machine wrote them. Incognito chats and Aphrodite stay on the Spark unless a machine is marked private."
- },
- {
-  "date": "2026-10-09",
-  "area": "Guests",
-  "title": "Guest containers (beta)",
-  "summary": "A guest can now get the full Shell:B as their own instance in a sealed container with no network: chat, pictures, voice and search work through a broker that only allows safe requests to the models. Turn it on per guest in Tools & Connectors → Guests."
- },
- {
-  "date": "2026-10-09",
-  "area": "Desktop app",
-  "title": "Shell:B links",
-  "summary": "shellb:// links open a place in Shell:B: a chat, a note, a Studio project, a Wiki page. They work in chats and from other apps once Shell:B is installed (the browser asks once), and in your friends' own Shell:B too. Right-click a chat → Copy Shell:B link. For bare shellb:// on a desktop, run the helper in clients/shellb-link."
- },
- {
-  "date": "2026-10-09",
-  "area": "Guests",
-  "title": "Guest accounts",
-  "summary": "Guests now sign in with a username and password they choose from your invite link, with optional two-step codes and recovery codes. Wrong passwords lock an account for 15 minutes and tell you in Activity. Tools & Connectors → Guests shows each guest's sign-in log and can unlock them, turn off two-step or make a one-time reset link."
- },
- {
-  "date": "2026-10-09",
-  "area": "Guests",
-  "title": "Shell:B Guest",
-  "summary": "Friends get their own Shell:B on this machine: an installable app at the guest address with their own chats, files, memory and notes, local agents, pictures, music, the code sandbox, the offline Wiki and Worlds, Radio, and a Report to Evie button. Invite them from Tools & Connectors → Guests. Nothing of yours is reachable from there."
- },
- {
-  "date": "2026-10-09",
-  "area": "Agents",
-  "title": "Night shift",
-  "summary": "While you're away, the big local model (ShellB-Titan) researches queued questions and writes second drafts of replies you rated 👎. It stops the moment you start a chat. See Activity → Night shift."
- },
- {
-  "date": "2026-10-08",
-  "area": "API",
-  "title": "Shell:B as an MCP server",
-  "summary": "/api/v1/mcp behind the API keys, so other tools can use Shell:B's tools."
- },
- {
-  "date": "2026-10-08",
-  "area": "API",
-  "title": "Public API and API keys",
-  "summary": "API keys, /api/v1 chat endpoints and an OpenAI-compatible chat/completions."
- },
- {
-  "date": "2026-10-08",
-  "area": "Tools",
-  "title": "Browser on your computer",
-  "summary": "Agents read pages and fill forms; submits need approval. Search forms don't, secrets are masked on cards."
- },
- {
-  "date": "2026-10-08",
-  "area": "Tools",
-  "title": "Screen sight",
-  "summary": "Agents can look at a shared screen. Access is HTTPS-only."
- },
- {
-  "date": "2026-10-08",
-  "area": "UI",
-  "title": "Context menus",
-  "summary": "Right-click chats, messages, artifacts, projects and file trees (Studio and Code)."
- },
- {
-  "date": "2026-10-08",
-  "area": "Tools",
-  "title": "Shopping",
-  "summary": "Price comparison, baskets, cart links and price watch."
- },
- {
-  "date": "2026-10-08",
-  "area": "Agents",
-  "title": "Chat-to-chat mail",
-  "summary": "leave_message / check_messages between conversations."
- },
- {
-  "date": "2026-10-08",
-  "area": "UI",
-  "title": "Chat cards",
-  "summary": "Infobox, compare, profile, steps, callout, quote, status and diagram cards."
- },
- {
-  "date": "2026-10-08",
-  "area": "Desktop",
-  "title": "Installable desktop app",
-  "summary": "Icon badge, Open with / Share to Shell:B, single window, own title bar, jump-list shortcuts, offline handling."
- },
- {
-  "date": "2026-10-08",
-  "area": "UI",
-  "title": "UI polish pass",
-  "summary": "Lighter first load, kiosk fixes, toasts, contrast and keyboard access."
- },
- {
-  "date": "2026-10-08",
-  "area": "Models",
-  "title": "Model Store and After Dark agent",
-  "summary": "Browse and pull Ollama and Hugging Face models; adult-content agent added."
- },
- {
-  "date": "2026-10-08",
-  "area": "Secretary",
-  "title": "Voice ID",
-  "summary": "Neural speaker identification (voice prints); meeting audio is kept."
- },
- {
-  "date": "2026-10-08",
-  "area": "Agents",
-  "title": "Community Hub (Discover)",
-  "summary": "Discover and install MCP servers and skills from community sources."
- },
- {
-  "date": "2026-10-08",
-  "area": "Security",
-  "title": "Security hardening",
-  "summary": "Approvals for agent schedules, admin gates, caps, path-traversal and backup fixes, regression gate."
- },
- {
-  "date": "2026-10-08",
-  "area": "Self",
-  "title": "Self-review and findings ledger",
-  "summary": "Shell:B reviews the live code and tracks what it finds."
- },
- {
-  "date": "2026-10-08",
-  "area": "System",
-  "title": "GAIA and ChromaDB retired",
-  "summary": "Stable Audio is watched in /api/status; memory stays in SQLite."
- },
- {
-  "date": "2026-10-07",
-  "area": "Notifications",
-  "title": "Push notifications report back",
-  "summary": "Devices confirm delivery; every push goes out high-urgency."
- },
- {
-  "date": "2026-10-07",
-  "area": "Me",
-  "title": "Me page and starter suggestions",
-  "summary": "Everything Shell:B knows about the owner on one page."
- },
- {
-  "date": "2026-10-06",
-  "area": "System",
-  "title": "Health watchdog and search-everything",
-  "summary": "Watchdog restarts stuck services; Ctrl+K searches chats, memory and more."
- },
- {
-  "date": "2026-10-06",
-  "area": "Self",
-  "title": "Test-gated self-deploys",
-  "summary": "Regression tests run before Shell:B deploys herself."
- },
- {
-  "date": "2026-10-06",
-  "area": "Worlds",
-  "title": "Worlds rework",
-  "summary": "Stable map lifecycle, layer table, real sky and ephemeris."
- },
- {
-  "date": "2026-10-06",
-  "area": "Agents",
-  "title": "Generate, follow-ups and morning brief",
-  "summary": "Generate app, follow_ups tool, push notifications, incognito chats and history import."
- },
- {
-  "date": "2026-10-06",
-  "area": "Security",
-  "title": "Fetch hardening",
-  "summary": "Hardened fetches, sandboxed project pages, event-loop crash fixes and file-handling holes closed."
- },
- {
-  "date": "2026-10-06",
-  "area": "Core",
-  "title": "Shell:B Web v1.0.0",
-  "summary": "Initial release (AGPL-3.0): chat UI, agent runner and tool hub."
- }
+  {
+    "date": "2026-10-10",
+    "area": "Languages",
+    "title": "Shell:B in French",
+    "summary": "Settings → General → Language (Automatic follows the browser) and a per-guest language in Tools → Guests. The login and guest sign-in screens, the guest page, the chat, the mobile bar and the Settings tabs are translated; agents reply in the person's language; invite and reset emails too. Other panels follow as their strings are wrapped (ui/src/i18n)."
+  },
+  {
+    "date": "2026-10-10",
+    "area": "Guests",
+    "title": "Dev servers and screenshots in guests' own Shell:B",
+    "summary": "A guest's Studio and Code projects can now run their live back-end (devserver.json) and their agents can take screenshots: the host runs the container and the browser for them through the broker, bound to that one project, and the preview opens on the project's own preview host."
+  },
+  {
+    "date": "2026-10-10",
+    "area": "UI",
+    "title": "Click-through polish for the new panels",
+    "summary": "A fresh feed subscription now shows its backlog instead of an empty “All caught up” (and that empty state offers “Show everything”); the CalDAV/CardDAV sync dialog closes on Escape; Settings → Usage prices list only the cloud models used in the period, with a show-all toggle; share links opened from inside the app render the read-only view; the Code sidebar’s Remote panel and the share-link toast explain the owner sign-in instead of showing a raw server error."
+  },
+  {
+    "date": "2026-10-10",
+    "area": "Guests",
+    "title": "Guests get their own full Shell:B",
+    "summary": "Every guest now opens the complete Shell:B as their own instance in a sealed container: Studio, Code, Codex, Library, Research, Shopping, Circles, their own agents, memory and themes. The UI knows it is a guest's (no host apps or tabs; Account and security, Your devices, About and limits and Report to Evie in the gear menu, Settings and the palette; a Report flag on every reply) and shows “Starting your Shell:B…” while the container boots. The lighter guest app stays one untick away per guest in Tools & Connectors → Guests."
+  },
+  {
+    "date": "2026-10-10",
+    "area": "Security",
+    "title": "Passkeys for the owner login",
+    "summary": "Settings → Account → Passkeys: sign in with your device's screen lock or a security key instead of the password. A passkey is tied to the address you make it at and counts as its own second step."
+  },
+  {
+    "date": "2026-10-10",
+    "area": "Codex",
+    "title": "Calendar and contacts sync with CalDAV and CardDAV",
+    "summary": "Codex → Calendar → Sync… and Contacts → Sync… keep a Nextcloud, Fastmail, iCloud or Radicale calendar and address book in step with the Codex every few minutes: your edits go up, their changes come down, matched by UID. Deletions aren't synced."
+  },
+  {
+    "date": "2026-10-10",
+    "area": "Media",
+    "title": "YouTube and streaming links transcribe too",
+    "summary": "The transcribe tool, Secretary and research notebooks now take YouTube, Vimeo and SoundCloud links: the audio is fetched on the Spark (one video at a time, up to four hours) and transcribed like a file."
+  },
+  {
+    "date": "2026-10-10",
+    "area": "Sharing",
+    "title": "share.shellb.app carries read-only links",
+    "summary": "Share links now open on share.shellb.app without a login, for anyone who has the link. The host serves only the shared page and nothing else of the app."
+  },
+  {
+    "date": "2026-10-10",
+    "area": "Law",
+    "title": "Federal Register and federal case law join the law index",
+    "summary": "The legal tool's index is growing overnight with Federal Register issues from 2020 on, the EU court's judgments that were downloaded but never indexed, and published opinions of the Supreme Court and the federal courts of appeals from CourtListener."
+  },
+  {
+    "date": "2026-10-10",
+    "area": "Circles",
+    "title": "Circles: share chats and artifacts, and mail each other",
+    "summary": "Right-click a chat or an artifact → Share to a circle: a copy of it goes to one circle with a line from you, where members can read it, keep their own copy, and their agents can use it as background. Circles also got mail: short messages between people who share a circle, read by their agents as information and answerable from the chat when you ask. Shares expire after 90 days and can be retracted."
+  },
+  {
+    "date": "2026-10-10",
+    "area": "Guests",
+    "title": "Guest containers: code sandbox and web access",
+    "summary": "A guest's own container can now run code (the host runs the sandbox for it, with only that chat's folder visible) and reach the web through a filtered proxy on this machine, so Studio, Code, Research, Shopping and web reading work for guests in containers. Their daily turn and token caps now apply there too, and their storage count includes the container's files."
+  },
+  {
+    "date": "2026-10-10",
+    "area": "Media",
+    "title": "Transcribe audio and video, edit pictures, LoRAs, Gemini import",
+    "summary": "Agents can transcribe audio and video files (and Secretary takes video recordings): ffmpeg in the sandbox extracts the sound, Whisper writes a timestamped transcript saved next to the file. NYX and Daedalus got edit_image: cut a subject out, upscale with an ESRGAN model from the Model Store, or inpaint a masked area from a prompt. generate_image can apply a LoRA from the Model Store. Import history now reads a Google Takeout of Gemini activity. The API gained artifact content, image inputs, library search and (per key) memory, and the MCP server the matching tools."
+  },
+  {
+    "date": "2026-10-10",
+    "area": "Email",
+    "title": "Read your inbox: IMAP, rules that start a turn, threaded replies",
+    "summary": "Settings → Notifications → Email → Inbox connects a mailbox over IMAP with an app password. New mail shows in Activity, agents in your chats can read and search it (read_email), and rules can hand a matching email to an agent the moment it arrives (an invoice to file, a request to answer). Replies through send_email thread under the original. Cloud agents stay out of the inbox unless you allow it."
+  },
+  {
+    "date": "2026-10-10",
+    "area": "Code",
+    "title": "Git remotes: fetch, pull and push from a Code workspace",
+    "summary": "The Code and Studio sidebar has a Remote tab: give it the https address of a GitHub, GitLab or Gitea repository, a branch, and a Codex secret holding your token, then Fetch, Pull (fast-forward only) and Push. Agents working in the project can fetch and pull themselves; when one wants to push, an approval card lists the commits and waits for you."
+  },
+  {
+    "date": "2026-10-10",
+    "area": "Sharing",
+    "title": "Read-only share links for chats and artifacts",
+    "summary": "Right-click a chat or an artifact → Share read-only link. The link opens a frozen copy (what was there when you shared it) for anyone who has it, for 30 days or until you revoke it in Settings → Account → Shared links. Set a share host in Settings → Network so the links work without a login; incognito and guest chats can't be shared."
+  },
+  {
+    "date": "2026-10-10",
+    "area": "Chat",
+    "title": "Translate any message, locally",
+    "summary": "Right-click a message → Translate to… renders a translation under it, made by the local utility model (nothing leaves the Spark). Agents got a translate tool for the same job, and /translate nudges them to use it."
+  },
+  {
+    "date": "2026-10-10",
+    "area": "Feeds",
+    "title": "Feeds: follow sites by RSS or Atom",
+    "summary": "A Feeds app: paste a site's address and Shell:B finds its feed; read what's new in folders, search, mark read, and hand any item to a chat with Ask about this. Agents can read your feeds too, and the morning brief mentions the headlines that arrived overnight. Import or export OPML to move subscriptions from another reader."
+  },
+  {
+    "date": "2026-10-10",
+    "area": "API",
+    "title": "Webhooks in and out",
+    "summary": "Tools & Connectors → API → Webhooks. Inbound: give n8n, GitHub, Home Assistant or a cron job a URL and a secret; each call starts a turn for the agent you chose, with the payload shaped by a template (or passed through), unattended like a scheduled run. Outbound: Shell:B posts what happened (a plan finished, a reminder is due, something waits for your approval, a service went down…) as signed JSON to a URL you run, with retries and a delivery log. Outbound targets must be on the public internet."
+  },
+  {
+    "date": "2026-10-10",
+    "area": "Settings",
+    "title": "Usage: tokens per day, agent and model, with prices",
+    "summary": "Settings → Usage charts the last 7, 30 or 90 days of tokens split into yours, guests' and API keys', lists the agents and models that used them, and totals lifetime use. Enter what your cloud models cost per million tokens and it shows what those turns added up to. Local models stay free."
+  },
+  {
+    "date": "2026-10-10",
+    "area": "Codex",
+    "title": "Calendar and contacts: import, export, repeats and reminders",
+    "summary": "Codex → Calendar imports .ics files from Google, Apple or Outlook (times converted to your time zone, repeats and alarms included) and exports every event as one .ics you can subscribe to elsewhere; Codex → Contacts imports .vcf address books and exports yours. Importing the same file twice updates instead of doubling. Events can now repeat daily, weekly, monthly or by a custom rule, and show on every day they fall on; agents see those repeats in their upcoming-schedule block. A new Remind me field posts a reminder to Activity (and your phone, if that kind is on) before the event starts."
+  },
+  {
+    "date": "2026-10-10",
+    "area": "Security",
+    "title": "Two-step verification for the owner login",
+    "summary": "Settings → Account → Two-step verification: after your password, the app asks for the 6-digit code from an authenticator app (the same kind guests already had). Setup scans a QR code and gives you ten recovery codes for a lost phone; from the Spark's shell, auth.py disable-2fa turns it off. Wrong codes slow logins down like wrong passwords, and a code is never accepted twice."
+  },
+  {
+    "date": "2026-10-10",
+    "area": "Security",
+    "title": "Self-review findings fixed",
+    "summary": "Self-deploys now sync and diff against the branch the live tree has checked out (they fetched main while deploying into public-release). Aphrodite screens attached files like the typed message and takes no pictures as input. Community MCP servers each get their own package cache, so one can't plant code in another, and a marketplace plugin path can't point outside its repository. The Model Store refuses a download that would overwrite a ComfyUI model with the same name. The kiosk lock screen lost its URL bypass, warns while the default PIN is in use and shows real memory and service status. Notes report failed searches, opens and relinks instead of staying silent. Chats got a mailbox envelope, Settings → Account an audit log, and the Agent Lab the thumbs per agent."
+  },
+  {
+    "date": "2026-10-10",
+    "area": "Agents",
+    "title": "Agent Lab shows which tools Shell:B adds on her own",
+    "summary": "Sixteen tools (weather, shopping, wiki, law, follow-ups, circles, the library and Codex, the browser and screen…) are added to agents by rules, not by ticking them, and the Agent Lab now lists them under \"Added automatically\" with the rule instead of showing checkboxes that did nothing. Tools & Connectors marks them Auto. The \"SSH\" and \"Swarm\" model sources that were never built are gone; Models → Fleet is how other machines run models. Shell:B, Hephaestus, Minerva, Mimir and Daedalus can now leave notes for other chats, Shell:B, Hephaestus, Atlas and Claude can look up community MCP servers and skills (find_capability), and Shell:B and Hephaestus see the findings ledger."
+  },
+  {
+    "date": "2026-10-10",
+    "area": "UI",
+    "title": "Shopping and Circles on phones and the kiosk, more in the palette",
+    "summary": "Shopping opens on the mobile layout and Shopping and Circles open as kiosk windows (they came up blank). New incognito chat works from the palette on mobile and the kiosk, and the kiosk answers Ctrl+K and Ctrl+Shift+O. The command palette reaches every Settings tab, every Tools & Connectors tab, Follow-ups, Night shift, Findings, the Model Store, Updates and Fleet. Settings → Shortcuts lists the keyboard shortcuts (press ? anywhere). Settings gained the controls that were missing: fresh starter cards, the tool-round hard cap, the stream stall timeout, the night-shift context window and the Studio preview host. Activity can filter Shopping, Guests and Circles, and the morning brief and night-shift jobs can notify."
+  },
+  {
+    "date": "2026-10-09",
+    "area": "Circles",
+    "title": "Circles",
+    "summary": "Family, Friends and Work to start: short notes you share with the people in one circle, and that their agents can use as background, labelled with who wrote them. Nobody sees a circle they aren't in. Agents can draft a note for you to publish from a card in the chat; personal memories have Share to a circle. Right-click a chat or project → Circle notes from… to keep it to one circle. You add people in Circles → Manage or Tools & Connectors → Guests."
+  },
+  {
+    "date": "2026-10-09",
+    "area": "Models",
+    "title": "Fleet: more machines share the work",
+    "summary": "Other computers with Ollama can now run Shell:B's local models. Add one in Models → Fleet, run the one-line setup command it shows on that machine, and copy the models it should run (Shell:B-built models like ShellB-Swift are rebuilt there exactly). Overflow sends requests elsewhere only while the Spark is full; Spread balances every request. Replies show which machine wrote them. Incognito chats and Aphrodite stay on the Spark unless a machine is marked private."
+  },
+  {
+    "date": "2026-10-09",
+    "area": "Guests",
+    "title": "Guest containers (beta)",
+    "summary": "A guest can now get the full Shell:B as their own instance in a sealed container with no network: chat, pictures, voice and search work through a broker that only allows safe requests to the models. Turn it on per guest in Tools & Connectors → Guests."
+  },
+  {
+    "date": "2026-10-09",
+    "area": "Desktop app",
+    "title": "Shell:B links",
+    "summary": "shellb:// links open a place in Shell:B: a chat, a note, a Studio project, a Wiki page. They work in chats and from other apps once Shell:B is installed (the browser asks once), and in your friends' own Shell:B too. Right-click a chat → Copy Shell:B link. For bare shellb:// on a desktop, run the helper in clients/shellb-link."
+  },
+  {
+    "date": "2026-10-09",
+    "area": "Guests",
+    "title": "Guest accounts",
+    "summary": "Guests now sign in with a username and password they choose from your invite link, with optional two-step codes and recovery codes. Wrong passwords lock an account for 15 minutes and tell you in Activity. Tools & Connectors → Guests shows each guest's sign-in log and can unlock them, turn off two-step or make a one-time reset link."
+  },
+  {
+    "date": "2026-10-09",
+    "area": "Guests",
+    "title": "Shell:B Guest",
+    "summary": "Friends get their own Shell:B on this machine: an installable app at the guest address with their own chats, files, memory and notes, local agents, pictures, music, the code sandbox, the offline Wiki and Worlds, Radio, and a Report to Evie button. Invite them from Tools & Connectors → Guests. Nothing of yours is reachable from there."
+  },
+  {
+    "date": "2026-10-09",
+    "area": "Agents",
+    "title": "Night shift",
+    "summary": "While you're away, the big local model (ShellB-Titan) researches queued questions and writes second drafts of replies you rated 👎. It stops the moment you start a chat. See Activity → Night shift."
+  },
+  {
+    "date": "2026-10-08",
+    "area": "API",
+    "title": "Shell:B as an MCP server",
+    "summary": "/api/v1/mcp behind the API keys, so other tools can use Shell:B's tools."
+  },
+  {
+    "date": "2026-10-08",
+    "area": "API",
+    "title": "Public API and API keys",
+    "summary": "API keys, /api/v1 chat endpoints and an OpenAI-compatible chat/completions."
+  },
+  {
+    "date": "2026-10-08",
+    "area": "Tools",
+    "title": "Browser on your computer",
+    "summary": "Agents read pages and fill forms; submits need approval. Search forms don't, secrets are masked on cards."
+  },
+  {
+    "date": "2026-10-08",
+    "area": "Tools",
+    "title": "Screen sight",
+    "summary": "Agents can look at a shared screen. Access is HTTPS-only."
+  },
+  {
+    "date": "2026-10-08",
+    "area": "UI",
+    "title": "Context menus",
+    "summary": "Right-click chats, messages, artifacts, projects and file trees (Studio and Code)."
+  },
+  {
+    "date": "2026-10-08",
+    "area": "Tools",
+    "title": "Shopping",
+    "summary": "Price comparison, baskets, cart links and price watch."
+  },
+  {
+    "date": "2026-10-08",
+    "area": "Agents",
+    "title": "Chat-to-chat mail",
+    "summary": "leave_message / check_messages between conversations."
+  },
+  {
+    "date": "2026-10-08",
+    "area": "UI",
+    "title": "Chat cards",
+    "summary": "Infobox, compare, profile, steps, callout, quote, status and diagram cards."
+  },
+  {
+    "date": "2026-10-08",
+    "area": "Desktop",
+    "title": "Installable desktop app",
+    "summary": "Icon badge, Open with / Share to Shell:B, single window, own title bar, jump-list shortcuts, offline handling."
+  },
+  {
+    "date": "2026-10-08",
+    "area": "UI",
+    "title": "UI polish pass",
+    "summary": "Lighter first load, kiosk fixes, toasts, contrast and keyboard access."
+  },
+  {
+    "date": "2026-10-08",
+    "area": "Models",
+    "title": "Model Store and After Dark agent",
+    "summary": "Browse and pull Ollama and Hugging Face models; adult-content agent added."
+  },
+  {
+    "date": "2026-10-08",
+    "area": "Secretary",
+    "title": "Voice ID",
+    "summary": "Neural speaker identification (voice prints); meeting audio is kept."
+  },
+  {
+    "date": "2026-10-08",
+    "area": "Agents",
+    "title": "Community Hub (Discover)",
+    "summary": "Discover and install MCP servers and skills from community sources."
+  },
+  {
+    "date": "2026-10-08",
+    "area": "Security",
+    "title": "Security hardening",
+    "summary": "Approvals for agent schedules, admin gates, caps, path-traversal and backup fixes, regression gate."
+  },
+  {
+    "date": "2026-10-08",
+    "area": "Self",
+    "title": "Self-review and findings ledger",
+    "summary": "Shell:B reviews the live code and tracks what it finds."
+  },
+  {
+    "date": "2026-10-08",
+    "area": "System",
+    "title": "GAIA and ChromaDB retired",
+    "summary": "Stable Audio is watched in /api/status; memory stays in SQLite."
+  },
+  {
+    "date": "2026-10-07",
+    "area": "Notifications",
+    "title": "Push notifications report back",
+    "summary": "Devices confirm delivery; every push goes out high-urgency."
+  },
+  {
+    "date": "2026-10-07",
+    "area": "Me",
+    "title": "Me page and starter suggestions",
+    "summary": "Everything Shell:B knows about the owner on one page."
+  },
+  {
+    "date": "2026-10-06",
+    "area": "System",
+    "title": "Health watchdog and search-everything",
+    "summary": "Watchdog restarts stuck services; Ctrl+K searches chats, memory and more."
+  },
+  {
+    "date": "2026-10-06",
+    "area": "Self",
+    "title": "Test-gated self-deploys",
+    "summary": "Regression tests run before Shell:B deploys herself."
+  },
+  {
+    "date": "2026-10-06",
+    "area": "Worlds",
+    "title": "Worlds rework",
+    "summary": "Stable map lifecycle, layer table, real sky and ephemeris."
+  },
+  {
+    "date": "2026-10-06",
+    "area": "Agents",
+    "title": "Generate, follow-ups and morning brief",
+    "summary": "Generate app, follow_ups tool, push notifications, incognito chats and history import."
+  },
+  {
+    "date": "2026-10-06",
+    "area": "Security",
+    "title": "Fetch hardening",
+    "summary": "Hardened fetches, sandboxed project pages, event-loop crash fixes and file-handling holes closed."
+  },
+  {
+    "date": "2026-10-06",
+    "area": "Core",
+    "title": "Shell:B Web v1.0.0",
+    "summary": "Initial release (AGPL-3.0): chat UI, agent runner and tool hub."
+  }
 ]

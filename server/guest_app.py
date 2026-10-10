@@ -177,7 +177,7 @@ def _me(g: dict, sess: dict) -> dict:
             "limits": {k: cfg[k] for k in guests.LIMITS}, "storageBytes": guests.storage_bytes(g["id"]),
             "agents": [guests.public_agent(a, g) for a in guests.agents_for(g)],
             "defaultAgent": get_settings().get("defaultAgent"), "devices": guests.devices(g["id"], sess["id"]),
-            "username": g["username"], "twoStep": g["twoStep"],
+            "username": g["username"], "twoStep": g["twoStep"], "language": cfg.get("language", ""),
             "deviceCodes": sess.get("via") in guest_accounts.PASSWORD_VIAS}
 
 
@@ -189,12 +189,13 @@ def auth_me(req: Request):
     if not got:  # gateway: the full UI (AuthGate.tsx) reloads to this gateway's own sign-in page instead of the owner's login
         return {"authenticated": False, "via": None, "passwordSet": True, "frameKey": None, "gateway": True}
     g = got[0]
+    lang = (g.get("config") or {}).get("language", "")
     if g["passwordSet"] and cells.enabled(g):  # what the full Shell:B UI asks first (cell_boot.auth_me answers the same)
         return {"authenticated": True, "via": "session", "passwordSet": True, "needsAccount": False,
-                "frameKey": guests.frame_secret(g["id"]), "cell": {"guest": g["name"]},
+                "frameKey": guests.frame_secret(g["id"]), "cell": {"guest": g["name"]}, "language": lang,
                 "guest": {"id": g["id"], "name": g["name"], "username": g["username"]}}
     return {"authenticated": True, "via": "guest", "passwordSet": True, "needsAccount": not g["passwordSet"],
-            "frameKey": guests.frame_secret(g["id"]) if g["passwordSet"] else None,
+            "frameKey": guests.frame_secret(g["id"]) if g["passwordSet"] else None, "language": lang,
             "guest": {"id": g["id"], "name": g["name"], "username": g["username"]}}
 
 

@@ -1,3 +1,4 @@
+import { t, fmtDate } from '../i18n';
 import { useEffect, useRef, type ReactNode } from 'react';
 import clsx from 'clsx';
 import {
@@ -152,10 +153,10 @@ export const btn = {
 
 export function relTime(ts: number) {
   const s = (Date.now() - ts) / 1000;
-  if (s < 60) return 'just now';
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  if (s < 60) return t('just now');
+  if (s < 3600) return t('{n}m ago', { n: Math.floor(s / 60) });
+  if (s < 86400) return t('{n}h ago', { n: Math.floor(s / 3600) });
+  return fmtDate(ts);
 }
 
 export function Snippet({ text }: { text: string }) {

@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import { secureHere } from '../secureUrl';
 import clsx from 'clsx';
@@ -149,22 +150,22 @@ export function Composer({
     const sec = secureHere();
     if (!screenSupported()) {
       if (sec) location.href = sec;
-      else toast('Screen sharing needs HTTPS and a desktop browser.', { kind: 'error' });
+      else toast(t('Screen sharing needs HTTPS and a desktop browser.'), { kind: 'error' });
       return;
     }
     const failed = (what: string) => (err: unknown) => {
       if (!/NotAllowed|AbortError|Permission/i.test(String(err))) toast(`${what}: ${String(err).replace(/^Error: (\d+: )?/, '')}`, { kind: 'error' });
     };
     openMenuAt(e, [
-      { label: share ? 'Attach a screenshot of the share' : 'Attach a screenshot…', icon: Camera,
-        onSelect: () => { snapshot().then(f => addFiles([f]), failed("Couldn't take a screenshot")); } },
+      { label: share ? t('Attach a screenshot of the share') : t('Attach a screenshot…'), icon: Camera,
+        onSelect: () => { snapshot().then(f => addFiles([f]), failed(t("Couldn't take a screenshot"))); } },
       share
-        ? { label: 'Stop sharing', icon: ScreenShareOff, danger: true, onSelect: () => { void stopLive(); } }
-        : { label: 'Share screen live…', icon: ScreenShare, hint: 'agents look when needed',
-            onSelect: () => { startLive().then(() => toast(canSee ? `${agent.name} can now look at your screen when it helps.`
-              : `Sharing. ${agent.name}'s model can't see images; pick a vision model or agent to use it.`), failed("Couldn't share the screen")); } },
-      ...(inbox && overlaySupported() ? [{ label: overlay ? 'Close the overlay' : 'Overlay: keep Shell:B on top', icon: PictureInPicture2, hint: 'Ctrl+Shift+Y',
-        onSelect: () => { toggleOverlay().catch(failed("Couldn't open the overlay")); } }] : []),
+        ? { label: t('Stop sharing'), icon: ScreenShareOff, danger: true, onSelect: () => { void stopLive(); } }
+        : { label: t('Share screen live…'), icon: ScreenShare, hint: t('agents look when needed'),
+            onSelect: () => { startLive().then(() => toast(canSee ? t('{name} can now look at your screen when it helps.', { name: agent.name })
+              : t("Sharing. {name}'s model can't see images; pick a vision model or agent to use it.", { name: agent.name })), failed(t("Couldn't share the screen"))); } },
+      ...(inbox && overlaySupported() ? [{ label: overlay ? t('Close the overlay') : t('Overlay: keep Shell:B on top'), icon: PictureInPicture2, hint: 'Ctrl+Shift+Y',
+        onSelect: () => { toggleOverlay().catch(failed(t("Couldn't open the overlay"))); } }] : []),
     ]);
   }
 
@@ -253,7 +254,7 @@ export function Composer({
   }
 
   const secure = secureHere();  // plain http: the mic opens this chat on the HTTPS address instead
-  const micDisabledReason = secure ? '' : !voiceOk ? 'HERMES (speech service) is offline' : '';
+  const micDisabledReason = secure ? '' : !voiceOk ? t('HERMES (speech service) is offline') : '';
 
   return (
     <div
@@ -307,9 +308,9 @@ export function Composer({
             const files = Array.from(e.clipboardData.files);
             if (files.length) { e.preventDefault(); addFiles(files); }
           }}
-          placeholder={ghost ? '' : recording === 'rec' ? 'Listening… click the mic to stop' : placeholder ?? (planMode ? `Plan with ${agent.name}: describe what you want; nothing changes until you approve` : `Message ${agent.name}…  (/ commands · @ agents · # context)`)}
+          placeholder={ghost ? '' : recording === 'rec' ? t('Listening… click the mic to stop') : placeholder ?? (planMode ? t('Plan with {name}: describe what you want; nothing changes until you approve', { name: agent.name }) : t('Message {name}…  (/ commands · @ agents · # context)', { name: agent.name }))}
           className="w-full bg-transparent text-[0.9375rem] placeholder-[var(--text-muted)] resize-none focus:outline-none px-1.5 py-1 min-h-[40px]"
-          aria-label="Message"
+          aria-label={t('Message')}
         />
       </div>
 
@@ -317,9 +318,9 @@ export function Composer({
       {share && (
         <div className="flex items-center gap-2 px-1.5 pb-1 text-[11px] text-[var(--text-muted)]">
           <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shrink-0" aria-hidden />
-          <span className="truncate">Sharing <span className="text-[var(--text-secondary)]">{share.label}</span>
-            {share.looks ? ` · looked ${share.looks}×` : ' · agents look only when needed'}</span>
-          <button onClick={() => { void stopLive(); }} className="ml-auto shrink-0 px-1.5 rounded text-red-400 hover:bg-red-500/10 focus-visible:outline focus-visible:outline-1">Stop</button>
+          <span className="truncate">{t('Sharing')} <span className="text-[var(--text-secondary)]">{share.label}</span>
+            {share.looks ? ` · ${t('looked {n}×', { n: share.looks })}` : ` · ${t('agents look only when needed')}`}</span>
+          <button onClick={() => { void stopLive(); }} className="ml-auto shrink-0 px-1.5 rounded text-red-400 hover:bg-red-500/10 focus-visible:outline focus-visible:outline-1">{t('Stop')}</button>
         </div>
       )}
 
@@ -340,18 +341,18 @@ export function Composer({
 
         <div className="flex items-center gap-1 shrink-0 ml-auto">
           <input ref={fileRef} type="file" multiple className="hidden" onChange={e => { addFiles(Array.from(e.target.files ?? [])); e.target.value = ''; }} />
-          <button onClick={() => fileRef.current?.click()} className="p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition" title="Attach files or images">
+          <button onClick={() => fileRef.current?.click()} className="p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition" title={t('Attach files or images')}>
             <Paperclip className="w-4 h-4" />
           </button>
           {!guest && <button onClick={screenMenu} aria-haspopup="menu"
             className={clsx('p-2 rounded-lg transition', share ? 'text-red-400 hover:bg-red-500/10' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]')}
-            title={share ? `Sharing ${share.label}: click to stop or attach a screenshot` : 'Screen: attach a screenshot or share live'}>
+            title={share ? t('Sharing {what}: click to stop or attach a screenshot', { what: share.label }) : t('Screen: attach a screenshot or share live')}>
             <ScreenShare className="w-4 h-4" />
           </button>}
           <button
             onClick={secure ? () => { location.href = secure; } : toggleMic} disabled={!!micDisabledReason || recording === 'transcribing'}
-            title={secure ? 'Voice input needs HTTPS: click to reopen this chat on the secure Tailscale address'
-              : micDisabledReason || (recording === 'rec' ? 'Stop and transcribe' : 'Dictate (HERMES Whisper)')}
+            title={secure ? t('Voice input needs HTTPS: click to reopen this chat on the secure Tailscale address')
+              : micDisabledReason || (recording === 'rec' ? t('Stop and transcribe') : t('Dictate (HERMES Whisper)'))}
             className={clsx('p-2 rounded-lg transition disabled:opacity-35',
               recording === 'rec' ? 'bg-red-500/20 text-red-400 animate-pulse' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]')}
           >
@@ -359,26 +360,26 @@ export function Composer({
           </button>
           {onVoiceMode && (
             <button onClick={secure ? () => { location.href = secure; } : onVoiceMode} disabled={!!micDisabledReason}
-              title={secure ? 'Voice mode needs HTTPS: click to reopen this chat on the secure Tailscale address'
-                : micDisabledReason || 'Talk hands-free: speak, hear the reply, interrupt any time'}
+              title={secure ? t('Voice mode needs HTTPS: click to reopen this chat on the secure Tailscale address')
+                : micDisabledReason || t('Talk hands-free: speak, hear the reply, interrupt any time')}
               className="p-2 rounded-lg transition disabled:opacity-35 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]">
               <AudioLines className="w-4 h-4" />
             </button>
           )}
           {!guest && <button
             onClick={() => { location.hash = '#/secretary'; }}
-            title="Secretary Mode: listen & transcribe meetings with speaker identification and compile summaries"
+            title={t('Secretary Mode: listen & transcribe meetings with speaker identification and compile summaries')}
             className="p-2 rounded-lg transition text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
           >
             <Users className="w-4 h-4" />
           </button>}
           {busy ? (
-            <button onClick={onStop} className="p-2 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] transition hover:opacity-80" title="Stop">
+            <button onClick={onStop} className="p-2 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] transition hover:opacity-80" title={t('Stop')}>
               <Square className="w-4 h-4 fill-current" />
             </button>
           ) : (
             <button onClick={submit} disabled={uploading || (!text.trim() && atts.length === 0)}
-              className="p-2 rounded-xl bg-[var(--accent)] hover:brightness-110 disabled:opacity-30 text-[var(--accent-fg)] transition shadow-md" title="Send (Enter)">
+              className="p-2 rounded-xl bg-[var(--accent)] hover:brightness-110 disabled:opacity-30 text-[var(--accent-fg)] transition shadow-md" title={t('Send (Enter)')}>
               <ArrowUp className="w-4 h-4 stroke-[2.5]" />
             </button>
           )}

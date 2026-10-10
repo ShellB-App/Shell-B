@@ -18,6 +18,7 @@ import { THEMES, setTheme, useTheme } from '../themes';
 import type { Agent, Attachment, ConversationSummary, Effort } from '../types';
 import { guestApi, type GuestMe } from './guestApi';
 import { AboutPanel, AccountPanel, DevicesPanel, MemoryPanel, ReportPanel } from './panels';
+import { t, tn } from '../i18n';
 
 // Shell:B Guest: a friend's own Shell:B (server/guests.py). The chat is the owner's components (useChat, MessageView,
 // Composer, ArtifactPanel) on the guest server, which answers the same paths but only with this guest's things.
@@ -170,13 +171,13 @@ export function GuestApp({ me, refresh }: { me: GuestMe; refresh: () => void }) 
   })));
 
   const removeChat = async (c: ConversationSummary) => {
-    if (!confirm(`Delete "${c.title}" and its files? This can't be undone.`)) return;
+    if (!confirm(t('Delete "{title}" and its files? This can\'t be undone.', { title: c.title }))) return;
     await api.deleteConversation(c.id).catch(e => toast(String(e), { kind: 'error' }));
     setConvs(prev => prev.filter(x => x.id !== c.id));
     if (conv?.id === c.id) newChat();
   };
   const renameChat = async (c: ConversationSummary) => {
-    const title = prompt('Rename chat', c.title)?.trim();
+    const title = prompt(t('Rename chat'), c.title)?.trim();
     if (!title || title === c.title) return;
     await api.patchConversation(c.id, { title }).catch(e => toast(String(e), { kind: 'error' }));
     setConvs(prev => prev.map(x => (x.id === c.id ? { ...x, title } : x)));
@@ -192,23 +193,23 @@ export function GuestApp({ me, refresh }: { me: GuestMe; refresh: () => void }) 
   };
   const theme = useTheme();
   const accountMenu = (e: ReactMouseEvent<HTMLButtonElement>) => openMenuAt(e, [
-    { label: 'Account and security', icon: UserRound, onSelect: () => setPanel('account') },
-    { label: 'What Shell:B remembers', icon: Brain, onSelect: () => setPanel('memory') },
-    { label: 'Your devices', icon: Laptop, onSelect: () => { refresh(); setPanel('devices'); } },
-    { label: 'Theme', icon: Palette, items: THEMES.map(t => ({ label: t.label, checked: t.id === theme, onSelect: () => setTheme(t.id) })) },
-    { label: dark ? 'Light mode' : 'Dark mode', icon: dark ? Sun : Moon, onSelect: toggleMode },
+    { label: t('Account and security'), icon: UserRound, onSelect: () => setPanel('account') },
+    { label: t('What Shell:B remembers'), icon: Brain, onSelect: () => setPanel('memory') },
+    { label: t('Your devices'), icon: Laptop, onSelect: () => { refresh(); setPanel('devices'); } },
+    { label: t('Theme'), icon: Palette, items: THEMES.map(t => ({ label: t.label, checked: t.id === theme, onSelect: () => setTheme(t.id) })) },
+    { label: dark ? t('Light mode') : t('Dark mode'), icon: dark ? Sun : Moon, onSelect: toggleMode },
     'sep',
-    { label: 'About and limits', icon: Info, onSelect: () => { refresh(); setPanel('about'); } },
-    { label: 'Report to Evie', icon: Flag, onSelect: () => setPanel({ report: { convId: conv?.id } }) },
+    { label: t('About and limits'), icon: Info, onSelect: () => { refresh(); setPanel('about'); } },
+    { label: t('Report to Evie'), icon: Flag, onSelect: () => setPanel({ report: { convId: conv?.id } }) },
     'sep',
-    { label: 'Sign out of this device', icon: LogOut, danger: true, onSelect: () => { guestApi.logout().finally(refresh); } },
+    { label: t('Sign out of this device'), icon: LogOut, danger: true, onSelect: () => { guestApi.logout().finally(refresh); } },
   ]);
 
   const sidebar = (
     <Sidebar me={me} convs={convs} current={view === 'chat' ? conv?.id : undefined} openConv={conv?.id} view={view} onNew={newChat} onAccount={accountMenu}
       onContext={(e, c) => openContextMenu(e, [
-        { label: 'Rename', icon: Pencil, onSelect: () => renameChat(c) },
-        { label: 'Delete', icon: Trash2, danger: true, onSelect: () => removeChat(c) },
+        { label: t('Rename'), icon: Pencil, onSelect: () => renameChat(c) },
+        { label: t('Delete'), icon: Trash2, danger: true, onSelect: () => removeChat(c) },
       ] satisfies MenuEntry[])}
       onDelete={removeChat} />
   );
@@ -219,17 +220,17 @@ export function GuestApp({ me, refresh }: { me: GuestMe; refresh: () => void }) 
     <div className="h-full flex overflow-hidden">
       <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-[var(--border-subtle)] bg-[var(--bg-secondary)]">{sidebar}</aside>
       {drawer && (
-        <div className="md:hidden fixed inset-0 z-40 flex" role="dialog" aria-modal="true" aria-label="Chats">
+        <div className="md:hidden fixed inset-0 z-40 flex" role="dialog" aria-modal="true" aria-label={t('Chats')}>
           <div className="w-[82%] max-w-xs flex flex-col bg-[var(--bg-secondary)] border-r border-[var(--border-subtle)] animate-slide-up">{sidebar}</div>
-          <button className="flex-1 bg-black/50" aria-label="Close chats" onClick={() => setDrawer(false)} />
+          <button className="flex-1 bg-black/50" aria-label={t('Close chats')} onClick={() => setDrawer(false)} />
         </div>
       )}
 
       {view !== 'chat' && (
         <main className="flex-1 min-w-0 flex flex-col">
           <header className="md:hidden h-12 shrink-0 flex items-center gap-2 px-3 border-b border-[var(--border-subtle)] pt-[env(safe-area-inset-top)]">
-            <button className={btn.icon} aria-label="Menu" onClick={() => setDrawer(true)}><Menu className="w-4 h-4" /></button>
-            <span className="text-sm font-semibold">{VIEWS.find(v => v.id === view)?.label}</span>
+            <button className={btn.icon} aria-label={t('Menu')} onClick={() => setDrawer(true)}><Menu className="w-4 h-4" /></button>
+            <span className="text-sm font-semibold">{t(VIEWS.find(v => v.id === view)?.label ?? '')}</span>
           </header>
           <div className="flex-1 min-h-0">
             <Suspense fallback={<div className="h-full grid place-items-center"><Loader2 className="w-5 h-5 animate-spin text-[var(--text-muted)]" /></div>}>
@@ -245,7 +246,7 @@ export function GuestApp({ me, refresh }: { me: GuestMe; refresh: () => void }) 
 
       <main className={clsx('flex-1 min-w-0 flex flex-col', view !== 'chat' && 'hidden')}>
         <header className="h-12 shrink-0 flex items-center gap-2 px-3 border-b border-[var(--border-subtle)] pt-[env(safe-area-inset-top)]">
-          <button className={clsx(btn.icon, 'md:hidden')} aria-label="Chats" onClick={() => setDrawer(true)}><Menu className="w-4 h-4" /></button>
+          <button className={clsx(btn.icon, 'md:hidden')} aria-label={t('Chats')} onClick={() => setDrawer(true)}><Menu className="w-4 h-4" /></button>
           {agent && (
             <button onClick={agentMenu} aria-haspopup="menu" className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-[var(--bg-hover)] transition">
               <AgentAvatar agent={agent} size={22} />
@@ -255,8 +256,8 @@ export function GuestApp({ me, refresh }: { me: GuestMe; refresh: () => void }) 
             </button>
           )}
           <span className="flex-1 min-w-0 truncate text-xs text-[var(--text-muted)] text-center">{conv && conv.title !== 'New conversation' ? conv.title : ''}</span>
-          <button className={btn.ghost} onClick={() => setPanel({ report: { convId: conv?.id } })} title="Tell Evie something is broken">
-            <Flag className="w-3.5 h-3.5" /><span className="hidden sm:inline">Report to Evie</span>
+          <button className={btn.ghost} onClick={() => setPanel({ report: { convId: conv?.id } })} title={t('Tell Evie something is broken')}>
+            <Flag className="w-3.5 h-3.5" /><span className="hidden sm:inline">{t('Report to Evie')}</span>
           </button>
         </header>
 
@@ -280,7 +281,7 @@ export function GuestApp({ me, refresh }: { me: GuestMe; refresh: () => void }) 
                   {queued && (
                     <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]" role="status">
                       <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--accent)]" />
-                      Waiting for its turn: Shell:B is finishing another reply on the same machine.
+                      {t('Waiting for its turn: Shell:B is finishing another reply on the same machine.')}
                     </div>
                   )}
                 </div>
@@ -300,7 +301,7 @@ export function GuestApp({ me, refresh }: { me: GuestMe; refresh: () => void }) 
                   ensureConversation={ensureConversation} voiceOk focusKey={`${conv?.id ?? 'new'}:${focusTick}`} convId={conv?.id}
                   onCommand={c => { if (c === 'new') newChat(); }}
                   onVoiceMode={voiceMode ? undefined : () => setVoiceMode(true)} guest
-                  placeholder={`Message ${agent.name}…`} />
+                  placeholder={t('Message {name}…', { name: agent.name })} />
               )}
             </div>
           </div>
@@ -333,23 +334,23 @@ function Sidebar({ me, convs, current, openConv, view, onNew, onAccount, onConte
       <div className="h-12 shrink-0 flex items-center justify-between px-3 pt-[env(safe-area-inset-top)]">
         <span className="flex items-baseline gap-2">
           <span className="text-[15px] font-semibold tracking-tight">Shell:B</span>
-          <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">guest</span>
+          <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">{t('guest')}</span>
         </span>
-        <button className={btn.icon} onClick={onNew} title="New chat" aria-label="New chat"><Plus className="w-4 h-4" /></button>
+        <button className={btn.icon} onClick={onNew} title={t('New chat')} aria-label={t('New chat')}><Plus className="w-4 h-4" /></button>
       </div>
-      <nav className="shrink-0 px-2 pb-2 grid grid-cols-5 gap-1" aria-label="Apps">
+      <nav className="shrink-0 px-2 pb-2 grid grid-cols-5 gap-1" aria-label={t('Apps')}>
         {VIEWS.map(v => (
-          <a key={v.id} href={v.id === 'chat' && openConv ? `#/c/${openConv}` : v.hash} aria-current={view === v.id ? 'page' : undefined} title={v.label}
+          <a key={v.id} href={v.id === 'chat' && openConv ? `#/c/${openConv}` : v.hash} aria-current={view === v.id ? 'page' : undefined} title={t(v.label)}
             className={clsx('flex flex-col items-center gap-1 py-1.5 rounded-lg text-[10px] tracking-wide transition',
               view === v.id ? 'bg-[var(--bg-hover)] text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]')}>
-            <v.icon className="w-4 h-4" aria-hidden />{v.label}
+            <v.icon className="w-4 h-4" aria-hidden />{t(v.label)}
           </a>
         ))}
       </nav>
-      <div className="mx-3 mb-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Chats</div>
-      <nav className="flex-1 overflow-y-auto px-2 pb-2" aria-label="Your chats">
+      <div className="mx-3 mb-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)]">{t('Chats')}</div>
+      <nav className="flex-1 overflow-y-auto px-2 pb-2" aria-label={t('Your chats')}>
         {convs.length === 0 ? (
-          <p className="px-2 py-6 text-xs leading-relaxed text-[var(--text-muted)]">Your chats will show up here.</p>
+          <p className="px-2 py-6 text-xs leading-relaxed text-[var(--text-muted)]">{t('Your chats will show up here.')}</p>
         ) : (
           <ul className="space-y-px">
             {convs.map(c => (
@@ -358,10 +359,10 @@ function Sidebar({ me, convs, current, openConv, view, onNew, onAccount, onConte
                   className={clsx('block pl-2.5 pr-8 py-2 rounded-lg text-[13px] transition',
                     c.id === current ? 'bg-[var(--bg-hover)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]')}>
                   <span className="block truncate">{c.title}</span>
-                  <span className="block text-[10px] text-[var(--text-muted)]">{c.streaming ? 'replying…' : relTime(c.updatedAt)}</span>
+                  <span className="block text-[10px] text-[var(--text-muted)]">{c.streaming ? t('replying…') : relTime(c.updatedAt)}</span>
                 </a>
                 <button className={clsx(btn.icon, 'absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus:opacity-100')}
-                  title="Delete chat" aria-label={`Delete ${c.title}`} onClick={() => onDelete(c)}>
+                  title={t('Delete chat')} aria-label={t('Delete {title}', { title: c.title })} onClick={() => onDelete(c)}>
                   <X className="w-3.5 h-3.5" />
                 </button>
               </li>
@@ -377,7 +378,7 @@ function Sidebar({ me, convs, current, openConv, view, onNew, onAccount, onConte
           <span className="flex-1 min-w-0">
             <span className="block text-sm truncate">{me.name}</span>
             <span className="block text-[10px] text-[var(--text-muted)]">
-              {me.limits.turnsPerDay ? `${Math.max(0, me.limits.turnsPerDay - me.today.turns)} messages left today` : 'Guest'}
+              {me.limits.turnsPerDay ? tn(Math.max(0, me.limits.turnsPerDay - me.today.turns), '{n} message left today', '{n} messages left today') : t('Guest')}
             </span>
           </span>
           <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)]" />
@@ -392,13 +393,13 @@ function Welcome({ me, agents, agent, onPick, onStart }: {
 }) {
   return (
     <div className="max-w-3xl mx-auto px-6 pt-[10vh] pb-10">
-      <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Shell:B · on Evie's DGX Spark</p>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight leading-[1.15]">Hi {me.name}.</h1>
+      <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-muted)]">{t("Shell:B · on Evie's DGX Spark")}</p>
+      <h1 className="mt-2 text-3xl font-semibold tracking-tight leading-[1.15]">{t('Hi {name}.', { name: me.name })}</h1>
       <p className="mt-2 text-[0.9375rem] leading-relaxed text-[var(--text-secondary)] max-w-[60ch]">
-        Pick who you'd like to talk to, or just start typing. Everything runs on this one machine.
+        {t("Pick who you'd like to talk to, or just start typing. Everything runs on this one machine.")}
       </p>
       {agents.length > 1 && (
-        <Section title="Agents">
+        <Section title={t('Agents')}>
           <div className="grid gap-2 sm:grid-cols-2">
             {agents.map(a => (
               <button key={a.id} onClick={() => onPick(a)} aria-pressed={a.id === agent?.id}
@@ -414,13 +415,13 @@ function Welcome({ me, agents, agent, onPick, onStart }: {
           </div>
         </Section>
       )}
-      <Section title="Try">
+      <Section title={t('Try')}>
         <div className="grid gap-2 sm:grid-cols-2">
           {STARTERS.map(s => (
-            <button key={s.title} onClick={() => onStart(s.prompt)}
+            <button key={s.title} onClick={() => onStart(t(s.prompt))}
               className="p-3 rounded-xl border border-[var(--border-subtle)] hover:bg-[var(--bg-hover)] text-left transition">
-              <span className="block text-sm font-medium">{s.title}</span>
-              <span className="block mt-0.5 text-xs leading-relaxed text-[var(--text-secondary)] line-clamp-2">{s.prompt}</span>
+              <span className="block text-sm font-medium">{t(s.title)}</span>
+              <span className="block mt-0.5 text-xs leading-relaxed text-[var(--text-secondary)] line-clamp-2">{t(s.prompt)}</span>
             </button>
           ))}
         </div>

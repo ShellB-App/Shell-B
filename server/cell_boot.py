@@ -63,8 +63,9 @@ def report_usage(usage: dict | None):
 
 def auth_me():
     """What the UI asks first: signed in (the gateway only forwards signed-in guests), and the frame key."""
+    import db
     return {"authenticated": True, "via": "session", "passwordSet": True, "frameKey": FRAME_SECRET,
-            "cell": {"guest": GUEST}}
+            "cell": {"guest": GUEST}, "language": (db.kv_get("settings", {}) or {}).get("language", "")}
 
 
 def not_here(rest: str):
@@ -122,6 +123,8 @@ def boot():
     for key in ("embeddingModel", "utilityModel", "visionFallbackModel"):
         if cfg.get(key):
             settings[key] = cfg[key]
+    if cfg.get("language") and not settings.get("language"):  # the owner's choice for this guest, until the guest picks their own
+        settings["language"] = cfg["language"]
 
     def ok(a: dict) -> bool:
         return a.get("model") in models and not a.get("adult") and not providers.is_cloud(a.get("model", ""))

@@ -22,7 +22,9 @@ export interface AuthInfo { authenticated: boolean; via: 'session' | 'local' | n
   /** from the guest gateway (server/guest_app.py): this UI is a guest's own Shell:B in a container (cell.ts) */
   cell?: { guest: string }; guest?: { id: string; name: string; username: string | null };
   /** the guest gateway answered: a signed-out visitor gets its sign-in page, not the owner's login */
-  gateway?: boolean }
+  gateway?: boolean;
+  /** the interface language the server knows for this person ('' = browser), see ui/src/i18n */
+  language?: string }
 export interface TwoStepStatus { on: boolean; recoveryLeft: number; since: number | null }
 export interface Passkey { id: string; label: string; rpId: string; created: number; lastUsed: number | null }
 export interface AuthSession { created: number; lastSeen: number; ip: string; userAgent: string; current: boolean }
