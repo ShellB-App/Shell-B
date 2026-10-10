@@ -9,7 +9,7 @@ import {
   MapPin,
   Plus,
   Sparkles,
-  Users, Upload, Download } from 'lucide-react';
+  Users, Upload, Download, RefreshCw } from 'lucide-react';
 import { api } from '../../api';
 import { toastError } from '../toast';
 import type { CodexEntry } from '../../types';
@@ -51,6 +51,7 @@ export function CalendarView({
   onAutoPopulate,
   populating,
   onImported,
+  onSync,
 }: {
   events: CodexEntry[];
   contacts?: CodexEntry[];
@@ -63,6 +64,8 @@ export function CalendarView({
   populating?: boolean;
   /** after an .ics import: reload the entries */
   onImported?: (r: { added: number; updated: number; total: number }) => void;
+  /** open the CalDAV sync accounts dialog */
+  onSync?: () => void;
 }) {
   const icsInput = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
@@ -222,6 +225,7 @@ export function CalendarView({
           <a className={btn.subtle} href="/api/codex/calendar.ics" download="shellb-calendar.ics" title="Every event as one .ics file; open it in another calendar app">
             <Download className="w-3.5 h-3.5" />Export .ics
           </a>
+          {onSync && <button className={btn.subtle} onClick={onSync} title="Keep a CalDAV calendar in step with this one"><RefreshCw className="w-3.5 h-3.5" />Sync…</button>}
         </div>
       </div>
 

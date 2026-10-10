@@ -25,6 +25,7 @@ Setting a password from the shell signs out every session.
 """
 import asyncio
 import hashlib
+import json
 import hmac
 import ipaddress
 import os
@@ -80,6 +81,9 @@ def init():
         c.execute("""CREATE TABLE IF NOT EXISTS auth_sessions(
             id TEXT PRIMARY KEY, frame_key TEXT UNIQUE, created REAL, last_seen REAL, expires REAL, ip TEXT, ua TEXT)""")
         c.execute("DELETE FROM auth_sessions WHERE expires < ?", (time.time(),))
+        c.execute("""CREATE TABLE IF NOT EXISTS auth_passkeys(
+            id TEXT PRIMARY KEY, public_key BLOB, sign_count INTEGER DEFAULT 0, transports TEXT, label TEXT, rp_id TEXT,
+            created REAL, last_used REAL)""")
         c.execute("""CREATE TABLE IF NOT EXISTS auth_attempts(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ip TEXT,
@@ -574,6 +578,13 @@ def me(req: Request):
     return JSONResponse(_me(req), headers={"Cache-Control": "no-store"})
 
 
+@router.get("/passkeys/available")
+def passkeys_available(req: Request):
+    """Public: whether a passkey exists for this address, so the login screen can offer the button."""
+    rp_id, _o = _rp(req)
+    return {"available": any(r["rp_id"] == rp_id for r in _passkey_rows())}
+
+
 @router.get("/status")
 def auth_status(req: Request):
     ip = _client_ip(req.scope)
@@ -693,6 +704,166 @@ async def login_code(req: Request):
     _tickets.pop(ticket, None)
     _succeeded(ip, "code")
     return _login_response(req)
+
+
+# ── passkeys (WebAuthn) ─────────────────────────────────────────────────────
+# A passkey is a second way in, next to the password: the owner registers one from a signed-in session (any platform
+# authenticator or security key), and later signs in with it alone; two-step verification is satisfied by the passkey
+# itself (it is a possession factor verified by the device). py_webauthn does the ceremonies; the relying party id is the
+# host the app is reached on (ai.shellb.app, the Tailscale name…), so a passkey is bound to the address it was made at.
+# Table auth_passkeys: credential id, public key, sign count, transports, a label, the rp id.
+
+PASSKEY_TTL = 5 * 60
+_passkey_challenges: dict[str, tuple[bytes, float, str]] = {}  # challenge id → (challenge, issued, kind)
+
+
+def _rp(req: Request) -> tuple[str, str]:
+    """(rp id, expected origin) for this request: the host name without a port, and the scheme+host the browser sees."""
+    host = (req.headers.get("x-forwarded-host") or req.headers.get("host") or "localhost").split(",")[0].strip()
+    hostname = host.rsplit(":", 1)[0] if host.count(":") == 1 and not host.startswith("[") else host.strip("[]").split("]")[0]
+    proto = (req.headers.get("x-forwarded-proto") or req.url.scheme or "https").split(",")[0].strip()
+    return hostname.lower(), f"{proto}://{host}"
+
+
+def _passkey_rows() -> list[dict]:
+    with db.conn() as c:
+        return [dict(r) for r in c.execute("SELECT * FROM auth_passkeys ORDER BY created")]
+
+
+def passkeys_on() -> bool:
+    with db.conn() as c:
+        return bool(c.execute("SELECT 1 FROM auth_passkeys LIMIT 1").fetchone())
+
+
+def _new_challenge(kind: str) -> tuple[str, bytes]:
+    now = time.time()
+    for k, (_c, ts, _k) in list(_passkey_challenges.items()):
+        if now - ts > PASSKEY_TTL:
+            _passkey_challenges.pop(k, None)
+    cid, ch = secrets.token_urlsafe(16), secrets.token_bytes(32)
+    _passkey_challenges[cid] = (ch, now, kind)
+    return cid, ch
+
+
+def _take_challenge(cid: str, kind: str) -> bytes:
+    item = _passkey_challenges.pop(str(cid or ""), None)
+    if not item or item[2] != kind or time.time() - item[1] > PASSKEY_TTL:
+        raise HTTPException(400, "That passkey request expired. Start again.")
+    return item[0]
+
+
+@router.get("/passkeys")
+def passkeys_list(req: Request):
+    _owner_session(req)
+    return {"passkeys": [{"id": r["id"], "label": r["label"], "rpId": r["rp_id"], "created": r["created"], "lastUsed": r["last_used"]}
+                         for r in _passkey_rows()]}
+
+
+@router.post("/passkeys/register/begin")
+async def passkey_register_begin(req: Request):
+    """Options for navigator.credentials.create(); needs the password (a session alone shouldn't mint a lasting key)."""
+    _owner_session(req)
+    body = await req.json()
+    ip = _client_ip(req.scope)
+    _throttle(ip)
+    if not check_password(str(body.get("password", ""))):
+        await _failed(ip, "passkey")
+        raise HTTPException(403, "The password is wrong")
+    _succeeded(ip, "passkey")
+    from webauthn import generate_registration_options, options_to_json
+    from webauthn.helpers.structs import AuthenticatorSelectionCriteria, PublicKeyCredentialDescriptor, ResidentKeyRequirement, UserVerificationRequirement
+    rp_id, _origin = _rp(req)
+    cid, ch = _new_challenge("register")
+    opts = generate_registration_options(
+        rp_id=rp_id, rp_name="Shell:B", user_id=b"owner", user_name="owner", user_display_name="Shell:B owner", challenge=ch,
+        exclude_credentials=[PublicKeyCredentialDescriptor(id=bytes.fromhex(r["id"])) for r in _passkey_rows()],
+        authenticator_selection=AuthenticatorSelectionCriteria(resident_key=ResidentKeyRequirement.PREFERRED,
+                                                              user_verification=UserVerificationRequirement.PREFERRED),
+        timeout=PASSKEY_TTL * 1000)
+    return {"challengeId": cid, "options": json.loads(options_to_json(opts))}
+
+
+@router.post("/passkeys/register/finish")
+async def passkey_register_finish(req: Request):
+    _owner_session(req)
+    body = await req.json()
+    from webauthn import verify_registration_response
+    rp_id, origin = _rp(req)
+    ch = _take_challenge(body.get("challengeId"), "register")
+    try:
+        v = verify_registration_response(credential=body.get("credential"), expected_challenge=ch, expected_rp_id=rp_id,
+                                         expected_origin=origin, require_user_verification=False)
+    except Exception as e:  # noqa: BLE001  py_webauthn raises its own classes, ValueError, KeyError, binascii.Error… all mean "no"
+        raise HTTPException(400, f"The browser's answer didn't verify: {type(e).__name__}: {str(e)[:160]}")
+    label = str(body.get("label") or "").strip()[:60] or f"Passkey ({time.strftime('%Y-%m-%d')})"
+    transports = json.dumps([str(t) for t in (body.get("transports") or [])][:6])
+    with db.conn() as c:
+        c.execute("INSERT OR REPLACE INTO auth_passkeys(id, public_key, sign_count, transports, label, rp_id, created, last_used) VALUES(?,?,?,?,?,?,?,NULL)",
+                  (v.credential_id.hex(), v.credential_public_key, int(v.sign_count), transports, label, rp_id, time.time()))
+    db.audit_log("admin:passkey_added", {"label": label, "rp": rp_id, "ip": _client_ip(req.scope)})
+    return {"ok": True, "id": v.credential_id.hex(), "label": label}
+
+
+@router.delete("/passkeys/{pid}")
+def passkey_delete(pid: str, req: Request):
+    _owner_session(req)
+    with db.conn() as c:
+        n = c.execute("DELETE FROM auth_passkeys WHERE id=?", (pid,)).rowcount
+    if not n:
+        raise HTTPException(404, "No such passkey")
+    db.audit_log("admin:passkey_removed", {"id": pid[:16]})
+    return {"ok": True}
+
+
+@router.post("/passkeys/login/begin")
+async def passkey_login_begin(req: Request):
+    """Options for navigator.credentials.get(); public, like /login. Only credentials made for this host are offered."""
+    ip = _client_ip(req.scope)
+    _throttle(ip)
+    rp_id, _origin = _rp(req)
+    rows = [r for r in _passkey_rows() if r["rp_id"] == rp_id]
+    if not rows:
+        raise HTTPException(404, "No passkey is set up for this address")
+    from webauthn import generate_authentication_options, options_to_json
+    from webauthn.helpers.structs import PublicKeyCredentialDescriptor, UserVerificationRequirement
+    cid, ch = _new_challenge("login")
+    opts = generate_authentication_options(rp_id=rp_id, challenge=ch, timeout=PASSKEY_TTL * 1000,
+                                           allow_credentials=[PublicKeyCredentialDescriptor(id=bytes.fromhex(r["id"])) for r in rows],
+                                           user_verification=UserVerificationRequirement.PREFERRED)
+    return {"challengeId": cid, "options": json.loads(options_to_json(opts))}
+
+
+@router.post("/passkeys/login/finish")
+async def passkey_login_finish(req: Request):
+    body = await req.json()
+    ip = _client_ip(req.scope)
+    _throttle(ip)
+    from webauthn import verify_authentication_response
+    from webauthn.helpers import base64url_to_bytes
+    rp_id, origin = _rp(req)
+    ch = _take_challenge(body.get("challengeId"), "login")
+    cred = body.get("credential") or {}
+    try:
+        raw_id = base64url_to_bytes(str(cred.get("rawId") or cred.get("id") or "")).hex()
+    except Exception:  # noqa: BLE001
+        raw_id = ""
+    with db.conn() as c:
+        row = c.execute("SELECT * FROM auth_passkeys WHERE id=? AND rp_id=?", (raw_id, rp_id)).fetchone()
+    if not row:
+        await _failed(ip, "passkey")
+        raise HTTPException(401, "That passkey isn't registered here")
+    try:
+        v = verify_authentication_response(credential=cred, expected_challenge=ch, expected_rp_id=rp_id, expected_origin=origin,
+                                           credential_public_key=row["public_key"], credential_current_sign_count=int(row["sign_count"] or 0),
+                                           require_user_verification=False)
+    except Exception as e:  # noqa: BLE001
+        await _failed(ip, "passkey")
+        raise HTTPException(401, f"The passkey didn't verify: {type(e).__name__}: {str(e)[:140]}")
+    with db.conn() as c:
+        c.execute("UPDATE auth_passkeys SET sign_count=?, last_used=? WHERE id=?", (int(v.new_sign_count), time.time(), raw_id))
+    _succeeded(ip, "passkey")
+    db.audit_log("admin:passkey_login", {"label": row["label"], "ip": ip})
+    return _login_response(req)  # a passkey is its own second factor: no TOTP step
 
 
 @router.get("/2fa")

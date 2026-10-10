@@ -16,6 +16,13 @@ kind `contact` (meta: role, company, email/emails, phone/phones, location, birth
 
 Imports are the owner's own data from their other apps, so they are written as accepted entries (not drafts) by
 "import". Agents don't get an import tool; the Codex tool's `add` already makes drafts.
+
+Sync accounts (kv `codex_sync_accounts`, passwords in data/codex-sync/<id>.pass, 0600): a CalDAV calendar (python
+`caldav`) or a CardDAV address book (plain WebDAV over httpx) checked every N minutes. Each run pushes local entries
+edited since the last run (new ones are created on the server, edited ones replaced at their href), then pulls the
+server's items (matched by UID, so nothing doubles; `meta.sync` remembers the account and href). Local edits win when
+both sides changed; deletions aren't synced either way (retire an entry on both sides yourself). Results go to Activity
+(source `codex`) when something failed.
 """
 import asyncio
 import json
@@ -23,9 +30,12 @@ import re
 import time
 import uuid
 from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
+from urllib.parse import urljoin, urlparse
 from zoneinfo import ZoneInfo
 
 from dateutil import rrule as _rr
+import httpx
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from fastapi.responses import Response
 
@@ -629,3 +639,395 @@ async def api_import_vcf(req: Request, files: list[UploadFile] = File(...), coll
     if not items:
         raise HTTPException(400, "No contacts found. Export a .vcf file from your contacts app and upload that.")
     return await asyncio.to_thread(import_entries, "contact", items, collection or None)
+
+
+# ── CalDAV / CardDAV accounts ───────────────────────────────────────────────
+
+import secrets as _secrets
+import threading as _threading
+
+SYNC_DIR = db.DATA / "codex-sync"
+SYNC_KINDS = ("caldav", "carddav")
+SYNC_EVERY = 15
+_sync_lock = _threading.Lock()
+_sync_task: asyncio.Task | None = None
+_DAV = {"d": "DAV:", "c": "urn:ietf:params:xml:ns:caldav", "card": "urn:ietf:params:xml:ns:carddav"}
+
+
+def sync_accounts() -> list[dict]:
+    return [a for a in (db.kv_get("codex_sync_accounts") or []) if isinstance(a, dict)]
+
+
+def _save_accounts(accts: list[dict]):
+    db.kv_set("codex_sync_accounts", accts)
+
+
+def _acct(aid: str) -> dict | None:
+    return next((a for a in sync_accounts() if a["id"] == aid), None)
+
+
+def _pass_path(aid: str) -> Path:
+    return SYNC_DIR / f"{aid}.pass"
+
+
+def _password(aid: str) -> str:
+    try:
+        return _pass_path(aid).read_text().strip()
+    except OSError:
+        return ""
+
+
+def _public_acct(a: dict) -> dict:
+    return {**{k: a.get(k) for k in ("id", "kind", "name", "url", "user", "collection", "everyMinutes", "enabled", "lastSync", "lastError", "stats")},
+            "hasPassword": bool(_password(a["id"]))}
+
+
+def add_account(kind: str, url: str, user: str, password: str, name: str = "", every: int = SYNC_EVERY, collection: str = "") -> dict:
+    if kind not in SYNC_KINDS:
+        raise ValueError("kind is caldav or carddav")
+    u = urlparse(str(url or "").strip())
+    if u.scheme not in ("http", "https") or not u.hostname:
+        raise ValueError("Give the server's https URL (the calendar or address-book collection, or the account root)")
+    from tools import _blocked_host
+    if _blocked_host(u.hostname) and u.hostname not in ("localhost",) and not u.hostname.endswith(".ts.net"):
+        pass  # self-hosted Nextcloud/Radicale on the LAN or tailnet are the usual case: allowed
+    aid = "sync-" + _secrets.token_hex(6)
+    SYNC_DIR.mkdir(parents=True, exist_ok=True)
+    if password:
+        _pass_path(aid).write_text(password)
+        _pass_path(aid).chmod(0o600)
+    a = {"id": aid, "kind": kind, "name": (name or u.hostname)[:60], "url": u.geturl(), "user": str(user or "")[:120], "collection": str(collection or "")[:400],
+         "everyMinutes": max(5, min(1440, int(every or SYNC_EVERY))), "enabled": True, "lastSync": None, "lastError": "", "stats": {}, "created": time.time()}
+    _save_accounts(sync_accounts() + [a])
+    db.kv_set(f"codex_sync_state_{aid}", {})
+    return _public_acct(a)
+
+
+def update_account(aid: str, fields: dict) -> dict | None:
+    accts = sync_accounts()
+    a = next((x for x in accts if x["id"] == aid), None)
+    if not a:
+        return None
+    for k in ("name", "user", "collection", "url"):
+        if k in fields:
+            a[k] = str(fields[k] or "").strip()[:400]
+    if "everyMinutes" in fields:
+        a["everyMinutes"] = max(5, min(1440, int(fields["everyMinutes"] or SYNC_EVERY)))
+    if "enabled" in fields:
+        a["enabled"] = bool(fields["enabled"])
+    if fields.get("password"):
+        SYNC_DIR.mkdir(parents=True, exist_ok=True)
+        _pass_path(aid).write_text(str(fields["password"]))
+        _pass_path(aid).chmod(0o600)
+    _save_accounts(accts)
+    return _public_acct(a)
+
+
+def remove_account(aid: str) -> bool:
+    accts = sync_accounts()
+    keep = [x for x in accts if x["id"] != aid]
+    if len(keep) == len(accts):
+        return False
+    _save_accounts(keep)
+    _pass_path(aid).unlink(missing_ok=True)
+    db.kv_set(f"codex_sync_state_{aid}", None)
+    return True
+
+
+def _entries_for_push(kind: str, aid: str, since: float) -> list[dict]:
+    """Local entries changed since the last sync that belong to this account (or to none yet)."""
+    with db.conn() as c:
+        rows = c.execute("SELECT id, title, body, meta, updated FROM codex_entries WHERE kind=? AND status='ok' AND updated>?", (kind, since)).fetchall()
+    out = []
+    for r in rows:
+        meta = json.loads(r["meta"] or "{}")
+        sync = meta.get("sync") or {}
+        if sync and sync.get("account") != aid:
+            continue
+        out.append({"id": r["id"], "title": r["title"], "body": r["body"] or "", "meta": meta})
+    return out
+
+
+def _set_sync_meta(eid: str, sync: dict, uid: str | None = None):
+    with db.conn() as c:
+        r = c.execute("SELECT meta FROM codex_entries WHERE id=?", (eid,)).fetchone()
+        if not r:
+            return
+        meta = json.loads(r["meta"] or "{}")
+        meta["sync"] = sync
+        if uid and not meta.get("uid"):
+            meta["uid"] = uid
+        c.execute("UPDATE codex_entries SET meta=? WHERE id=?", (json.dumps(meta), eid))  # bookkeeping: not a user edit
+
+
+# CalDAV through the `caldav` library (blocking: run in a thread)
+
+def _caldav_calendar(a: dict):
+    import caldav
+    client = caldav.DAVClient(url=a["url"], username=a["user"], password=_password(a["id"]), timeout=60)
+    if a.get("collection"):
+        return caldav.Calendar(client=client, url=a["collection"])
+    cals = client.principal().calendars()
+    if not cals:
+        raise RuntimeError("No calendars found for this account")
+    return cals[0]
+
+
+def list_collections(a: dict) -> list[dict]:
+    if a["kind"] == "caldav":
+        import caldav
+        client = caldav.DAVClient(url=a["url"], username=a["user"], password=_password(a["id"]), timeout=60)
+        return [{"name": str(c.name or c.url), "url": str(c.url)} for c in client.principal().calendars()]
+    return [{"name": a.get("name") or "Address book", "url": a.get("collection") or a["url"]}]
+
+
+def _sync_caldav(a: dict, since: float) -> dict:
+    from datetime import datetime as _dt, timedelta as _td
+    cal = _caldav_calendar(a)
+    z = tz()
+    tzname = z.key if z else None
+    stats = {"pushed": 0, "created": 0, "pulled": 0, "updated": 0, "errors": []}
+    # push local changes first (local wins)
+    for e in _entries_for_push("event", a["id"], since):
+        try:
+            ics = calendar_ics([e], tzname)
+            href = (e["meta"].get("sync") or {}).get("href")
+            uid = e["meta"].get("uid") or f"{e['id']}@shellb"
+            if href:
+                obj = cal.event_by_url(href)
+                obj.data = ics
+                obj.save()
+                stats["pushed"] += 1
+            else:
+                obj = cal.save_event(ics)
+                href = str(obj.url)
+                stats["created"] += 1
+            _set_sync_meta(e["id"], {"account": a["id"], "href": href, "at": time.time()}, uid)
+        except Exception as ex:  # noqa: BLE001
+            stats["errors"].append(f"push {e['title'][:40]}: {type(ex).__name__}: {str(ex)[:120]}")
+    # pull a window around now
+    now = _dt.now()
+    try:
+        objs = cal.search(start=now - _td(days=90), end=now + _td(days=400), event=True, expand=False)
+    except Exception:  # noqa: BLE001  servers that don't take time-range queries
+        objs = cal.events()
+    items = []
+    for obj in objs:
+        try:
+            for ev in ics_events(obj.data if isinstance(obj.data, str) else obj.data.decode(), z):
+                ev["meta"]["sync"] = {"account": a["id"], "href": str(obj.url), "at": time.time()}
+                items.append(ev)
+        except Exception as ex:  # noqa: BLE001
+            stats["errors"].append(f"pull {obj.url}: {type(ex).__name__}")
+    if items:
+        r = import_entries("event", items)
+        stats["pulled"], stats["updated"] = r["added"], r["updated"]
+    return stats
+
+
+# CardDAV over plain WebDAV
+
+def _dav(a: dict, method: str, url: str, body: str | None = None, headers: dict | None = None, timeout: float = 60) -> httpx.Response:
+    return httpx.request(method, url, content=body.encode() if body else None, auth=(a["user"], _password(a["id"])),
+                         headers={"Content-Type": "application/xml; charset=utf-8", **(headers or {})}, timeout=timeout, follow_redirects=True)
+
+
+def carddav_list(a: dict) -> dict[str, str]:
+    """href → etag for every card in the address book (PROPFIND Depth 1)."""
+    from lxml import etree
+    url = a.get("collection") or a["url"]
+    body = '<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:getetag/><d:resourcetype/><d:getcontenttype/></d:prop></d:propfind>'
+    r = _dav(a, "PROPFIND", url, body, {"Depth": "1"})
+    if r.status_code not in (207, 200):
+        raise RuntimeError(f"PROPFIND {r.status_code}: {r.text[:200]}")
+    root = etree.fromstring(r.content, parser=etree.XMLParser(resolve_entities=False, no_network=True))
+    out = {}
+    for resp in root.findall("d:response", _DAV):
+        href = resp.findtext("d:href", namespaces=_DAV) or ""
+        if resp.find(".//d:resourcetype/d:collection", _DAV) is not None:
+            continue
+        etag = resp.findtext(".//d:getetag", namespaces=_DAV) or ""
+        ctype = (resp.findtext(".//d:getcontenttype", namespaces=_DAV) or "").lower()
+        if href.lower().endswith(".vcf") or "vcard" in ctype:
+            out[urljoin(url, href)] = etag
+    return out
+
+
+def _sync_carddav(a: dict, since: float) -> dict:
+    stats = {"pushed": 0, "created": 0, "pulled": 0, "updated": 0, "errors": []}
+    base = (a.get("collection") or a["url"]).rstrip("/") + "/"
+    state = db.kv_get(f"codex_sync_state_{a['id']}") or {}
+    # push
+    for e in _entries_for_push("contact", a["id"], since):
+        try:
+            sync = e["meta"].get("sync") or {}
+            uid = e["meta"].get("uid") or f"{e['id']}@shellb"
+            e["meta"]["uid"] = uid
+            vcf = contacts_vcf([e])
+            if sync.get("href"):
+                r = _dav(a, "PUT", sync["href"], vcf, {"Content-Type": "text/vcard; charset=utf-8", **({"If-Match": sync["etag"]} if sync.get("etag") else {})})
+                href = sync["href"]
+                if r.status_code == 412:
+                    stats["errors"].append(f"{e['title'][:40]}: changed on the server too; the server's copy was kept")
+                    continue
+                stats["pushed"] += 1
+            else:
+                href = base + uid.split("@")[0].replace("/", "-") + ".vcf"
+                r = _dav(a, "PUT", href, vcf, {"Content-Type": "text/vcard; charset=utf-8", "If-None-Match": "*"})
+                stats["created"] += 1
+            if r.status_code >= 300:
+                stats["errors"].append(f"push {e['title'][:40]}: HTTP {r.status_code}")
+                continue
+            etag = r.headers.get("etag", "")
+            _set_sync_meta(e["id"], {"account": a["id"], "href": href, "etag": etag, "at": time.time()}, uid)
+            state[href] = etag
+        except Exception as ex:  # noqa: BLE001
+            stats["errors"].append(f"push {e['title'][:40]}: {type(ex).__name__}: {str(ex)[:120]}")
+    # pull what changed
+    listing = carddav_list(a)
+    items = []
+    for href, etag in listing.items():
+        if state.get(href) == etag and etag:
+            continue
+        try:
+            r = _dav(a, "GET", href)
+            if r.status_code != 200:
+                continue
+            for c in vcf_contacts(r.text):
+                c["meta"]["sync"] = {"account": a["id"], "href": href, "etag": etag or r.headers.get("etag", ""), "at": time.time()}
+                items.append(c)
+            state[href] = etag
+        except Exception as ex:  # noqa: BLE001
+            stats["errors"].append(f"pull {href.rsplit('/', 1)[-1]}: {type(ex).__name__}")
+    if items:
+        r = import_entries("contact", items)
+        stats["pulled"], stats["updated"] = r["added"], r["updated"]
+    db.kv_set(f"codex_sync_state_{a['id']}", {h: t for h, t in state.items() if h in listing or h not in state})
+    return stats
+
+
+def run_sync(aid: str) -> dict:
+    """One account, now (blocking). Returns the stats; records lastSync/lastError on the account."""
+    a = _acct(aid)
+    if not a:
+        raise LookupError("No such account")
+    with _sync_lock:
+        since = float(a.get("lastSync") or 0)
+        t0 = time.time()
+        failed = False
+        try:
+            stats = (_sync_caldav if a["kind"] == "caldav" else _sync_carddav)(a, since)
+            err = "; ".join(stats["errors"][:3])
+        except Exception as e:  # noqa: BLE001
+            failed = True
+            stats, err = {"pushed": 0, "created": 0, "pulled": 0, "updated": 0, "errors": [str(e)[:200]]}, f"{type(e).__name__}: {str(e)[:200]}"
+        accts = sync_accounts()
+        for x in accts:
+            if x["id"] == aid:
+                # the watermark is the END of the run: entries the pull just wrote are older than it, so they don't echo
+                # back up next time; a run that blew up keeps the old watermark and retries the same window
+                x["lastSync"] = x.get("lastSync") if failed else time.time()
+                x["lastError"] = err
+                x["stats"] = {k: v for k, v in stats.items() if k != "errors"}
+        _save_accounts(accts)
+    if err:
+        import activity
+        activity.post("codex", "warning", f"Sync with {a['name']} had trouble", body=err, link="#/codex/calendar" if a["kind"] == "caldav" else "#/codex/contacts", ref=f"sync:{aid}:{int(t0 // 3600)}")
+    return {**stats, "error": err}
+
+
+async def _sync_loop():
+    await asyncio.sleep(150)
+    while True:
+        try:
+            now = time.time()
+            for a in sync_accounts():
+                if a.get("enabled") and _password(a["id"]) and (a.get("lastSync") or 0) + int(a.get("everyMinutes") or SYNC_EVERY) * 60 <= now:
+                    await asyncio.to_thread(run_sync, a["id"])
+        except Exception as e:  # noqa: BLE001
+            print(f"codex sync loop: {type(e).__name__}: {e}")
+        await asyncio.sleep(60)
+
+
+_start_orig = start
+
+
+def start():  # noqa: F811  the reminder loop and the sync loop
+    global _sync_task
+    _start_orig()
+    if _sync_task is None:
+        _sync_task = asyncio.create_task(_sync_loop())
+
+
+_stop_orig = stop
+
+
+def stop():  # noqa: F811
+    global _sync_task
+    _stop_orig()
+    if _sync_task:
+        _sync_task.cancel()
+        _sync_task = None
+
+
+# routes
+
+def _admin(req: Request):
+    import remote
+    remote.require_admin(req)
+
+
+@router.get("/sync")
+def api_sync_list(req: Request):
+    _owner(req)
+    return {"accounts": [_public_acct(a) for a in sync_accounts()]}
+
+
+@router.post("/sync")
+async def api_sync_add(req: Request):
+    _admin(req)
+    b = await req.json()
+    try:
+        return add_account(str(b.get("kind") or ""), str(b.get("url") or ""), str(b.get("user") or ""), str(b.get("password") or ""),
+                           str(b.get("name") or ""), int(b.get("everyMinutes") or SYNC_EVERY), str(b.get("collection") or ""))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@router.patch("/sync/{aid}")
+async def api_sync_update(aid: str, req: Request):
+    _admin(req)
+    out = update_account(aid, await req.json())
+    if not out:
+        raise HTTPException(404, "No such account")
+    return out
+
+
+@router.delete("/sync/{aid}")
+def api_sync_delete(aid: str, req: Request):
+    _admin(req)
+    if not remove_account(aid):
+        raise HTTPException(404, "No such account")
+    return {"ok": True}
+
+
+@router.post("/sync/{aid}/collections")
+async def api_sync_collections(aid: str, req: Request):
+    _admin(req)
+    a = _acct(aid)
+    if not a:
+        raise HTTPException(404, "No such account")
+    try:
+        return {"collections": await asyncio.to_thread(list_collections, a)}
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(400, f"{type(e).__name__}: {str(e)[:200]}")
+
+
+@router.post("/sync/{aid}/run")
+async def api_sync_run(aid: str, req: Request):
+    _owner(req)
+    try:
+        out = await asyncio.to_thread(run_sync, aid)
+    except LookupError:
+        raise HTTPException(404, "No such account")
+    return {**out, "account": _public_acct(_acct(aid))}

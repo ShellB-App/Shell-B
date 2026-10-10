@@ -303,11 +303,8 @@ def _is_youtube(url):
 
 async def _fetch(url) -> tuple[str, str]:
     """(title, text) of a web page or online document; a direct media link is transcribed instead."""
-    if _is_youtube(url):
-        raise ValueError("YouTube pages can't be added: fetching their media needs yt-dlp with network access in the sandbox, "
-                         "which isn't enabled. Download the audio or video and upload the file instead; it will be transcribed.")
     import transcribe
-    if transcribe.is_media(urlparse(url).path):
+    if _is_youtube(url) or transcribe.STREAMING.match(url) or transcribe.is_media(urlparse(url).path):
         import tempfile
         tmp = Path(tempfile.mkdtemp(prefix="nb-media-", dir=db.DATA / "cells"))
         try:

@@ -20,6 +20,7 @@ export interface AuthInfo { authenticated: boolean; via: 'session' | 'local' | n
   /** two-step verification: the password was right, a code is still due for this login ticket */
   needsCode?: boolean; pending?: string }
 export interface TwoStepStatus { on: boolean; recoveryLeft: number; since: number | null }
+export interface Passkey { id: string; label: string; rpId: string; created: number; lastUsed: number | null }
 export interface AuthSession { created: number; lastSeen: number; ip: string; userAgent: string; current: boolean }
 /** one row of the server's audit_log table (db.audit_log): admin actions, settings changes, approvals */
 export interface AuditEntry { id: number; timestamp: number; action: string; details: Record<string, unknown> | string | null; ip?: string | null }
@@ -79,6 +80,13 @@ export const api = {
   login: (password: string) => req<AuthInfo>('/api/auth/login', { method: 'POST', body: json({ password }) }),
   loginCode: (pending: string, code: string) => req<AuthInfo>('/api/auth/login/code', { method: 'POST', body: json({ pending, code }) }),
   twoStep: () => req<TwoStepStatus>('/api/auth/2fa'),
+  passkeys: () => req<{ passkeys: Passkey[] }>('/api/auth/passkeys'),
+  passkeysAvailable: () => req<{ available: boolean }>('/api/auth/passkeys/available'),
+  passkeyRegisterBegin: (password: string) => req<{ challengeId: string; options: PublicKeyCredentialCreationOptionsJSON }>('/api/auth/passkeys/register/begin', { method: 'POST', body: json({ password }) }),
+  passkeyRegisterFinish: (b: { challengeId: string; credential: unknown; label: string; transports: string[] }) => req<{ ok: boolean; id: string; label: string }>('/api/auth/passkeys/register/finish', { method: 'POST', body: json(b) }),
+  passkeyDelete: (id: string) => req(`/api/auth/passkeys/${id}`, { method: 'DELETE' }),
+  passkeyLoginBegin: () => req<{ challengeId: string; options: PublicKeyCredentialRequestOptionsJSON }>('/api/auth/passkeys/login/begin', { method: 'POST', body: json({}) }),
+  passkeyLoginFinish: (b: { challengeId: string; credential: unknown }) => req<AuthInfo>('/api/auth/passkeys/login/finish', { method: 'POST', body: json(b) }),
   twoStepBegin: (password: string) => req<{ secret: string; uri: string }>('/api/auth/2fa/begin', { method: 'POST', body: json({ password }) }),
   twoStepConfirm: (code: string) => req<{ on: boolean; recovery: string[] }>('/api/auth/2fa/confirm', { method: 'POST', body: json({ code }) }),
   twoStepRecovery: (password: string) => req<{ recovery: string[] }>('/api/auth/2fa/recovery', { method: 'POST', body: json({ password }) }),

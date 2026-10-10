@@ -1,6 +1,36 @@
 [
  {
   "date": "2026-10-10",
+  "area": "Security",
+  "title": "Passkeys for the owner login",
+  "summary": "Settings → Account → Passkeys: sign in with your device's screen lock or a security key instead of the password. A passkey is tied to the address you make it at and counts as its own second step."
+ },
+ {
+  "date": "2026-10-10",
+  "area": "Codex",
+  "title": "Calendar and contacts sync with CalDAV and CardDAV",
+  "summary": "Codex → Calendar → Sync… and Contacts → Sync… keep a Nextcloud, Fastmail, iCloud or Radicale calendar and address book in step with the Codex every few minutes: your edits go up, their changes come down, matched by UID. Deletions aren't synced."
+ },
+ {
+  "date": "2026-10-10",
+  "area": "Media",
+  "title": "YouTube and streaming links transcribe too",
+  "summary": "The transcribe tool, Secretary and research notebooks now take YouTube, Vimeo and SoundCloud links: the audio is fetched on the Spark (one video at a time, up to four hours) and transcribed like a file."
+ },
+ {
+  "date": "2026-10-10",
+  "area": "Sharing",
+  "title": "share.shellb.app carries read-only links",
+  "summary": "Share links now open on share.shellb.app without a login, for anyone who has the link. The host serves only the shared page and nothing else of the app."
+ },
+ {
+  "date": "2026-10-10",
+  "area": "Law",
+  "title": "Federal Register and federal case law join the law index",
+  "summary": "The legal tool's index is growing overnight with Federal Register issues from 2020 on, the EU court's judgments that were downloaded but never indexed, and published opinions of the Supreme Court and the federal courts of appeals from CourtListener."
+ },
+ {
+  "date": "2026-10-10",
   "area": "Circles",
   "title": "Circles: share chats and artifacts, and mail each other",
   "summary": "Right-click a chat or an artifact → Share to a circle: a copy of it goes to one circle with a line from you, where members can read it, keep their own copy, and their agents can use it as background. Circles also got mail: short messages between people who share a circle, read by their agents as information and answerable from the chat when you ask. Shares expire after 90 days and can be retracted."

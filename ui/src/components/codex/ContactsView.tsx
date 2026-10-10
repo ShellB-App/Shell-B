@@ -2,7 +2,7 @@ import { useMemo, useState, useRef } from 'react';
 import clsx from 'clsx';
 import {
   Briefcase, Building, Cake, ExternalLink, LayoutGrid, List,
-  Loader2, Mail, MapPin, Phone, Pin, Plus, Search, Sparkles, User, X, Upload, Download } from 'lucide-react';
+  Loader2, Mail, MapPin, Phone, Pin, Plus, Search, Sparkles, User, X, Upload, Download, RefreshCw } from 'lucide-react';
 import { api } from '../../api';
 import { toastError } from '../toast';
 import type { CodexEntry } from '../../types';
@@ -46,6 +46,7 @@ export function ContactsView({
   onDiscard,
   onPin,
   onImported,
+  onSync,
 }: {
   contacts: CodexEntry[];
   agentNames: Record<string, string>;
@@ -58,6 +59,8 @@ export function ContactsView({
   onPin: (e: CodexEntry) => void;
   /** after a .vcf import: reload the entries */
   onImported?: (r: { added: number; updated: number; total: number }) => void;
+  /** open the CardDAV sync accounts dialog */
+  onSync?: () => void;
 }) {
   const vcfInput = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
@@ -198,6 +201,7 @@ export function ContactsView({
         <a className={btn.subtle} href="/api/codex/contacts.vcf" download="shellb-contacts.vcf" title="Every contact as a vCard file for your phone or another address book">
           <Download className="w-3.5 h-3.5" />Export .vcf
         </a>
+        {onSync && <button className={btn.subtle} onClick={onSync} title="Keep a CardDAV address book in step with these contacts"><RefreshCw className="w-3.5 h-3.5" />Sync…</button>}
       </div>
 
       {/* Tag Filters */}

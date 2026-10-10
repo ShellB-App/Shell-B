@@ -23,13 +23,19 @@ class Transcribe(unittest.TestCase):
         self.assertTrue(transcribe.is_media("talk.MP4") and transcribe.is_video("a.mkv") and not transcribe.is_video("a.mp3"))
         self.assertFalse(transcribe.is_media("notes.pdf"))
 
-    def test_download_refuses_streaming_sites_and_local_hosts(self):
+    def test_streaming_sites_go_through_yt_dlp_and_local_hosts_are_refused(self):
         import tempfile
         from pathlib import Path
         d = Path(tempfile.mkdtemp())
-        with self.assertRaises(ValueError) as cm:
-            asyncio.run(transcribe.download("https://www.youtube.com/watch?v=abc", d))
-        self.assertIn("yt-dlp", str(cm.exception))
+        fake = d / "talk.m4a"
+        fake.write_bytes(b"x")
+        with mock.patch.object(transcribe, "youtube", return_value=fake) as yt:
+            self.assertEqual(asyncio.run(transcribe.download("https://www.youtube.com/watch?v=abc", d)), fake)
+            yt.assert_called_once()
+        with mock.patch.object(transcribe, "youtube", side_effect=ValueError("yt-dlp couldn't fetch that: private video")):
+            with self.assertRaises(ValueError) as cm:
+                asyncio.run(transcribe.download("https://vimeo.com/123", d))
+            self.assertIn("yt-dlp", str(cm.exception))
         with self.assertRaises(ValueError):
             asyncio.run(transcribe.download("http://192.168.0.5/talk.mp3", d))
 
@@ -41,8 +47,9 @@ class Transcribe(unittest.TestCase):
         self.assertTrue(out.error)
         out = asyncio.run(transcribe.transcribe_tool({"file": "/work/missing.mp3"}, Ctx()))
         self.assertTrue(out.error and "No such file" in out.text)
-        out = asyncio.run(transcribe.transcribe_tool({"url": "https://youtu.be/x"}, Ctx()))
-        self.assertTrue(out.error and "Streaming sites" in out.text)
+        with mock.patch.object(transcribe, "youtube", side_effect=ValueError("yt-dlp couldn't fetch that: unavailable")):
+            out = asyncio.run(transcribe.transcribe_tool({"url": "https://youtu.be/x"}, Ctx()))
+        self.assertTrue(out.error and "yt-dlp" in out.text)
 
 
 class EditGraphs(unittest.TestCase):

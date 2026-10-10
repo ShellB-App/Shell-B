@@ -31,6 +31,7 @@ import { SecretEditor } from './codex/SecretEditor';
 import { CodexRow as Row } from './codex/CodexRow';
 import { CalendarView } from './codex/CalendarView';
 import { ContactsView } from './codex/ContactsView';
+import { SyncAccountsDialog } from './codex/SyncAccounts';
 
 // Re-export helpers for external consumers (e.g. Notes.tsx, App.tsx)
 export { parseCodexRoute, TagInput };
@@ -81,6 +82,7 @@ export function Codex({ sub, agentNames }: { sub: string; agentNames: Record<str
   const [selectedDate, setSelectedDate] = useState(() => `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`);
 
   useEffect(() => { const t = setTimeout(() => setQuery(q.trim()), 300); return () => clearTimeout(t); }, [q]);
+  const [syncKind, setSyncKind] = useState<'caldav' | 'carddav' | null>(null);  // Sync… dialog (codex/SyncAccounts.tsx)
   const loadIndex = useCallback(() => api.codex().then(setIndex).catch(e => setError(String(e))), []);
   const loadItems = useCallback(async () => {
     try {
@@ -262,6 +264,7 @@ export function Codex({ sub, agentNames }: { sub: string; agentNames: Record<str
               onDiscard={async c => { await api.deleteCodexEntry(c.id); setItems(p => p.filter(i => i.id !== c.id)); setAllContacts(p => p.filter(i => i.id !== c.id)); loadIndex(); }}
               onPin={async c => onSaved(await api.patchCodexEntry(c.id, { pinned: !c.pinned }))}
               onImported={r => { toast(`Imported ${r.added} new, updated ${r.updated}`); loadItems(); loadIndex(); }}
+              onSync={() => setSyncKind('carddav')}
             />
           ) : !isCalendarView ? (
             <>
@@ -349,6 +352,7 @@ export function Codex({ sub, agentNames }: { sub: string; agentNames: Record<str
               onAutoPopulate={autoPopulate}
               populating={populating}
               onImported={r => { toast(`Imported ${r.added} new, updated ${r.updated}`); loadItems(); loadIndex(); }}
+              onSync={() => setSyncKind('caldav')}
             />
           )}
         </div>
@@ -381,6 +385,7 @@ export function Codex({ sub, agentNames }: { sub: string; agentNames: Record<str
           onSaved={onSaved}
           onDeleted={id => { setItems(p => p.filter(i => i.id !== id)); setOpen(null); refresh(); }} />
       )}
-    </div>
+    {syncKind && <SyncAccountsDialog kind={syncKind} onClose={() => setSyncKind(null)} onChanged={() => { loadItems(); loadIndex(); }} />}
+      </div>
   );
 }

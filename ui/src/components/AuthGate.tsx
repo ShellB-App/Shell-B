@@ -1,8 +1,9 @@
 /** Login screen in front of the app (server/auth.py). First run sets the password with the admin key. */
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
-import { Loader2, LockKeyhole, RefreshCw, WifiOff } from 'lucide-react';
+import { KeyRound, Loader2, LockKeyhole, RefreshCw, WifiOff } from 'lucide-react';
 import { AUTH_LOST, api, setFrameKey, type AuthInfo } from '../api';
+import { loginWithPasskey, passkeysSupported } from '../webauthn';
 import { btn } from './common';
 import { reducedMotion } from '../ambience';
 import '../ambience.css';
@@ -112,6 +113,12 @@ function LoginForm({ setup, onDone }: { setup: boolean; onDone: (i: AuthInfo) =>
   const [error, setError] = useState('');
   const [pending, setPending] = useState('');  // two-step: the login ticket waiting for a code
   const [code, setCode] = useState('');
+  const [passkey, setPasskey] = useState(false);  // a passkey exists for this address (server/auth.py)
+  useEffect(() => { if (!setup && passkeysSupported()) api.passkeysAvailable().then(r => setPasskey(r.available)).catch(() => {}); }, [setup]);
+  const usePasskey = async () => {
+    setBusy(true); setError('');
+    try { onDone(await loginWithPasskey()); } catch (err) { setError(errText(err)); } finally { setBusy(false); }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -173,6 +180,11 @@ function LoginForm({ setup, onDone }: { setup: boolean; onDone: (i: AuthInfo) =>
       <button type="submit" className={`${btn.primary} w-full py-2`} disabled={busy || !password || (setup && (!adminKey || !again))}>
         {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}{setup ? 'Set password and log in' : 'Log in'}
       </button>
+      {!setup && passkey && (
+        <button type="button" className={`${btn.subtle} w-full py-2 justify-center`} disabled={busy} onClick={usePasskey}>
+          <KeyRound className="w-3.5 h-3.5" />Use a passkey instead
+        </button>
+      )}
     </form>
   );
 }

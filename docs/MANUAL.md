@@ -171,10 +171,13 @@ address (`_ShortNameRedirect` in app.py). Check with `tailscale serve status`; r
   Activity (source `data`). Installing, scheduling, cancelling and deleting need the owner. The planet mosaics and map fonts
   are built locally, so they are only measured.
 - **Legal** (`server/legal.py`; tool `legal`, `/api/legal/{sources,search,read}`): offline US and EU law from a full-text index,
-  `~/shellb/legal/index.db` (SQLite FTS5; one row per section, article, recital, annex chunk, tariff heading or screening-list entry).
+  `~/shellb/legal/index.db` (SQLite FTS5; one row per section, article, recital, annex chunk, tariff heading, screening-list entry,
+  Federal Register document chunk or court-opinion chunk).
   Sources: US Code, eCFR (EAR/CCL in 15 CFR 730-774, ITAR, OFAC, Customs), Statutes at Large, Public Laws, HTS, the trade.gov
   Consolidated Screening List, EUR-Lex legislation (the Cyber Resilience Act, NIS2, GDPR, AI Act, dual-use, customs), and, once
-  `build_index.py` has parsers for them, the Federal Register and CourtListener case law (downloaded, not yet indexed). The files are fetched by `~/shellb/legal/fetch_legal.py` (resumable, outside this repo) and indexed by
+  `build_index.py fr` has run, the Federal Register (daily issues, 2020 on; `FR_FROM` sets the start year) and, through
+  `~/shellb/legal/build_caselaw.py` (streams the 52 GB CourtListener bulk file), published opinions of the Supreme Court and the
+  federal courts of appeals, first 60k characters each. Both started indexing on 2026-10-10 (`run-20261010-index.out`). The files are fetched by `~/shellb/legal/fetch_legal.py` (resumable, outside this repo) and indexed by
   `~/shellb/legal/build_index.py` (per-file, skips what is already indexed, so re-run it after a download). The tool opens the index
   read-only per call and is added to every agent once it exists (`tool_switches.legal` turns it off). Results carry the cite and the
   snapshot date; the model is told it is reference, not legal advice. `search` ranks heading > act title > text, puts an explicit
@@ -416,7 +419,8 @@ address (`_ShortNameRedirect` in app.py). Check with `tailscale serve status`; r
   an audio or video file in /work or the project, or a direct media URL (public addresses, 500 MB). The host has no
   ffmpeg, so the file is transcoded to 16 kHz mono WAV by ffmpeg inside the sandbox image (`--network none`), then
   HERMES Whisper transcribes it; the transcript is saved beside the file as `<name>.transcript.txt`. YouTube and other
-  streaming sites are refused (that would need yt-dlp with network in the sandbox, not enabled). **Secretary** accepts
+  streaming sites (YouTube, Vimeo, SoundCloud…) are fetched by yt-dlp in the server's venv, audio only, one video, ≤ 300 MB /
+  4 h, so the sandbox never gets a network. **Secretary** accepts
   video uploads the same way, and a research notebook given a direct media link transcribes it as a source.
 - **`edit_image`** (tool, on for NYX and Daedalus; `server/studio_edit.py`): `cutout` removes the background with
   BiRefNet (RGBA PNG), `upscale` runs an ESRGAN-family model from Models → Store → Upscalers, `inpaint` repaints a
@@ -453,8 +457,9 @@ or unknown. Incognito, guest, API-key and Aphrodite chats can't be shared. Links
 Making a share needs the owner's session (not localhost trust) and is audited.
 
 **Hosting.** `ai.shellb.app` sits behind Cloudflare Access, so a share link there asks the reader to log in. Settings →
-Network → **Share host** names a host that reaches this machine without Access or login in front (e.g. `share.shellb.app`
-through `hub-shellb-edge`, serving only `/`, `/assets/*`, `/#/s/*` and `/api/share/*`); links are then built on it.
+Network → **Share host** names a host that reaches this machine without Access or login in front: `share.shellb.app`
+(set up 2026-10-10) goes through `hub-shellb-edge`, which serves only the app shell, `/assets/*`, `/vendor/*` and
+`/api/share/*` with cookies stripped; links are built on it.
 The shared page renders Markdown and sandboxes HTML/SVG exactly like the owner's view, and makes no other API calls.
 
 ## Translation
@@ -503,8 +508,13 @@ Codex → Contacts have the buttons).
   "Upcoming Schedule" block and for the calendar grid (custom rules are expanded server-side only).
 - **Reminders:** an event's **Remind me** (at the start, 5–60 minutes or a day before) posts to Activity (source
   `calendar`, status `due`) once per occurrence; push and email notifications follow the Calendar reminders level.
-- No library: the module writes and parses the formats itself (folding, escaping, parameters, nested VALARM).
-  CalDAV/CardDAV live sync is not built; subscribe to the `.ics` URL from the other side for a read-only feed.
+- No library for the formats: the module writes and parses them itself (folding, escaping, parameters, nested VALARM).
+- **Sync accounts** (Calendar → Sync…, Contacts → Sync…; `python-caldav` for CalDAV, plain WebDAV for CardDAV;
+  `/api/codex/sync[/{id}[/run|/collections]]`, admin to add or change, passwords in `data/codex-sync/<id>.pass`). Every
+  `everyMinutes` (15 by default) an account pushes the entries edited here since its last run (a first run pushes every
+  local entry; new ones are created on the server, edited ones replaced at their href, local edits win), then pulls the
+  server's items into the Codex matched by UID. Deletions aren't synced. Trouble posts to Activity (source `codex`);
+  `meta.sync` on an entry names its account and href.
 
 ## Circles
 
@@ -730,6 +740,11 @@ One owner password guards the app (`server/auth.py`, `ui/src/components/AuthGate
   passwords, and an accepted code is never accepted again. Localhost trust and the admin key are unaffected. Lost
   phone: a recovery code, or `auth.py disable-2fa` (and `set-password` clears it too). Routes: `GET/POST /api/auth/2fa`,
   `/2fa/{begin,confirm,recovery,disable}`, all owner-session only.
+- **Passkeys** (Settings → Account → Passkeys; `py_webauthn`): sign in with the device's screen lock or a security key
+  instead of the password. Registering needs a signed-in session plus the password; a passkey is bound to the host it
+  was made at (the relying-party id is the address without its port) and counts as its own second factor, so no TOTP
+  step follows. Routes: `GET/DELETE /api/auth/passkeys[/{id}]`, `/passkeys/register/{begin,finish}`,
+  `/passkeys/login/{begin,finish}`, public `GET /passkeys/available`. Table `auth_passkeys`.
 - **Sessions** are an HttpOnly `shellb_session` cookie (SameSite=Lax, Secure over https) that lasts 30 days from your last
   visit. They're stored hashed in the `auth_sessions` table. Settings → **Account** signs you out, changes the password
   (which signs out every other device) and lists the signed-in devices. Five wrong passwords from one IP slow further

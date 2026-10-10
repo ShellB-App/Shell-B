@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Loader2, LogOut, ShieldCheck, ShieldAlert, KeyRound } from 'lucide-react';
-import { api, type AuditEntry, type AuthInfo, type AuthSession, type ShareInfo, type TwoStepStatus } from '../api';
+import { api, type AuditEntry, type AuthInfo, type AuthSession, type Passkey, type ShareInfo, type TwoStepStatus } from '../api';
 import { qrMatrix } from '../qr';
+import { passkeysSupported, registerPasskey } from '../webauthn';
 import { btn, relTime } from './common';
 import {
   getKioskPin,
@@ -60,6 +61,7 @@ export function AccountTab() {
           </section>
 
           <TwoStepSection />
+          <PasskeysSection />
           <section>
             <h3 className="text-sm font-medium mb-2">Change password</h3>
             <form onSubmit={change} className="space-y-2 max-w-sm">
@@ -406,6 +408,63 @@ function SharedLinks() {
           ))}
         </ul>
       )}
+    </section>
+  );
+}
+
+
+/** Settings → Account → Passkeys (server/auth.py `/api/auth/passkeys/*`): sign in with a device or security key instead
+ * of the password; a passkey counts as its own second factor. Bound to the address it was made at. */
+function PasskeysSection() {
+  const [keys, setKeys] = useState<Passkey[] | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [password, setPassword] = useState('');
+  const [label, setLabel] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const load = () => api.passkeys().then(r => setKeys(r.passkeys)).catch(() => setKeys([]));
+  useEffect(() => { load(); }, []);
+  if (!keys) return null;
+  const supported = passkeysSupported();
+  const add = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true); setErr('');
+    try {
+      await registerPasskey(password, label.trim() || `${navigator.platform || 'This device'} · ${new Date().toLocaleDateString()}`);
+      setAdding(false); setPassword(''); setLabel(''); load();
+    } catch (e2) { setErr(errText(e2)); } finally { setBusy(false); }
+  };
+  return (
+    <section>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-medium">Passkeys</h3>
+        <span className="text-[11px] text-[var(--text-muted)]">{keys.length ? `${keys.length} registered` : 'none'}</span>
+      </div>
+      <p className="text-xs text-[var(--text-muted)] max-w-[65ch]">
+        Sign in with this device's screen lock or a security key instead of the password. A passkey is tied to the address you make it at ({location.hostname}); make one per address you use. It satisfies two-step verification on its own.
+        {!supported && <> This browser doesn't support passkeys{location.protocol !== 'https:' ? ' (they need HTTPS)' : ''}.</>}
+      </p>
+      {keys.length > 0 && (
+        <ul className="mt-2 divide-y divide-[var(--border-subtle)] border border-[var(--border-subtle)] rounded-lg">
+          {keys.map(k => (
+            <li key={k.id} className="px-3 py-2 flex items-center justify-between gap-3 text-[13px]">
+              <span className="min-w-0 truncate">{k.label} <span className="text-[var(--text-muted)]">· {k.rpId}</span></span>
+              <span className="shrink-0 text-[11px] text-[var(--text-muted)]">{k.lastUsed ? `used ${relTime(k.lastUsed * 1000)}` : `made ${relTime(k.created * 1000)}`}</span>
+              <button className={`${btn.ghost} text-red-400`} onClick={() => { if (confirm(`Remove the passkey “${k.label}”?`)) api.passkeyDelete(k.id).then(load); }}>Remove</button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {supported && !adding && <button className={`${btn.subtle} mt-2`} onClick={() => setAdding(true)}>Add a passkey</button>}
+      {adding && (
+        <form className="mt-2 flex flex-col sm:flex-row gap-2" onSubmit={add}>
+          <input className={`${btn.input} sm:w-44`} placeholder="Label (e.g. MacBook)" value={label} onChange={e => setLabel(e.target.value)} />
+          <input className={`${btn.input} flex-1`} type="password" autoComplete="current-password" placeholder="Your password" value={password} onChange={e => setPassword(e.target.value)} autoFocus />
+          <button className={btn.primary} type="submit" disabled={busy || !password}>{busy ? 'Waiting for the device…' : 'Create'}</button>
+          <button className={btn.ghost} type="button" onClick={() => { setAdding(false); setErr(''); }}>Cancel</button>
+        </form>
+      )}
+      {err && <p className="text-xs text-red-400 mt-2">{err}</p>}
     </section>
   );
 }

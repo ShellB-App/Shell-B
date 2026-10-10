@@ -6,6 +6,9 @@ file's folder mounted) to turn any audio/video into 16 kHz mono WAV, then `stt` 
 /work, a project, or an http(s) URL to a media file (public addresses only, 500 MB cap). YouTube and other streaming
 sites are not fetched: that would need yt-dlp with network access inside the sandbox, which the owner hasn't enabled.
 Transcripts are saved next to the source as <name>.transcript.txt so the agent can read or search them later.
+
+YouTube, Vimeo and the like: yt-dlp (in the server's venv, so the sandbox never gets a network) fetches the best audio-
+only format (≤ 300 MB, ≤ 4 h, single video, no playlists) into the chat's media folder; the sandbox then transcodes it.
 """
 import asyncio
 import json
@@ -29,7 +32,9 @@ MAX_MINUTES = 240
 AUDIO_EXT = {".wav", ".mp3", ".m4a", ".aac", ".ogg", ".oga", ".opus", ".flac", ".wma", ".webm", ".weba", ".amr", ".aiff", ".aif"}
 VIDEO_EXT = {".mp4", ".mkv", ".mov", ".avi", ".m4v", ".mpg", ".mpeg", ".wmv", ".3gp", ".ts", ".mts"}
 MEDIA_EXT = AUDIO_EXT | VIDEO_EXT
-STREAMING = re.compile(r"https?://(www\.|m\.)?(youtube\.com|youtu\.be|vimeo\.com|twitch\.tv|tiktok\.com|dailymotion\.com)/", re.I)
+STREAMING = re.compile(r"https?://(www\.|m\.|music\.)?(youtube\.com|youtu\.be|vimeo\.com|twitch\.tv|tiktok\.com|dailymotion\.com|soundcloud\.com)/", re.I)
+YT_MAX_BYTES = 300 * 2**20
+YT_MAX_SECONDS = 4 * 3600
 
 
 def is_media(name: str) -> bool:
@@ -125,8 +130,7 @@ async def download(url: str, into: Path) -> Path:
     if u.scheme not in ("http", "https") or not u.hostname or _blocked_host(u.hostname):
         raise ValueError("Only public http(s) addresses can be fetched")
     if STREAMING.match(url):
-        raise ValueError("Streaming sites (YouTube, Vimeo, Twitch…) aren't fetched: that needs yt-dlp with network access in the "
-                         "sandbox, which isn't enabled. Download the media yourself and attach the file.")
+        return await asyncio.to_thread(youtube, url, into)
     name = re.sub(r"[^\w.-]+", "_", Path(u.path).name or "media")[:80]
     if not is_media(name):
         name += ".mp4"
@@ -145,6 +149,36 @@ async def download(url: str, into: Path) -> Path:
                         dest.unlink(missing_ok=True)
                         raise ValueError("Files over 500 MB aren't fetched")
                     f.write(chunk)
+    return dest
+
+
+def youtube(url: str, into: Path) -> Path:
+    """yt-dlp, audio only, one video: returns the downloaded file. Runs on the host (blocking; call from a thread)."""
+    try:
+        import yt_dlp
+    except ImportError:
+        raise ValueError("yt-dlp isn't installed in the venv (venv/bin/pip install yt-dlp)")
+    into.mkdir(parents=True, exist_ok=True)
+    opts = {"format": "bestaudio[filesize<300M]/bestaudio/best[filesize<300M]", "noplaylist": True, "quiet": True, "no_warnings": True,
+            "outtmpl": str(into / "%(id)s.%(ext)s"), "max_filesize": YT_MAX_BYTES, "match_filter": yt_dlp.utils.match_filter_func(f"duration <= {YT_MAX_SECONDS}"),
+            "socket_timeout": 30, "retries": 2, "nocheckcertificate": False, "cachedir": False, "writesubtitles": False}
+    with yt_dlp.YoutubeDL(opts) as y:
+        try:
+            info = y.extract_info(url, download=True)
+        except yt_dlp.utils.DownloadError as e:
+            raise ValueError(f"yt-dlp couldn't fetch that: {str(e).splitlines()[-1][:200]}")
+    if info.get("_type") == "playlist":
+        info = (info.get("entries") or [None])[0] or {}
+    path = Path(y.prepare_filename(info)) if info else None
+    if not path or not path.exists():
+        found = sorted(into.glob(f"{info.get('id', '*')}.*"), key=lambda p: p.stat().st_mtime) if info else []
+        if not found:
+            raise ValueError("yt-dlp finished but left no file (the video may be too long or unavailable)")
+        path = found[-1]
+    title = re.sub(r"[^\w.-]+", "_", str(info.get("title") or path.stem))[:80]
+    dest = path.with_name(f"{title}{path.suffix}")
+    if dest != path:
+        path.replace(dest)
     return dest
 
 
@@ -190,7 +224,7 @@ def register():
         "ui": {"displayName": "Transcribe", "icon": "Captions", "category": "media",
                "description": "Speech to text for audio and video files (ffmpeg in the sandbox, Whisper on HERMES); transcripts are saved beside the file"},
         "schema": _fn("transcribe", "Transcribe an audio or video file with timestamps. `file` is a path in /work (chat uploads) or "
-                      "/project; `url` is a direct link to a media file (not YouTube or other streaming sites). The transcript is "
+                      "/project; `url` is a direct media link or a YouTube/Vimeo/SoundCloud page (audio is fetched, ≤ 4 h). The transcript is "
                       "saved as <name>.transcript.txt next to the file and returned (long ones clipped; read the file for the rest).",
                       {"file": {"type": "string"}, "url": {"type": "string"}}, []),
     }
