@@ -228,6 +228,8 @@ def event(source: str, status: str, title: str, link: str = "", ref: str | None 
     try:
         if source not in KIND_IDS:
             return
+        import hooks
+        hooks.emit(source, status, title, link, ref)  # outbound webhooks pick their own kinds (hooks.py)
         push, email = wanted(source, status), wanted(source, status, "email")
         if not (push or email):
             return
@@ -247,6 +249,8 @@ def approval(aid: str, meta: dict):
     try:
         kind = "question" if meta.get("kind") == "question" else "approval"
         noun = APPROVAL_NOUN.get(meta.get("kind", "remote"), "Approval")
+        import hooks
+        hooks.emit("approval", "waiting", f"{noun}: {meta.get('title') or ''}".strip(": "), "#/activity", f"apr-{aid}")
 
         def fire(channel: str):
             import remote

@@ -163,6 +163,29 @@ Tools:
 Raw keys can't use the MCP server (it hands tasks to agents). A long agent turn can outlast a client's tool timeout; the turn keeps running on Shell:B either way, so use
 `wait: false` and `shellb_read` for big tasks. Refusals (busy chat, unknown agent) come back as tool errors.
 
+## Webhooks
+
+Tools & Connectors → API → **Webhooks** (`server/hooks.py`). Hooks are managed by the owner at `/api/webhooks`; they are
+separate from API keys.
+
+**Inbound** — an outside system starts a turn: `POST /api/v1/hooks/<hook id>`. The credential is the hook's own secret,
+either as `X-Hook-Secret: <secret>` or as a GitHub-style signature `X-Hook-Signature: sha256=<HMAC-SHA256(secret, raw
+body)>` (`X-Hub-Signature-256` works too). The body may be JSON, a form or text (256 kB at most). The hook's template
+turns it into the message: `{{json}}` (payload pretty-printed; the default with no template), `{{text}}` (raw body),
+`{{payload.a.b}}` / `{{payload.list.0}}` (one field), `{{header.x-github-event}}`, `{{query.q}}`. Each delivery starts a
+new chat titled "Webhook: <name>" with the hook's agent, unattended (nobody is watching; the payload is marked as data
+from an outside system), or continues the hook's one chat when *reuse* is on. The answer is `202 {conversation,
+status: "running"}`; `?wait=1` waits and returns `{conversation, status, reply}`. Ten deliveries a minute per hook; a
+disabled hook answers 403; every delivery is an `api_usage` row with mode `hook`.
+
+**Outbound** — Shell:B tells a URL what happened. A hook has a public https URL (this machine, the LAN and the tailnet
+are refused), an optional secret and the event kinds it wants: the Activity sources (`schedule`, `plan`, `todo`,
+`deploy`, `calendar`, `health`, `shopping`, `guest`, `circles`, …) plus `approval` (something is waiting for the owner).
+Each event is one `POST` with JSON `{id, event: "<kind>.<status>", kind, status, title, link, ref, ts}` and the headers
+`X-Shellb-Event: <kind>`, `X-Shellb-Delivery: <id>` and, with a secret, `X-Shellb-Signature: sha256=<HMAC-SHA256(secret,
+body)>`. Three tries (at once, 5 s, 30 s); 4xx other than 429 stops early. The last 200 deliveries, both directions,
+are in the panel. **Test** sends `test.ping`.
+
 ## Examples
 
 ```bash

@@ -1,6 +1,12 @@
 [
  {
   "date": "2026-10-10",
+  "area": "API",
+  "title": "Webhooks in and out",
+  "summary": "Tools & Connectors → API → Webhooks. Inbound: give n8n, GitHub, Home Assistant or a cron job a URL and a secret; each call starts a turn for the agent you chose, with the payload shaped by a template (or passed through), unattended like a scheduled run. Outbound: Shell:B posts what happened (a plan finished, a reminder is due, something waits for your approval, a service went down…) as signed JSON to a URL you run, with retries and a delivery log. Outbound targets must be on the public internet."
+ },
+ {
+  "date": "2026-10-10",
   "area": "Settings",
   "title": "Usage: tokens per day, agent and model, with prices",
   "summary": "Settings → Usage charts the last 7, 30 or 90 days of tokens split into yours, guests' and API keys', lists the agents and models that used them, and totals lifetime use. Enter what your cloud models cost per million tokens and it shows what those turns added up to. Local models stay free."

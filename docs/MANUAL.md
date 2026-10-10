@@ -557,6 +557,10 @@ Open **Tools & Connectors** in the sidebar.
   API-key models (`anthropic/…`, `gemini/…`, `openai/…`) can be picked per agent too. Any agent can also use a cloud model, and local agents may
   consult cloud agents through `ask_agent`. Cloud agents get no long-term memory unless you allow it.
   Provider code is in `server/providers.py`: Claude goes through the Anthropic SDK; Gemini and OpenAI use OpenAI-compatible endpoints.
+- **Webhooks** (Tools & Connectors → API, `server/hooks.py`, docs/API.md § Webhooks): inbound hooks give n8n, GitHub,
+  Home Assistant or a cron job a URL that starts an agent turn from a payload (template with `{{payload.x}}` fields,
+  secret or HMAC signature, 202 or `?wait=1`); outbound hooks post Activity events and waiting approvals as signed JSON
+  to a public URL you run. Local, LAN and tailnet targets are refused.
 - **Admin key:** connectors can launch programs and API keys cost money. So adding or editing servers, saving keys and
   changing cloud settings need the owner's login, or the key in `data/admin.key` (`cat ~/shellb/web/data/admin.key`).
   Localhost on its own doesn't count as admin. Turning servers on or off, restarting them and editing skills need admin too.

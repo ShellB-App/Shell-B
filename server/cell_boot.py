@@ -25,7 +25,7 @@ FRAME_SECRET = os.environ.get("SHELLB_CELL_FRAME_SECRET", "")
 
 # modules whose routers a cell never mounts (matched by the module of the router's endpoints)
 HOST_ROUTERS = frozenset({
-    "auth", "backup", "community", "datasets", "gibberlink", "guest_accounts", "guests", "mcp_router", "mcp_server",
+    "auth", "backup", "community", "datasets", "gibberlink", "guest_accounts", "guests", "hooks", "mcp_router", "mcp_server",
     "modelhub", "modelstore", "network", "nightshift", "public_api", "remote", "screen", "secretary", "selfmod",
     "selfreview", "sysinfo", "watchdog",
 })

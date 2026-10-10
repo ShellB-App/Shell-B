@@ -39,6 +39,7 @@ import favorites
 import codex
 import codex_secrets
 import codex_sync
+import hooks
 import media
 import generate
 import modelhub
@@ -140,6 +141,7 @@ db.init()
 activity.init()
 auth.init()
 public_api.init()
+hooks.init()
 mailer.init()
 studio_tools.register()
 studio_assets.register()
@@ -250,6 +252,8 @@ app.include_router(ask.router)
 app.include_router(screen.router)
 app.include_router(public_api.router)
 app.include_router(public_api.admin_router)
+app.include_router(hooks.router)
+app.include_router(hooks.admin_router)
 app.include_router(guests.admin_router)  # owner side of Shell:B Guest; the guests' own app is guest_app.py
 app.include_router(guest_accounts.admin_router)  # guests' accounts: unlock, reset links, two-step off, sign-in log
 app.include_router(mcp_server.router)
@@ -936,6 +940,7 @@ def _abort_turn(conv_id):
 
 
 public_api.begin_turn, public_api.ACTIVE, public_api.abort_turn, public_api.OLLAMA = begin_turn, ACTIVE, _abort_turn, OLLAMA
+hooks.begin_turn = begin_turn
 
 
 async def _run_scheduled(t, on_conv):

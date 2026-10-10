@@ -3,6 +3,7 @@ import { Activity, Bot, Check, Copy, Cpu, KeyRound, Loader2, Pause, Pencil, Play
 import { req } from '../api';
 import { btn } from './common';
 import { toast } from './toast';
+import { WebhooksPanel } from './WebhooksPanel';
 
 /** Settings → Tools & Connectors → API: keys that let other systems use Shell:B (server/public_api.py, docs/API.md).
  *  A key's token is shown once; only its hash is stored. Each key has a mode (full agent, persona, raw model), its own
@@ -406,6 +407,8 @@ export function ApiTab({ locked }: { locked: boolean }) {
           </div>
         )}
       </section>
+
+      <WebhooksPanel agents={agents} />
 
       <section className="space-y-2">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">All API activity</h3>
