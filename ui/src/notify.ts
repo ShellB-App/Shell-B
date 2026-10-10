@@ -5,7 +5,7 @@ import { req } from './api';
 
 export type NotifyLevel = 'off' | 'attention' | 'all';
 export interface NotifyKind { id: string; label: string; hint: string; default: NotifyLevel }
-export interface NotifyPrefs { levels: Record<string, NotifyLevel>; details: boolean; kinds: NotifyKind[] }
+export interface NotifyPrefs { levels: Record<string, NotifyLevel>; email: Record<string, NotifyLevel>; details: boolean; kinds: NotifyKind[] }
 export interface PushDevice {
   id: string; label: string; service: string; hash: string; created: number;
   /** the push service (Google, Mozilla, Apple) accepted a message for this device */
@@ -18,7 +18,7 @@ export interface PushResult { id: string; ok: boolean; status: number; error: st
 export const notifyApi = {
   key: () => req<{ publicKey: string }>('/api/notify/key'),
   prefs: () => req<NotifyPrefs>('/api/notify/prefs'),
-  setPrefs: (p: { levels?: Record<string, NotifyLevel>; details?: boolean }) =>
+  setPrefs: (p: { levels?: Record<string, NotifyLevel>; email?: Record<string, NotifyLevel>; details?: boolean }) =>
     req<NotifyPrefs>('/api/notify/prefs', { method: 'PUT', body: JSON.stringify(p) }),
   devices: () => req<PushDevice[]>('/api/notify/devices'),
   subscribe: (subscription: PushSubscriptionJSON, label: string) =>

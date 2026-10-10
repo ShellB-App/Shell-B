@@ -57,6 +57,7 @@ class PreviewTickets(unittest.TestCase):
     def test_preview_base_follows_the_setting(self):
         settings = db.kv_get("settings", {})
         try:
+            db.kv_set("settings", {**settings, "previewHost": ""})
             self.assertIsNone(devserver.preview_base(PID))
             db.kv_set("settings", {**settings, "previewHost": "shellb.app"})
             self.assertEqual(devserver.preview_base(PID), "https://p-0123456789ab.shellb.app")

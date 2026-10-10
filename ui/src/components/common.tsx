@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import clsx from 'clsx';
 import {
-  BookMarked, BookOpen,
+  BookMarked, BookOpen, Mail,
   Boxes, Brain, BrainCircuit, CalendarClock, History, Camera, FileSearch, FolderSearch, GitCompare, TextSearch, ScanEye, ScanText, Sparkles, WandSparkles, Eye, FilePen, FilePlus, FileSymlink, FileText, FolderTree, GitFork, Globe, Image, Library, ListChecks, ListTodo, MessageCircleQuestion, Music,
   ScanFace, Search, Shapes, Download, Telescope, Terminal, Trash2, UsersRound, Workflow, Wrench, X, type LucideIcon,
 } from 'lucide-react';
@@ -16,7 +16,7 @@ export const TOOL_ICONS: Record<string, LucideIcon> = {
   read_document: FileSearch, view_document: ScanEye, ocr: ScanText,
   use_skill: Sparkles, read_skill_file: FileText, save_skill: WandSparkles, schedule_task: CalendarClock, project_todos: ListChecks,
   research_board: Telescope, mega_plan: Workflow, library: Library, codex: BookMarked, circles: UsersRound, follow_ups: ListTodo, asset_library: Shapes, scrape: Download,
-  shellb_self: ScanFace, ask_user: MessageCircleQuestion, wiki: BookOpen, look_at_screen: Camera, browser: Globe,
+  shellb_self: ScanFace, ask_user: MessageCircleQuestion, wiki: BookOpen, look_at_screen: Camera, browser: Globe, send_email: Mail,
 };
 export const toolIcon = (name: string) => TOOL_ICONS[name] ?? Wrench;
 
@@ -37,6 +37,7 @@ export const TOOL_LABELS: Record<string, [string, string]> = {
   ask_user: ['Asking you', 'Asked you'],
   look_at_screen: ['Looking at your screen', 'Looked at your screen'],
   browser: ['Using your browser', 'Used your browser'],
+  send_email: ['Writing an email', 'Sent an email'],
   schedule_task: ['Scheduling', 'Scheduled a task'],
   project_todos: ['Updating the to-do list', 'Updated the to-do list'],
   research_board: ['Updating the research board', 'Updated the research board'],

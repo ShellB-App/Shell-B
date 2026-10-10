@@ -228,7 +228,7 @@ export type Block =
       args: Record<string, unknown>;
       status: 'running' | 'approval' | 'done' | 'error';
       /** set while a remote (SSH) workspace call, or a deploy of Shell:B's own code (kind 'self'), waits for the owner */
-      approval?: { id: string; kind?: 'self' | 'secret' | 'question' | 'schedule' | 'install'; title?: string; detail?: string };
+      approval?: { id: string; kind?: 'self' | 'secret' | 'question' | 'schedule' | 'install' | 'browser' | 'email'; title?: string; detail?: string };
       /** ask_user: the questions shown to the owner, and their answers once given */
       questions?: AskQuestion[];
       answers?: AskAnswer[];
@@ -591,7 +591,7 @@ export interface CodexIndex {
 
 export interface PendingApproval {
   id: string;
-  kind: 'remote' | 'self' | 'secret' | 'question' | 'schedule' | 'install';
+  kind: 'remote' | 'self' | 'secret' | 'question' | 'schedule' | 'install' | 'browser' | 'email';
   title: string;
   detail: string;
   convId: string | null;

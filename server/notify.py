@@ -1,4 +1,6 @@
 """Notifications: Web Push to the owner's devices, so Shell:B can reach her when the tab isn't in view (backlog C10).
+Email (mailer.py) is a second channel with its own per-kind levels (`notify_prefs.email`, all off by default); approvals
+reach it only after mailer.EMAIL_GRACE.
 
 What notifies: every Activity event (`activity.post` calls `event`) and every approval an agent is waiting on
 (`remote.wait_approval` calls `approval`), filtered by a per-kind level in kv `notify_prefs`: off, attention (failed,
@@ -80,7 +82,8 @@ VERB = {"done": "finished", "complete": "finished", "failed": "failed", "blocked
         "interrupted": "was interrupted", "rolled-back": "rolled back", "restart-pending": "is waiting for a restart",
         "review": "needs your review", "waiting": "is waiting for you", "warning": "needs attention",
         "recovered": "recovered"}
-APPROVAL_NOUN = {"self": "Self-deploy", "remote": "Remote command", "secret": "Secret access", "question": "Question", "browser": "Browser submit"}
+APPROVAL_NOUN = {"self": "Self-deploy", "remote": "Remote command", "secret": "Secret access", "question": "Question", "browser": "Browser submit",
+                 "email": "Email to send"}
 
 _ready = False
 _recent: deque = deque(maxlen=50)
@@ -178,14 +181,22 @@ def encrypt(plaintext: bytes, p256dh: str, auth: str, *, salt: bytes | None = No
 
 def prefs() -> dict:
     saved = db.kv_get("notify_prefs") or {}
-    levels = saved.get("levels") or {}
+    levels, email = saved.get("levels") or {}, saved.get("email") or {}
     return {"levels": {k: levels.get(k) if levels.get(k) in LEVELS else d for k, _, _, d in KINDS},
+            # email (mailer.py) is its own channel, off for every kind until the owner picks a level
+            "email": {k: email.get(k) if email.get(k) in LEVELS else "off" for k, _, _, _ in KINDS},
             "details": bool(saved.get("details"))}
 
 
-def wanted(kind: str, status: str) -> bool:
-    level = prefs()["levels"].get(kind, "off")
+def wanted(kind: str, status: str, channel: str = "levels") -> bool:
+    level = prefs()[channel].get(kind, "off")
     return level == "all" or (level == "attention" and status in ATTENTION)
+
+
+def _email(kind: str, status: str, msg: dict):
+    if wanted(kind, status, "email"):
+        import mailer
+        mailer.notify(msg)
 
 
 # ── events ──────────────────────────────────────────────────────────────────
@@ -212,12 +223,18 @@ def _remember(msg: dict):
 def event(source: str, status: str, title: str, link: str = "", ref: str | None = None):
     """Called by activity.post for each new event. Never raises and never blocks the caller."""
     try:
-        if source not in KIND_IDS or not wanted(source, status):
+        if source not in KIND_IDS:
+            return
+        push, email = wanted(source, status), wanted(source, status, "email")
+        if not (push or email):
             return
         tag = "act-" + hashlib.sha1((ref or f"{source}:{title}:{time.time()}").encode()).hexdigest()[:12]
         msg = _message(source, status, title, link, tag)
-        _remember(msg)
-        _enqueue(msg)
+        if push:
+            _remember(msg)
+            _enqueue(msg)
+        if email:
+            _email(source, status, msg)
     except Exception as e:  # noqa: BLE001
         print(f"notify.event failed: {type(e).__name__}: {e}")
 
@@ -226,22 +243,26 @@ def approval(aid: str, meta: dict):
     """Called by remote.wait_approval. Notifies only if the approval is still open after APPROVAL_GRACE seconds."""
     try:
         kind = "question" if meta.get("kind") == "question" else "approval"
-        if not wanted(kind, "waiting"):
-            return
         noun = APPROVAL_NOUN.get(meta.get("kind", "remote"), "Approval")
 
-        def fire():
+        def fire(channel: str):
             import remote
             fut = remote._pending.get(aid)
             if fut is None or fut.done():
                 return
             msg = _message(kind, "waiting", meta.get("title") or "", "#/activity", f"apr-{aid}", noun)
-            _remember(msg)
-            _enqueue(msg)
+            if channel == "email":
+                _email(kind, "waiting", msg)
+            else:
+                _remember(msg)
+                _enqueue(msg)
 
-        t = threading.Timer(APPROVAL_GRACE, fire)
-        t.daemon = True
-        t.start()
+        import mailer
+        for channel, grace in (("levels", APPROVAL_GRACE), ("email", mailer.EMAIL_GRACE)):
+            if wanted(kind, "waiting", channel):
+                t = threading.Timer(grace, fire, (channel,))
+                t.daemon = True
+                t.start()
     except Exception as e:  # noqa: BLE001
         print(f"notify.approval failed: {type(e).__name__}: {e}")
 
@@ -348,8 +369,9 @@ async def api_set_prefs(req: Request):
     body = await req.json()
     cur = prefs()
     levels = {**cur["levels"], **{k: v for k, v in (body.get("levels") or {}).items() if k in KIND_IDS and v in LEVELS}}
+    email = {**cur["email"], **{k: v for k, v in (body.get("email") or {}).items() if k in KIND_IDS and v in LEVELS}}
     details = bool(body["details"]) if "details" in body else cur["details"]
-    db.kv_set("notify_prefs", {"levels": levels, "details": details})
+    db.kv_set("notify_prefs", {"levels": levels, "email": email, "details": details})
     return api_prefs(req)
 
 

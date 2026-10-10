@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Check, ChevronDown, Copy, Flag, KeyRound, Link2, Loader2, LockOpen, LogOut, Pause, Play, Plus, ShieldOff, Trash2, Users } from 'lucide-react';
+import { Check, ChevronDown, Copy, Flag, KeyRound, Link2, Loader2, LockOpen, LogOut, Mail, Pause, Play, Plus, ShieldOff, Trash2, Users } from 'lucide-react';
 import { fmtBytes, req } from '../api';
 import { btn, relTime } from './common';
 import { toast } from './toast';
@@ -95,6 +95,18 @@ export function GuestsTab({ locked }: { locked: boolean }) {
     if (!confirm(`Make a reset link for ${g.name}? It signs them out on every device until they use it.`)) return;
     const r = await req<{ link: string }>(`/api/guests/${g.id}/reset`, { method: 'POST' }).catch(e => { toast(errText(e), { kind: 'error' }); return null; });
     if (r) { setFresh({ id: g.id, link: r.link, kind: 'reset' }); setOpen(g.id); load(); }
+  }
+  // server/guest_accounts.py → mailer.py: the same one-time links, sent from Shell:B's address
+  async function emailLink(g: Guest) {
+    if (g.passwordSet) {
+      if (!g.email) { toast(`${g.name} has no email address on their account. Make a reset link and pass it on instead.`, { kind: 'error' }); return; }
+      if (!confirm(`Email ${g.name} a password reset link at ${g.email}? It signs them out on every device until they use it.`)) return;
+      act(req(`/api/guests/${g.id}/email-reset`, { method: 'POST' }), `Reset link sent to ${g.email}`);
+    } else {
+      const to = prompt(`Email an invite to ${g.name} at:`, g.email ?? '')?.trim();
+      if (!to) return;
+      act(req(`/api/guests/${g.id}/email-invite`, { method: 'POST', body: json({ email: to }) }), `Invite sent to ${to}`);
+    }
   }
   const saveSettings = (patch: Partial<GuestSettings>) => act(req('/api/guests/settings', { method: 'PUT', body: json(patch) }));
   const models = Array.from(new Set([...data.allowedModels, ...data.agents.map(a => a.model)]));
@@ -209,6 +221,10 @@ export function GuestsTab({ locked }: { locked: boolean }) {
                 {g.passwordSet
                   ? <button className={btn.icon} title="Make a password reset link" onClick={() => resetLink(g)}><KeyRound className="w-3.5 h-3.5" /></button>
                   : <button className={btn.icon} title="New invite link" onClick={() => reinvite(g)}><Link2 className="w-3.5 h-3.5" /></button>}
+                <button className={btn.icon} title={g.passwordSet ? (g.email ? `Email a reset link to ${g.email}` : 'No email address on their account') : 'Email an invite'}
+                  disabled={g.passwordSet && !g.email} onClick={() => emailLink(g)}>
+                  <Mail className="w-3.5 h-3.5" />
+                </button>
                 <button className={btn.icon} title={g.disabled ? 'Resume' : 'Pause (signs out every device)'}
                   onClick={() => act(req(`/api/guests/${g.id}`, { method: 'PATCH', body: json({ disabled: !g.disabled }) }))}>
                   {g.disabled ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
@@ -226,7 +242,7 @@ export function GuestsTab({ locked }: { locked: boolean }) {
                   {fresh?.kind === 'reset' && fresh.id === g.id && (
                     <div className="mt-3 space-y-1.5">
                       <CopyLink link={fresh.link} />
-                      <p className="text-[11px] text-[var(--text-muted)]">Shown once. It works one time, within 24 hours, and sets a new password. Pass it on yourself: Shell:B doesn't send email.</p>
+                      <p className="text-[11px] text-[var(--text-muted)]">Shown once. It works one time, within 24 hours, and sets a new password. Pass it on yourself, or use the envelope to email it from Shell:B.</p>
                     </div>
                   )}
                   <div className="mt-3">

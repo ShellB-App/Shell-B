@@ -78,6 +78,7 @@ import guest_accounts
 import guests
 import mcp_server
 import browsing
+import mailer
 import compaction
 import composer
 import planmode
@@ -137,6 +138,7 @@ db.init()
 activity.init()
 auth.init()
 public_api.init()
+mailer.init()
 studio_tools.register()
 studio_assets.register()
 devserver.register()
@@ -150,6 +152,7 @@ ask.register()
 themes.register()
 screen.register()
 browsing.register()
+mailer.register()
 scrape.register()
 skills.register()
 groups.register()
@@ -214,6 +217,7 @@ app.include_router(activity.router)
 app.include_router(commitments.router)
 app.include_router(nightshift.router)
 app.include_router(notify.router)
+app.include_router(mailer.router)
 app.include_router(codex_secrets.router)
 app.include_router(codex.router)
 app.include_router(media.router)

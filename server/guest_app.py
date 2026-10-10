@@ -61,7 +61,7 @@ STATIC_DIRS = ("assets", "fonts", "icons", "vendor")
 STATIC_FILES = ("favicon.svg", "guest.html", "manifest-guest.webmanifest", "guest-sw.js", "sw.js", "manifest.webmanifest")
 # the only /api paths that answer without a guest session (every handler checks again; this is the outer wall)
 OPEN = ("/api/auth/me", "/api/guest/login", "/api/guest/login/two-step", "/api/guest/code", "/api/guest/signup",
-        "/api/guest/reset", "/api/guest/redeem", "/api/guest/logout", "/api/_hold")
+        "/api/guest/reset", "/api/guest/forgot", "/api/guest/redeem", "/api/guest/logout", "/api/_hold")
 # what a session of a guest with no password yet (invite-only, from before accounts) may reach: choosing one
 SETUP_OPEN = ("/api/guest/account/create",)
 # owner routers whose GET routes guests share as they are: offline Wikipedia, maps, sky, weather, routes, flights,
@@ -230,6 +230,11 @@ async def reset(req: Request):
     body = await _body(req)
     got = await guest_accounts.reset(req, body.get("code"), body.get("password"), body.get("remember") is not False)
     return _signed_in(got, req)
+
+
+@guest_app.post("/api/guest/forgot")
+async def forgot(req: Request):
+    return await guest_accounts.forgot_password(req, (await _body(req)).get("who"))
 
 
 @guest_app.post("/api/guest/redeem")

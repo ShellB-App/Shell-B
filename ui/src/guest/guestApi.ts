@@ -47,6 +47,7 @@ const agent = (a: Agent): Agent => ({ ...a, systemPrompt: '', color: a.color ?? 
 export const guestApi = {
   authMe: () => req<GuestAuthMe>('/api/auth/me'),
   me: () => req<GuestMe>('/api/guest/me').then(m => ({ ...m, agents: m.agents.map(agent) })),
+  forgot: (who: string) => req<{ ok: boolean; message: string }>('/api/guest/forgot', { method: 'POST', body: json({ who }) }),
   redeem: (code: string) => req<{ ok: boolean; name: string }>('/api/guest/redeem', { method: 'POST', body: json({ code }) }),
   login: (username: string, password: string, remember: boolean) =>
     req<SignInResult>('/api/guest/login', { method: 'POST', body: json({ username, password, remember }) }),

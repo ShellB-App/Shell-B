@@ -17,7 +17,8 @@ the gateway signs the guest in, then forwards.
 - **Two-step (optional):** RFC 6238 codes (SHA-1, 6 digits, 30 s, ±1 step, a step never accepted twice) plus 10
   one-time recovery codes stored as hashes. Stdlib only.
 - **Resets:** the owner makes a one-time reset link (24 h) in Settings → Guests, which signs the guest out
-  everywhere. There's no email; she passes the link on. Two-step still applies after a reset; the owner can turn it
+  everywhere, and passes it on or emails it (mailer.py). A guest with an address on the account can also ask for one
+  at sign-in ("Forgot password?", forgot_password): same answer either way, no sign-out until the link is used. Two-step still applies after a reset; the owner can turn it
   off for a guest who lost their phone.
 - **Sessions** (guests.py): 30 days from last use with "Remember me", 12 hours idle without. A device code can only
   be made from a session that proved the password (PASSWORD_VIAS).
@@ -79,7 +80,7 @@ LABELS = {
     "signup": "Created the account", "signin": "Signed in", "signin_failed": "Wrong password",
     "twostep_failed": "Wrong two-step code", "locked": "Locked after too many wrong tries", "unlocked": "Unlocked by Evie",
     "password_set": "Chose a username and password", "password_changed": "Changed the password",
-    "password_change_failed": "Wrong current password", "reset_issued": "Evie made a reset link",
+    "password_change_failed": "Wrong current password", "reset_issued": "Evie made a reset link", "reset_requested": "Asked for a reset email",
     "reset_used": "Reset the password", "twostep_on": "Turned on two-step sign-in",
     "twostep_off": "Turned off two-step sign-in", "twostep_off_owner": "Evie turned off two-step sign-in",
     "recovery_used": "Signed in with a recovery code", "recovery_new": "Made new recovery codes",
@@ -570,17 +571,75 @@ async def new_recovery_codes(req: Request, g: dict, password) -> list[str]:
 
 # ── owner side (/api/guests/{gid}/…, admin only) ────────────────────────────
 
-def reset_link(gid: str) -> str:
+def reset_link(gid: str, sign_out: bool = True) -> str:
+    """A one-time reset link. The owner's signs the guest out at once; a self-service one (forgot_password) doesn't,
+    or anyone who knows a username could sign that guest out. Using the link signs out every other device anyway."""
     code = secrets.token_urlsafe(18)
     with db.conn() as c:
         c.execute("DELETE FROM guest_codes WHERE guest_id=? AND kind='reset'", (gid,))
         c.execute("INSERT INTO guest_codes VALUES(?,?,?,?,?)",
                   (guests._sha(code), gid, "reset", time.time(), time.time() + RESET_TTL))
-    guests.sign_out(gid)
-    _drop_tickets(gid)
-    log(gid, "reset_issued")
+    if sign_out:
+        guests.sign_out(gid)
+        _drop_tickets(gid)
+    log(gid, "reset_issued" if sign_out else "reset_requested")
     base = guests.settings()["url"]
     return f"{base}/#reset={code}" if base else f"#reset={code}"
+
+
+# ── email (mailer.py): links the owner sends, and "Forgot password?" ────────
+
+FORGOT_PER_IP = 5           # requests per address per hour
+FORGOT_EVERY = 15 * 60      # at most one reset email per account this often
+_forgot_ip: dict[str, list[float]] = {}
+_forgot_sent: dict[str, float] = {}
+
+
+def _mail(to: str, subject: str, lines: list[str]):
+    import mailer
+    mailer.send_later("guest", to, subject, "\n".join(lines + ["", "— Shell:B"]))
+
+
+def mail_invite(g: dict, to: str, link: str):
+    _mail(to, "Your invite to Shell:B", [
+        f"Hi {g['name']},", "", "Evie invited you to Shell:B, her private AI workspace.",
+        "Open this link to choose a username and password (it works once and expires in 7 days):", "", link, "",
+        "If you weren't expecting this, you can ignore it."])
+
+
+def mail_reset(g: dict, link: str, requested: bool):
+    why = "Someone (hopefully you) asked to reset your Shell:B password." if requested \
+        else "Evie made a password reset link for your Shell:B account."
+    _mail(g["email"], "Reset your Shell:B password", [
+        f"Hi {g['name']},", "", why, "Open this link to choose a new password (it works once and expires in 24 hours):",
+        "", link, "", "Using it signs you out on your other devices. Two-step sign-in still applies.",
+        "If you didn't ask for this, ignore it: your password stays the same."])
+
+
+async def forgot_password(req: Request, who) -> dict:
+    """Email a reset link to the account's address. Answers the same whether or not the account exists or has an
+    address, so it can't be used to find accounts; rate limited per address and per account."""
+    import mailer
+    ip, now = _ip(req), time.time()
+    tries = [t for t in _forgot_ip.get(ip, []) if now - t < 3600]
+    if len(tries) >= FORGOT_PER_IP:
+        raise HTTPException(429, "Too many requests. Try again later.", headers={"Retry-After": "900"})
+    _forgot_ip[ip] = tries + [now]
+    text = str(who or "").strip().lower()[:254]
+    row = None
+    if USERNAME.match(text):
+        row = _by_username(text)
+    elif mailer.valid_address(text):
+        with db.conn() as c:
+            row = c.execute("SELECT * FROM guests WHERE lower(email)=?", (text,)).fetchone()
+    if row is not None and row["email"] and row["pw_set"] and not row["disabled"] and mailer.ready() \
+            and now - _forgot_sent.get(row["id"], 0) > FORGOT_EVERY:
+        _forgot_sent[row["id"]] = now
+        g = guests.get_guest(row["id"])
+        mail_reset(g, reset_link(row["id"], sign_out=False), requested=True)
+    await asyncio.sleep(0.5)
+    return {"ok": True, "message": "If that account has an email address, a reset link is on its way. "
+                                   "No email? Ask Evie for a reset link."}
 
 
 def _owned(gid: str, req: Request) -> dict:
@@ -606,6 +665,37 @@ def api_reset(gid: str, req: Request):
     if not g["passwordSet"]:
         raise HTTPException(409, f"{g['name']} hasn't made an account yet. Send them an invite link instead.")
     return {"link": reset_link(gid), "expiresIn": RESET_TTL}
+
+
+@admin_router.post("/{gid}/email-reset")
+def api_email_reset(gid: str, req: Request):
+    import mailer
+    g = _owned(gid, req)
+    if not g["passwordSet"]:
+        raise HTTPException(409, f"{g['name']} hasn't made an account yet. Email them an invite instead.")
+    if not mailer.valid_address(g["email"]):
+        raise HTTPException(409, f"{g['name']} has no email address on their account.")
+    if not mailer.ready():
+        raise HTTPException(409, "Email isn't set up yet (Settings → Notifications → Email).")
+    mail_reset(g, reset_link(gid), requested=False)
+    return {"ok": True, "to": g["email"]}
+
+
+@admin_router.post("/{gid}/email-invite")
+async def api_email_invite(gid: str, req: Request):
+    import mailer
+    g = _owned(gid, req)
+    if g["passwordSet"]:
+        raise HTTPException(409, f"{g['name']} already has an account. Email a reset link instead.")
+    to = mailer.valid_address((await req.json()).get("email"))
+    if not to:
+        raise HTTPException(400, "Enter the address to send the invite to.")
+    if not mailer.ready():
+        raise HTTPException(409, "Email isn't set up yet (Settings → Notifications → Email).")
+    with db.conn() as c:  # it becomes the account's address, which the sign-up form shows and can change
+        c.execute("UPDATE guests SET email=? WHERE id=?", (to, gid))
+    mail_invite(g, to, guests.invite_link(guests.new_invite(gid)))
+    return {"ok": True, "to": to}
 
 
 @admin_router.post("/{gid}/two-step/off")

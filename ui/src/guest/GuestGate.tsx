@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useState, type FormEvent, type ReactNode } from 'react';
-import { ArrowLeft, ArrowRight, Eye, EyeOff, KeyRound, Loader2, LogOut, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Eye, EyeOff, KeyRound, Loader2, LogOut, Mail, ShieldCheck } from 'lucide-react';
 import { AUTH_LOST, setFrameKey } from '../api';
 import { btn } from '../components/common';
 import { errText, guestApi, type CodeInfo, type GuestMe, type SignInResult } from './guestApi';
@@ -120,6 +120,7 @@ const Alert = ({ text }: { text: string }) =>
 type Screen =
   | { at: 'signin'; username?: string; note?: string }
   | { at: 'device' }
+  | { at: 'forgot'; username?: string }
   | { at: 'link' }
   | { at: 'invite'; code: string; name: string }
   | { at: 'reset'; code: string; name: string; username: string | null }
@@ -164,20 +165,22 @@ function Welcome({ offline, onIn }: { offline: boolean; onIn: () => void }) {
   if (screen.at === 'reset') return <ResetPassword {...screen} busy={busy} error={error} step={step} />;
   if (screen.at === 'twostep') return <TwoStep ticket={screen.ticket} busy={busy} error={error} step={step} back={() => go({ at: 'signin' })} />;
   if (screen.at === 'device') return <DeviceCode error={error} back={() => go({ at: 'signin' })} onIn={onIn} />;
-  return <SignIn initial={screen.username} note={screen.note} busy={busy} error={error} step={step} toDevice={() => go({ at: 'device' })} />;
+  if (screen.at === 'forgot') return <Forgot initial={screen.username} back={() => go({ at: 'signin' })} />;
+  return <SignIn initial={screen.username} note={screen.note} busy={busy} error={error} step={step} toDevice={() => go({ at: 'device' })}
+    toForgot={username => go({ at: 'forgot', username })} />;
 }
 
 type Step = (run: () => Promise<SignInResult>) => Promise<void>;
 
-function SignIn({ initial, note, busy, error, step, toDevice }: {
-  initial?: string; note?: string; busy: boolean; error: string; step: Step; toDevice: () => void;
+function SignIn({ initial, note, busy, error, step, toDevice, toForgot }: {
+  initial?: string; note?: string; busy: boolean; error: string; step: Step; toDevice: () => void; toForgot: (username: string) => void;
 }) {
   const [username, setUsername] = useState(initial ?? '');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
   const submit = (e: FormEvent) => { e.preventDefault(); step(() => guestApi.login(username.trim(), password, remember)); };
   return (
-    <Shell footer="Forgot your password? Ask Evie for a reset link. New here? You need an invite from her.">
+    <Shell footer="New here? You need an invite from Evie.">
       <p className="mt-4 text-[0.9375rem] leading-relaxed text-[var(--text-secondary)] max-w-[40ch]">
         {note ?? "Chat, draw, compose music and run code on Evie's DGX Spark. Your space here is your own."}
       </p>
@@ -194,6 +197,45 @@ function SignIn({ initial, note, busy, error, step, toDevice }: {
       <button type="button" onClick={toDevice} className={`${btn.ghost} mt-3 -ml-2.5`}>
         <KeyRound className="w-3.5 h-3.5" />Use a device code from your other device
       </button>
+      <button type="button" onClick={() => toForgot(username.trim())} className={`${btn.ghost} -ml-2.5`}>
+        <Mail className="w-3.5 h-3.5" />Forgot your password?
+      </button>
+    </Shell>
+  );
+}
+
+/** "Forgot password?": a reset link by email if the account has an address (guest_accounts.forgot_password). The
+ *  answer is the same either way, so this can't tell anyone which accounts exist. */
+function Forgot({ initial, back }: { initial?: string; back: () => void }) {
+  const [who, setWho] = useState(initial ?? '');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [done, setDone] = useState('');
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    try { setDone((await guestApi.forgot(who.trim())).message); } catch (err) { setError(errText(err)); }
+    setBusy(false);
+  };
+  return (
+    <Shell footer="The link works once, within 24 hours. Using it signs you out on your other devices. No email address on your account? Ask Evie for a reset link.">
+      <p className="mt-4 text-[0.9375rem] leading-relaxed text-[var(--text-secondary)] max-w-[40ch]">
+        Enter your username or the email address on your account, and Shell:B emails you a link to choose a new password.
+      </p>
+      {done ? (
+        <p role="status" className="mt-8 text-sm leading-relaxed text-[var(--text-primary)]">{done}</p>
+      ) : (
+        <form className="mt-8 space-y-4" onSubmit={submit}>
+          <Field label="Username or email">
+            {id => <input id={id} value={who} onChange={e => setWho(e.target.value)} autoComplete="username" required
+              autoCapitalize="none" spellCheck={false} className={btn.input} autoFocus />}
+          </Field>
+          <Alert text={error} />
+          <Submit busy={busy} disabled={!who.trim()}>Email me a reset link</Submit>
+        </form>
+      )}
+      <button type="button" onClick={back} className={`${btn.ghost} mt-3 -ml-2.5`}><ArrowLeft className="w-3.5 h-3.5" />Back to sign in</button>
     </Shell>
   );
 }

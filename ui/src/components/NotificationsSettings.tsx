@@ -7,6 +7,7 @@ import {
   type NotifyLevel, type NotifyPrefs, type PushDevice,
 } from '../notify';
 import { Toggle, btn, relTime } from './common';
+import { EmailSection } from './EmailSettings';
 
 const errText = (e: unknown) => String(e instanceof Error ? e.message : e).replace(/^Error: /, '').replace(/^\d+: /, '');
 
@@ -31,6 +32,7 @@ export function NotificationsTab() {
   const [mine, setMine] = useState('');
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [emailReady, setEmailReady] = useState(false);
   const blocker = pushBlocker();
   const permission = 'Notification' in window ? Notification.permission : 'default';
 
@@ -102,11 +104,26 @@ export function NotificationsTab() {
     await load();
   });
 
-  const setLevel = async (kind: string, level: NotifyLevel) => {
+  const setLevel = async (kind: string, level: NotifyLevel, channel: 'levels' | 'email' = 'levels') => {
     if (!prefs) return;
-    setPrefs({ ...prefs, levels: { ...prefs.levels, [kind]: level } });
-    try { setPrefs(await notifyApi.setPrefs({ levels: { [kind]: level } })); } catch (e) { setMsg({ ok: false, text: errText(e) }); load(); }
+    setPrefs({ ...prefs, [channel]: { ...prefs[channel], [kind]: level } });
+    try { setPrefs(await notifyApi.setPrefs({ [channel]: { [kind]: level } })); } catch (e) { setMsg({ ok: false, text: errText(e) }); load(); }
   };
+  const picker = (k: { id: string; label: string }, channel: 'levels' | 'email') => (
+    <div className="flex items-center gap-1.5">
+      {emailReady && <span className="w-9 text-right text-[10px] uppercase tracking-wider text-[var(--text-muted)]">{channel === 'email' ? 'Email' : 'Push'}</span>}
+      <div role="radiogroup" aria-label={`${k.label} ${channel === 'email' ? 'emails' : 'notifications'}`} className="inline-flex rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] p-0.5">
+        {LEVELS.filter(l => !(l.id === 'attention' && (k.id === 'approval' || k.id === 'question'))).map(l => (
+          <button key={l.id} role="radio" aria-checked={prefs![channel][k.id] === l.id} title={l.title}
+            onClick={() => setLevel(k.id, l.id, channel)}
+            className={clsx('px-2.5 py-1 rounded-md text-[11px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]',
+              prefs![channel][k.id] === l.id ? 'bg-[var(--bg-primary)] text-[var(--text-primary)] font-medium shadow-sm' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]')}>
+            {l.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
   const setDetails = async (details: boolean) => {
     if (!prefs) return;
     setPrefs({ ...prefs, details });
@@ -223,15 +240,9 @@ export function NotificationsTab() {
                     <div className="text-[13px] font-medium">{k.label}</div>
                     <div className="text-[11px] text-[var(--text-muted)] leading-snug">{k.hint}</div>
                   </div>
-                  <div role="radiogroup" aria-label={`${k.label} notifications`} className="inline-flex rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] p-0.5">
-                    {LEVELS.filter(l => !(l.id === 'attention' && (k.id === 'approval' || k.id === 'question'))).map(l => (
-                      <button key={l.id} role="radio" aria-checked={prefs.levels[k.id] === l.id} title={l.title}
-                        onClick={() => setLevel(k.id, l.id)}
-                        className={clsx('px-2.5 py-1 rounded-md text-[11px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]',
-                          prefs.levels[k.id] === l.id ? 'bg-[var(--bg-primary)] text-[var(--text-primary)] font-medium shadow-sm' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]')}>
-                        {l.label}
-                      </button>
-                    ))}
+                  <div className="flex flex-col items-end gap-1">
+                    {picker(k, 'levels')}
+                    {emailReady && picker(k, 'email')}
                   </div>
                 </li>
               ))}
@@ -245,11 +256,15 @@ export function NotificationsTab() {
               <p className="text-[11px] text-[var(--text-muted)] leading-relaxed max-w-[65ch]">
                 Off: alerts say only what happened (“Mega Plan finished”). On: they add the item’s title, which then shows on your
                 lock screen. Push travels through Google, Mozilla or Apple; the payload is end-to-end encrypted, but they see when
-                and to which device. Message contents are never sent.
+                and to which device. Emails follow the same choice and pass through Cloudflare and your mail provider unencrypted.
+                Message contents are never sent.
               </p>
             </div>
             <Toggle on={prefs.details} label="Show item titles" onChange={setDetails} />
           </section>
+
+          {/* ── email ── */}
+          <EmailSection onChange={st => setEmailReady(st.ready && !!st.to)} />
 
           {/* ── devices ── */}
           <section>
