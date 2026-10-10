@@ -17,7 +17,10 @@ export const adminKey = {
 };
 
 /** Login (server/auth.py). `frameKey` lets sandboxed frames, which get no cookie, reach their own content and saved state. */
-export interface AuthInfo { authenticated: boolean; via: 'session' | 'local' | null; passwordSet: boolean; frameKey: string | null }
+export interface AuthInfo { authenticated: boolean; via: 'session' | 'local' | null; passwordSet: boolean; frameKey: string | null;
+  /** two-step verification: the password was right, a code is still due for this login ticket */
+  needsCode?: boolean; pending?: string }
+export interface TwoStepStatus { on: boolean; recoveryLeft: number; since: number | null }
 export interface AuthSession { created: number; lastSeen: number; ip: string; userAgent: string; current: boolean }
 /** one row of the server's audit_log table (db.audit_log): admin actions, settings changes, approvals */
 export interface AuditEntry { id: number; timestamp: number; action: string; details: Record<string, unknown> | string | null; ip?: string | null }
@@ -74,6 +77,12 @@ export const api = {
   authMe: () => req<AuthInfo>('/api/auth/me'),
   authSetup: (adminKey: string, password: string) => req<AuthInfo>('/api/auth/setup', { method: 'POST', body: json({ adminKey, password }) }),
   login: (password: string) => req<AuthInfo>('/api/auth/login', { method: 'POST', body: json({ password }) }),
+  loginCode: (pending: string, code: string) => req<AuthInfo>('/api/auth/login/code', { method: 'POST', body: json({ pending, code }) }),
+  twoStep: () => req<TwoStepStatus>('/api/auth/2fa'),
+  twoStepBegin: (password: string) => req<{ secret: string; uri: string }>('/api/auth/2fa/begin', { method: 'POST', body: json({ password }) }),
+  twoStepConfirm: (code: string) => req<{ on: boolean; recovery: string[] }>('/api/auth/2fa/confirm', { method: 'POST', body: json({ code }) }),
+  twoStepRecovery: (password: string) => req<{ recovery: string[] }>('/api/auth/2fa/recovery', { method: 'POST', body: json({ password }) }),
+  twoStepDisable: (password: string) => req<{ on: boolean }>('/api/auth/2fa/disable', { method: 'POST', body: json({ password }) }),
   logout: () => {
     try { localStorage.removeItem('shellb.kiosk.password_authenticated'); } catch {}
     return req('/api/auth/logout', { method: 'POST' });

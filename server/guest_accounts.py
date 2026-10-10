@@ -41,6 +41,7 @@ from fastapi import APIRouter, HTTPException, Request
 import auth
 import db
 import guests
+import otp
 
 admin_router = APIRouter(prefix="/api/guests")
 
@@ -300,23 +301,13 @@ def _spend(code_hash: str) -> bool:
 
 # ── two-step codes ──────────────────────────────────────────────────────────
 
-def _key(secret: str) -> bytes:
-    return base64.b32decode(secret + "=" * (-len(secret) % 8))
-
-
 def totp(secret: str, counter: int) -> str:
-    mac = hmac.new(_key(secret), struct.pack(">Q", counter), hashlib.sha1).digest()
-    o = mac[-1] & 15
-    return f"{(struct.unpack('>I', mac[o:o + 4])[0] & 0x7FFFFFFF) % 1_000_000:06d}"
+    return otp.totp(secret, counter)
 
 
 def _totp_step(secret: str, code: str, last: int, now: float | None = None) -> int | None:
     """The time step this code belongs to (the one before, now, or the one after), never one already used."""
-    t = int((now or time.time()) // TOTP_STEP)
-    for step in (t - 1, t, t + 1):
-        if step > (last or 0) and hmac.compare_digest(totp(secret, step), code):
-            return step
-    return None
+    return otp.step_for(secret, code, last, now)
 
 
 def _norm_recovery(code: str) -> str:

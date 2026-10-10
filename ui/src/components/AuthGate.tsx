@@ -110,18 +110,49 @@ function LoginForm({ setup, onDone }: { setup: boolean; onDone: (i: AuthInfo) =>
   const [again, setAgain] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [pending, setPending] = useState('');  // two-step: the login ticket waiting for a code
+  const [code, setCode] = useState('');
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (setup && password !== again) { setError("The passwords don't match."); return; }
     setBusy(true); setError('');
     try {
-      onDone(setup ? await api.authSetup(adminKey.trim(), password) : await api.login(password));
+      const r = setup ? await api.authSetup(adminKey.trim(), password) : await api.login(password);
+      if (r.needsCode && r.pending) { setPending(r.pending); setPassword(''); return; }
+      onDone(r);
     } catch (err) {
       setError(errText(err));
       setPassword(''); setAgain('');
     } finally { setBusy(false); }
   };
+
+  const submitCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true); setError('');
+    try {
+      onDone(await api.loginCode(pending, code.trim()));
+    } catch (err) {
+      setError(errText(err));
+      setCode('');
+      if (/Start the login again/.test(String(err))) setPending('');
+    } finally { setBusy(false); }
+  };
+
+  if (pending) return (
+    <form onSubmit={submitCode} className="space-y-3">
+      <div>
+        <h1 className="text-base font-semibold flex items-center gap-2"><LockKeyhole className="w-4 h-4" />Two-step verification</h1>
+        <p className="text-xs text-[var(--text-muted)] mt-1">Enter the 6-digit code from your authenticator app, or one of your recovery codes.</p>
+      </div>
+      <input className={btn.input} inputMode="numeric" autoComplete="one-time-code" placeholder="123 456" value={code} onChange={e => setCode(e.target.value)} autoFocus />
+      {error && <p className="text-xs text-red-400">{error}</p>}
+      <button type="submit" className={`${btn.primary} w-full py-2`} disabled={busy || code.trim().length < 6}>
+        {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}Continue
+      </button>
+      <button type="button" className={`${btn.ghost} w-full justify-center`} onClick={() => { setPending(''); setCode(''); setError(''); }}>Back</button>
+    </form>
+  );
 
   return (
     <form onSubmit={submit} className="space-y-3">

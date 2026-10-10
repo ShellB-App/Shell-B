@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Loader2, LogOut, ShieldCheck, ShieldAlert, KeyRound } from 'lucide-react';
-import { api, type AuditEntry, type AuthInfo, type AuthSession } from '../api';
+import { api, type AuditEntry, type AuthInfo, type AuthSession, type TwoStepStatus } from '../api';
+import { qrMatrix } from '../qr';
 import { btn, relTime } from './common';
 import {
   getKioskPin,
@@ -58,6 +59,7 @@ export function AccountTab() {
             <button className={btn.subtle} onClick={signOut}><LogOut className="w-3.5 h-3.5" />Sign out</button>
           </section>
 
+          <TwoStepSection />
           <section>
             <h3 className="text-sm font-medium mb-2">Change password</h3>
             <form onSubmit={change} className="space-y-2 max-w-sm">
@@ -278,5 +280,97 @@ function AuditLog() {
         </div>
       )}
     </section>
+  );
+}
+
+
+/** Settings → Account → Two-step verification (server/auth.py `/api/auth/2fa`): an authenticator app's code after the
+ * password. Setup: password → scan the QR → one code → recovery codes shown once. */
+function TwoStepSection() {
+  const [st, setSt] = useState<TwoStepStatus | null>(null);
+  const [mode, setMode] = useState<'idle' | 'password' | 'scan' | 'codes' | 'off' | 'recovery'>('idle');
+  const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
+  const [setup, setSetup] = useState<{ secret: string; uri: string } | null>(null);
+  const [codes, setCodes] = useState<string[]>([]);
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+  const load = () => api.twoStep().then(setSt).catch(() => setSt(null));
+  useEffect(() => { load(); }, []);
+  const run = async (f: () => Promise<void>) => { setBusy(true); setErr(''); try { await f(); } catch (e) { setErr(errText(e)); } finally { setBusy(false); } };
+  const reset = () => { setMode('idle'); setPassword(''); setCode(''); setSetup(null); setErr(''); };
+  if (!st) return null;
+  return (
+    <section>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-medium">Two-step verification</h3>
+        <span className={`text-[11px] ${st.on ? 'text-emerald-400' : 'text-[var(--text-muted)]'}`}>{st.on ? `On · ${st.recoveryLeft} recovery codes left` : 'Off'}</span>
+      </div>
+      <p className="text-xs text-[var(--text-muted)] max-w-[65ch]">
+        Logging in asks for a code from an authenticator app (any TOTP app) after the password. Localhost and the admin key are unaffected.
+        Lost the phone? Use a recovery code, or run <code className="font-mono">auth.py disable-2fa</code> on the Spark.
+      </p>
+      {mode === 'idle' && (
+        <div className="flex flex-wrap gap-2 mt-2">
+          {!st.on && <button className={btn.primary} onClick={() => setMode('password')}>Turn on</button>}
+          {st.on && <button className={btn.subtle} onClick={() => setMode('recovery')}>New recovery codes</button>}
+          {st.on && <button className={btn.ghost} onClick={() => setMode('off')}>Turn off</button>}
+        </div>
+      )}
+      {(mode === 'password' || mode === 'off' || mode === 'recovery') && (
+        <form className="mt-2 flex flex-col sm:flex-row gap-2" onSubmit={e => { e.preventDefault(); run(async () => {
+          if (mode === 'password') { setSetup(await api.twoStepBegin(password)); setMode('scan'); }
+          else if (mode === 'off') { await api.twoStepDisable(password); reset(); load(); }
+          else { setCodes((await api.twoStepRecovery(password)).recovery); setMode('codes'); }
+          setPassword('');
+        }); }}>
+          <input className={`${btn.input} flex-1`} type="password" autoComplete="current-password" placeholder="Your password" value={password} onChange={e => setPassword(e.target.value)} autoFocus />
+          <button className={mode === 'off' ? btn.subtle : btn.primary} type="submit" disabled={busy || !password}>{mode === 'password' ? 'Continue' : mode === 'off' ? 'Turn off' : 'Make new codes'}</button>
+          <button className={btn.ghost} type="button" onClick={reset}>Cancel</button>
+        </form>
+      )}
+      {mode === 'scan' && setup && (
+        <form className="mt-2 flex flex-col sm:flex-row gap-4 items-start" onSubmit={e => { e.preventDefault(); run(async () => {
+          const r = await api.twoStepConfirm(code); setCodes(r.recovery); setMode('codes'); setCode(''); load();
+        }); }}>
+          <QrCode text={setup.uri} />
+          <div className="space-y-2 flex-1 min-w-0">
+            <p className="text-xs text-[var(--text-secondary)]">Scan this with your authenticator app, or enter the key by hand:</p>
+            <code className="block font-mono text-[11px] break-all select-all text-[var(--text-primary)]">{setup.secret}</code>
+            <p className="text-xs text-[var(--text-secondary)]">Then type the code it shows:</p>
+            <div className="flex gap-2">
+              <input className={`${btn.input} w-32`} inputMode="numeric" autoComplete="one-time-code" placeholder="123 456" value={code} onChange={e => setCode(e.target.value)} />
+              <button className={btn.primary} type="submit" disabled={busy || code.trim().length < 6}>Turn on</button>
+              <button className={btn.ghost} type="button" onClick={reset}>Cancel</button>
+            </div>
+          </div>
+        </form>
+      )}
+      {mode === 'codes' && (
+        <div className="mt-2 space-y-2">
+          <p className="text-xs text-[var(--text-secondary)] max-w-[65ch]">Recovery codes: each one opens the app once if the phone is gone. Keep them somewhere safe; they are shown only now.</p>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 font-mono text-[12px] select-all">
+            {codes.map(c => <span key={c} className="px-2 py-1 rounded border border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-center">{c}</span>)}
+          </div>
+          <div className="flex gap-2">
+            <button className={btn.subtle} onClick={() => navigator.clipboard?.writeText(codes.join('\n')).catch(() => {})}>Copy</button>
+            <button className={btn.primary} onClick={reset}>Done</button>
+          </div>
+        </div>
+      )}
+      {err && <p className="text-xs text-red-400 mt-2">{err}</p>}
+    </section>
+  );
+}
+
+function QrCode({ text }: { text: string }) {
+  const m = qrMatrix(text);
+  let d = '';
+  m.forEach((row, y) => row.forEach((on, x) => { if (on) d += `M${x + 4} ${y + 4}h1v1h-1z`; }));
+  const n = m.length + 8;
+  return (
+    <svg viewBox={`0 0 ${n} ${n}`} className="w-40 h-40 rounded-lg shrink-0" role="img" shapeRendering="crispEdges" aria-label="QR code to scan with your authenticator app">
+      <rect width={n} height={n} fill="#fff" /><path d={d} fill="#000" />
+    </svg>
   );
 }

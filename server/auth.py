@@ -38,6 +38,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 import db
+import otp
 
 router = APIRouter(prefix="/api/auth")
 
@@ -618,7 +619,161 @@ async def login(req: Request):
         await _failed(ip, "login")
         raise HTTPException(401, "Wrong password")
     _succeeded(ip, "login")
+    if two_step_on():  # the password alone opens nothing: a short-lived ticket waits for the code
+        ticket = secrets.token_urlsafe(32)
+        _prune_tickets()
+        _tickets[ticket] = (time.time(), ip)
+        return JSONResponse({"authenticated": False, "via": None, "passwordSet": True, "frameKey": None,
+                             "needsCode": True, "pending": ticket})
     return _login_response(req)
+
+
+# ── two-step verification (owner) ───────────────────────────────────────────
+# kv auth_2fa = {"secret": base32, "last": step, "recovery": [sha256 of normalised codes, unused only], "set": ts}.
+# Stored like the password (same database, same backups); losing the phone is handled by a recovery code or by
+# `auth.py set-password` from the shell, which clears it along with the password.
+
+TICKET_TTL = 10 * 60
+SETUP_TTL = 15 * 60
+ISSUER = "Shell:B"
+_tickets: dict[str, tuple[float, str]] = {}  # login ticket → (issued, ip): password accepted, code still due
+_setup: tuple[str, float] | None = None       # (secret being set up, when)
+
+
+def two_step_on() -> bool:
+    return bool((db.kv_get("auth_2fa") or {}).get("secret"))
+
+
+def _prune_tickets():
+    now = time.time()
+    for t, (ts, _ip) in list(_tickets.items()):
+        if now - ts > TICKET_TTL:
+            _tickets.pop(t, None)
+
+
+def _owner_session(req: Request) -> dict:
+    sess = session_of(req)
+    if not sess or not is_owner(req):
+        raise HTTPException(401, "login-required")
+    return sess
+
+
+@router.post("/login/code")
+async def login_code(req: Request):
+    """Second step of the login: the authenticator code (or a recovery code) for a ticket from /login."""
+    body = await req.json()
+    ip = _client_ip(req.scope)
+    _throttle(ip)
+    _prune_tickets()
+    ticket = str(body.get("pending") or "")
+    issued = _tickets.get(ticket)
+    if not issued or issued[1] != ip:
+        raise HTTPException(401, "Start the login again.")
+    rec = db.kv_get("auth_2fa") or {}
+    if not rec.get("secret"):
+        _tickets.pop(ticket, None)
+        return _login_response(req)
+    code = str(body.get("code") or "")
+    step = otp.step_for(rec["secret"], code, int(rec.get("last") or 0))
+    used_recovery = False
+    if step is None:
+        h = otp.sha(otp.norm_recovery(code))
+        if len(otp.norm_recovery(code)) == 10 and h in (rec.get("recovery") or []):
+            used_recovery = True
+        else:
+            await _failed(ip, "code")
+            raise HTTPException(401, "That code doesn't match. Enter the newest code from your authenticator, or a recovery code.")
+    if used_recovery:
+        rec["recovery"] = [x for x in rec["recovery"] if x != otp.sha(otp.norm_recovery(code))]
+        db.audit_log("admin:2fa_recovery_used", {"ip": ip, "left": len(rec["recovery"])})
+    else:
+        rec["last"] = step
+    db.kv_set("auth_2fa", rec)
+    _tickets.pop(ticket, None)
+    _succeeded(ip, "code")
+    return _login_response(req)
+
+
+@router.get("/2fa")
+def two_step_status(req: Request):
+    _owner_session(req)
+    rec = db.kv_get("auth_2fa") or {}
+    return {"on": bool(rec.get("secret")), "recoveryLeft": len(rec.get("recovery") or []), "since": rec.get("set")}
+
+
+@router.post("/2fa/begin")
+async def two_step_begin(req: Request):
+    """Start setup: the current password, then a fresh secret to scan. Nothing changes until /2fa/confirm."""
+    global _setup
+    _owner_session(req)
+    body = await req.json()
+    ip = _client_ip(req.scope)
+    _throttle(ip)
+    if not check_password(str(body.get("password", ""))):
+        await _failed(ip, "2fa")
+        raise HTTPException(403, "The password is wrong")
+    _succeeded(ip, "2fa")
+    secret = otp.new_secret()
+    _setup = (secret, time.time())
+    return {"secret": secret, "uri": otp.uri(ISSUER, "owner", secret)}
+
+
+@router.post("/2fa/confirm")
+async def two_step_confirm(req: Request):
+    """Prove the authenticator has the secret (one correct code), then turn two-step on and hand out recovery codes."""
+    global _setup
+    _owner_session(req)
+    body = await req.json()
+    ip = _client_ip(req.scope)
+    _throttle(ip)
+    if not _setup or time.time() - _setup[1] > SETUP_TTL:
+        raise HTTPException(409, "Setup timed out. Start again.")
+    step = otp.step_for(_setup[0], str(body.get("code") or ""), 0)
+    if step is None:
+        await _failed(ip, "2fa")
+        raise HTTPException(400, "That code doesn't match. Check the phone's clock, then enter the newest code.")
+    codes = otp.new_recovery_codes()
+    db.kv_set("auth_2fa", {"secret": _setup[0], "last": step, "recovery": [otp.sha(c) for c in codes], "set": time.time()})
+    _setup = None
+    _succeeded(ip, "2fa")
+    db.audit_log("admin:2fa_on", {"ip": ip})
+    return {"on": True, "recovery": [otp.pretty(c) for c in codes]}
+
+
+@router.post("/2fa/recovery")
+async def two_step_recovery(req: Request):
+    """New recovery codes (the old ones stop working). Needs the password."""
+    _owner_session(req)
+    body = await req.json()
+    ip = _client_ip(req.scope)
+    _throttle(ip)
+    rec = db.kv_get("auth_2fa") or {}
+    if not rec.get("secret"):
+        raise HTTPException(409, "Two-step verification is off.")
+    if not check_password(str(body.get("password", ""))):
+        await _failed(ip, "2fa")
+        raise HTTPException(403, "The password is wrong")
+    _succeeded(ip, "2fa")
+    codes = otp.new_recovery_codes()
+    rec["recovery"] = [otp.sha(c) for c in codes]
+    db.kv_set("auth_2fa", rec)
+    db.audit_log("admin:2fa_recovery_new", {"ip": ip})
+    return {"recovery": [otp.pretty(c) for c in codes]}
+
+
+@router.post("/2fa/disable")
+async def two_step_disable(req: Request):
+    _owner_session(req)
+    body = await req.json()
+    ip = _client_ip(req.scope)
+    _throttle(ip)
+    if not check_password(str(body.get("password", ""))):
+        await _failed(ip, "2fa")
+        raise HTTPException(403, "The password is wrong")
+    _succeeded(ip, "2fa")
+    db.kv_set("auth_2fa", None)
+    db.audit_log("admin:2fa_off", {"ip": ip})
+    return {"on": False}
 
 
 def _login_response(req: Request) -> JSONResponse:
@@ -683,8 +838,13 @@ def logout_others(req: Request):
 if __name__ == "__main__":
     import getpass
     import sys
+    if sys.argv[1:] == ["disable-2fa"]:
+        init()
+        db.kv_set("auth_2fa", None)
+        db.audit_log("admin:2fa_off_cli", {})
+        sys.exit("Two-step verification is off. The password still applies.")
     if sys.argv[1:] != ["set-password"]:
-        sys.exit("usage: auth.py set-password")
+        sys.exit("usage: auth.py set-password | disable-2fa")
     init()
     pw = getpass.getpass("New Shell:B password: ")
     if pw != getpass.getpass("Again: "):
@@ -693,5 +853,8 @@ if __name__ == "__main__":
         set_password(pw, reason="password_reset_cli")
     except ValueError as e:
         sys.exit(str(e))
+    if two_step_on():
+        db.kv_set("auth_2fa", None)
+        print("Two-step verification was turned off too (set it up again from Settings → Account).")
     drop_sessions()
     print("Password set. Every session was signed out.")

@@ -603,6 +603,13 @@ One owner password guards the app (`server/auth.py`, `ui/src/components/AuthGate
 - **First visit:** the login screen asks for the admin key (`cat ~/shellb/web/data/admin.key`) and a new password.
   To reset it from the shell, run `~/shellb/web/venv/bin/python ~/shellb/web/server/auth.py set-password`. That also
   signs out every session.
+- **Two-step verification** (Settings → Account): after the password, a code from an authenticator app (TOTP;
+  `server/otp.py` is shared with guest accounts). Setup shows a QR code and, once a code matches, ten one-time recovery
+  codes. `/api/auth/login` then answers `needsCode` with a 10-minute ticket bound to your address, and
+  `/api/auth/login/code` takes the code or a recovery code; wrong codes count toward the same throttling as wrong
+  passwords, and an accepted code is never accepted again. Localhost trust and the admin key are unaffected. Lost
+  phone: a recovery code, or `auth.py disable-2fa` (and `set-password` clears it too). Routes: `GET/POST /api/auth/2fa`,
+  `/2fa/{begin,confirm,recovery,disable}`, all owner-session only.
 - **Sessions** are an HttpOnly `shellb_session` cookie (SameSite=Lax, Secure over https) that lasts 30 days from your last
   visit. They're stored hashed in the `auth_sessions` table. Settings → **Account** signs you out, changes the password
   (which signs out every other device) and lists the signed-in devices. Five wrong passwords from one IP slow further

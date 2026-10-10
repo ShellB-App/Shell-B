@@ -2,6 +2,12 @@
  {
   "date": "2026-10-10",
   "area": "Security",
+  "title": "Two-step verification for the owner login",
+  "summary": "Settings → Account → Two-step verification: after your password, the app asks for the 6-digit code from an authenticator app (the same kind guests already had). Setup scans a QR code and gives you ten recovery codes for a lost phone; from the Spark's shell, auth.py disable-2fa turns it off. Wrong codes slow logins down like wrong passwords, and a code is never accepted twice."
+ },
+ {
+  "date": "2026-10-10",
+  "area": "Security",
   "title": "Self-review findings fixed",
   "summary": "Self-deploys now sync and diff against the branch the live tree has checked out (they fetched main while deploying into public-release). Aphrodite screens attached files like the typed message and takes no pictures as input. Community MCP servers each get their own package cache, so one can't plant code in another, and a marketplace plugin path can't point outside its repository. The Model Store refuses a download that would overwrite a ComfyUI model with the same name. The kiosk lock screen lost its URL bypass, warns while the default PIN is in use and shows real memory and service status. Notes report failed searches, opens and relinks instead of staying silent. Chats got a mailbox envelope, Settings → Account an audit log, and the Agent Lab the thumbs per agent."
  },
