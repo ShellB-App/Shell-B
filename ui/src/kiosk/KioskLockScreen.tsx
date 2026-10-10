@@ -29,8 +29,6 @@ export function setKioskPin(pin: string) {
 
 export function isStationPasswordAuthenticated(): boolean {
   try {
-    if (typeof window !== 'undefined' && /[?&]authed=1/.test(window.location.search)) return true;
-    if (typeof window !== 'undefined' && /[?&]authed=0/.test(window.location.search)) return false;
     return localStorage.getItem(KIOSK_AUTH_FLAG) === 'true';
   } catch {
     return false;
@@ -328,15 +326,29 @@ export function KioskLockScreen({ open, onUnlock, status }: Props) {
 
           <div className="w-48 h-1 rounded-full bg-gradient-to-r from-blue-500 via-pink-500 to-amber-500 my-2" />
 
-          {/* Telemetry pill */}
-          <div className="flex items-center gap-4 text-xs font-mono text-white/60 bg-white/5 border border-white/10 px-4 py-2 rounded-full">
-            <span className="flex items-center gap-1.5 text-emerald-400">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              Unified VRAM: 48 GB OK
-            </span>
-            <span>·</span>
-            <span>Neural Runtimes: Online</span>
-          </div>
+          {/* Telemetry pill: bound to /api/status (memory and the model services), not a fixed label */}
+          {(() => {
+            const total = status?.memory?.MemTotal ?? 0, avail = status?.memory?.MemAvailable ?? 0;
+            const gb = (b: number) => Math.round(b / 2 ** 30);
+            const svcs = Object.values(status?.services ?? {});
+            const down = svcs.filter(s => !s.ok).length;
+            const memOk = !total || avail / total > 0.1;
+            return (
+              <div className="flex items-center gap-4 text-xs font-mono text-white/60 bg-white/5 border border-white/10 px-4 py-2 rounded-full">
+                <span className={`flex items-center gap-1.5 ${memOk ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  <span className={`w-2 h-2 rounded-full ${memOk ? 'bg-emerald-400 animate-ping' : 'bg-amber-400'}`} />
+                  {total ? `Unified memory: ${gb(avail)} of ${gb(total)} GB free` : 'Unified memory: …'}
+                </span>
+                <span>·</span>
+                <span className={down ? 'text-amber-400' : ''}>{!svcs.length ? 'Services: …' : down ? `Services: ${down} offline` : 'Services: online'}</span>
+              </div>
+            );
+          })()}
+          {getKioskPin() === DEFAULT_PIN && (
+            <div className="text-[11px] text-amber-300/90 bg-amber-500/10 border border-amber-400/20 px-3 py-1.5 rounded-lg max-w-[40ch] text-center">
+              The default PIN is still in use. Set your own in the kiosk's lock settings.
+            </div>
+          )}
         </div>
       ) : (
         /* UNLOCK PROMPT (PIN / PASSWORD) */

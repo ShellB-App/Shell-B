@@ -6,7 +6,7 @@ import type { CodexEntry, CodexIndex } from '../types';
 import { Markdown } from './Markdown';
 import { TagInput } from './Codex';
 import { btn, relTime } from './common';
-import { toastError } from './toast';
+import { toast, toastError } from './toast';
 
 /**
  * Notes: a writing-first view of the Codex's notes, at #/codex/notes(/<entry id>). Same entries as the Codex page, so
@@ -212,7 +212,7 @@ function NoteEditor({ id, index, titles, view, onView, onSaved, onDeleted, onBac
     if (from.trim().toLowerCase() === to.trim().toLowerCase()) return;   // links match titles ignoring case
     req<RelinkResult>(`/api/codex/entries/${eid}/relink`, { method: 'POST', body: JSON.stringify({ from, to }), keepalive: opts?.keepalive })
       .then(r => { if (r.updated.length || r.skipped) onRelinked({ ...r, from, to }); })
-      .catch(() => { linked.current = from; });
+      .catch(() => { linked.current = from; toast(`Couldn't update the links to “${to}” in other notes`, { kind: 'error' }); });
   }, [onRelinked]);
 
   // flush on switching notes, leaving the page, or closing the tab
@@ -474,7 +474,7 @@ export function Notes({ sub, onDiscuss, guest }: { sub: string; onDiscuss?: (pro
         setItems(prev => [{ ...e, preview: '' }, ...prev]);
       }
       setOpen(hit.id); setSession(n => n + 1); setNoteHash(hit.id);
-    } catch { /* leave the current note open */ }
+    } catch (e) { toastError(`Couldn't open “${title}”`)(e); }
   }, [loadTitles]);
 
   // #/codex/notes/<id>, or …/t/<title> and …/new/<title> from a link opened in a new tab
@@ -486,7 +486,7 @@ export function Notes({ sub, onDiscuss, guest }: { sub: string; onDiscuss?: (pro
   useEffect(() => { const t = setTimeout(() => setQuery(q.trim()), 250); return () => clearTimeout(t); }, [q]);
 
   const load = useCallback(async () => {
-    try { setItems(await api.codexEntries({ kind: 'note', q: query, tag })); } catch { /* keep the old list */ }
+    try { setItems(await api.codexEntries({ kind: 'note', q: query, tag })); } catch (e) { if (query || tag) toastError('Search failed')(e); }
     setLoaded(true);
   }, [query, tag]);
   useEffect(() => { load(); }, [load]);

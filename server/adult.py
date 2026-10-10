@@ -86,6 +86,23 @@ def refuse_reason(agent: dict, settings: dict, owner: bool, interactive: bool = 
     return ""
 
 
+async def screen_attachments(attachments: list | None, settings: dict) -> str:
+    """"" if the attachments may go to the adult agent, else why not. Pictures are refused outright (there is no local
+    classifier for them, and a photo of a real person is exactly what the limits forbid); text that was inlined from a
+    file is screened like the typed message, so a pasted document can't carry what the message box can't."""
+    for att in attachments or []:
+        if not isinstance(att, dict):
+            continue
+        if att.get("kind") == "image" or str(att.get("type") or "").startswith("image/"):
+            return "Aphrodite doesn't take pictures as input. Describe the scene in words instead."
+        text = str(att.get("inline") or "")
+        if text:
+            why = await screen(text[:12000], settings)
+            if why:
+                return f"In {att.get('name') or 'the attached file'}: {why}"
+    return ""
+
+
 async def screen(text: str, settings: dict, image: bool = False) -> str:
     """"" if the request may proceed, else a short reason it was refused."""
     text = (text or "").strip()

@@ -660,7 +660,7 @@ async def chat(conv_id: str, req: Request):
         why = adult.refuse_reason(agent, settings, auth.is_owner(req))
         if why:
             raise HTTPException(403, why)
-        why = await adult.screen(body.get("content") or "", settings)
+        why = await adult.screen(body.get("content") or "", settings) or await adult.screen_attachments(body.get("attachments"), settings)
         if why:
             raise HTTPException(400, why)
         if not conv.get("incognito"):  # Aphrodite's chats are never remembered and expire on their own

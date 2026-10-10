@@ -182,8 +182,9 @@ async def fetch_repo(repo: str, sha: str) -> Path:
 
 def _skill_items(source_id: str, repo: str, sha: str, root: Path, base: str = "", plugin: str = "") -> list[tuple]:
     out = []
-    start = root / base if base else root
-    if not start.is_dir():
+    start = (root / base).resolve() if base else root.resolve()
+    root = root.resolve()
+    if not start.is_dir() or not start.is_relative_to(root):  # a marketplace's "../x" plugin path never leaves the repo
         return out
     for md in sorted(start.rglob("SKILL.md")):
         rel = str(md.parent.relative_to(root))
@@ -324,16 +325,32 @@ def install_options(server: dict) -> list[dict]:
     return out
 
 
+async def drop_volumes(sid: str):
+    """Remove the per-server npm/uv cache volumes a community install used (best effort; nothing if there are none)."""
+    import asyncio
+    docker = shutil.which("docker")
+    if not docker or not re.fullmatch(r"[A-Za-z0-9_-]+", sid or ""):
+        return
+    proc = await asyncio.create_subprocess_exec(docker, "volume", "rm", "-f", f"shellb-mcp-npm-{sid}", f"shellb-mcp-uv-{sid}",
+                                                stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
+    try:
+        await asyncio.wait_for(proc.wait(), timeout=20)
+    except asyncio.TimeoutError:
+        proc.kill()
+
+
 def _docker_cmd(sid: str, opt: dict) -> list[str]:
     base = [shutil.which("docker") or "docker", "run", "--rm", "-i", "--init", "--name", f"shellb-mcp-{sid}",
             "--cap-drop", "ALL", "--memory", "1g", "--pids-limit", "256", "--network", MCP_NETWORK]
     env = [x for f in opt.get("fields") or [] for x in ("-e", f["key"])]  # values come from the environment, not argv
     ident, ver = opt["identifier"], opt.get("version") or ""
     if opt["kind"] == "npm":
-        return base + env + ["-v", "shellb-mcp-npm:/root/.npm", NODE_IMAGE, "npx", "-y", f"{ident}@{ver}" if ver else ident,
+        # one cache volume per server: npx runs packages from ~/.npm/_npx as plain files, so a shared cache would let
+        # one community server plant code in another
+        return base + env + ["-v", f"shellb-mcp-npm-{sid}:/root/.npm", NODE_IMAGE, "npx", "-y", f"{ident}@{ver}" if ver else ident,
                              *opt.get("args", [])]
     if opt["kind"] == "pypi":
-        return base + env + ["-v", "shellb-mcp-uv:/root/.cache/uv", UV_IMAGE, "uvx", f"{ident}=={ver}" if ver else ident,
+        return base + env + ["-v", f"shellb-mcp-uv-{sid}:/root/.cache/uv", UV_IMAGE, "uvx", f"{ident}=={ver}" if ver else ident,
                              *opt.get("args", [])]
     image = ident if ":" in ident.rsplit("/", 1)[-1] or not ver else f"{ident}:{ver}"
     return base + env + [image, *opt.get("args", [])]

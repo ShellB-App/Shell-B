@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Loader2, LogOut, ShieldCheck, ShieldAlert, KeyRound } from 'lucide-react';
-import { api, type AuthInfo, type AuthSession } from '../api';
+import { api, type AuditEntry, type AuthInfo, type AuthSession } from '../api';
 import { btn, relTime } from './common';
 import {
   getKioskPin,
@@ -85,6 +85,7 @@ export function AccountTab() {
               ))}
             </ul>
           </section>
+          <AuditLog />
         </>
       ) : (
         <section className="p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] space-y-2">
@@ -225,6 +226,57 @@ function KioskPinSection() {
         </div>
         {pinSuccess && <p className="text-xs text-emerald-400">PIN updated successfully.</p>}
       </form>
+    </section>
+  );
+}
+
+
+/** The server's audit log (db.audit_log): settings changes, admin actions, approvals, backups. Owner only. */
+function AuditLog() {
+  const [rows, setRows] = useState<AuditEntry[] | null>(null);
+  const [open, setOpen] = useState(false);
+  const [action, setAction] = useState('');
+  const [more, setMore] = useState(true);
+  const PAGE = 50;
+  const load = (offset = 0) => api.auditLog(PAGE, offset, action)
+    .then(r => { setRows(prev => offset && prev ? [...prev, ...r] : r); setMore(r.length === PAGE); })
+    .catch(() => { setRows([]); setMore(false); });
+  useEffect(() => { if (open) load(0); }, [open, action]);  // eslint-disable-line react-hooks/exhaustive-deps
+  const actions = Array.from(new Set((rows ?? []).map(r => r.action))).sort();
+  const summary = (d: AuditEntry['details']) => {
+    if (!d) return '';
+    if (typeof d === 'string') return d;
+    return Object.entries(d).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : typeof v === 'object' ? JSON.stringify(v) : String(v)}`).join(' · ');
+  };
+  return (
+    <section>
+      <button className="flex items-center justify-between w-full mb-2" onClick={() => setOpen(o => !o)} aria-expanded={open}>
+        <h3 className="text-sm font-medium">Audit log</h3>
+        <span className="text-[11px] text-[var(--text-muted)]">{open ? 'Hide' : 'Show'}</span>
+      </button>
+      {open && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <select className={btn.input} value={action} onChange={e => setAction(e.target.value)} aria-label="Filter by action">
+              <option value="">All actions</option>
+              {actions.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+            <span className="text-[11px] text-[var(--text-muted)]">Settings changes, admin actions, approvals and backups, newest first.</span>
+          </div>
+          <ul className="divide-y divide-[var(--border-subtle)] border border-[var(--border-subtle)] rounded-lg max-h-80 overflow-y-auto">
+            {rows === null && <li className="px-3 py-2 text-[12px] text-[var(--text-muted)]">Loading…</li>}
+            {rows?.length === 0 && <li className="px-3 py-2 text-[12px] text-[var(--text-muted)]">Nothing logged yet.</li>}
+            {rows?.map(r => (
+              <li key={r.id} className="px-3 py-1.5 text-[12px] flex items-start gap-3">
+                <span className="shrink-0 w-24 text-[var(--text-muted)]" title={new Date(r.timestamp * 1000).toLocaleString()}>{relTime(r.timestamp * 1000)}</span>
+                <span className="shrink-0 font-mono text-[11px] text-[var(--accent-soft)]">{r.action}</span>
+                <span className="min-w-0 truncate text-[var(--text-secondary)]" title={summary(r.details)}>{summary(r.details)}</span>
+              </li>
+            ))}
+          </ul>
+          {more && rows && rows.length > 0 && <button className={btn.ghost} onClick={() => load(rows.length)}>Load more</button>}
+        </div>
+      )}
     </section>
   );
 }

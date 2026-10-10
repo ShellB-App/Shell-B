@@ -59,6 +59,13 @@ def _env():
     return {**os.environ, "PATH": f"{NODE_BIN}:{os.environ.get('PATH', '')}", "GIT_TERMINAL_PROMPT": "0"}
 
 
+def live_branch() -> str:
+    """The branch the live tree has checked out (public-release today). Sync and diff fetch it, and deploy merges into
+    it, so a tree on any branch works; "main" used to be hard-coded here while deploys merged into HEAD's branch."""
+    b = _git(LIVE, "rev-parse", "--abbrev-ref", "HEAD", check=False).strip()
+    return b if b and b != "HEAD" else "main"
+
+
 def _git(cwd: Path, *args: str, check=True) -> str:
     r = subprocess.run(["git", *GIT_ID, *args], cwd=cwd, capture_output=True, text=True, env=_env())
     if check and r.returncode != 0:
@@ -167,7 +174,7 @@ def sync(pid: str) -> str:
     commit_outside_edits()
     P.commit(pid, "Work in progress (before sync)")
     ws = P.PROJECTS / pid
-    _git(ws, "fetch", "-q", str(LIVE), "main")
+    _git(ws, "fetch", "-q", str(LIVE), live_branch())
     merge = ["git", *GIT_ID, "merge", "--no-edit", "-q"]
     r = subprocess.run([*merge, "FETCH_HEAD"], cwd=ws, capture_output=True, text=True)
     if r.returncode == 0:
@@ -201,7 +208,7 @@ def pending_diff(pid: str) -> str:
     import projects as P
     ws = P.PROJECTS / pid
     P.commit(pid, "Work in progress")
-    _git(ws, "fetch", "-q", str(LIVE), "main")
+    _git(ws, "fetch", "-q", str(LIVE), live_branch())
     stat = _git(ws, "diff", "--stat", "FETCH_HEAD...HEAD").strip()
     if not stat:
         return "No changes: the workspace has nothing that isn't already live."

@@ -16,7 +16,7 @@ const cToF = (c: number) => Math.round((c * 9) / 5 + 32);
 
 export function DossierDrawer({ bodyId, onClose, onOpenSol }: DossierDrawerProps) {
   const d = getDossier(bodyId);
-  // Computed from sol.ts (JPL elements); the server's /api/planetary/ephemeris figures were invented.
+  // Computed from sol.ts (JPL elements) in the browser; the server's /api/planetary/ephemeris (solsys.py) agrees.
   const t = useClockTime(60_000);
   const link = useMemo(() => (bodyId === 'earth' || bodyId === 'sol' ? null : earthLink(bodyId, t)), [bodyId, t]);
 

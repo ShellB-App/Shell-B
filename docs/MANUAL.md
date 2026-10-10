@@ -32,7 +32,10 @@ address (`_ShortNameRedirect` in app.py). Check with `tailscale serve status`; r
   Mimir (knowledge: offline wiki, Codex, past chats), Atlas (Worlds and cartography), Magpie (asset scout) and Daedalus
   (Studio, hidden from chat lists); the local ones run on ShellB-Swift (Qwen3.6) unless noted. Cloud: Claude
   (`claude-code/opus`) and Gemini (`antigravity/gemini-3.1-pro-high`), see **Cloud AI**. Each agent has its own model,
-  prompt, tools, temperature, reasoning effort and context size.
+  prompt, tools, temperature, reasoning effort and context size. The Agent Lab lists the tools you pick per agent; tools
+  Shell:B adds by rule (weather and shopping for agents that search, wiki and law once installed, the library, Codex,
+  follow-ups, circles, the browser and screen in live chats…) appear under *Added automatically* with their rule, and
+  `GET /api/tools` reports each tool's `scope` and `auto` text.
 - **Long chats** (`server/compaction.py`): when the next prompt would fill about 70% of the agent's context, the
   oldest messages are summarized in the background after a reply and the summary is applied at the start of the next
   turn. Nothing is deleted: summarized messages get `summarizedBy` and stay in the chat (under a "Summarized N earlier
@@ -170,8 +173,8 @@ address (`_ShortNameRedirect` in app.py). Check with `tailscale serve status`; r
 - **Legal** (`server/legal.py`; tool `legal`, `/api/legal/{sources,search,read}`): offline US and EU law from a full-text index,
   `~/shellb/legal/index.db` (SQLite FTS5; one row per section, article, recital, annex chunk, tariff heading or screening-list entry).
   Sources: US Code, eCFR (EAR/CCL in 15 CFR 730-774, ITAR, OFAC, Customs), Statutes at Large, Public Laws, HTS, the trade.gov
-  Consolidated Screening List, EUR-Lex legislation (the Cyber Resilience Act, NIS2, GDPR, AI Act, dual-use, customs), later the Federal
-  Register and case law. The files are fetched by `~/shellb/legal/fetch_legal.py` (resumable, outside this repo) and indexed by
+  Consolidated Screening List, EUR-Lex legislation (the Cyber Resilience Act, NIS2, GDPR, AI Act, dual-use, customs), and, once
+  `build_index.py` has parsers for them, the Federal Register and CourtListener case law (downloaded, not yet indexed). The files are fetched by `~/shellb/legal/fetch_legal.py` (resumable, outside this repo) and indexed by
   `~/shellb/legal/build_index.py` (per-file, skips what is already indexed, so re-run it after a download). The tool opens the index
   read-only per call and is added to every agent once it exists (`tool_switches.legal` turns it off). Results carry the cite and the
   snapshot date; the model is told it is reference, not legal advice. `search` ranks heading > act title > text, puts an explicit
@@ -325,7 +328,11 @@ address (`_ShortNameRedirect` in app.py). Check with `tailscale serve status`; r
   **Activity → Self-review** lists them. `.gitignore` keeps `data/`, the venv, node_modules, `ui/dist` and `ui/public/vendor` out.
 - **UI**: conversations are stored on the server, so they work from any device, and they survive reloads mid-reply.
   Also: a collapsible thinking/tool trace; a sandboxed artifact panel with versions; attachments (images go to the
-  vision model, files to `/work`); dictation and read-aloud through HERMES; Ctrl+K palette; light/dark themes; mobile layout.
+  vision model, files to `/work`); dictation and read-aloud through HERMES; Ctrl+K palette (every app, Settings tab,
+  Tools & Connectors tab, Activity panel and Models page); light/dark themes; mobile layout. Settings → Shortcuts lists
+  the keyboard shortcuts (`?` opens it). The envelope in a chat's header is its mailbox (`server/chatmail.py`): notes
+  other chats left for it, and a box to leave one for its next turn. Settings → Account shows the audit log
+  (`GET /api/audit-log`), and the Agent Lab shows each agent's thumbs over the last 30 days.
 
 - **Scheduled** (`#/scheduled`, sidebar → Scheduled): prompts that run on their own, once at a set time or on a repeat
   (daily, chosen weekdays, monthly, every N minutes/hours, or any 5-field cron). Each run starts a new chat titled
@@ -668,7 +675,7 @@ switches theme, `&peek=N` opens the Nth rich-link popover, and `&modal=agents|to
 
 ## Not done yet
 
-- One owner account only. There are no per-user accounts or private data.
+- One owner. Guests have their own accounts and data (see **Shell:B Guest**), but the owner's side is a single account.
 - An artifact that hard-codes `/api/workspace/<conv>/…` (rather than going through the frame-key prefix) can't load
   that file inside its sandboxed preview, because no cookie is sent from there.
 - The microphone needs HTTPS (browser rule), so dictation works only over HTTPS: the Tailscale `https://` URL or the

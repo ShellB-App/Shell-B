@@ -25,6 +25,7 @@ import { AgentAvatar, btn } from './components/common';
 import { WorkspaceFiles } from './components/WorkspaceFiles';
 import { ArtifactViewer, Library } from './components/Library';
 import { FavoriteStar, FavoritesPage } from './components/Favorites';
+import { Mailbox } from './components/Mailbox';
 import { Scheduled, browserTz } from './components/Scheduled';
 import { Activity } from './components/Activity';
 import { Downloads } from './components/Downloads';
@@ -688,6 +689,7 @@ export function App() {
                 <span className="text-sm font-medium truncate">{conv?.title ?? (incognito ? `Incognito chat with ${agent.name}` : `New chat with ${agent.name}`)}</span>
                 {incognito && <IncognitoMark />}
                 {conv && <FavoriteStar kind="chat" id={conv.id} title={conv.title} />}
+                {conv && !incognito && <Mailbox convId={conv.id} tick={conv.messages.length} />}
                 {conv && (
                   <div className="flex items-center gap-0.5 ml-1">
                     <button className={btn.icon} onClick={() => forkChat(conv.id)} title="Fork this conversation">

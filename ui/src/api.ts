@@ -19,6 +19,9 @@ export const adminKey = {
 /** Login (server/auth.py). `frameKey` lets sandboxed frames, which get no cookie, reach their own content and saved state. */
 export interface AuthInfo { authenticated: boolean; via: 'session' | 'local' | null; passwordSet: boolean; frameKey: string | null }
 export interface AuthSession { created: number; lastSeen: number; ip: string; userAgent: string; current: boolean }
+/** one row of the server's audit_log table (db.audit_log): admin actions, settings changes, approvals */
+export interface AuditEntry { id: number; timestamp: number; action: string; details: Record<string, unknown> | string | null; ip?: string | null }
+export interface MailboxNote { id: string; from_conv: string | null; fromTitle: string; sender: string; text: string; created: number; read_at: number | null }
 let frameKey: string | null = null;
 export const setFrameKey = (k: string | null) => { frameKey = k; };
 /** Base for /api URLs that a sandboxed frame loads (boot.js, project pages, /work files). The key reaches `scope` only
@@ -76,6 +79,11 @@ export const api = {
     return req('/api/auth/logout', { method: 'POST' });
   },
   logoutOthers: () => req('/api/auth/logout-others', { method: 'POST' }),
+  auditLog: (limit = 100, offset = 0, action = '') => req<AuditEntry[]>(`/api/audit-log?limit=${limit}&offset=${offset}${action ? `&action=${encodeURIComponent(action)}` : ''}`),
+  feedbackStats: (days = 30) => req<Record<string, { up: number; down: number }>>(`/api/feedback/stats?days=${days}`),
+  mailbox: (conv: string, unread = false) => req<{ messages: MailboxNote[]; unread: number }>(`/api/mailbox/${conv}${unread ? '?unread=true' : ''}`),
+  mailboxSend: (conv: string, text: string) => req(`/api/mailbox/${conv}`, { method: 'POST', body: json({ text }) }),
+  mailboxRead: (conv: string) => req(`/api/mailbox/${conv}/read`, { method: 'POST' }),
   authSessions: () => req<AuthSession[]>('/api/auth/sessions'),
   changePassword: (current: string, password: string) => req('/api/auth/password', { method: 'POST', body: json({ current, password }) }),
   authRateLimitStatus: () => req<{ ip: string; recentIpFailures: number; maxIpFailuresBeforeLock: number; recentGlobalFailures: number; globalLockActive: boolean }>('/api/auth/status'),

@@ -394,6 +394,8 @@ async def start_file(repo: str, file: str, dest: str) -> dict:
     if not REPO_RE.match(repo) or not FILE_RE.match(file) or ".." in file:
         raise HTTPException(400, "Bad repository or file.")
     target = _dest_path(dest, file)
+    if target.exists():  # ComfyUI graphs name files exactly, so a same-named download would silently replace a model
+        raise HTTPException(409, f"{target.name} is already in {dest}. Delete it first if you want this copy instead.")
     d = await _hf_repo(repo, fresh=True)
     sib = next((s for s in d.get("siblings") or [] if s["rfilename"] == file), None)
     if not sib:

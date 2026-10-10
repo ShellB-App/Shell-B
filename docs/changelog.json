@@ -1,6 +1,12 @@
 [
  {
   "date": "2026-10-10",
+  "area": "Security",
+  "title": "Self-review findings fixed",
+  "summary": "Self-deploys now sync and diff against the branch the live tree has checked out (they fetched main while deploying into public-release). Aphrodite screens attached files like the typed message and takes no pictures as input. Community MCP servers each get their own package cache, so one can't plant code in another, and a marketplace plugin path can't point outside its repository. The Model Store refuses a download that would overwrite a ComfyUI model with the same name. The kiosk lock screen lost its URL bypass, warns while the default PIN is in use and shows real memory and service status. Notes report failed searches, opens and relinks instead of staying silent. Chats got a mailbox envelope, Settings → Account an audit log, and the Agent Lab the thumbs per agent."
+ },
+ {
+  "date": "2026-10-10",
   "area": "Agents",
   "title": "Agent Lab shows which tools Shell:B adds on her own",
   "summary": "Sixteen tools (weather, shopping, wiki, law, follow-ups, circles, the library and Codex, the browser and screen…) are added to agents by rules, not by ticking them, and the Agent Lab now lists them under \"Added automatically\" with the rule instead of showing checkboxes that did nothing. Tools & Connectors marks them Auto. The \"SSH\" and \"Swarm\" model sources that were never built are gone; Models → Fleet is how other machines run models. Shell:B, Hephaestus, Minerva, Mimir and Daedalus can now leave notes for other chats, Shell:B, Hephaestus, Atlas and Claude can look up community MCP servers and skills (find_capability), and Shell:B and Hephaestus see the findings ledger."

@@ -35,6 +35,8 @@ interface Props {
 export function AgentLab({ open, onClose, agents, tools, models, initialId, onChanged }: Props) {
   const [selId, setSelId] = useState<string | undefined>(initialId ?? agents[0]?.id);
   const [draft, setDraft] = useState<Agent | null>(null);
+  const [ratings, setRatings] = useState<Record<string, { up: number; down: number }>>({});  // thumbs per agent, last 30 days (server/feedback.py)
+  useEffect(() => { if (open) api.feedbackStats(30).then(setRatings).catch(() => setRatings({})); }, [open]);
   const [isNew, setIsNew] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -123,6 +125,11 @@ export function AgentLab({ open, onClose, agents, tools, models, initialId, onCh
               </label>
             </div>
           </div>
+          {!isNew && ratings[draft.id] && (ratings[draft.id].up || ratings[draft.id].down) ? (
+            <div className="text-[11px] text-[var(--text-muted)]" title="Thumbs under this agent's replies in the last 30 days (Activity → Memory digest has the repeated complaints)">
+              Last 30 days: 👍 {ratings[draft.id].up} · 👎 {ratings[draft.id].down}
+            </div>
+          ) : null}
 
           <div className="flex flex-wrap gap-1.5">
             {PALETTE.map(c => (

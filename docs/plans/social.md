@@ -146,7 +146,7 @@ circle with its owner (`shellb://u/<handle>`).
 - **Agents may propose notes** (`circle_propose`, approval card, per-circle switch defaults on).
 - **Unpinned chats draw from all of a person's circles**, each note labelled by circle; pinning a chat or project
   narrows it.
-- **Status: plan only.** Don't start building until Evie says so.
+- **Status: Phase 1 shipped 2026-10-09** (see Progress above). Phases 2 and 3 are planned under *Shell:B feature-completeness review* (2026-10-10).
 
 Still open:
 - Do circle notes ever reach cloud agents? (Plan: only where the circle allows cloud and the author ticked

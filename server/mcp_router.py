@@ -65,6 +65,8 @@ async def mcp_server_delete(sid: str, req: Request):
     auth.require_admin(req)
     mcp_hub.remove(sid)
     await mcp_hub.sync()
+    import community
+    await community.drop_volumes(sid)  # a community install's private npm/uv cache goes with it
     agents = get_agents()  # drop the server from agents that used it
     if any(f"mcp:{sid}" in a.get("tools", []) for a in agents):
         for a in agents:

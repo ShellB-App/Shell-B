@@ -1,7 +1,8 @@
 """Legal: offline US and EU law from the full-text index in ~/shellb/legal/index.db.
 
 The corpus (US Code, eCFR incl. EAR/ITAR/OFAC/Customs, Statutes at Large, Public Laws, HTS, Consolidated Screening List,
-EUR-Lex legislation incl. the Cyber Resilience Act, Federal Register, case law) is fetched by ~/shellb/legal/fetch_legal.py
+EUR-Lex legislation incl. the Cyber Resilience Act; the Federal Register and CourtListener case law are downloaded but
+not indexed until build_index.py grows their parsers) is fetched by ~/shellb/legal/fetch_legal.py
 and indexed by ~/shellb/legal/build_index.py. Each indexed row is one citable unit (a section, article, recital, annex
 chunk, tariff heading or list entry). This module only reads the index (opened read-only per call), so re-indexing while
 the app runs is safe. Everything an agent gets names its source and snapshot: law changes, the files are a snapshot.

@@ -1,5 +1,5 @@
 // Real sky positions and Earth-link numbers for the Worlds app, computed in the browser from sol.ts (JPL elements).
-// Replaces /api/planetary/sky_view and /ephemeris, whose numbers were invented.
+// The server's /api/planetary/sky_view and /ephemeris now compute the same thing with solsys.py; this copy saves the round-trip.
 //
 // Sky: target directions from the observer's spot (topocentric, so Phobos and our Moon are right), turned into
 // the local horizon with the IAU WGCCRE 2015 rotation models (pole RA/Dec + prime meridian W). Light time and
