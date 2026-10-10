@@ -38,6 +38,7 @@ import tokens
 import favorites
 import codex
 import codex_secrets
+import codex_sync
 import media
 import generate
 import modelhub
@@ -226,6 +227,7 @@ app.include_router(notify.router)
 app.include_router(mailer.router)
 app.include_router(codex_secrets.router)
 app.include_router(codex.router)
+app.include_router(codex_sync.router)
 app.include_router(media.router)
 app.include_router(generate.router)
 app.include_router(suggestions.router)
@@ -305,6 +307,7 @@ async def _start_mcp():
     suggestions.start()
     commitments.busy = lambda: bool(ACTIVE)
     commitments.start()
+    codex_sync.start()  # calendar reminders (Activity source `calendar`)
     nightshift.run_turn, nightshift.abort_turn, nightshift.get_settings = _run_nightshift, _abort_turn, get_settings
     nightshift.active_convs, nightshift.busy = lambda: list(ACTIVE), _background_busy
     if not cell_boot.CELL:
@@ -338,6 +341,7 @@ async def _shutdown():
     reflection.stop()
     suggestions.stop()
     commitments.stop()
+    codex_sync.stop()
     nightshift.stop()
     datasets.stop()
     watchdog.stop()

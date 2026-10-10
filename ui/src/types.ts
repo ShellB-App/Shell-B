@@ -500,7 +500,7 @@ export interface DownloadItem {
   done: number; total: number; rate: number | null; note?: string | null; started?: number; link: string;
 }
 
-export type ActivitySource = 'schedule' | 'todo' | 'plan' | 'scout' | 'notebook' | 'deploy' | 'codex' | 'memory' | 'data' | 'brief' | 'health' | 'shopping' | 'nightshift' | 'circles' | 'guest';
+export type ActivitySource = 'schedule' | 'todo' | 'plan' | 'scout' | 'notebook' | 'deploy' | 'codex' | 'memory' | 'data' | 'brief' | 'health' | 'shopping' | 'nightshift' | 'circles' | 'guest' | 'calendar';
 
 /** Unread events, how many of them need the owner, and approvals agents are waiting on right now. */
 export interface ActivitySummary { unread: number; attention: number; pending: number }
@@ -546,7 +546,13 @@ export interface EventMeta {
   location?: string;
   attendees?: string[];
   status?: 'confirmed' | 'tentative' | 'cancelled';
-  recurrence?: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+  recurrence?: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
+  /** RFC 5545 rule text when recurrence is custom (server/codex_sync.py expands it) */
+  rrule?: string;
+  /** minutes before the start to post a reminder to Activity; 0 = at the start */
+  reminderMinutes?: number;
+  /** iCalendar UID, kept across .ics import/export */
+  uid?: string;
 }
 
 export interface CodexEntryMeta extends ContactMeta, EventMeta {

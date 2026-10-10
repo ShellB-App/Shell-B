@@ -53,7 +53,7 @@ RECORD_SIZE = 4096
 PUSH_HOSTS = ("fcm.googleapis.com", "android.googleapis.com", "updates.push.services.mozilla.com",
               ".push.apple.com", ".notify.windows.com")
 LEVELS = ("off", "attention", "all")
-ATTENTION = {"failed", "blocked", "paused", "interrupted", "rolled-back", "restart-pending", "review", "waiting", "warning"}
+ATTENTION = {"failed", "blocked", "paused", "interrupted", "rolled-back", "restart-pending", "review", "waiting", "warning", "due"}
 
 # id, label, hint, default level. Activity sources mirror activity.SOURCES; approval/question come from remote.py.
 KINDS = [
@@ -72,6 +72,7 @@ KINDS = [
     ("health", "System health", "A service went down or came back, a crash loop, low disk or memory", "all"),
     ("brief", "Morning brief", "Your daily brief is ready", "attention"),
     ("nightshift", "Night shift", "A night-shift research or redraft job finished or failed", "attention"),
+    ("calendar", "Calendar reminders", "A Codex event with a reminder is about to start", "all"),
     ("guest", "Guests", "A guest used Report to Evie, or a guest account locked after wrong passwords", "all"),
     ("circles", "Circles", "Someone flagged a circle note, or flags hid one", "all"),
 ]
@@ -79,11 +80,11 @@ KIND_IDS = {k[0] for k in KINDS}
 NOUN = {"approval": "Approval", "question": "Question", "schedule": "Scheduled task", "plan": "Mega Plan",
         "todo": "To-do", "deploy": "Self-deploy", "scout": "Asset scout", "notebook": "Notebook", "codex": "Codex draft",
         "memory": "Memory", "data": "Offline data", "health": "System health", "shopping": "Price watch",
-        "guest": "Guest report", "circles": "Circle note", "brief": "Morning brief", "nightshift": "Night-shift job"}
+        "guest": "Guest report", "circles": "Circle note", "brief": "Morning brief", "nightshift": "Night-shift job", "calendar": "Event"}
 VERB = {"done": "finished", "complete": "finished", "failed": "failed", "blocked": "is blocked", "paused": "paused",
         "interrupted": "was interrupted", "rolled-back": "rolled back", "restart-pending": "is waiting for a restart",
         "review": "needs your review", "waiting": "is waiting for you", "warning": "needs attention",
-        "recovered": "recovered"}
+        "recovered": "recovered", "due": "is coming up"}
 APPROVAL_NOUN = {"self": "Self-deploy", "remote": "Remote command", "secret": "Secret access", "question": "Question", "browser": "Browser submit",
                  "email": "Email to send"}
 

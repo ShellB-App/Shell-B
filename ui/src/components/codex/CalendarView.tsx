@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import clsx from 'clsx';
 import {
   Cake,
@@ -9,12 +9,15 @@ import {
   MapPin,
   Plus,
   Sparkles,
-  Users,
-} from 'lucide-react';
+  Users, Upload, Download } from 'lucide-react';
+import { api } from '../../api';
+import { toastError } from '../toast';
 import type { CodexEntry } from '../../types';
 import { btn } from '../common';
 import { ContactAvatar } from './ContactAvatar';
 
+/** Does the event fall on this day? Daily, weekly, monthly and yearly repeats are expanded here (from the first
+ * date on); a custom RRULE is only expanded by the server (codex_sync.occurrences), so it shows on its first date. */
 function eventMatchesDate(e: CodexEntry, targetDateStr: string): boolean {
   const m = e.meta || {};
   const d = m.date || (m as any).startDate;
@@ -25,8 +28,16 @@ function eventMatchesDate(e: CodexEntry, targetDateStr: string): boolean {
     const eventMMDD = d.length === 5 ? d : d.slice(5);
     if (targetMMDD === eventMMDD) return true;
   }
+  if (d.length !== 10 || targetDateStr < d) return false;
+  if (m.recurrence === 'daily') return true;
+  if (m.recurrence === 'weekly') {
+    const days = Math.round((Date.UTC(+targetDateStr.slice(0, 4), +targetDateStr.slice(5, 7) - 1, +targetDateStr.slice(8)) - Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8))) / 86400000);
+    return days % 7 === 0;
+  }
+  if (m.recurrence === 'monthly') return targetDateStr.slice(8) === d.slice(8);
   return false;
 }
+const repeats = (e: CodexEntry) => !!e.meta?.recurrence && e.meta.recurrence !== 'none';
 
 /** Interactive Month Calendar & Agenda Timeline View. */
 export function CalendarView({
@@ -39,6 +50,7 @@ export function CalendarView({
   onCreateEvent,
   onAutoPopulate,
   populating,
+  onImported,
 }: {
   events: CodexEntry[];
   contacts?: CodexEntry[];
@@ -49,7 +61,16 @@ export function CalendarView({
   onCreateEvent: (d?: string) => void;
   onAutoPopulate?: () => void;
   populating?: boolean;
+  /** after an .ics import: reload the entries */
+  onImported?: (r: { added: number; updated: number; total: number }) => void;
 }) {
+  const icsInput = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+  const importIcs = async (files: File[]) => {
+    if (!files.length) return;
+    setImporting(true);
+    try { onImported?.(await api.importCodexIcs(files)); } catch (e) { toastError('Import failed')(e); } finally { setImporting(false); }
+  };
   const [viewMonth, setViewMonth] = useState(() => {
     const today = new Date();
     return new Date(today.getFullYear(), today.getMonth(), 1);
@@ -144,12 +165,12 @@ export function CalendarView({
   const upcomingEvents = sortedEvents.filter(e => {
     const d = e.meta?.date || (e.meta as any)?.startDate;
     if (!d) return true;
-    if (e.meta?.recurrence === 'yearly') return true;
+    if (repeats(e)) return true;
     return d >= todayStr;
   });
   const pastEvents = sortedEvents.filter(e => {
     const d = e.meta?.date || (e.meta as any)?.startDate;
-    return d && d < todayStr && e.meta?.recurrence !== 'yearly';
+    return d && d < todayStr && !repeats(e);
   });
 
   return (
@@ -194,6 +215,13 @@ export function CalendarView({
           <button className={clsx(btn.primary, 'bg-orange-600 hover:bg-orange-500 text-white border-transparent')} onClick={() => onCreateEvent(selectedDate)}>
             <Plus className="w-3.5 h-3.5" />New Event
           </button>
+          <button className={btn.subtle} onClick={() => icsInput.current?.click()} disabled={importing} title="Import events from an .ics file (Google, Apple, Outlook exports; repeats and reminders come along)">
+            {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}Import .ics
+          </button>
+          <input ref={icsInput} type="file" accept=".ics,text/calendar" multiple hidden onChange={e => { importIcs([...(e.target.files ?? [])]); e.target.value = ''; }} />
+          <a className={btn.subtle} href="/api/codex/calendar.ics" download="shellb-calendar.ics" title="Every event as one .ics file; open it in another calendar app">
+            <Download className="w-3.5 h-3.5" />Export .ics
+          </a>
         </div>
       </div>
 

@@ -17,6 +17,7 @@ import {
   X,
   UserRound,
 } from 'lucide-react';
+import { toast } from './toast';
 import { api } from '../api';
 import type { CodexEntry, CodexIndex, CodexKind } from '../types';
 import { btn } from './common';
@@ -260,6 +261,7 @@ export function Codex({ sub, agentNames }: { sub: string; agentNames: Record<str
               onAccept={async c => { onSaved(await api.patchCodexEntry(c.id, { draft: false })); }}
               onDiscard={async c => { await api.deleteCodexEntry(c.id); setItems(p => p.filter(i => i.id !== c.id)); setAllContacts(p => p.filter(i => i.id !== c.id)); loadIndex(); }}
               onPin={async c => onSaved(await api.patchCodexEntry(c.id, { pinned: !c.pinned }))}
+              onImported={r => { toast(`Imported ${r.added} new, updated ${r.updated}`); loadItems(); loadIndex(); }}
             />
           ) : !isCalendarView ? (
             <>
@@ -346,6 +348,7 @@ export function Codex({ sub, agentNames }: { sub: string; agentNames: Record<str
               onCreateEvent={d => setOpen({ kind: 'event', title: '', body: '', tags: [], collectionId: defaultCollection, url: '', meta: { date: d || selectedDate } })}
               onAutoPopulate={autoPopulate}
               populating={populating}
+              onImported={r => { toast(`Imported ${r.added} new, updated ${r.updated}`); loadItems(); loadIndex(); }}
             />
           )}
         </div>

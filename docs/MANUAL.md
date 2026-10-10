@@ -404,6 +404,25 @@ address (`_ShortNameRedirect` in app.py). Check with `tailscale serve status`; r
   The orchestrator always gets the tool in its plan chat. Code is in `server/megaplan.py` and
   `ui/src/components/MegaPlans.tsx`; the tables are `mega_plans`, `mega_steps`, `mega_events` and `mega_links`.
 
+## Calendar and contacts interchange
+
+The Codex's events and contacts move in and out as standard files (`server/codex_sync.py`; Codex → Calendar and
+Codex → Contacts have the buttons).
+- **Export:** `GET /api/codex/calendar.ics` (every event, or `?collection=`) is one iCalendar file another calendar app
+  can import or subscribe to; `GET /api/codex/contacts.vcf` is every contact as vCard 3.0. Both need the owner.
+- **Import:** `POST /api/codex/import/{ics,vcf}` (multipart `files`) reads exports from Google, Apple, Outlook or a
+  phone. Events keep their UID, so importing the same file again updates instead of doubling; contacts match by UID,
+  then by name or email, and an existing contact only gains fields it was missing. Times with a time zone or in UTC
+  are converted to Settings → `timeZone`; all-day events stay all-day; `RRULE`s that are a plain daily/weekly/monthly/
+  yearly map to the recurrence picker, anything else becomes **Custom rule** and is kept as the rule text (`meta.rrule`).
+  A `VALARM` trigger becomes the event's reminder.
+- **Recurrence:** daily, weekly, monthly, yearly and custom RRULE events are expanded with dateutil for the agents'
+  "Upcoming Schedule" block and for the calendar grid (custom rules are expanded server-side only).
+- **Reminders:** an event's **Remind me** (at the start, 5–60 minutes or a day before) posts to Activity (source
+  `calendar`, status `due`) once per occurrence; push and email notifications follow the Calendar reminders level.
+- No library: the module writes and parses the formats itself (folding, escaping, parameters, nested VALARM).
+  CalDAV/CardDAV live sync is not built; subscribe to the `.ics` URL from the other side for a read-only feed.
+
 ## Circles
 
 The people Shell:B is shared with, in walled groups, and the notes they choose to tell each other (`server/circles.py`,

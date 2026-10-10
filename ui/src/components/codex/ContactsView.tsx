@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import clsx from 'clsx';
 import {
   Briefcase, Building, Cake, ExternalLink, LayoutGrid, List,
-  Loader2, Mail, MapPin, Phone, Pin, Plus, Search, Sparkles, User, X
-} from 'lucide-react';
+  Loader2, Mail, MapPin, Phone, Pin, Plus, Search, Sparkles, User, X, Upload, Download } from 'lucide-react';
+import { api } from '../../api';
+import { toastError } from '../toast';
 import type { CodexEntry } from '../../types';
 import { btn, relTime } from '../common';
 import { ContactAvatar } from './ContactAvatar';
@@ -44,6 +45,7 @@ export function ContactsView({
   onAccept,
   onDiscard,
   onPin,
+  onImported,
 }: {
   contacts: CodexEntry[];
   agentNames: Record<string, string>;
@@ -54,7 +56,16 @@ export function ContactsView({
   onAccept: (e: CodexEntry) => void;
   onDiscard: (e: CodexEntry) => void;
   onPin: (e: CodexEntry) => void;
+  /** after a .vcf import: reload the entries */
+  onImported?: (r: { added: number; updated: number; total: number }) => void;
 }) {
+  const vcfInput = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+  const importVcf = async (files: File[]) => {
+    if (!files.length) return;
+    setImporting(true);
+    try { onImported?.(await api.importCodexVcf(files)); } catch (e) { toastError('Import failed')(e); } finally { setImporting(false); }
+  };
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
     try {
       return (localStorage.getItem('codex_contacts_view') as 'grid' | 'list') || 'grid';
@@ -180,6 +191,13 @@ export function ContactsView({
           {populating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
           Auto-populate
         </button>
+        <button className={btn.subtle} onClick={() => vcfInput.current?.click()} disabled={importing} title="Import people from a .vcf file (phone, Google or Outlook contacts export)">
+          {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}Import .vcf
+        </button>
+        <input ref={vcfInput} type="file" accept=".vcf,text/vcard,text/x-vcard" multiple hidden onChange={e => { importVcf([...(e.target.files ?? [])]); e.target.value = ''; }} />
+        <a className={btn.subtle} href="/api/codex/contacts.vcf" download="shellb-contacts.vcf" title="Every contact as a vCard file for your phone or another address book">
+          <Download className="w-3.5 h-3.5" />Export .vcf
+        </a>
       </div>
 
       {/* Tag Filters */}

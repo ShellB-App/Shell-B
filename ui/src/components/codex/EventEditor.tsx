@@ -165,6 +165,23 @@ export function EventEditor({ start, index, agentNames, allContacts, contacts = 
                 <option value="weekly">Weekly</option>
                 <option value="monthly">Monthly</option>
                 <option value="yearly">Yearly</option>
+                <option value="custom">Custom rule (RRULE)</option>
+              </select>
+              {m.recurrence === 'custom' && (
+                <input className={clsx(btn.input, 'font-mono text-xs')} placeholder="FREQ=WEEKLY;BYDAY=MO,WE;INTERVAL=2" value={m.rrule ?? ''}
+                  onChange={ev => setMeta({ rrule: ev.target.value })} aria-label="Recurrence rule" />
+              )}
+            </label>
+            <label className="block space-y-1">
+              <span className="text-[11px] text-[var(--text-muted)]">Remind me</span>
+              <select className={btn.input} value={m.reminderMinutes ?? ''} onChange={ev => setMeta({ reminderMinutes: ev.target.value === '' ? undefined : Number(ev.target.value) })}>
+                <option value="">No reminder</option>
+                <option value="0">When it starts</option>
+                <option value="5">5 minutes before</option>
+                <option value="15">15 minutes before</option>
+                <option value="30">30 minutes before</option>
+                <option value="60">1 hour before</option>
+                <option value="1440">1 day before</option>
               </select>
             </label>
             <label className="block space-y-1">

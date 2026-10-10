@@ -1,6 +1,12 @@
 [
  {
   "date": "2026-10-10",
+  "area": "Codex",
+  "title": "Calendar and contacts: import, export, repeats and reminders",
+  "summary": "Codex → Calendar imports .ics files from Google, Apple or Outlook (times converted to your time zone, repeats and alarms included) and exports every event as one .ics you can subscribe to elsewhere; Codex → Contacts imports .vcf address books and exports yours. Importing the same file twice updates instead of doubling. Events can now repeat daily, weekly, monthly or by a custom rule, and show on every day they fall on; agents see those repeats in their upcoming-schedule block. A new Remind me field posts a reminder to Activity (and your phone, if that kind is on) before the event starts."
+ },
+ {
+  "date": "2026-10-10",
   "area": "Security",
   "title": "Two-step verification for the owner login",
   "summary": "Settings → Account → Two-step verification: after your password, the app asks for the 6-digit code from an authenticator app (the same kind guests already had). Setup scans a QR code and gives you ten recovery codes for a lost phone; from the Spark's shell, auth.py disable-2fa turns it off. Wrong codes slow logins down like wrong passwords, and a code is never accepted twice."

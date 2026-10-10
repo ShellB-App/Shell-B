@@ -256,6 +256,16 @@ export const api = {
     fd.append('collectionId', collectionId);
     return req<CodexEntry[]>('/api/codex/upload', { method: 'POST', body: fd });
   },
+  importCodexIcs: (files: File[], collection = '') => {
+    const fd = new FormData();
+    files.forEach(f => fd.append('files', f));
+    return req<{ added: number; updated: number; total: number }>(`/api/codex/import/ics${collection ? `?collection=${encodeURIComponent(collection)}` : ''}`, { method: 'POST', body: fd });
+  },
+  importCodexVcf: (files: File[], collection = '') => {
+    const fd = new FormData();
+    files.forEach(f => fd.append('files', f));
+    return req<{ added: number; updated: number; total: number }>(`/api/codex/import/vcf${collection ? `?collection=${encodeURIComponent(collection)}` : ''}`, { method: 'POST', body: fd });
+  },
   createCodexCollection: (name: string, description = '') =>
     req<CodexCollection>('/api/codex/collections', { method: 'POST', body: json({ name, description }) }),
   patchCodexCollection: (id: string, c: { name?: string; description?: string }) =>

@@ -619,6 +619,11 @@ def upcoming_schedule_prompt(now=None, days=14) -> str:
                 upcoming.append((this_year_date, f"{title}{time_str}{loc_str}{att_str} (Yearly)"))
             elif len(annual_milestones) < 3:
                 annual_milestones.append(f"{title} ({this_year_date.strftime('%b %d')}){att_str}")
+        elif recurrence in ("daily", "weekly", "monthly", "custom"):
+            import codex_sync  # dateutil expands the rule (daily/weekly/monthly, or the stored RRULE)
+            label = {"custom": "Repeats"}.get(recurrence, recurrence.capitalize())
+            for occ in codex_sync.occurrences(meta, today, end_date, limit=8):
+                upcoming.append((occ, f"{title}{time_str}{loc_str}{att_str} ({label})"))
         else:
             if today <= ev_date <= end_date:
                 upcoming.append((ev_date, f"{title}{time_str}{loc_str}{att_str}"))
