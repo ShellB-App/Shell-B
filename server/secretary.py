@@ -717,6 +717,23 @@ async def upload_meeting_audio(mid: str, file: UploadFile = File(...)):
 
     audio_bytes = await file.read()
     filename = file.filename or "meeting.wav"
+    import transcribe
+    if transcribe.is_video(filename) or Path(filename).suffix.lower() in (".mkv", ".mov", ".m4v", ".avi"):
+        # a recording with a picture: ffmpeg in the sandbox strips the audio track first (the host has no ffmpeg)
+        import tempfile
+        tmp = Path(tempfile.mkdtemp(prefix="meeting-", dir=db.DATA / "cells"))
+        try:
+            src = tmp / Path(filename).name
+            src.write_bytes(audio_bytes)
+            wav = await transcribe.to_wav(src, tmp / "meeting.wav")
+            audio_bytes, filename = wav.read_bytes(), "meeting.wav"
+        except RuntimeError as e:
+            m["status"] = "idle"
+            _save_meeting(m)
+            raise HTTPException(400, f"Couldn't extract the audio: {e}")
+        finally:
+            import shutil
+            shutil.rmtree(tmp, ignore_errors=True)
 
     # Transcribe via Hermes Whisper
     async with httpx.AsyncClient(timeout=300) as c:

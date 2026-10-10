@@ -986,7 +986,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
               <span className="hidden sm:inline">Upload Audio</span>
               <input
                 type="file"
-                accept="audio/*"
+                accept="audio/*,video/*,.mkv,.mov,.m4v"
                 onChange={handleAudioUpload}
                 disabled={uploadingAudio}
                 className="hidden"

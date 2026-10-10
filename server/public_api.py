@@ -48,6 +48,8 @@ Endpoints (all under /api/v1):
 See docs/API.md.
 """
 import asyncio
+import binascii
+import re
 import hashlib
 import hmac
 import json
@@ -149,6 +151,7 @@ def clean_config(cfg: dict | None, mode: str) -> dict:
     out = {k: _int(cfg.get(k, d), d, lo, hi) for k, (d, lo, hi) in LIMITS.items()}
     out["logContent"] = bool(cfg.get("logContent"))
     out["disabled"] = bool(cfg.get("disabled"))
+    out["memory"] = bool(cfg.get("memory")) and mode == "agent"  # may read and add the owner's memories (/api/v1/memory)
     out["instructions"] = str(cfg.get("instructions") or "").strip()[:20_000] if mode == "persona" else ""
     out["tools"] = [t for t in dict.fromkeys(str(t) for t in cfg.get("tools") or []) if t in PERSONA_TOOLS] if mode == "persona" else []
     if mode == "raw":
@@ -430,7 +433,8 @@ def _running(key: dict) -> int:
     return len(mine & set(ACTIVE))
 
 
-def _start(key: dict, conv: dict, agent: dict, content: str, instructions: str = "", usage: dict | None = None):
+def _start(key: dict, conv: dict, agent: dict, content: str, instructions: str = "", usage: dict | None = None,
+           attachments: list[dict] | None = None):
     """Start a turn for a key: (event queue, task). Checks busy chats and the key's concurrency. A persona key's turn
     is sealed off from the owner's memory and data (app.begin_turn's `api`)."""
     if conv["id"] in ACTIVE:
@@ -438,7 +442,7 @@ def _start(key: dict, conv: dict, agent: dict, content: str, instructions: str =
     limit = key["config"]["concurrent"]
     if _running(key) >= limit:
         raise HTTPException(429, f"This key already has {limit} turns running", headers={"Retry-After": "5"})
-    if not content.strip():
+    if not content.strip() and not attachments:
         raise HTTPException(400, "Empty message")
     if len(content) > MAX_MESSAGE:
         raise HTTPException(413, f"Message over {MAX_MESSAGE} characters")
@@ -455,7 +459,10 @@ def _start(key: dict, conv: dict, agent: dict, content: str, instructions: str =
     if instructions.strip():
         note += "\n\n## Instructions from the API caller\n" + instructions.strip()[:20_000]
     try:
-        return begin_turn(conv, {"content": content, "agentId": agent["id"]}, stream=True, note=note, interactive=False, **extra)
+        body = {"content": content or "(see the attached image)", "agentId": agent["id"]}
+        if attachments:
+            body["attachments"] = attachments
+        return begin_turn(conv, body, stream=True, note=note, interactive=False, **extra)
     except RuntimeError as e:
         raise HTTPException(403, str(e))
 
@@ -659,6 +666,8 @@ def agents(req: Request):
 
 
 async def _body(req: Request) -> dict:
+    if isinstance(req.scope.get("shellb_mcp_body"), dict):  # the MCP server calls these endpoints in-process
+        return req.scope.pop("shellb_mcp_body")
     try:
         body = await req.json()
     except Exception:
@@ -693,7 +702,8 @@ async def chat(req: Request):
     conv0 = db.get_conversation(conv_id) if conv_id and _owns(key, conv_id) else None
     agent = _agent(key, body.get("agent") or (conv0 or {}).get("agentId"))
     conv = _conversation(key, conv_id, agent)
-    queue, task = _start(key, conv, agent, content, str(body.get("instructions") or ""), usage)
+    atts = _save_attachments(conv["id"], [a for a in (body.get("attachments") or []) if isinstance(a, dict)]) if body.get("attachments") else None
+    queue, task = _start(key, conv, agent, content, str(body.get("instructions") or ""), usage, atts)
 
     if body.get("stream"):
         async def events():
@@ -755,14 +765,129 @@ def stop(conv_id: str, req: Request):
     return {"ok": True, "stopped": bool(abort_turn(conv_id))}
 
 
+@router.get("/conversations/{conv_id}/artifacts/{art_id}")
+def artifact(conv_id: str, art_id: str, req: Request, version: int | None = None):
+    """One artifact's content (the newest version unless `version` is given), for a chat this key started."""
+    key = _caller(req)
+    if not _owns(key, conv_id):
+        raise HTTPException(404, "No such conversation for this key")
+    g = next((a for a in db.list_artifacts(conv_id) if a["id"] == art_id), None)
+    if not g or not g["versions"]:
+        raise HTTPException(404, "No such artifact")
+    v = next((x for x in g["versions"] if x["version"] == version), None) if version else g["versions"][-1]
+    if not v:
+        raise HTTPException(404, "No such version")
+    _usage(req)["conv"] = conv_id
+    return {"id": g["id"], "title": g["title"], "type": v["type"], "language": v.get("language"), "version": v["version"],
+            "versions": len(g["versions"]), "content": v["content"]}
+
+
+@router.get("/library")
+async def library_search(req: Request, q: str = "", kind: str = "", limit: int = 20):
+    """What Shell:B has made: Studio/Code projects, notebooks, chat Projects, artifacts, media (library.py). Agent keys only."""
+    key = _caller(req)
+    if key["mode"] != "agent":
+        raise HTTPException(403, "Only agent keys reach the library")
+    import library
+    items = library.entries(kind or None)
+    ql = q.strip().lower()
+    if ql:
+        items = [i for i in items if ql in json.dumps(i, ensure_ascii=False).lower()]
+    return {"items": items[:max(1, min(100, limit))], "total": len(items)}
+
+
+@router.get("/memory")
+async def memory_get(req: Request, q: str = "", limit: int = 20):
+    """The owner's memories (agent keys with the `memory` permission): `q` searches by meaning, else the newest."""
+    key = _caller(req)
+    if not key["config"].get("memory"):
+        raise HTTPException(403, "This key may not read memory (tick Memory on the key)")
+    import memory
+    if q.strip():
+        rows = await memory.search(q.strip(), get_settings(), k=max(1, min(50, limit)))
+    else:
+        rows = memory.rows()[-max(1, min(200, limit)):][::-1]
+    return {"memories": [{k: r.get(k) for k in ("id", "text", "category", "origin", "createdAt", "expires", "score") if k in r} for r in rows]}
+
+
+@router.post("/memory")
+async def memory_post(req: Request):
+    """Add one memory as the API caller (origin api:<key name>); the owner sees it in Settings → Memory."""
+    key = _caller(req)
+    if not key["config"].get("memory"):
+        raise HTTPException(403, "This key may not write memory (tick Memory on the key)")
+    body = await _body(req)
+    text = str(body.get("text") or "").strip()
+    if not text or len(text) > 300:
+        raise HTTPException(400, "text is 1-300 characters")
+    import memory
+    mid, dup = await memory.add(text, category=str(body.get("category") or "other"), origin=f"api:{key['name']}"[:40])
+    if dup:
+        return {"memory": {"id": dup.get("id"), "text": dup.get("text")}, "duplicate": True}
+    return {"memory": {"id": mid, "text": text}, "duplicate": False}
+
+
 # ── OpenAI-compatible ───────────────────────────────────────────────────────
 
 def _text(content) -> str:
     if isinstance(content, str):
         return content
-    if isinstance(content, list):  # content parts: text only (images through the API aren't supported yet)
+    if isinstance(content, list):  # content parts: the text; images are picked up by _image_parts
         return "\n".join(str(p.get("text", "")) for p in content if isinstance(p, dict) and p.get("type") in ("text", "input_text"))
     return ""
+
+
+IMAGE_TYPES = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp", "image/gif": ".gif"}
+MAX_IMAGE = 8 * 2**20
+
+
+def _save_attachments(conv_id: str, parts: list[dict]) -> list[dict]:
+    """Base64 images from an API call → attachments the way app.py's upload makes them, so the vision model sees them.
+    Each part is {name?, mime, data (base64)} (native) or an OpenAI image_url data: URL."""
+    import base64
+    from tools import WORKSPACES
+    out = []
+    ws = WORKSPACES / conv_id
+    ws.mkdir(exist_ok=True)
+    for p in parts[:8]:
+        mime, b64 = str(p.get("mime") or ""), str(p.get("data") or "")
+        url = p.get("url") or (p.get("image_url") or {}).get("url") if isinstance(p.get("image_url"), (dict, str)) else None
+        if isinstance(p.get("image_url"), str):
+            url = p["image_url"]
+        if url and str(url).startswith("data:"):
+            m = re.match(r"^data:([\w/+.-]+);base64,(.+)$", str(url), re.S)
+            if not m:
+                raise HTTPException(400, "image_url must be a data: URL with base64 content")
+            mime, b64 = m.group(1).lower(), m.group(2)
+        elif url:
+            raise HTTPException(400, "Remote image URLs aren't fetched; send the image as a base64 data: URL")
+        ext = IMAGE_TYPES.get(mime.lower())
+        if not ext:
+            raise HTTPException(400, f"Unsupported image type {mime or '(none)'}; use PNG, JPEG, WebP or GIF")
+        try:
+            data = base64.b64decode(b64, validate=True)
+        except (ValueError, binascii.Error):
+            raise HTTPException(400, "Bad base64 image data")
+        if len(data) > MAX_IMAGE:
+            raise HTTPException(413, f"Images over {MAX_IMAGE // 2**20} MB aren't accepted")
+        name = re.sub(r"[^\w.-]+", "_", str(p.get("name") or f"image-{uuid.uuid4().hex[:8]}{ext}"))
+        if not name.lower().endswith(ext):
+            name += ext
+        dest = ws / name
+        n = 1
+        while dest.exists():
+            dest = ws / f"{dest.stem}-{n}{ext}"
+            n += 1
+        dest.write_bytes(data)
+        out.append({"id": db.new_id("att"), "name": dest.name, "size": len(data), "type": mime, "kind": "image",
+                    "url": f"/api/workspace/{conv_id}/{dest.name}"})
+    return out
+
+
+def _image_parts(content) -> list[dict]:
+    if not isinstance(content, list):
+        return []
+    return [p for p in content if isinstance(p, dict) and p.get("type") in ("image_url", "input_image")]
 
 
 @router.get("/models")
@@ -798,7 +923,9 @@ async def chat_completions(req: Request):
             if m.get("role") in ("user", "assistant"):
                 db.add_message(conv["id"], m["role"], _text(m.get("content")),
                                {"agentId": agent["id"], "status": "complete"} if m["role"] == "assistant" else {})
-    queue, task = _start(key, conv, agent, _text(msgs[-1].get("content")), system, audit)
+    parts = _image_parts(msgs[-1].get("content"))
+    atts = _save_attachments(conv["id"], parts) if parts else None
+    queue, task = _start(key, conv, agent, _text(msgs[-1].get("content")), system, audit, atts)
     cid, created = "chatcmpl-" + uuid.uuid4().hex[:24], int(time.time())
     headers = {"X-Shellb-Conversation": conv["id"]}
 

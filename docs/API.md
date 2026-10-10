@@ -163,6 +163,19 @@ Tools:
 Raw keys can't use the MCP server (it hands tasks to agents). A long agent turn can outlast a client's tool timeout; the turn keeps running on Shell:B either way, so use
 `wait: false` and `shellb_read` for big tasks. Refusals (busy chat, unknown agent) come back as tool errors.
 
+## Artifacts, images, library and memory
+
+- `GET /conversations/{id}/artifacts/{artifact}` (`?version=`): an artifact's content and type (`/chat` replies list
+  the ids). MCP: `shellb_artifact`.
+- Images in: `/chat` takes `attachments: [{name, mime, data}]` (base64, PNG/JPEG/WebP/GIF, 8 MB each, up to 8); `/chat/
+  completions` takes OpenAI `image_url` parts as `data:` URLs. They land in the chat's /work like an upload, so vision
+  agents see them. Remote image URLs are not fetched.
+- `GET /library?q=&kind=&limit=`: what Shell:B has made (Studio/Code projects, notebooks, chat Projects, artifacts,
+  media). Agent keys only. MCP: `shellb_library_search`.
+- `GET /memory?q=&limit=` and `POST /memory {text, category}`: the owner's memories, only for agent keys with the
+  **Memory** permission ticked (Tools & Connectors → API → the key). Added memories carry origin `api:<key name>`.
+  MCP: `shellb_memory_search`, `shellb_memory_save`.
+
 ## Webhooks
 
 Tools & Connectors → API → **Webhooks** (`server/hooks.py`). Hooks are managed by the owner at `/api/webhooks`; they are

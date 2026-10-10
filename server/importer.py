@@ -18,6 +18,7 @@ Formats (both drift; everything is read defensively):
 """
 import asyncio
 import json
+import re
 import secrets
 import threading
 import time
@@ -35,7 +36,7 @@ UPLOADS = db.DATA / "imports"
 MAX_UPLOAD = 4 * 1024 ** 3        # exports with images can be large; only conversations.json is read
 MAX_JSON = 2 * 1024 ** 3
 SESSION_TTL = 3600
-SOURCES = {"chatgpt": "ChatGPT", "claude": "Claude"}
+SOURCES = {"chatgpt": "ChatGPT", "claude": "Claude", "gemini": "Gemini"}
 
 _sessions: dict[str, dict] = {}   # upload token → {source, convs, created, filename}
 _job = {"running": False, "phase": "", "done": 0, "total": 0, "imported": 0, "skipped": 0, "messages": 0, "error": "",
@@ -219,6 +220,53 @@ def _normalize(c: dict) -> dict:
     return c
 
 
+def _parse_gemini(day: dict) -> dict | None:
+    """One day of Takeout's My Activity → Gemini Apps records (MyActivity.json), grouped by `_gemini_days`.
+
+    Each record is one prompt: {"header": "Gemini Apps", "title": "Prompted <text>", "time": ISO, "details": [...],
+    "subtitles": [...]}. Takeout logs what was asked, not the model's reply, so these chats hold the prompts (and a reply
+    when a record carries one under "subtitles"), one chat per day."""
+    msgs = []
+    for r in day["records"]:
+        title = _str(r.get("title"))
+        text = re.sub(r"^(Prompted|Asked|Searched for)\s+", "", title).strip()
+        if not text or re.match(r"^(Used|Visited|Viewed|Opened)\b", title):
+            continue
+        ts = _iso_ts(r.get("time"))
+        msgs.append({"role": "user", "text": text, "ts": ts, "model": "gemini"})
+        reply = " ".join(_str(s.get("name")) for s in (r.get("subtitles") or []) if isinstance(s, dict) and _str(s.get("name")).strip())
+        if reply and not reply.startswith(("Gemini Apps", "Google")):
+            msgs.append({"role": "assistant", "text": reply, "ts": ts, "model": "gemini"})
+    if not msgs:
+        return None
+    first, last = min(m["ts"] or 0 for m in msgs), max(m["ts"] or 0 for m in msgs)
+    return {"id": f"gemini-{day['day']}", "title": f"Gemini · {day['day']}", "created": first, "updated": last, "messages": msgs}
+
+
+def _iso_ts(v) -> float | None:
+    from datetime import datetime
+    s = _str(v).strip()
+    if not s:
+        return None
+    try:
+        return datetime.fromisoformat(s.replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return None
+
+
+def _gemini_days(records: list) -> list[dict]:
+    """Takeout records → [{day: YYYY-MM-DD, records: [...]}], oldest first."""
+    from datetime import datetime, timezone
+    days: dict[str, list] = {}
+    for r in records:
+        if not isinstance(r, dict) or _str(r.get("header")) != "Gemini Apps":
+            continue
+        ts = _iso_ts(r.get("time"))
+        day = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d") if ts else "undated"
+        days.setdefault(day, []).append(r)
+    return [{"day": d, "records": sorted(rs, key=lambda r: _iso_ts(r.get("time")) or 0)} for d, rs in sorted(days.items())]
+
+
 def detect(data) -> tuple[str, list]:
     if isinstance(data, dict):  # a single conversation, or a wrapper object
         for k in ("conversations", "items", "data"):
@@ -234,12 +282,15 @@ def detect(data) -> tuple[str, list]:
             return "chatgpt", data
         if isinstance(c, dict) and isinstance(c.get("chat_messages"), list):
             return "claude", data
-    raise ValueError("Not a ChatGPT or Claude export: no conversations with `mapping` or `chat_messages` found.")
+        if isinstance(c, dict) and _str(c.get("header")) == "Gemini Apps" and "title" in c:
+            return "gemini", _gemini_days(data)
+    raise ValueError("Not a ChatGPT, Claude or Gemini export: no conversations with `mapping` or `chat_messages`, and no "
+                     "Gemini Apps activity records, found.")
 
 
 def parse(data) -> tuple[str, list[dict]]:
     source, raw = detect(data)
-    fn = _parse_chatgpt if source == "chatgpt" else _parse_claude
+    fn = {"chatgpt": _parse_chatgpt, "claude": _parse_claude, "gemini": _parse_gemini}[source]
     out, seen = [], set()
     for i, item in enumerate(raw):
         if not isinstance(item, dict):
@@ -261,10 +312,13 @@ def parse(data) -> tuple[str, list[dict]]:
 def _read_json_file(path: Path):
     if zipfile.is_zipfile(path):
         with zipfile.ZipFile(path) as z:
-            names = [n for n in z.namelist() if Path(n).name.lower().startswith("conversations") and n.lower().endswith(".json")
-                     and not n.startswith("__MACOSX")]
+            names = [n for n in z.namelist() if (Path(n).name.lower().startswith("conversations") or
+                     (Path(n).name == "MyActivity.json" and "Gemini" in n)) and n.lower().endswith(".json") and not n.startswith("__MACOSX")]
             if not names:
-                raise ValueError("No conversations.json in this zip. Upload the export zip from ChatGPT or Claude as it was downloaded.")
+                if any(Path(n).name == "MyActivity.html" and "Gemini" in n for n in z.namelist()):
+                    raise ValueError("This Google Takeout has Gemini activity as HTML. Export again with the JSON format "
+                                     "(Takeout → My Activity → Multiple formats → JSON) and upload that zip.")
+                raise ValueError("No conversations.json (ChatGPT, Claude) or Gemini Apps MyActivity.json (Google Takeout) in this zip.")
             combined = []
             for n in sorted(names, key=lambda n: (n.count("/"), n)):  # conversations.json, or conversations-000.json …
                 if z.getinfo(n).file_size > MAX_JSON:

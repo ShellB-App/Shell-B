@@ -44,6 +44,8 @@ import gitremote
 import hooks
 import inbox
 import shares
+import studio_edit
+import transcribe
 import translate
 import media
 import generate
@@ -154,6 +156,8 @@ translate.register()
 gitremote.register()
 inbox.init()
 inbox.register()
+transcribe.register()
+studio_edit.register()
 mailer.init()
 studio_tools.register()
 studio_assets.register()
@@ -206,6 +210,7 @@ roster.grant_tools("tools_2026_10_10", {  # tools that reached no stored agent b
     "minerva": ["leave_message", "check_messages"], "mimir": ["leave_message", "check_messages"], "daedalus": ["leave_message", "check_messages"],
     "atlas": ["find_capability"], "claude": ["find_capability"]})
 roster.grant_tools("tools_feeds_2026_10_10", {"shellb": ["feeds", "translate"], "minerva": ["feeds"], "mimir": ["feeds", "translate"], "spark": ["translate"]})
+roster.grant_tools("tools_media_2026_10_10", {"shellb": ["transcribe"], "minerva": ["transcribe"], "heimdall": ["transcribe"], "nyx": ["edit_image"], "daedalus": ["edit_image"]})
 compaction.migrate_legacy()  # after episodes.init: the FTS triggers index the messages it puts back
 feedback.init()
 guests.init()

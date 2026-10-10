@@ -311,15 +311,21 @@ def flux_dev_available() -> bool:
     return (Path.home() / "comfyui/models/checkpoints" / FLUX_DEV).is_file()
 
 
-def _flux_workflow(prompt, width, height, seed, quality="draft"):
+def loras() -> list[str]:
+    """LoRA files in ~/comfyui/models/loras (the Model Store downloads them there)."""
+    d = Path.home() / "comfyui" / "models" / "loras"
+    return sorted(p.name for p in d.glob("*.safetensors") if not p.name.startswith(".")) if d.is_dir() else []
+
+
+def _flux_workflow(prompt, width, height, seed, quality="draft", lora: str | None = None, lora_strength: float = 0.8):
     if quality == "high" and flux_dev_available():
-        wf = _flux_workflow(prompt, width, height, seed)
+        wf = _flux_workflow(prompt, width, height, seed, lora=lora, lora_strength=lora_strength)
         # dev: the same text encoders and VAE, the dev transformer, FluxGuidance instead of CFG, ~24 steps
         wf["1"] = {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": FLUX_DEV}}
         wf["7"] = {"class_type": "FluxGuidance", "inputs": {"conditioning": ["4", 0], "guidance": 3.5}}
         wf["8"]["inputs"].update({"steps": 24, "positive": ["7", 0]})
         return wf
-    return {
+    wf = {
         "1": {"class_type": "UNETLoader", "inputs": {"unet_name": "flux1-schnell-fp8.safetensors", "weight_dtype": "fp8_e4m3fn"}},
         "2": {"class_type": "DualCLIPLoader", "inputs": {"clip_name1": "t5xxl_fp8_e4m3fn.safetensors",
                                                          "clip_name2": "clip_l.safetensors", "type": "flux", "device": "default"}},
@@ -334,6 +340,12 @@ def _flux_workflow(prompt, width, height, seed, quality="draft"):
         "9": {"class_type": "VAEDecode", "inputs": {"samples": ["8", 0], "vae": ["3", 0]}},
         "10": {"class_type": "SaveImage", "inputs": {"filename_prefix": "ShellB_Web", "images": ["9", 0]}},
     }
+    if lora and lora in loras():  # a LoRA sits between the loaders and everything that uses the model or the CLIP
+        wf["11"] = {"class_type": "LoraLoader", "inputs": {"model": ["1", 0], "clip": ["2", 0], "lora_name": lora,
+                                                           "strength_model": lora_strength, "strength_clip": lora_strength}}
+        wf["4"]["inputs"]["clip"] = wf["5"]["inputs"]["clip"] = ["11", 1]
+        wf["8"]["inputs"]["model"] = ["11", 0]
+    return wf
 
 
 def _mem_available_gb():
@@ -375,7 +387,12 @@ async def generate_image(args, ctx):
     keep = {ctx.agent.get("model", "")}
     evicted = await make_room(28, keep)
     async with httpx.AsyncClient(timeout=30) as c:
-        r = await c.post(f"{COMFY}/prompt", json={"prompt": _flux_workflow(prompt, width, height, seed, quality),
+        lora = str(args.get("lora") or "").strip() or None
+        try:
+            strength = max(0.0, min(1.5, float(args.get("lora_strength") or 0.8)))
+        except (TypeError, ValueError):
+            strength = 0.8
+        r = await c.post(f"{COMFY}/prompt", json={"prompt": _flux_workflow(prompt, width, height, seed, quality, lora, strength),
                                                    "client_id": uuid.uuid4().hex})
         r.raise_for_status()
         pid = r.json()["prompt_id"]
@@ -864,6 +881,8 @@ TOOLS: dict[str, dict[str, Any]] = {
                       {"prompt": {"type": "string", "description": "Rich visual description: subject, composition, lighting, style"},
                        "width": {"type": "integer", "description": "Pixels, 256-1536 (default 1024)"},
                        "height": {"type": "integer", "description": "Pixels, 256-1536 (default 1024)"},
+                       "lora": {"type": "string", "description": "a LoRA file from ~/comfyui/models/loras (Models → Store → LoRAs) to apply"},
+                       "lora_strength": {"type": "number", "description": "0-1.5, default 0.8"},
                        "quality": {"type": "string", "enum": ["draft", "high"],
                                    "description": "draft = FLUX.1-schnell, ~10 s (default); high = FLUX.1-dev, ~1 min, better "
                                                   "detail, text rendering and prompt-following, for final hero art"},

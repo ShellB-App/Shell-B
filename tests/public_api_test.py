@@ -362,3 +362,60 @@ class Raw(Base):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Additions(Base):
+    """2026-10-10: artifact content, image inputs, library, memory behind a per-key permission."""
+
+    def test_artifact_content(self):
+        _, h = key()
+        conv = lan.post("/api/v1/chat", json={"message": "hi", "agent": normal_agent()}, headers=h).json()["conversation"]
+        db.save_artifact(conv, "art1", "Chart", "html", None, "<b>hi</b>", None)
+        db.save_artifact(conv, "art1", "Chart", "html", None, "<b>hi v2</b>", None)
+        r = lan.get(f"/api/v1/conversations/{conv}/artifacts/art1", headers=h)
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertEqual((r.json()["content"], r.json()["version"], r.json()["versions"]), ("<b>hi v2</b>", 2, 2))
+        self.assertEqual(lan.get(f"/api/v1/conversations/{conv}/artifacts/art1?version=1", headers=h).json()["content"], "<b>hi</b>")
+        self.assertEqual(lan.get(f"/api/v1/conversations/{conv}/artifacts/nope", headers=h).status_code, 404)
+        _, other = key(name="Other")
+        self.assertEqual(lan.get(f"/api/v1/conversations/{conv}/artifacts/art1", headers=other).status_code, 404)
+
+    def test_images_become_attachments(self):
+        import base64
+        png = base64.b64encode(b"\x89PNG\r\n\x1a\n" + b"0" * 32).decode()
+        _, h = key()
+        r = lan.post("/api/v1/chat", json={"message": "what is this", "agent": normal_agent(),
+                                          "attachments": [{"name": "shot.png", "mime": "image/png", "data": png}]}, headers=h)
+        self.assertEqual(r.status_code, 200, r.text)
+        att = CALLS[-1]["body"]["attachments"][0]
+        self.assertEqual((att["kind"], att["name"], att["type"]), ("image", "shot.png", "image/png"))
+        from tools import WORKSPACES
+        self.assertTrue((WORKSPACES / r.json()["conversation"] / "shot.png").exists())
+        # OpenAI style
+        r = lan.post("/api/v1/chat/completions", headers=h, json={"model": normal_agent(), "messages": [
+            {"role": "user", "content": [{"type": "text", "text": "describe"}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{png}"}}]}]})
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertEqual(CALLS[-1]["body"]["attachments"][0]["kind"], "image")
+        self.assertEqual(CALLS[-1]["body"]["content"], "describe")
+        # refusals
+        r = lan.post("/api/v1/chat", json={"message": "x", "agent": normal_agent(), "attachments": [{"mime": "image/bmp", "data": png}]}, headers=h)
+        self.assertEqual(r.status_code, 400)
+        r = lan.post("/api/v1/chat/completions", headers=h, json={"model": normal_agent(), "messages": [
+            {"role": "user", "content": [{"type": "image_url", "image_url": {"url": "https://example.com/x.png"}}]}]})
+        self.assertEqual(r.status_code, 400)
+
+    def test_library_and_memory_permission(self):
+        _, h = key()
+        r = lan.get("/api/v1/library?q=zzz-nothing", headers=h)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["items"], [])
+        self.assertEqual(lan.get("/api/v1/memory", headers=h).status_code, 403)
+        self.assertEqual(lan.post("/api/v1/memory", json={"text": "x"}, headers=h).status_code, 403)
+        k, hm = key(name="Mem", config={"memory": True})
+        self.assertTrue(public_api.get_key(k["id"])["config"]["memory"])
+        r = lan.get("/api/v1/memory?limit=3", headers=hm)
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertIn("memories", r.json())
+        self.assertEqual(lan.post("/api/v1/memory", json={"text": ""}, headers=hm).status_code, 400)
+        _, raw = key(name="Raw", mode="raw")
+        self.assertEqual(lan.get("/api/v1/library", headers=raw).status_code, 403)

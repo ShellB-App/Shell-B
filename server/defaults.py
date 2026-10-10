@@ -37,7 +37,7 @@ Cloud agents send the brief off this machine: use them only for problems the loc
         "effort": "medium",
         "tools": ["web_search", "web_fetch", "read_document", "view_document", "ocr", "run_code", "create_artifact", "generate_image",
                   "generate_music", "memory_save", "memory_forget", "memory_search", "recall_conversations", "ask_agent", "schedule_task", "mega_plan", "shellb_self",
-                  "leave_message", "check_messages", "find_capability", "self_findings", "feeds", "translate"],
+                  "leave_message", "check_messages", "find_capability", "self_findings", "feeds", "translate", "transcribe"],
         "builtin": True,
     },
     {
@@ -79,7 +79,7 @@ research_board as you go, so the user can browse every source, finding and open 
         "model": "ShellB-Swift",
         "temperature": 0.5,
         "effort": "high",
-        "tools": ["web_search", "web_fetch", "read_document", "view_document", "ocr", "run_code", "create_artifact", "memory_save", "memory_forget", "memory_search", "recall_conversations", "research_board", "leave_message", "check_messages", "feeds"],
+        "tools": ["web_search", "web_fetch", "read_document", "view_document", "ocr", "run_code", "create_artifact", "memory_save", "memory_forget", "memory_search", "recall_conversations", "research_board", "leave_message", "check_messages", "feeds", "transcribe"],
         "builtin": True,
     },
     {
@@ -137,7 +137,7 @@ leave open-ended research about what you found to the caller.""",
         "model": "ShellB-Swift",
         "temperature": 0.4,
         "effort": "medium",
-        "tools": ["read_document", "view_document", "ocr", "run_code", "create_artifact", "web_search"],
+        "tools": ["read_document", "view_document", "ocr", "run_code", "create_artifact", "web_search", "transcribe"],
         "builtin": True,
     },
     {
@@ -160,7 +160,7 @@ Daedalus.""",
         "model": "ShellB-Swift",
         "temperature": 0.8,
         "effort": "low",
-        "tools": ["generate_image", "generate_sprite", "generate_texture", "generate_3d", "generate_music", "generate_sfx",
+        "tools": ["generate_image", "edit_image", "generate_sprite", "generate_texture", "generate_3d", "generate_music", "generate_sfx",
                   "generate_voice", "create_artifact", "web_search", "view_document"],
         "builtin": True,
     },
@@ -346,7 +346,7 @@ Asset generation (all of it saves into the project)
     "model": "ShellB-Swift",
     "temperature": 0.7,
     "effort": "medium",
-    "tools": ["web_search", "web_fetch", "run_code", "generate_image", "generate_sprite", "generate_texture", "generate_3d",
+    "tools": ["web_search", "web_fetch", "run_code", "generate_image", "edit_image", "generate_sprite", "generate_texture", "generate_3d",
               "generate_music", "generate_sfx", "generate_voice", "read_document", "view_document", "ocr", "memory_search", "recall_conversations",
               "leave_message", "check_messages"],
     "builtin": True,
@@ -482,6 +482,7 @@ DEFAULT_SETTINGS = {
     "adultEnabled": False,     # Aphrodite, the adult agent (adult.py): master switch, admin-only; off = the agent is hidden and refuses
     "adultImageCheckpoint": "",  # SDXL-style file in ~/comfyui/models/checkpoints for Aphrodite; "" = FLUX.1-dev
     "shareHost": "",           # share links (shares.py) are built on https://<this>/#/s/<token>; "" = this origin (login needed)
+    "editCheckpoint": "",      # edit_image inpaint without FLUX.1-dev: an SDXL checkpoint file in ~/comfyui/models/checkpoints
     "modelCosts": {},          # Settings → Usage prices cloud turns: {"anthropic/claude-x": {"in": $/1M prompt tokens, "out": $/1M completion}}
     "previewHost": "",         # Studio live previews on https://p-<project>.<this> (hub edge proxy, devserver.py); "" = this host's ports
 }

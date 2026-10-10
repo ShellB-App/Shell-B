@@ -410,6 +410,24 @@ address (`_ShortNameRedirect` in app.py). Check with `tailscale serve status`; r
   The orchestrator always gets the tool in its plan chat. Code is in `server/megaplan.py` and
   `ui/src/components/MegaPlans.tsx`; the tables are `mega_plans`, `mega_steps`, `mega_events` and `mega_links`.
 
+## Media: transcription and image editing
+
+- **`transcribe`** (tool, on for Shell:B, Minerva and Heimdall; `server/transcribe.py`): speech to text with timestamps for
+  an audio or video file in /work or the project, or a direct media URL (public addresses, 500 MB). The host has no
+  ffmpeg, so the file is transcoded to 16 kHz mono WAV by ffmpeg inside the sandbox image (`--network none`), then
+  HERMES Whisper transcribes it; the transcript is saved beside the file as `<name>.transcript.txt`. YouTube and other
+  streaming sites are refused (that would need yt-dlp with network in the sandbox, not enabled). **Secretary** accepts
+  video uploads the same way, and a research notebook given a direct media link transcribes it as a source.
+- **`edit_image`** (tool, on for NYX and Daedalus; `server/studio_edit.py`): `cutout` removes the background with
+  BiRefNet (RGBA PNG), `upscale` runs an ESRGAN-family model from Models → Store → Upscalers, `inpaint` repaints a
+  masked area from a prompt, the mask being a black/white image (white = repaint) or `background`/`subject` (BiRefNet
+  picks the area); FLUX.1-dev with inpaint conditioning when installed, else an SDXL checkpoint named by the
+  `editCheckpoint` setting (never Aphrodite's). Results go to `assets/edited/` in a project or `/api/files`.
+- **LoRA**: `generate_image` takes `lora` (a file in `~/comfyui/models/loras`, downloadable in Models → Store → LoRAs)
+  and `lora_strength`.
+- **Import history** also reads a Google Takeout of **Gemini** activity (My Activity → Gemini Apps, JSON format): one
+  chat per day of prompts (Takeout keeps the prompts and some replies).
+
 ## Email inbox (IMAP)
 
 Settings → Notifications → Email → **Inbox** (`server/inbox.py`): the mailbox the agents may read. Host, port (TLS),

@@ -9,7 +9,7 @@ import { btn } from './common';
 
 interface PreviewConv { id: string; title: string; createdAt: number; updatedAt: number; messages: number; imported: boolean; convId: string | null }
 interface Preview {
-  token: string; source: 'chatgpt' | 'claude'; sourceLabel: string; filename: string;
+  token: string; source: 'chatgpt' | 'claude' | 'gemini'; sourceLabel: string; filename: string;
   count: number; already: number; messages: number; from: number | null; to: number | null; conversations: PreviewConv[];
 }
 interface Job {
@@ -142,7 +142,7 @@ export function HistoryImport({ onLearn, learning }: { onLearn: () => void; lear
       <div>
         <h3 id="history-import-title" className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Import history</h3>
         <p className="text-[11px] leading-relaxed text-[var(--text-muted)] max-w-[65ch]">
-          Bring your ChatGPT or Claude conversations into Shell:B as searchable chats. Choose the export zip as downloaded,
+          Bring your ChatGPT, Claude or Gemini conversations into Shell:B as searchable chats. Choose the export zip as downloaded,
           or the <code className="font-mono">conversations.json</code> inside it. The file is read on this machine and deleted
           once parsed; nothing leaves it.
         </p>
@@ -163,6 +163,7 @@ export function HistoryImport({ onLearn, learning }: { onLearn: () => void; lear
           <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[11px] text-[var(--text-muted)] max-w-[65ch]">
             <dt className="font-medium text-[var(--text-secondary)]">ChatGPT</dt><dd>Settings → Data controls → Export data. The link arrives by email.</dd>
             <dt className="font-medium text-[var(--text-secondary)]">Claude</dt><dd>Settings → Privacy → Export data. The link arrives by email.</dd>
+            <dt className="font-medium text-[var(--text-secondary)]">Gemini</dt><dd>takeout.google.com → My Activity → Gemini Apps, format JSON. Takeout keeps your prompts (and some replies), one chat per day.</dd>
           </dl>
         </>
       )}

@@ -53,6 +53,23 @@ TOOLS = [
      "description": "Stop the reply running in one of this key's chats.",
      "inputSchema": {"type": "object", "required": ["conversation"], "properties": {"conversation": {"type": "string"}}},
      "annotations": {"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False}},
+    {"name": "shellb_artifact", "title": "Read a Shell:B artifact",
+     "description": "The content of an artifact (HTML, SVG, Markdown, code…) an agent made in one of this key's chats; shellb_ask lists their ids.",
+     "inputSchema": {"type": "object", "required": ["conversation", "artifact"], "properties": {
+         "conversation": {"type": "string"}, "artifact": {"type": "string"}, "version": {"type": "integer"}}},
+     "annotations": {"readOnlyHint": True, "openWorldHint": False}},
+    {"name": "shellb_library_search", "title": "Search Shell:B's library",
+     "description": "What Shell:B has built: Studio designs, Code workspaces, research notebooks, chat Projects, artifacts and generated media.",
+     "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}, "kind": {"type": "string"}, "limit": {"type": "integer"}}},
+     "annotations": {"readOnlyHint": True, "openWorldHint": False}},
+    {"name": "shellb_memory_search", "title": "Search the owner's memory",
+     "description": "Memories Shell:B keeps about its owner, by meaning (keys with the Memory permission only).",
+     "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}, "limit": {"type": "integer"}}},
+     "annotations": {"readOnlyHint": True, "openWorldHint": False}},
+    {"name": "shellb_memory_save", "title": "Remember something for the owner",
+     "description": "Add one short memory (keys with the Memory permission only); the owner sees it in Settings → Memory.",
+     "inputSchema": {"type": "object", "required": ["text"], "properties": {"text": {"type": "string"}, "category": {"type": "string"}}},
+     "annotations": {"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False}},
 ]
 
 
@@ -111,6 +128,15 @@ async def _call(key: dict, name: str, args: dict, req: Request) -> dict:
         return _text(out)
     if name == "shellb_stop":
         return _text(api.stop(str(args.get("conversation") or ""), req))
+    if name == "shellb_artifact":
+        return _text(api.artifact(str(args.get("conversation") or ""), str(args.get("artifact") or ""), req, args.get("version")))
+    if name == "shellb_library_search":
+        return _text(await api.library_search(req, q=str(args.get("query") or ""), kind=str(args.get("kind") or ""), limit=int(args.get("limit") or 20)))
+    if name == "shellb_memory_search":
+        return _text(await api.memory_get(req, q=str(args.get("query") or ""), limit=int(args.get("limit") or 20)))
+    if name == "shellb_memory_save":
+        req.scope["shellb_mcp_body"] = {"text": args.get("text"), "category": args.get("category")}
+        return _text(await api.memory_post(req))
     raise KeyError(name)
 
 

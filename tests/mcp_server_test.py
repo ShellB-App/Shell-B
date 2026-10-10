@@ -26,7 +26,8 @@ class Mcp(Base):
         n = lan.post(URL, headers=h, json={"jsonrpc": "2.0", "method": "notifications/initialized"})
         self.assertEqual(n.status_code, 202)
         names = {t["name"] for t in rpc(h, "tools/list").json()["result"]["tools"]}
-        self.assertEqual(names, {"shellb_agents", "shellb_ask", "shellb_conversations", "shellb_read", "shellb_stop"})
+        self.assertEqual(names, {"shellb_agents", "shellb_ask", "shellb_conversations", "shellb_read", "shellb_stop", "shellb_artifact",
+                                 "shellb_library_search", "shellb_memory_search", "shellb_memory_save"})
         self.assertEqual(rpc(h, "nope").json()["error"]["code"], -32601)
 
     def test_ask_and_read(self):
