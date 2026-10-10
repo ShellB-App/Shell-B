@@ -195,7 +195,7 @@ def _run_args(cell: Cell, guest: dict) -> list[str]:
     models = {"models": allowed_models(), "embeddingModel": s.get("embeddingModel"), "utilityModel": s.get("utilityModel"),
               "visionFallbackModel": s.get("visionFallbackModel"), "language": (guest.get("config") or {}).get("language", "")}
     env = {"SHELLB_CELL": "1", "SHELLB_CELL_SECRET": cell.secret, "SHELLB_CELL_FRAME_SECRET": guests.frame_secret(cell.gid),
-           "SHELLB_CELL_GUEST": guest["name"], "SHELLB_CELL_MODELS": json.dumps(models), "SHELLB_DEV_DIR": "/run/web/dev",
+           "SHELLB_CELL_GUEST": guest["name"], "SHELLB_CELL_ID": cell.gid, "SHELLB_CELL_MODELS": json.dumps(models), "SHELLB_DEV_DIR": "/run/web/dev",
            "SHELLB_CELL_FORWARD": ",".join(f"{port}:{svc}" for svc, (port, _up) in SERVICES.items()),
            "HOME": "/home/cell", "TZ": os.environ.get("TZ") or _host_tz(), "PYTHONDONTWRITEBYTECODE": "1",
            # web access goes through the host's filtered proxy (_Egress); the model services stay direct
@@ -1106,6 +1106,12 @@ async def _sandbox(req: Request, gid: str) -> Response:
         return JSONResponse({"ok": True})
     if req.method != "POST":
         raise Refused(f"{req.method} {path} isn't available to guests")
+    if path == "/shelf/publish":  # a maintainer's new version of a shared document (shelf.py checks it's theirs)
+        import shelf
+        try:
+            return JSONResponse(shelf.publish(gid, await _json(req, shelf.MAX_JSON)))
+        except ValueError as e:
+            raise Refused(str(e))
     body = await _json(req, MAX_JSON)
     if path == "/usage":
         p, c = int(body.get("prompt") or 0), int(body.get("completion") or 0)

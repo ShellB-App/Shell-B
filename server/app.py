@@ -58,6 +58,7 @@ import studio_assets
 import devserver
 import doc_tools
 import docview
+import shelf
 import adult
 import maps
 import flights
@@ -234,6 +235,7 @@ app.include_router(changelog.router)
 app.include_router(asset_libs.router)
 app.include_router(groups.router)
 app.include_router(docview.router)
+app.include_router(shelf.cell_router if cell_boot.CELL else shelf.router)  # Codex → Share with guests / publish a new version
 app.include_router(schedules.router)
 app.include_router(research.router)
 app.include_router(notebook.router)
@@ -332,11 +334,7 @@ async def _start_mcp():
     asset_libs.start()
     codex.start()
     if cell_boot.CELL:  # the owner's shared shelf (~/shellb/shelf, mounted read-only) into this guest's Codex
-        import shelf
-        try:
-            shelf.sync()
-        except Exception as e:  # noqa: BLE001
-            print(f"shelf sync: {type(e).__name__}: {e}")
+        shelf.start()
     episodes.busy = lambda: bool(ACTIVE)
     episodes.start()
     reflection.busy = lambda: bool(ACTIVE)

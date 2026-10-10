@@ -30,7 +30,8 @@ export const busyIndex = (e: CodexEntry) =>
   e.meta.index === 'pending' || e.meta.index === 'indexing' || e.meta.snapshot?.status === 'pending';
 
 export const who = (e: CodexEntry, names: Record<string, string>) =>
-  (e.createdBy.startsWith('agent:') ? names[e.createdBy.slice(6)] ?? 'an agent' : 'you');
+  (e.createdBy.startsWith('agent:') ? names[e.createdBy.slice(6)] ?? 'an agent'
+    : e.meta.shelf && e.createdBy !== 'you' ? e.createdBy : 'you');  // a shelf item is credited to its author
 
 export const ownerOnly = (err: unknown) => {
   const t = String(err).replace(/^Error: \d+: /, '');

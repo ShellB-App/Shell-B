@@ -573,6 +573,15 @@ export interface CodexEntryMeta extends ContactMeta, EventMeta {
   hosts?: string[];
   approval?: 'ask' | 'auto';
   uses?: number;
+  // the shared shelf (server/shelf.py): sharedShelf on the owner's entry, the rest on a guest's copy
+  sharedShelf?: string | null;
+  shelf?: string;
+  author?: string;
+  shelfVersion?: string;
+  shelfTitle?: string;
+  shelfCanPublish?: boolean;
+  shelfUpdatedBy?: string;
+  shelfUpdated?: number;
 }
 
 export interface CodexEntry {

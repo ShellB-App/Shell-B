@@ -11,6 +11,8 @@ import { btn, relTime } from '../common';
 import { Draft, KIND, busyIndex, who } from './types';
 import { IndexState, TagInput } from './Inputs';
 import { t as tx } from '../../i18n';
+import { isCell } from '../../cell';
+import { ShareWithGuests, ShelfPublish } from './ShelfPanel';
 
 /** Opens, edits and creates one entry. `start` is a saved entry, or a blank draft for a new one. */
 export function Editor({ start, index, agentNames, onClose, onSaved, onDeleted }: {
@@ -126,6 +128,9 @@ export function Editor({ start, index, agentNames, onClose, onSaved, onDeleted }
             <a className={btn.ghost} href={`/api/codex/file/${e.id}?download=true`}><Download className="w-3.5 h-3.5" />{tx('Download')}</a>
           </div>
         )}
+        {e.kind === 'file' && e.id && full?.meta?.file && (isCell()
+          ? full.meta.shelf && <ShelfPublish entry={full} onUpdated={f => { setFull(f); setE(p => ({ ...p, meta: f.meta })); onSaved(f); }} />
+          : <ShareWithGuests entry={full} />)}
         {e.kind === 'file' && isImage && e.id && <img src={`/api/codex/file/${e.id}`} alt={e.title} className="max-h-80 rounded-lg border border-[var(--border-subtle)] mx-auto" />}
 
         {e.kind === 'snippet' ? (
