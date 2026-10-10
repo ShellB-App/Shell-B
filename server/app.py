@@ -257,6 +257,7 @@ app.include_router(memory.router)
 app.include_router(episodes.router)
 app.include_router(chatmail.router)
 app.include_router(circles.owner_router())  # in a cell: a pass-through to the broker
+app.include_router(circles.share_router(lambda req: None))  # share this Shell:B's chats, artifacts and entries into a circle
 app.include_router(circles.pins_router)
 app.include_router(me.router)
 app.include_router(feedback.router)

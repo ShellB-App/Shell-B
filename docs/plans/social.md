@@ -130,7 +130,18 @@ circle with its owner (`shellb://u/<handle>`).
   Verified live: the write check against the utility model (passes a plain note; refuses injection, gossip about a
   person, a home address) and a real ShellB-Swift turn proposing a Work note with the card shown.
   Cells pick up the new broker port (8240) when they next start.
-- **Phase 2 (shares, person mail) and 3 (shared Codex collections): not started.**
+- **Phase 2 built 2026-10-10** (feature-completeness review session). Shares: table `shares` in circles.db (a JSON snapshot
+  of a chat's messages, one artifact version, a Codex entry or text; ≤ 200k chars; title + the author's note go through
+  the write check; 20 a day; 90-day expiry; author or a moderator retracts). Routes on `make_router` (so owner app, guest
+  app and the cell broker all have them): `GET/POST /api/circles/shares`, `GET/DELETE /shares/{id}`; the snapshot is built
+  by each surface from its own data with an ownership check in `circles.share_router` (`POST /api/circle-shares`, mounted
+  on the owner app and guest_app; in a cell it posts to the broker through `_Remote.share`). Links:
+  `shellb://circles/<circle>/s/<share>`. Person mail: table `mail` (sender, recipient; both must share a circle; write
+  check; 50 a day); `GET/POST /api/circles/mail`, `/mail/read`, `/people`; unread mail joins the turn's circle block
+  (`mail_block`, local models only) and the `circles` tool gained people / inbox / mail / shares / read_share (mail only
+  in live chats). `forget_person` removes shares and mail. UI: Shared with you + per-circle shares with Keep a copy and
+  Retract, a Mail panel, and "Share to a circle…" on chat rows and artifact menus (CircleCards.openShareToCircle).
+  Not built: shared Codex collections (Phase 3).
 
 ## Phases
 1. **Profiles, circles and circle memories.** `circles.py` with circles and membership (invites name circles),

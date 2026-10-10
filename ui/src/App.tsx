@@ -26,6 +26,7 @@ import { WorkspaceFiles } from './components/WorkspaceFiles';
 import { ArtifactViewer, Library } from './components/Library';
 import { FavoriteStar, FavoritesPage } from './components/Favorites';
 import { Mailbox } from './components/Mailbox';
+import { CircleShareHost } from './components/CircleCards';
 import { Scheduled, browserTz } from './components/Scheduled';
 import { Activity } from './components/Activity';
 import { Downloads } from './components/Downloads';
@@ -589,6 +590,7 @@ export function App() {
       <SettingsModal open={modal === 'settings'} onClose={() => setModal(null)} settings={settings} agents={chatAgents} models={models}
         status={status} theme={theme} onTheme={t => t !== theme && toggleTheme()} onSaved={loadSettings} tab={settingsTab} />
       <FormFactorSwitcher open={formFactorOpen} onClose={() => setFormFactorOpen(false)} />
+      <CircleShareHost />
       <Overlay messages={conv?.messages ?? []} agentName={agent?.name ?? 'Shell:B'} busy={busy || !!conv?.streaming} onStop={stop}
         onSend={(t, a) => send(t, a)} ensureConversation={ensureConversation} />
     </>

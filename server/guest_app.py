@@ -646,6 +646,7 @@ async def voices(req: Request):
 
 guest_app.include_router(guest_notes.router)
 guest_app.include_router(circles.make_router(lambda req: guests.require(req)["id"]))  # the guest's circles
+guest_app.include_router(circles.share_router(lambda req: guests.require(req)["id"]))  # share their own chats into a circle
 
 
 def _my_pins(g: dict) -> dict:

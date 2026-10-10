@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import { AlertTriangle, BadgeCheck, ChevronDown, ChevronRight, Loader2, Sparkles, UsersRound } from 'lucide-react';
 import { btn } from './common';
 import { toast } from './toast';
-import { circlesApi, errText, KIND_LABEL, type Circle, type CircleNote, type NoteKind } from '../circlesApi';
+import { circlesApi, errText, KIND_LABEL, type Circle, type CircleNote, type NoteKind, type ShareKind } from '../circlesApi';
 import type { Message } from '../types';
 import type { MenuAction } from './ContextMenu';
 
@@ -189,3 +189,68 @@ export function ShareToCircle({ text, onClose }: { text: string; onClose: () => 
   );
 }
 
+
+
+// ── sharing content (phase 2): a chat, an artifact or an entry, copied into one circle ────────────────────────
+
+export interface SharePayload { kind: ShareKind; conv?: string; artifact?: string; version?: number; codex?: string; text?: string; title: string }
+const SHARE_EVENT = 'shellb:share-to-circle';
+
+/** Menus are built synchronously, so they ask for the dialog by event; CircleShareHost (App.tsx, MobileApp.tsx) shows it. */
+export function openShareToCircle(p: SharePayload) {
+  window.dispatchEvent(new CustomEvent<SharePayload>(SHARE_EVENT, { detail: p }));
+}
+
+export function CircleShareHost() {
+  const [p, setP] = useState<SharePayload | null>(null);
+  useEffect(() => {
+    const on = (e: Event) => setP((e as CustomEvent<SharePayload>).detail);
+    window.addEventListener(SHARE_EVENT, on);
+    return () => window.removeEventListener(SHARE_EVENT, on);
+  }, []);
+  return p ? <ShareContentToCircle payload={p} onClose={() => setP(null)} /> : null;
+}
+
+const WHAT: Record<ShareKind, string> = { chat: 'this chat (its messages as text)', artifact: 'this artifact', codex: 'this Codex entry', text: 'this text' };
+
+function ShareContentToCircle({ payload, onClose }: { payload: SharePayload; onClose: () => void }) {
+  const [circles, setCircles] = useState<Circle[] | null>(null);
+  const [circle, setCircle] = useState('');
+  const [title, setTitle] = useState(payload.title.slice(0, 200));
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [why, setWhy] = useState('');
+  useEffect(() => { circlesApi.index().then(i => setCircles(i.circles)).catch(e => setWhy(errText(e))); }, []);
+  const chosen = circles?.find(c => c.id === circle);
+  const share = () => {
+    setBusy(true); setWhy('');
+    circlesApi.shareContent({ ...payload, circle, title, note })
+      .then(s => { toast(`Shared “${s.title}” with ${chosen?.name}`); onClose(); }).catch(e => setWhy(errText(e))).finally(() => setBusy(false));
+  };
+  return (
+    <div className="fixed inset-0 z-[70] grid place-items-center bg-black/50 p-4" onClick={onClose}>
+      <div role="dialog" aria-modal aria-label="Share to a circle" onClick={e => e.stopPropagation()}
+        className="w-full max-w-md rounded-xl border border-[var(--border-strong)] bg-[var(--bg-secondary)] shadow-2xl p-5 space-y-3">
+        <h2 className="text-base font-semibold tracking-tight">Share to a circle</h2>
+        <p className="text-xs text-[var(--text-secondary)] max-w-[50ch]">A copy of {WHAT[payload.kind]} as it is now goes to one circle; later edits stay yours. Members (and their local agents, labelled as your words) can read it, and keep their own copy. You can retract it any time.</p>
+        <div className="flex flex-wrap gap-1" role="radiogroup" aria-label="Circle">
+          {(circles ?? []).map(c => (
+            <button key={c.id} role="radio" aria-checked={circle === c.id} onClick={() => setCircle(c.id)}
+              className={clsx(btn.subtle, circle === c.id && '!border-[color:var(--accent)] !text-[var(--text-primary)]')}>{c.emoji} {c.name}</button>
+          ))}
+          {circles?.length === 0 && <p className="text-sm text-[var(--text-muted)]">You aren't in any circles.</p>}
+        </div>
+        <input value={title} onChange={e => setTitle(e.target.value.slice(0, 200))} className={btn.input} aria-label="Title" placeholder="Title" />
+        <textarea value={note} onChange={e => setNote(e.target.value.slice(0, 300))} rows={2} className={clsx(btn.input, 'resize-none')} aria-label="A note for the circle" placeholder="A line about it, for the circle (optional)" />
+        {chosen && <p className="text-[11px] text-[var(--text-muted)]">{chosen.members} people in {chosen.name} will see it.</p>}
+        {why && <p className="text-xs text-amber-400 flex items-start gap-1.5"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />{why}</p>}
+        <div className="flex justify-end gap-2">
+          <button className={btn.ghost} onClick={onClose}>Cancel</button>
+          <button className={btn.primary} disabled={!circle || !title.trim() || busy} onClick={share}>
+            {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UsersRound className="w-3.5 h-3.5" />} {chosen ? `Share with ${chosen.name}` : 'Pick a circle'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

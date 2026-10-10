@@ -51,6 +51,7 @@ import { MobileTopBar } from './MobileTopBar';
 import { MobileBottomNav, type MobileTab } from './MobileBottomNav';
 import { MobileDrawer } from './MobileDrawer';
 import { MobileComposer } from './MobileComposer';
+import { CircleShareHost } from '../components/CircleCards';
 import { MobileAppsSheet } from './MobileAppsSheet';
 import { MobileArtifactSheet } from './MobileArtifactSheet';
 import { MobileAgentPicker } from './MobileAgentPicker';
@@ -1048,6 +1049,7 @@ export function MobileApp() {
         )}
       </main>
 
+      <CircleShareHost />
       {/* Mobile Bottom Navigation Bar */}
       <MobileBottomNav
         activeTab={currentTab}

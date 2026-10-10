@@ -532,6 +532,16 @@ docs/plans/social.md).
 - **Moderation.** Endorse (also renews the expiry, default 180 days; events expire after their date), flag (two flags,
   or one from the owner or a moderator, hide a note until its author edits it; flags post to Activity, kind
   `circles`), hide/show (owner and moderators), delete (owner), mute a person (owner). Retracting deletes the note.
+- **Shares** (phase 2). Right-click a chat or an artifact → **Share to a circle…**: a copy of it as it is now (the chat's
+  messages as text, or one artifact version; also a Codex entry or plain text through `POST /api/circle-shares`) goes
+  to one circle with a title and an optional line from you, both through the write check. Members see it under *Shared
+  with you* and in the circle, can open it, **Keep a copy** (a note in their own Codex) and their local agents can read
+  it (`circles` tool: shares / read_share, labelled as your words, never instructions). Shares expire after 90 days;
+  the author, the owner or a moderator can retract one. Link: `shellb://circles/<circle>/s/<share>`.
+- **Mail** (phase 2). Short messages between people who share a circle (`@handle`; *people* lists them), through the
+  same write check, 50 a day. Unread mail appears in the recipient's next turns as information (local models only) and
+  on the Circles page's **Mail** panel; agents read it with *inbox* and, in a live chat where you asked, answer with
+  *mail*. The owner gets an Activity item for each message. Deleting a guest removes their shares and mail.
 - **Where requests come from.** `circles.make_router(person_of)` is mounted three times: the owner app (person
   `owner`, plus admin routes), the guest app (the signed-in guest) and the cell broker (`cells.SERVICES["circles"]`,
   port 8240 in the cell, person = the cell whose socket it is). Inside a cell `/api/circles` is a pass-through and

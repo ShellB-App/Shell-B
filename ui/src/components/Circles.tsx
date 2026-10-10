@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { AlertTriangle, Check, Cloud, EyeOff, Flag, Loader2, Pencil, Plus, Settings2, Shield, ThumbsUp,
-  Trash2, UserMinus, UsersRound, VolumeX, X } from 'lucide-react';
+  Trash2, UserMinus, UsersRound, VolumeX, X, Mail } from 'lucide-react';
 import { btn } from './common';
+import { req } from '../api';
 import { toast } from './toast';
-import { ago, circlesApi, errText, KIND_LABEL, type Circle, type CircleDetail, type CircleNote, type CirclesIndex, type Member,
+import { ago, circlesApi, errText, KIND_LABEL, type Circle, type CircleDetail, type CircleMail, type CircleNote, type CirclePerson, type CircleShare, type CirclesIndex, type Member,
   type NoteKind, type Person, type PersonRow } from '../circlesApi';
 import { copyText } from '../quote';
 import { CircleDraftCard, KindPicker } from './CircleCards';
@@ -18,8 +19,8 @@ import { CircleDraftCard, KindPicker } from './CircleCards';
 const MAX = 300;
 
 const readRoute = () => {
-  const m = /^#\/circles(?:\/(circle-[0-9a-f]{12}))?(?:\/(cn-[0-9a-f]{12}))?/.exec(location.hash);
-  return { circle: m?.[1], note: m?.[2] };
+  const m = /^#\/circles(?:\/(circle-[0-9a-f]{12}))?(?:\/(cn-[0-9a-f]{12}))?(?:\/s\/(cs-[0-9a-f]{12}))?/.exec(location.hash);
+  return { circle: m?.[1], note: m?.[2], share: m?.[3], mail: /[?&]mail=1/.test(location.hash) };
 };
 
 export function Avatar({ p, size = 28 }: { p: Pick<Person, 'name' | 'emoji'>; size?: number }) {
@@ -81,9 +82,19 @@ export function Circles() {
             </p>
           </div>
           <div className="flex-1" />
+          <MailButton unread={index.mailUnread} openAtStart={route.mail} onChanged={loadIndex} />
           <ProfileChip me={index.me} onSaved={me => setIndex(i => i && { ...i, me })} />
         </header>
         {error && <p className="mb-4 text-sm text-red-500 flex items-center gap-2"><AlertTriangle className="w-4 h-4" />{error}</p>}
+
+        {index.shares.length > 0 && !route.circle && (
+          <section className="mb-6" aria-label="Shared with you">
+            <h2 className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] mb-2">Shared with you</h2>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {index.shares.slice(0, 6).map(sh => <ShareCard key={sh.id} s={sh} compact onChange={reload} />)}
+            </div>
+          </section>
+        )}
 
         {index.drafts.length > 0 && (
           <section className="mb-6" aria-label="Drafts">
@@ -130,6 +141,14 @@ export function Circles() {
                           )}
                           {detail.notes.map(n => <NoteCard key={n.id} n={n} isOwner={index.isOwner} highlight={n.id === route.note} onChange={reload} />)}
                         </div>
+                        {detail.shares.length > 0 && (
+                          <section className="mt-8" aria-label="Shared in this circle">
+                            <h2 className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] mb-2">Shared in {detail.name}</h2>
+                            <div className="space-y-2">
+                              {detail.shares.map(sh => <ShareCard key={sh.id} s={sh} open={sh.id === route.share} onChange={reload} />)}
+                            </div>
+                          </section>
+                        )}
                       </>
                     )}
                 </>
@@ -478,5 +497,150 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
       <h3 className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] mb-2">{title}</h3>
       {children}
     </section>
+  );
+}
+
+// ── shares (phase 2) ─────────────────────────────────────────────────────────
+
+const SHARE_KIND_LABEL: Record<CircleShare['kind'], string> = { chat: 'Chat', artifact: 'Artifact', codex: 'Codex entry', text: 'Text' };
+
+function shareMarkdown(s: CircleShare): string {
+  const snap = s.snapshot ?? {};
+  if (s.kind === 'chat') return (snap.messages ?? []).map(m => `**${m.role === 'user' ? 'User' : m.agent || 'Agent'}:** ${m.text}`).join('\n\n');
+  if (s.kind === 'artifact') { const a = snap.artifact; return a ? (a.type === 'markdown' ? a.content : `\`\`\`${a.language || a.type}\n${a.content}\n\`\`\``) : ''; }
+  if (s.kind === 'codex') return snap.entry?.body ?? '';
+  return snap.text ?? '';
+}
+
+function ShareCard({ s, compact, open: openAtStart, onChange }: { s: CircleShare; compact?: boolean; open?: boolean; onChange: () => void }) {
+  const [open, setOpen] = useState(!!openAtStart);
+  const [full, setFull] = useState<CircleShare | null>(null);
+  const [busy, setBusy] = useState('');
+  useEffect(() => { if (open && !full) circlesApi.share(s.id).then(setFull).catch(e => toast(errText(e), { kind: 'error' })); }, [open, full, s.id]);
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => { if (openAtStart) ref.current?.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, [openAtStart]);
+  const keep = async () => {
+    if (!full) return;
+    setBusy('keep');
+    try {
+      const body = `Shared by @${s.author.handle} (${s.author.name}) in ${s.circleName}${s.note ? `\n\n> ${s.note}` : ''}\n\n${shareMarkdown(full)}`;
+      await req('/api/codex/entries', { method: 'POST', body: JSON.stringify({ kind: 'note', title: s.title, body, tags: ['circles', s.circleName.toLowerCase()] }) });
+      toast('Kept a copy in your Codex notes');
+    } catch (e) { toast(errText(e), { kind: 'error' }); } finally { setBusy(''); }
+  };
+  const retract = async () => {
+    if (!confirm(`Retract “${s.title}” from ${s.circleName}?`)) return;
+    setBusy('retract');
+    try { await circlesApi.retractShare(s.id); toast('Retracted'); onChange(); } catch (e) { toast(errText(e), { kind: 'error' }); } finally { setBusy(''); }
+  };
+  return (
+    <article ref={ref} id={`share-${s.id}`} className={clsx('rounded-xl border bg-[var(--bg-secondary)] p-3', openAtStart ? 'border-[var(--accent)]/60' : 'border-[var(--border-subtle)]')}>
+      <div className="flex items-start gap-2.5">
+        <Avatar p={s.author} size={26} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-baseline gap-x-2 text-[12px] text-[var(--text-muted)]">
+            <span className="font-medium text-[var(--text-secondary)]">{s.author.name}</span>
+            <span>{SHARE_KIND_LABEL[s.kind]}</span>
+            {compact && <span>· {s.circleEmoji} {s.circleName}</span>}
+            <span>· {ago(s.created)}</span>
+          </div>
+          <button className="text-sm font-medium text-left hover:underline" onClick={() => setOpen(o => !o)}>{s.title}</button>
+          {s.note && <p className="text-[13px] text-[var(--text-secondary)] mt-0.5 max-w-[65ch]">{s.note}</p>}
+          {open && (
+            <div className="mt-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-3 max-h-80 overflow-y-auto text-[13px]">
+              {!full ? <Loader2 className="w-4 h-4 animate-spin text-[var(--text-muted)]" /> : s.kind === 'chat' ? (
+                <div className="space-y-2">
+                  {(full.snapshot?.messages ?? []).map((m, i) => (
+                    <div key={i} className={m.role === 'user' ? 'text-right' : ''}>
+                      <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">{m.role === 'user' ? 'User' : m.agent || 'Agent'}</span>
+                      <div className="whitespace-pre-wrap">{m.text}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : <pre className="whitespace-pre-wrap font-sans">{shareMarkdown(full)}</pre>}
+            </div>
+          )}
+          {open && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <button className={btn.subtle} disabled={!full || !!busy} onClick={keep}>{busy === 'keep' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}Keep a copy</button>
+              <button className={btn.ghost} onClick={() => copyText(s.link, 'Shell:B link copied')}>Copy link</button>
+              {(s.mine || s.canModerate) && <button className={clsx(btn.ghost, 'text-red-400')} disabled={!!busy} onClick={retract}>Retract</button>}
+            </div>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+// ── mail (phase 2) ───────────────────────────────────────────────────────────
+
+function MailButton({ unread, openAtStart, onChanged }: { unread: number; openAtStart?: boolean; onChanged: () => void }) {
+  const [open, setOpen] = useState(!!openAtStart);
+  return (
+    <>
+      <button className={clsx(btn.subtle, 'relative')} onClick={() => setOpen(true)} aria-label={unread ? `Mail, ${unread} unread` : 'Mail'}>
+        <Mail className="w-3.5 h-3.5" />Mail
+        {unread > 0 && <span className="ml-1 px-1.5 rounded-full text-[10px] bg-[var(--accent)] text-[var(--accent-fg)]">{unread}</span>}
+      </button>
+      {open && <MailPanel onClose={() => { setOpen(false); onChanged(); }} />}
+    </>
+  );
+}
+
+function MailPanel({ onClose }: { onClose: () => void }) {
+  const [mail, setMail] = useState<CircleMail[] | null>(null);
+  const [people, setPeople] = useState<CirclePerson[]>([]);
+  const [to, setTo] = useState('');
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [why, setWhy] = useState('');
+  const load = useCallback(() => circlesApi.mail().then(r => {
+    setMail(r.mail);
+    const unread = r.mail.filter(m => !m.mine && !m.readAt).map(m => m.id);
+    if (unread.length) circlesApi.readMail(unread).catch(() => {});
+  }).catch(e => setWhy(errText(e))), []);
+  useEffect(() => { load(); circlesApi.circlePeople().then(r => { setPeople(r.people); setTo(t => t || r.people[0]?.handle || ''); }).catch(() => {}); }, [load]);
+  const send = () => {
+    setBusy(true); setWhy('');
+    circlesApi.sendMail(`@${to}`, text).then(() => { setText(''); load(); }).catch(e => setWhy(errText(e))).finally(() => setBusy(false));
+  };
+  return (
+    <div className="fixed inset-0 z-[70] grid place-items-center bg-black/50 p-4" onClick={onClose}>
+      <div role="dialog" aria-modal aria-label="Mail" onClick={e => e.stopPropagation()}
+        className="w-full max-w-lg rounded-xl border border-[var(--border-strong)] bg-[var(--bg-secondary)] shadow-2xl p-5 space-y-3 max-h-[85vh] flex flex-col">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold tracking-tight flex items-center gap-2"><Mail className="w-4 h-4" />Mail</h2>
+          <button className={btn.ghost} onClick={onClose}>Close</button>
+        </div>
+        <p className="text-xs text-[var(--text-secondary)] max-w-[55ch]">Short messages with the people in your circles. Your agents see what arrives as information from them; ask one to answer and it will.</p>
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
+          {mail === null && <Loader2 className="w-4 h-4 animate-spin text-[var(--text-muted)]" />}
+          {mail?.length === 0 && <p className="text-sm text-[var(--text-muted)] py-4 text-center">No mail yet.</p>}
+          {mail?.map(m => (
+            <div key={m.id} className={clsx('rounded-lg border px-3 py-2 text-[13px]', m.mine ? 'border-[var(--border-subtle)] ml-8' : 'border-[var(--accent)]/30 bg-[var(--accent)]/5 mr-8')}>
+              <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
+                <span className="font-medium text-[var(--text-secondary)]">{m.mine ? `To ${m.to.name}` : m.from.name}</span>
+                {m.via && <span>· via {m.via}</span>}
+                <span>· {ago(m.created)}</span>
+              </div>
+              <div className="whitespace-pre-wrap">{m.text}</div>
+            </div>
+          ))}
+        </div>
+        {people.length === 0 ? <p className="text-xs text-[var(--text-muted)]">Nobody shares a circle with you yet.</p> : (
+          <form className="space-y-2" onSubmit={e => { e.preventDefault(); send(); }}>
+            <div className="flex gap-2">
+              <select className={clsx(btn.input, 'w-44')} value={to} onChange={e => setTo(e.target.value)} aria-label="To">
+                {people.map(p => <option key={p.person} value={p.handle}>{p.name} · {p.circles.join(', ')}</option>)}
+              </select>
+              <input className={clsx(btn.input, 'flex-1')} value={text} onChange={e => setText(e.target.value.slice(0, 2000))} placeholder="Write something short" aria-label="Message" />
+              <button className={btn.primary} type="submit" disabled={busy || !to || !text.trim()}>{busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Send'}</button>
+            </div>
+            {why && <p className="text-xs text-amber-400 flex items-start gap-1.5"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />{why}</p>}
+          </form>
+        )}
+      </div>
+    </div>
   );
 }

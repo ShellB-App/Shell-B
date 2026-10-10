@@ -11,7 +11,7 @@ import { chatProjectMenu } from './projectMenu';
 import { copyText } from '../quote';
 import { shellbLink } from '../links';
 import { shareLink } from '../shareLink';
-import { circlePinEntry, primeCirclePins } from './CircleCards';
+import { circlePinEntry, openShareToCircle, primeCirclePins } from './CircleCards';
 import { FavIcon, FavoriteStar } from './Favorites';
 import { req } from '../api';
 import { jumpToMessage } from '../jump';
@@ -113,6 +113,7 @@ export function Sidebar(p: Props) {
       { label: 'Copy link', icon: Link2, onSelect: () => copyText(`${location.origin}/#/c/${c.id}`, 'Link copied') },
       { label: 'Copy Shell:B link', icon: Link2, onSelect: () => copyText(shellbLink(`#/c/${c.id}`), 'Shell:B link copied') },
       !c.incognito && { label: 'Share read-only link…', icon: Share2, onSelect: () => shareLink({ kind: 'chat', conversation: c.id }) },
+      !c.incognito && { label: 'Share to a circle…', icon: UsersRound, onSelect: () => openShareToCircle({ kind: 'chat', conv: c.id, title: c.title }) },
       'sep',
       { label: 'Delete…', icon: Trash2, danger: true, hint: 'Del', onSelect: () => setConfirmDel(c.id) },
     ];

@@ -22,8 +22,17 @@ export interface CircleNote {
   mine: boolean; canModerate: boolean; link: string; flags?: number;
 }
 
-export interface CirclesIndex { circles: Circle[]; me: Person; isOwner: boolean; drafts: CircleNote[]; kinds: NoteKind[] }
-export interface CircleDetail extends Omit<Circle, 'members' | 'notes'> { notes: CircleNote[]; members: Member[] }
+export type ShareKind = 'chat' | 'artifact' | 'codex' | 'text';
+export interface CircleShare {
+  id: string; circle: string; circleName: string; circleEmoji: string; author: Person; kind: ShareKind; title: string; note: string;
+  size: number; created: number; expires: number | null; mine: boolean; status: string; canModerate: boolean; link: string;
+  snapshot?: { messages?: { role: string; text: string; agent?: string; ts?: number }[]; artifact?: { type: string; language?: string; content: string; version: number };
+    entry?: { kind: string; title: string; body: string; url?: string }; text?: string };
+}
+export interface CircleMail { id: string; from: Person; to: Person; text: string; via: string; created: number; readAt: number | null; mine: boolean }
+export interface CirclePerson extends Person { person: string; circles: string[] }
+export interface CirclesIndex { circles: Circle[]; me: Person; isOwner: boolean; drafts: CircleNote[]; kinds: NoteKind[]; shares: CircleShare[]; mailUnread: number }
+export interface CircleDetail extends Omit<Circle, 'members' | 'notes'> { notes: CircleNote[]; members: Member[]; shares: CircleShare[] }
 export interface PersonRow extends Person { person: string; account: string; disabled: boolean; muted: boolean; circles: string[] }
 
 const json = (method: string, body: unknown): RequestInit => ({ method, body: JSON.stringify(body) });
@@ -44,6 +53,17 @@ export const circlesApi = {
   moderate: (id: string, status: 'live' | 'hidden') => req<CircleNote>(`/api/circles/notes/${id}/moderate`, json('POST', { status })),
   setRecall: (id: string, recall: boolean) => req<Circle>(`/api/circles/${id}`, json('PATCH', { recall })),
   me: (b: Partial<Person>) => req<Person>('/api/circles/me', json('PUT', b)),
+  // shares (phase 2): a copy of one of this Shell:B's things, built server-side, for one circle
+  shareContent: (b: { kind: ShareKind; circle: string; conv?: string; artifact?: string; version?: number; codex?: string; text?: string; title?: string; note?: string; until?: number }) =>
+    req<CircleShare>('/api/circle-shares', json('POST', b)),
+  shares: (circle?: string) => req<{ shares: CircleShare[] }>(`/api/circles/shares${circle ? `?circle=${encodeURIComponent(circle)}` : ''}`),
+  share: (id: string) => req<CircleShare>(`/api/circles/shares/${id}`),
+  retractShare: (id: string) => req<{ ok: boolean }>(`/api/circles/shares/${id}`, { method: 'DELETE' }),
+  // person mail (phase 2)
+  circlePeople: () => req<{ people: CirclePerson[] }>('/api/circles/people'),
+  mail: (unread = false) => req<{ mail: CircleMail[]; unread: number }>(`/api/circles/mail${unread ? '?unread=1' : ''}`),
+  sendMail: (to: string, text: string) => req<CircleMail>('/api/circles/mail', json('POST', { to, text })),
+  readMail: (ids: string[]) => req<{ read: number; unread: number }>('/api/circles/mail/read', json('POST', { ids })),
   // owner only
   update: (id: string, b: Partial<{ name: string; emoji: string; settings: Partial<CircleSettings> }>) => req<Circle>(`/api/circles/${id}`, json('PATCH', b)),
   create: (name: string, emoji: string) => req<Circle>('/api/circles/admin/circles', json('POST', { name, emoji })),

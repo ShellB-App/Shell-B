@@ -1,6 +1,12 @@
 [
  {
   "date": "2026-10-10",
+  "area": "Circles",
+  "title": "Circles: share chats and artifacts, and mail each other",
+  "summary": "Right-click a chat or an artifact → Share to a circle: a copy of it goes to one circle with a line from you, where members can read it, keep their own copy, and their agents can use it as background. Circles also got mail: short messages between people who share a circle, read by their agents as information and answerable from the chat when you ask. Shares expire after 90 days and can be retracted."
+ },
+ {
+  "date": "2026-10-10",
   "area": "Guests",
   "title": "Guest containers: code sandbox and web access",
   "summary": "A guest's own container can now run code (the host runs the sandbox for it, with only that chat's folder visible) and reach the web through a filtered proxy on this machine, so Studio, Code, Research, Shopping and web reading work for guests in containers. Their daily turn and token caps now apply there too, and their storage count includes the container's files."
