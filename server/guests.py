@@ -892,7 +892,8 @@ def _summary(g: dict) -> dict:
             "SELECT kind, max(expires) AS expires FROM guest_codes WHERE guest_id=? AND kind IN ('invite', 'reset') "
             "AND expires > ? GROUP BY kind", (g["id"], time.time()))}
     import cells
-    return {**g, "today": usage(g["id"]), "devices": sessions, "chats": chats, "memories": mems,
+    import tokens
+    return {**g, "today": usage(g["id"]), "tokensTotal": tokens.total(g["id"])["total"], "devices": sessions, "chats": chats, "memories": mems,
             "storageBytes": storage_bytes(g["id"]), "busy": busy(g["id"]), "inviteExpires": codes.get("invite"),
             "resetExpires": codes.get("reset"), "cellStatus": cells.status(g["id"])}
 

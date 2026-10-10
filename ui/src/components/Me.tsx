@@ -29,8 +29,14 @@ interface MeData {
   upcoming: Upcoming[];
   timeline: { month: string; learned: string[]; changed: string[]; chats: number }[];
   recent: { id: string; title: string; summary: string; at: number }[];
-  stats: { since: number | null; chats: number; memories: number; people: number; pending: number };
+  stats: { since: number | null; chats: number; memories: number; people: number; pending: number; tokens?: TokenStats };
 }
+
+interface TokenCount { prompt: number; completion: number; total: number; turns: number }
+/** server/tokens.py: the owner's lifetime tokens and the whole machine's (guests and API keys included) */
+interface TokenStats { user: TokenCount; global: TokenCount; userToday: number; globalToday: number }
+
+const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 });
 
 const J = (body: unknown) => JSON.stringify(body);
 const me = {
@@ -125,6 +131,24 @@ export function Me() {
 
 // ── hero ────────────────────────────────────────────────────────────────────
 
+function TokenCounter({ t }: { t: TokenStats }) {
+  const tip = (c: TokenCount, today: number) =>
+    `${c.total.toLocaleString()} tokens over ${c.turns.toLocaleString()} replies (${c.prompt.toLocaleString()} in, `
+    + `${c.completion.toLocaleString()} out); ${today.toLocaleString()} today`;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-[11px] tabular-nums">
+      <span className="rounded-full border border-[var(--border-subtle)] px-2 py-0.5" title={tip(t.user, t.userToday)}>
+        <span className="font-semibold text-[var(--text-primary)]">{compact.format(t.user.total)}</span>
+        <span className="text-[var(--text-muted)]"> tokens yours</span>
+      </span>
+      <span className="rounded-full border border-[var(--border-subtle)] px-2 py-0.5" title={`Everyone on Shell:B, guests and API keys included: ${tip(t.global, t.globalToday)}`}>
+        <span className="font-semibold text-[var(--text-primary)]">{compact.format(t.global.total)}</span>
+        <span className="text-[var(--text-muted)]"> tokens in all</span>
+      </span>
+    </div>
+  );
+}
+
 function Hero({ data, name, onRewrite }: { data: MeData; name: string; onRewrite: () => void }) {
   const s = data.stats;
   const p = data.portrait;
@@ -142,6 +166,7 @@ function Hero({ data, name, onRewrite }: { data: MeData; name: string; onRewrite
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight">{name}</h1>
           <div className="text-xs text-[var(--text-muted)] mt-0.5">{bits.join(' · ')}</div>
+          {s.tokens && <TokenCounter t={s.tokens} />}
         </div>
         <div className="flex items-center gap-2 basis-full sm:basis-auto">
           {s.pending > 0 && (

@@ -21,7 +21,7 @@ interface Guest {
   id: string; name: string; created: number; disabled: boolean; config: Config; lastSeen: number | null; today: Usage;
   devices: number; chats: number; memories: number; storageBytes: number; busy: boolean; inviteExpires: number | null;
   username: string | null; email: string | null; passwordSet: boolean; twoStep: boolean; lockedUntil: number | null;
-  lastSignIn: number | null; resetExpires: number | null;
+  lastSignIn: number | null; tokensTotal?: number; resetExpires: number | null;
   cellStatus: { state: 'starting' | 'running' | 'stopping' | 'stopped'; started: number | null; lastActive: number | null; error: string };
 }
 interface AuthEvent { ts: number; event: string; label: string; ip: string; userAgent: string; detail: string }
@@ -196,6 +196,7 @@ export function GuestsTab({ locked }: { locked: boolean }) {
                     {g.username ? `@${g.username} · ` : g.lastSeen ? 'no password yet · ' : ''}
                     {g.lastSeen ? `seen ${relTime(g.lastSeen * 1000)}` : g.inviteExpires ? 'invited, not joined yet' : 'never joined'}
                     {' · '}today {g.today.turns}{g.config.turnsPerDay ? `/${g.config.turnsPerDay}` : ''} messages, {g.today.images} pictures, {g.today.audio} audio
+                    {' · '}{(g.tokensTotal ?? 0).toLocaleString()} tokens in all
                     {' · '}{g.chats} chats · {fmtBytes(g.storageBytes)} · {g.devices} device{g.devices === 1 ? '' : 's'}
                   </div>
                 </button>

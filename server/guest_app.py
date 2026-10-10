@@ -172,7 +172,8 @@ def _agent(g: dict, agent_id: str | None) -> dict:
 
 def _me(g: dict, sess: dict) -> dict:
     cfg = g["config"]
-    return {"id": g["id"], "name": g["name"], "today": guests.usage(g["id"]),
+    import tokens
+    return {"id": g["id"], "name": g["name"], "today": guests.usage(g["id"]), "tokensTotal": tokens.total(g["id"])["total"],
             "limits": {k: cfg[k] for k in guests.LIMITS}, "storageBytes": guests.storage_bytes(g["id"]),
             "agents": [guests.public_agent(a, g) for a in guests.agents_for(g)],
             "defaultAgent": get_settings().get("defaultAgent"), "devices": guests.devices(g["id"], sess["id"]),

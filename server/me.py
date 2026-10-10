@@ -21,6 +21,7 @@ from fastapi import APIRouter
 
 import db
 import memory
+import tokens
 
 router = APIRouter(prefix="/api/me")
 
@@ -351,7 +352,7 @@ def overview() -> dict:
         "timeline": _timeline(all_mems),
         "recent": _recent_chats(),
         "stats": {"since": since, "chats": chats, "memories": len(active), "people": len(people),
-                  "pending": sum(1 for m in all_mems if m["status"] == "pending")},
+                  "pending": sum(1 for m in all_mems if m["status"] == "pending"), "tokens": tokens.stats("")},
     }
 
 

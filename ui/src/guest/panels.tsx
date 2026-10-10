@@ -221,7 +221,8 @@ export function AboutPanel({ me, onClose }: { me: GuestMe; onClose: () => void }
           <Meter label="Pictures and 3D" used={me.today.images} cap={l.imagesPerDay} />
           <Meter label="Music, sound and voice" used={me.today.audio} cap={l.audioPerDay} />
           <Meter label="Space used (MB)" used={Math.round(me.storageBytes / 2 ** 20)} cap={l.storageMB} />
-          <p className="text-[11px] text-[var(--text-muted)]">Daily limits reset at midnight, Evie's time. Space used: {fmtBytes(me.storageBytes)}.</p>
+          <p className="text-[11px] text-[var(--text-muted)]">Daily limits reset at midnight, Evie's time. Space used: {fmtBytes(me.storageBytes)}.
+            {' '}Tokens: {me.today.tokens.toLocaleString()} today, {(me.tokensTotal ?? 0).toLocaleString()} in all.</p>
         </section>
       </div>
     </Modal>

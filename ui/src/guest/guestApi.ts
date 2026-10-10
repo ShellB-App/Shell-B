@@ -11,6 +11,8 @@ export interface GuestMe {
   id: string;
   name: string;
   today: GuestUsage;
+  /** lifetime tokens of this guest's turns (server/tokens.py) */
+  tokensTotal: number;
   limits: GuestLimits;
   storageBytes: number;
   agents: Agent[];

@@ -34,6 +34,7 @@ import activity
 import notify
 import megaplan
 import todos
+import tokens
 import favorites
 import codex
 import codex_secrets
@@ -164,6 +165,7 @@ research.register()
 megaplan.init()
 megaplan.register()
 todos.init()
+tokens.init()
 todos.register()
 asset_libs.init()
 asset_libs.register()
@@ -853,6 +855,7 @@ def begin_turn(conv, body, stream=True, note="", adult_ok=False, interactive=Non
                        | ({"error": error} if error else {}), msg_id=asst_id)
         if ACTIVE.get(conv_id, {}).get("abort") is abort:
             ACTIVE.pop(conv_id, None)
+        tokens.record(guest or ("api" if sealed else ""), turn.usage)  # the stats' token counter
         if guest:  # tokens against the guest's daily share; their own memory learns from the exchange
             guests.after_turn(guest, conv_id, content, final, learn=stream and status == "complete" and not abort.is_set())
         if stream and status == "complete" and not abort.is_set() and not sealed:
