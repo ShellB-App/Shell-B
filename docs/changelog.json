@@ -2,6 +2,12 @@
   {
     "date": "2026-10-10",
     "area": "Languages",
+    "title": "Studio, Activity, Library and Feeds in French",
+    "summary": "The Studio and Code workspaces (start page and template cards, files, history, remote, canvas, terminal), Activity with its feed, follow-ups, night shift and self-review, the Library with Media and Favorites, and Feeds follow the interface language. About 360 more strings."
+  },
+  {
+    "date": "2026-10-10",
+    "area": "Languages",
     "title": "Settings and the Codex in French",
     "summary": "Every Settings page (General, Appearance, API keys, Speech, Network, Memory, Shortcuts, System, Notifications, Backups, Changelog, Account, Usage) and the whole Codex (calendar, contacts, secrets, editors, sync) follow the interface language. About 850 more strings."
   },

@@ -5,6 +5,7 @@ import type { Agent } from '../types';
 import { FAV_LABEL, favKey, reorderFavorites, setFavorite, useFavorites, useIsFavorite, type FavKind, type Favorite } from '../favorites';
 import { ProjectGlyph } from './Projects';
 import { AgentAvatar, btn, relTime } from './common';
+import { t } from '../i18n';
 
 const ART_ICON: Record<string, typeof Boxes> = { html: AppWindow, svg: ImageIcon, markdown: FileText, mermaid: GitFork, code: FileCode2 };
 
@@ -78,14 +79,14 @@ export function FavoritesPage({ agents }: { agents: Agent[] }) {
     <div className="h-full overflow-y-auto">
       <div className="max-w-3xl mx-auto px-4 py-8 animate-fade-in">
         <div className="flex items-center gap-3 mb-1">
-          <h1 className="text-2xl font-semibold tracking-tight flex-1 flex items-center gap-2"><Star className="w-5 h-5 text-amber-400 fill-amber-400" />Favorites</h1>
-          <a href="#/library" className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]">Library →</a>
+          <h1 className="text-2xl font-semibold tracking-tight flex-1 flex items-center gap-2"><Star className="w-5 h-5 text-amber-400 fill-amber-400" />{t('Favorites')}</h1>
+          <a href="#/library" className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]">{t('Library →')}</a>
         </div>
-        <p className="text-xs text-[var(--text-muted)] mb-5">Star chats, artifacts, Studio and Code projects, Projects, research notebooks and mega plans to keep them here. Drag to reorder.</p>
+        <p className="text-xs text-[var(--text-muted)] mb-5">{t('Star chats, artifacts, Studio and Code projects, Projects, research notebooks and mega plans to keep them here. Drag to reorder.')}</p>
 
         <div className="relative mb-3">
           <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-          <input className={clsx(btn.input, 'pl-8')} value={q} onChange={e => setQ(e.target.value)} placeholder="Search favorites" />
+          <input className={clsx(btn.input, 'pl-8')} value={q} onChange={e => setQ(e.target.value)} placeholder={t('Search favorites')} />
         </div>
         {counts.size > 1 && (
           <div className="flex flex-wrap gap-1.5 mb-4">
@@ -97,7 +98,7 @@ export function FavoritesPage({ agents }: { agents: Agent[] }) {
         {list.length === 0 ? (
           <div className="text-center py-16 text-sm text-[var(--text-muted)]">
             <Star className="w-8 h-8 mx-auto mb-2" />
-            {favs.length ? 'Nothing matches.' : 'No favorites yet. Look for the ☆ on chats, artifacts, projects, notebooks and plans.'}
+            {favs.length ? t('Nothing matches.') : t('No favorites yet. Look for the ☆ on chats, artifacts, projects, notebooks and plans.')}
           </div>
         ) : (
           <ul className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] divide-y divide-[var(--border-subtle)] overflow-hidden">
@@ -110,9 +111,9 @@ export function FavoritesPage({ agents }: { agents: Agent[] }) {
                   {canDrag && <GripVertical className="w-3.5 h-3.5 -mr-1 text-[var(--text-muted)] opacity-0 group-hover:opacity-100 cursor-grab shrink-0" />}
                   <FavIcon f={f} agents={agents} size={18} />
                   <a href={f.href} className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{f.title}</div>
+                    <div className="text-sm font-medium truncate">{t(f.title)}</div>
                     <div className="text-[11px] text-[var(--text-muted)] truncate flex items-center gap-1">
-                      {f.kind === 'artifact' && <MessageSquare className="w-3 h-3 shrink-0" />}{f.subtitle}
+                      {f.kind === 'artifact' && <MessageSquare className="w-3 h-3 shrink-0" />}{t(f.subtitle)}
                     </div>
                   </a>
                   <span className="hidden sm:inline text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] text-[var(--text-muted)]">{FAV_LABEL[f.kind]}</span>

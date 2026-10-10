@@ -63,7 +63,7 @@ class French(unittest.TestCase):
 
     def test_no_untranslated_copies(self):
         """A value equal to its key is fine for names (Wiki, Radio…) but a long one means a forgotten translation."""
-        same_in_french = {"Conversations", "Notifications", "Cloudflare Email Sending", "Contacts ({v0})", "{gateway} via {interface}", "Active · …{keyTail}{v0}", "MusicGen · :8002"}
+        same_in_french = {"Conversations", "Notifications", "Cloudflare Email Sending", "Contacts ({v0})", "{gateway} via {interface}", "Active · …{keyTail}{v0}", "MusicGen · :8002", "git log --oneline"}
         same = [k for k, v in self.cat.items() if isinstance(v, str) and v == k and len(k) > 12 and k not in same_in_french]
         self.assertEqual(same, [], same)
 

@@ -15,6 +15,7 @@ import { FilesPanel, HistoryPanel, RemotePanel } from './Sidebar';
 import { KIND_ICON } from './Studio';
 import { Terminal } from './Terminal';
 import { foldSummarized } from '../summarized';
+import { t as tx } from '../i18n';
 
 interface Props {
   projectId: string;
@@ -156,8 +157,8 @@ export function ProjectView({ projectId, agents, models, theme, onToggleTheme, v
     return r;
   }, [projectId, refresh]);
 
-  if (error) return <div className="h-full flex items-center justify-center text-sm text-[var(--text-muted)]">Couldn't open this project: {error} <button className="underline ml-2" onClick={onBack}>Back</button></div>;
-  if (!project) return <div className="h-full flex items-center justify-center text-sm text-[var(--text-muted)]"><Loader2 className="w-4 h-4 animate-spin mr-2" />Opening project…</div>;
+  if (error) return <div className="h-full flex items-center justify-center text-sm text-[var(--text-muted)]">{tx('Couldn\'t open this project:')} {error} <button className="underline ml-2" onClick={onBack}>{tx('Back')}</button></div>;
+  if (!project) return <div className="h-full flex items-center justify-center text-sm text-[var(--text-muted)]"><Loader2 className="w-4 h-4 animate-spin mr-2" />{tx('Opening project…')}</div>;
 
   const file: ProjectFile | undefined = project.files.find(f => f.path === selected);
   const KindIcon = KIND_ICON[project.kind];
@@ -168,29 +169,29 @@ export function ProjectView({ projectId, agents, models, theme, onToggleTheme, v
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <header className="h-12 shrink-0 flex items-center gap-1.5 px-2.5 border-b border-[var(--border-subtle)]">
-        <button className={btn.icon} onClick={onBack} title="All projects"><ArrowLeft className="w-4 h-4" /></button>
-        <button className={clsx(btn.icon, left && 'text-[var(--text-primary)] bg-[var(--bg-hover)]')} onClick={() => setLeft(v => !v)} title="Files & history"><PanelLeft className="w-4 h-4" /></button>
+        <button className={btn.icon} onClick={onBack} title={tx('All projects')}><ArrowLeft className="w-4 h-4" /></button>
+        <button className={clsx(btn.icon, left && 'text-[var(--text-primary)] bg-[var(--bg-hover)]')} onClick={() => setLeft(v => !v)} title={tx('Files & history')}><PanelLeft className="w-4 h-4" /></button>
         <KindIcon className="w-4 h-4 text-[var(--accent)] ml-1 shrink-0" />
         {editingName ? (
           <input autoFocus defaultValue={project.name} className="bg-[var(--bg-tertiary)] border border-[var(--accent)] rounded px-1.5 py-0.5 text-sm focus:outline-none"
             onBlur={async e => { setEditingName(false); const n = e.target.value.trim(); if (n && n !== project.name) { await api.patchProject(projectId, { name: n }); refresh(); } }}
             onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingName(false); }} />
         ) : (
-          <button className="text-sm font-semibold truncate hover:underline decoration-dotted underline-offset-4" onClick={() => setEditingName(true)} title="Rename">{project.name}</button>
+          <button className="text-sm font-semibold truncate hover:underline decoration-dotted underline-offset-4" onClick={() => setEditingName(true)} title={tx('Rename')}>{project.name}</button>
         )}
-        <span className="hidden sm:inline text-[11px] text-[var(--text-muted)] truncate">· {project.files.length} files · saved {relTime(project.updatedAt)}</span>
+        <span className="hidden sm:inline text-[11px] text-[var(--text-muted)] truncate">{tx('· {length} files · saved {v0}', { length: project.files.length, v0: relTime(project.updatedAt) })}</span>
         <div className="flex-1" />
-        {project.entry.toLowerCase().endsWith('.html') && <a className={clsx(btn.ghost, 'hidden md:inline-flex')} href={`${rawUrl(projectId, project.entry)}`} target="_blank" rel="noreferrer" title="Open the entry page in a new tab"><ExternalLink className="w-3.5 h-3.5" />Open</a>}
+        {project.entry.toLowerCase().endsWith('.html') && <a className={clsx(btn.ghost, 'hidden md:inline-flex')} href={`${rawUrl(projectId, project.entry)}`} target="_blank" rel="noreferrer" title={tx('Open the entry page in a new tab')}><ExternalLink className="w-3.5 h-3.5" />{tx('Open')}</a>}
         {project.kind === 'screensaver' && <SaverButtons projectId={projectId} />}
-        <a className={clsx(btn.ghost, 'hidden md:inline-flex')} href={`/api/projects/${projectId}/export.zip`} title="Download all files"><Download className="w-3.5 h-3.5" />Export</a>
+        <a className={clsx(btn.ghost, 'hidden md:inline-flex')} href={`/api/projects/${projectId}/export.zip`} title={tx('Download all files')}><Download className="w-3.5 h-3.5" />{tx('Export')}</a>
         {isCode && (
-          <button className={clsx(btn.ghost, term && 'text-[var(--text-primary)] bg-[var(--bg-hover)]')} onClick={() => setTerm(v => !v)} title="Terminal (sandbox, no network)">
-            <SquareTerminal className="w-3.5 h-3.5" /><span className="hidden sm:inline">Terminal</span>
+          <button className={clsx(btn.ghost, term && 'text-[var(--text-primary)] bg-[var(--bg-hover)]')} onClick={() => setTerm(v => !v)} title={tx('Terminal (sandbox, no network)')}>
+            <SquareTerminal className="w-3.5 h-3.5" /><span className="hidden sm:inline">{tx('Terminal')}</span>
           </button>
         )}
-        <button className={btn.icon} onClick={onToggleTheme} title="Toggle theme">{theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}</button>
-        <button className={clsx(btn.ghost, chatOpen && 'text-[var(--text-primary)] bg-[var(--bg-hover)]')} onClick={() => setChatOpen(v => !v)} title="Agent chat">
-          <MessageSquare className="w-3.5 h-3.5" /><span className="hidden sm:inline">Chat</span>{busy && <Loader2 className="w-3 h-3 animate-spin text-[var(--accent)]" />}
+        <button className={btn.icon} onClick={onToggleTheme} title={tx('Toggle theme')}>{theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}</button>
+        <button className={clsx(btn.ghost, chatOpen && 'text-[var(--text-primary)] bg-[var(--bg-hover)]')} onClick={() => setChatOpen(v => !v)} title={tx('Agent chat')}>
+          <MessageSquare className="w-3.5 h-3.5" /><span className="hidden sm:inline">{tx('Chat')}</span>{busy && <Loader2 className="w-3 h-3 animate-spin text-[var(--accent)]" />}
         </button>
       </header>
 
@@ -198,7 +199,7 @@ export function ProjectView({ projectId, agents, models, theme, onToggleTheme, v
         {left && (
           <aside className="w-64 shrink-0 border-r border-[var(--border-subtle)] bg-[var(--bg-secondary)] flex flex-col absolute lg:static inset-y-0 left-0 z-20 shadow-2xl lg:shadow-none">
             <div className="flex p-1.5 gap-1 border-b border-[var(--border-subtle)]">
-              {([['files', 'Files', FolderTree], ['history', 'History', History], ['remote', 'Remote', GitBranch]] as const).map(([id, label, I]) => (
+              {([['files', tx('Files'), FolderTree], ['history', tx('History'), History], ['remote', tx('Remote'), GitBranch]] as const).map(([id, label, I]) => (
                 <button key={id} onClick={() => setLeftTab(id)}
                   className={clsx('flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs transition', leftTab === id ? 'bg-[var(--bg-hover)] text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]')}>
                   <I className="w-3.5 h-3.5" />{label}
@@ -232,24 +233,24 @@ export function ProjectView({ projectId, agents, models, theme, onToggleTheme, v
             <div className="h-10 shrink-0 flex items-center gap-1.5 px-2.5 border-b border-[var(--border-subtle)]">
               <div className="relative min-w-0 flex-1">
                 <button onClick={() => setThreadMenu(v => !v)} className="flex items-center gap-1.5 text-xs font-medium min-w-0 max-w-full">
-                  <span className="truncate">{chat.conv?.title ?? (isCode ? 'New coding session' : 'New design session')}</span><ChevronDown className="w-3 h-3 text-[var(--text-muted)] shrink-0" />
+                  <span className="truncate">{chat.conv?.title ?? (isCode ? tx('New coding session') : tx('New design session'))}</span><ChevronDown className="w-3 h-3 text-[var(--text-muted)] shrink-0" />
                 </button>
                 {threadMenu && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setThreadMenu(false)} />
                     <div className="absolute left-0 top-full mt-1 w-72 z-50 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-xl shadow-2xl p-1">
-                      <button onClick={newThread} className="w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs hover:bg-[var(--bg-hover)]"><Plus className="w-3.5 h-3.5" />New session</button>
+                      <button onClick={newThread} className="w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs hover:bg-[var(--bg-hover)]"><Plus className="w-3.5 h-3.5" />{tx('New session')}</button>
                       {project.threads.map(t => (
                         <button key={t.id} onClick={async () => { setThreadMenu(false); const c = await chat.load(t.id); setAgentId(c.agentId); }}
                           className={clsx('w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex justify-between gap-2', t.id === chat.conv?.id ? 'bg-[var(--accent)]/15' : 'hover:bg-[var(--bg-hover)]')}>
-                          <span className="truncate">{t.title}</span><span className="text-[var(--text-muted)] shrink-0">{relTime(t.updatedAt)}</span>
+                          <span className="truncate">{tx(t.title)}</span><span className="text-[var(--text-muted)] shrink-0">{relTime(t.updatedAt)}</span>
                         </button>
                       ))}
                     </div>
                   </>
                 )}
               </div>
-              <button className={clsx(btn.icon, 'sm:hidden')} onClick={() => setChatOpen(false)} aria-label="Close chat">✕</button>
+              <button className={clsx(btn.icon, 'sm:hidden')} onClick={() => setChatOpen(false)} aria-label={tx('Close chat')}>✕</button>
             </div>
 
             <RunCodeContext.Provider value={isCode ? runSnippet : null}>
@@ -258,7 +259,7 @@ export function ProjectView({ projectId, agents, models, theme, onToggleTheme, v
                 <div className="pt-6 text-center">
                   <AgentAvatar agent={agent} size={40} className="rounded-xl mx-auto mb-3" />
                   <div className="text-sm font-semibold">{agent?.name}</div>
-                  <p className="text-xs text-[var(--text-muted)] mt-1 px-4">{agent?.description}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1 px-4">{tx(agent?.description)}</p>
                   <div className="mt-5 space-y-1.5 text-left">
                     {(isCode ? [
                       'Walk me through this codebase: what it does, how it is structured, and how to run and test it.',
@@ -298,12 +299,12 @@ export function ProjectView({ projectId, agents, models, theme, onToggleTheme, v
                   onAgent={a => { setAgentId(a.id); if (chat.conv) api.patchConversation(chat.conv.id, { agentId: a.id }); }}
                   busy={busy} onSend={(t, a, o) => sendMessage(t, a, undefined, undefined, undefined, o?.agentId, o?.mode)} convId={chat.conv?.id} planMode={planMode} onPlanMode={setPlanMode} onStop={chat.stop} ensureConversation={ensureThread}
                   voiceOk={voiceOk} focusKey={chat.conv?.id ?? 'new'} uploader={uploader}
-                  placeholder={isCode ? `Ask ${agent.name} to build, fix, explain or review…${file ? ` (open: ${file.path})` : ''}`
-                    : file?.kind === 'html' ? `Ask ${agent.name} to change ${file.path}… or click Comment to point at something` : `Describe what to design…`} />
+                  placeholder={isCode ? tx('Ask {name} to build, fix, explain or review…{v0}', { name: agent.name, v0: file ? ` (open: ${file.path})` : '' })
+                    : file?.kind === 'html' ? tx('Ask {name} to change {path}… or click Comment to point at something', { name: agent.name, path: file.path }) : tx('Describe what to design…')} />
               )}
               <div className="flex items-center justify-between mt-1 px-1 text-[10px] text-[var(--text-muted)]">
-                <span>{agent?.model} · every reply is {isCode ? 'a git commit' : 'saved as a version'}</span>
-                <button className="hover:text-[var(--text-primary)] underline-offset-2 hover:underline" onClick={() => onOpenAgents(agent?.id ?? (isCode ? 'hephaestus' : 'daedalus'))}>Tune agent</button>
+                <span>{agent?.model} {tx('· every reply is')} {isCode ? tx('a git commit') : tx('saved as a version')}</span>
+                <button className="hover:text-[var(--text-primary)] underline-offset-2 hover:underline" onClick={() => onOpenAgents(agent?.id ?? (isCode ? 'hephaestus' : 'daedalus'))}>{tx('Tune agent')}</button>
               </div>
             </div>
           </section>
@@ -320,15 +321,15 @@ function SaverButtons({ projectId }: { projectId: string }) {
   const using = prefs.saverStyle === style;
   return (
     <>
-      <button className={btn.ghost} title="Show it full screen, the way the screensaver will (move the mouse or press a key to exit)"
+      <button className={btn.ghost} title={tx('Show it full screen, the way the screensaver will (move the mouse or press a key to exit)')}
         onClick={() => window.dispatchEvent(new CustomEvent(PREVIEW_SAVER, { detail: style }))}>
-        <MonitorPlay className="w-3.5 h-3.5" /><span className="hidden sm:inline">Preview</span>
+        <MonitorPlay className="w-3.5 h-3.5" /><span className="hidden sm:inline">{tx('Preview')}</span>
       </button>
       <button className={clsx(btn.ghost, using && '!text-[var(--accent-soft)]')} disabled={using}
-        title={using ? 'This is your screensaver (change it in Settings → Appearance)' : 'Make this your screensaver (Settings → Appearance)'}
+        title={using ? tx('This is your screensaver (change it in Settings → Appearance)') : tx('Make this your screensaver (Settings → Appearance)')}
         onClick={() => saveAmbience({ saverStyle: style, saverMinutes: loadAmbience().saverMinutes || 10 })}>
         {using ? <Check className="w-3.5 h-3.5" /> : <MonitorCheck className="w-3.5 h-3.5" />}
-        <span className="hidden sm:inline">{using ? 'Your screensaver' : 'Use as screensaver'}</span>
+        <span className="hidden sm:inline">{using ? tx('Your screensaver') : tx('Use as screensaver')}</span>
       </button>
     </>
   );

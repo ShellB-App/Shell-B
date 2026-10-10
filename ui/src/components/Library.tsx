@@ -14,6 +14,7 @@ import { useFavorites } from '../favorites';
 import { artifactMenu, artifactViewUrl } from './artifactMenu';
 import { openContextMenu } from './ContextMenu';
 import { workspaceMenu } from './projectMenu';
+import { t } from '../i18n';
 
 const SANDBOX = 'allow-scripts allow-forms allow-modals allow-popups allow-downloads allow-pointer-lock';
 const TYPE_LABEL: Record<string, string> = { html: 'HTML', svg: 'SVG', markdown: 'Markdown', mermaid: 'Diagram', code: 'Code' };
@@ -72,7 +73,7 @@ function ArtifactThumb({ a, dark }: { a: LibraryArtifact; dark: boolean }) {
           {a.content.split('\n').slice(0, 24).join('\n')}
         </pre>
       ) : (
-        <ScaledFrame title={a.title} doc={srcDoc(a.type, a.content, dark, artifactScope(a.convId, a.id), true, a.convId)} />
+        <ScaledFrame title={t(a.title)} doc={srcDoc(a.type, a.content, dark, artifactScope(a.convId, a.id), true, a.convId)} />
       )}
     </div>
   );
@@ -151,16 +152,16 @@ export function Library({ agents, dark, onOpenArtifact, initial = 'all' }: Props
       return (
         <div key={it.key} className="group rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:border-[var(--border-strong)] transition overflow-hidden flex flex-col"
           onContextMenu={e => openContextMenu(e, artifactMenu({ ...a, content: a, onOpen: () => onOpenArtifact(a.convId, a.id), openLabel: 'Open in its chat' }), { own: true })}>
-          <button onClick={() => onOpenArtifact(a.convId, a.id)} className="relative aspect-[16/10] bg-[var(--bg-tertiary)] border-b border-[var(--border-subtle)] overflow-hidden text-left" title="Open in its chat">
+          <button onClick={() => onOpenArtifact(a.convId, a.id)} className="relative aspect-[16/10] bg-[var(--bg-tertiary)] border-b border-[var(--border-subtle)] overflow-hidden text-left" title={t('Open in its chat')}>
             <ArtifactThumb a={a} dark={dark} />
             <span className="absolute inset-0 group-hover:bg-black/5 transition" />
           </button>
           <div className="p-3 flex-1 flex flex-col gap-1.5 min-w-0">
             <div className="flex items-center gap-2 min-w-0">
               <Icon className="w-3.5 h-3.5 text-[var(--accent)] shrink-0" />
-              <button onClick={() => onOpenArtifact(a.convId, a.id)} className="text-sm font-medium truncate flex-1 text-left hover:text-[var(--accent-soft)]">{a.title}</button>
-              <FavoriteStar kind="artifact" id={a.convId} sub={a.id} title={a.title} />
-              <a href={artifactViewUrl(a.convId, a.id)} target="_blank" rel="noopener" className={clsx(btn.icon, 'p-1 shrink-0')} title="Open full page in a new tab">
+              <button onClick={() => onOpenArtifact(a.convId, a.id)} className="text-sm font-medium truncate flex-1 text-left hover:text-[var(--accent-soft)]">{t(a.title)}</button>
+              <FavoriteStar kind="artifact" id={a.convId} sub={a.id} title={t(a.title)} />
+              <a href={artifactViewUrl(a.convId, a.id)} target="_blank" rel="noopener" className={clsx(btn.icon, 'p-1 shrink-0')} title={t('Open full page in a new tab')}>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
@@ -182,23 +183,23 @@ export function Library({ agents, dark, onOpenArtifact, initial = 'all' }: Props
     return (
       <div key={it.key} className="group rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:border-[var(--border-strong)] transition overflow-hidden flex flex-col"
         onContextMenu={e => openContextMenu(e, workspaceMenu(p, { onOpen: () => { location.hash = isCode ? `#/code/${p.id}` : `#/studio/${p.id}`; }, reload: load }), { own: true })}>
-        <a href={rawUrl(p.id, p.entry)} target="_blank" rel="noopener" className="relative block aspect-[16/10] bg-[var(--bg-tertiary)] border-b border-[var(--border-subtle)] overflow-hidden" title="Launch in a new tab">
+        <a href={rawUrl(p.id, p.entry)} target="_blank" rel="noopener" className="relative block aspect-[16/10] bg-[var(--bg-tertiary)] border-b border-[var(--border-subtle)] overflow-hidden" title={t('Launch in a new tab')}>
           <AppThumb p={p} />
-          <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-black/60 text-white backdrop-blur">Web app</span>
+          <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-black/60 text-white backdrop-blur">{t('Web app')}</span>
         </a>
         <div className="p-3 flex-1 flex flex-col gap-1.5 min-w-0">
           <div className="flex items-center gap-2 min-w-0">
             {isCode ? <CodeXml className="w-3.5 h-3.5 text-sky-400 shrink-0" /> : <Palette className="w-3.5 h-3.5 text-rose-400 shrink-0" />}
             <a href={rawUrl(p.id, p.entry)} target="_blank" rel="noopener" className="text-sm font-medium truncate flex-1 hover:text-[var(--accent-soft)]">{p.name}</a>
             <FavoriteStar kind="project" id={p.id} title={p.name} />
-            <a href={rawUrl(p.id, p.entry)} target="_blank" rel="noopener" className={clsx(btn.icon, 'p-1 shrink-0')} title="Launch in a new tab">
+            <a href={rawUrl(p.id, p.entry)} target="_blank" rel="noopener" className={clsx(btn.icon, 'p-1 shrink-0')} title={t('Launch in a new tab')}>
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
           </div>
-          <div className="text-[11px] text-[var(--text-muted)] truncate">{p.description || `${p.fileCount} file${p.fileCount === 1 ? '' : 's'} · ${p.entry}`}</div>
+          <div className="text-[11px] text-[var(--text-muted)] truncate">{p.description || t('{fileCount} file{v0} · {entry}', { fileCount: p.fileCount, v0: p.fileCount === 1 ? '' : 's', entry: p.entry })}</div>
           <div className="flex items-center gap-2 text-[10px] font-mono text-[var(--text-muted)]">
             <span className="px-1.5 py-0.5 rounded bg-[var(--bg-tertiary)] border border-[var(--border-subtle)]">{KIND_LABEL[p.kind] ?? p.kind}</span>
-            <a href={isCode ? `#/code/${p.id}` : `#/studio/${p.id}`} className="hover:text-[var(--accent-soft)] font-sans">Edit in {isCode ? 'Code' : 'Studio'}</a>
+            <a href={isCode ? `#/code/${p.id}` : `#/studio/${p.id}`} className="hover:text-[var(--accent-soft)] font-sans">{t('Edit in')} {isCode ? t('Code') : t('Studio')}</a>
             <span className="ml-auto">{relTime(it.ts)}</span>
           </div>
         </div>
@@ -210,35 +211,35 @@ export function Library({ agents, dark, onOpenArtifact, initial = 'all' }: Props
     <div className="h-full overflow-y-auto">
       <div className="max-w-6xl mx-auto px-4 py-8 animate-fade-in">
         <div className="flex items-center gap-3 mb-1">
-          <h1 className="text-2xl font-semibold tracking-tight flex-1">Library</h1>
-          <a href="#/library/favorites" className={clsx(btn.icon, 'flex items-center gap-1.5 text-xs')} title="Everything you've starred">
-            <Star className="w-4 h-4 text-amber-400" />Favorites{favCount > 0 && <span className="font-mono text-[10px] opacity-70">{favCount}</span>}
+          <h1 className="text-2xl font-semibold tracking-tight flex-1">{t('Library')}</h1>
+          <a href="#/library/favorites" className={clsx(btn.icon, 'flex items-center gap-1.5 text-xs')} title={t('Everything you\'ve starred')}>
+            <Star className="w-4 h-4 text-amber-400" />{t('Favorites')}{favCount > 0 && <span className="font-mono text-[10px] opacity-70">{favCount}</span>}
           </a>
-          <button className={btn.icon} onClick={load} title="Refresh"><RotateCw className="w-4 h-4" /></button>
+          <button className={btn.icon} onClick={load} title={t('Refresh')}><RotateCw className="w-4 h-4" /></button>
         </div>
-        <p className="text-xs text-[var(--text-muted)] mb-5">{show === 'media' ? 'Every picture, song, sound effect, voice clip and 3D model Shell:B has generated, wherever it was saved.'
-          : 'Every artifact from your chats and every web app built in Studio or Code, newest first.'}</p>
+        <p className="text-xs text-[var(--text-muted)] mb-5">{show === 'media' ? t('Every picture, song, sound effect, voice clip and 3D model Shell:B has generated, wherever it was saved.')
+          : t('Every artifact from your chats and every web app built in Studio or Code, newest first.')}</p>
 
         <div className="flex flex-wrap items-center gap-2 mb-3">
           <div className="flex items-center bg-[var(--bg-tertiary)] p-0.5 rounded-lg border border-[var(--border-subtle)]">
-            {tab('all', 'All', data ? data.artifacts.length + data.apps.length : undefined)}
-            {tab('artifacts', 'Artifacts', data?.artifacts.length)}
-            {tab('apps', 'Web apps', data?.apps.length)}
-            {tab('media', 'Media')}
+            {tab('all', t('All'), data ? data.artifacts.length + data.apps.length : undefined)}
+            {tab('artifacts', t('Artifacts'), data?.artifacts.length)}
+            {tab('apps', t('Web apps'), data?.apps.length)}
+            {tab('media', t('Media'))}
           </div>
           {show !== 'media' && <div className="relative flex-1 min-w-[180px]">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-            <input className={clsx(btn.input, 'pl-8')} value={q} onChange={e => setQ(e.target.value)} placeholder="Search by title or chat" />
+            <input className={clsx(btn.input, 'pl-8')} value={q} onChange={e => setQ(e.target.value)} placeholder={t('Search by title or chat')} />
           </div>}
         </div>
         {show === 'media' ? <MediaGallery agents={agents} /> : <>
         {chips.length > 1 && (
           <div className="flex flex-wrap gap-1.5 mb-5">
-            {[['', 'Any type'] as [string, string], ...chips].map(([k, label]) => (
+            {[['', t('Any type')] as [string, string], ...chips].map(([k, label]) => (
               <button key={k || 'any'} onClick={() => setType(k)}
                 className={clsx('px-2 py-0.5 rounded-full text-[11px] border transition',
                   type === k ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]')}>
-                {label}
+                {t(label)}
               </button>
             ))}
           </div>
@@ -251,7 +252,7 @@ export function Library({ agents, dark, onOpenArtifact, initial = 'all' }: Props
         ) : items.length === 0 ? (
           <div className="text-center py-16 text-sm text-[var(--text-muted)]">
             <LayoutGrid className="w-8 h-8 mx-auto mb-2" />
-            {data.artifacts.length + data.apps.length ? 'Nothing matches.' : 'Nothing built yet. Ask an agent for an HTML artifact, or start a Studio project.'}
+            {data.artifacts.length + data.apps.length ? t('Nothing matches.') : t('Nothing built yet. Ask an agent for an HTML artifact, or start a Studio project.')}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{items.map(card)}</div>
@@ -279,5 +280,5 @@ export function ArtifactViewer({ convId, artifactId, dark }: { convId: string; a
   if (!art) return <div className="h-full flex items-center justify-center text-[var(--text-muted)]"><Loader2 className="w-5 h-5 animate-spin" /></div>;
   if (art.type === 'markdown') return <div className="h-full overflow-y-auto px-6 py-8"><div className="max-w-3xl mx-auto"><Markdown text={art.content} /></div></div>;
   if (art.type === 'code') return <pre className="h-full overflow-auto p-4 text-[12.5px] leading-relaxed font-mono bg-[var(--bg-code)]">{art.content}</pre>;
-  return <iframe title={art.title} srcDoc={srcDoc(art.type, art.content, dark, artifactScope(convId, artifactId), false, convId)} sandbox={SANDBOX} className="w-full h-full border-0 bg-white" />;
+  return <iframe title={t(art.title)} srcDoc={srcDoc(art.type, art.content, dark, artifactScope(convId, artifactId), false, convId)} sandbox={SANDBOX} className="w-full h-full border-0 bg-white" />;
 }

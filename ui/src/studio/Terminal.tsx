@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Loader2, SquareTerminal, Trash2, Wand2, X } from 'lucide-react';
 import { api } from '../api';
+import { t } from '../i18n';
 
 type Entry = { id: number; command: string; output?: string; error?: boolean; running: boolean };
 
@@ -46,15 +47,15 @@ export function Terminal({ projectId, busy, pending, onClose, onRan, onAsk }: {
     <div className="h-64 shrink-0 flex flex-col border-t border-[var(--border-subtle)] bg-[var(--bg-code)]">
       <div className="h-8 shrink-0 flex items-center gap-2 px-2.5 border-b border-[var(--border-subtle)] text-[11px] text-[var(--text-muted)]">
         <SquareTerminal className="w-3.5 h-3.5" />
-        <span className="font-medium text-[var(--text-secondary)]">Terminal</span>
-        <span className="hidden sm:inline">bash in the sandbox · repo at /work · no network · 180 s limit</span>
+        <span className="font-medium text-[var(--text-secondary)]">{t('Terminal')}</span>
+        <span className="hidden sm:inline">{t('bash in the sandbox · repo at /work · no network · 180 s limit')}</span>
         <div className="flex-1" />
-        <button className="p-1 rounded hover:text-[var(--text-primary)]" title="Clear" onClick={() => setEntries([])}><Trash2 className="w-3.5 h-3.5" /></button>
-        <button className="p-1 rounded hover:text-[var(--text-primary)]" title="Close terminal" onClick={onClose}><X className="w-3.5 h-3.5" /></button>
+        <button className="p-1 rounded hover:text-[var(--text-primary)]" title={t('Clear')} onClick={() => setEntries([])}><Trash2 className="w-3.5 h-3.5" /></button>
+        <button className="p-1 rounded hover:text-[var(--text-primary)]" title={t('Close terminal')} onClick={onClose}><X className="w-3.5 h-3.5" /></button>
       </div>
       <div ref={scroller} className="flex-1 min-h-0 overflow-y-auto px-3 py-2 font-mono text-[11.5px] leading-relaxed" onClick={() => input.current?.focus()}>
         {entries.length === 0 && (
-          <div className="text-[var(--text-muted)]">Try <span className="text-[var(--text-secondary)]">pytest -q</span>, <span className="text-[var(--text-secondary)]">npm test</span>, <span className="text-[var(--text-secondary)]">make</span> or <span className="text-[var(--text-secondary)]">git log --oneline</span>. Files you change are committed as a version.</div>
+          <div className="text-[var(--text-muted)]">{t('Try')} <span className="text-[var(--text-secondary)]">{t('pytest -q')}</span>, <span className="text-[var(--text-secondary)]">{t('npm test')}</span>, <span className="text-[var(--text-secondary)]">make</span> or <span className="text-[var(--text-secondary)]">{t('git log --oneline')}</span>. Files you change are committed as a version.</div>
         )}
         {entries.map(e => (
           <div key={e.id} className="mb-2">
@@ -67,7 +68,7 @@ export function Terminal({ projectId, busy, pending, onClose, onRan, onAsk }: {
                 {e.error && (
                   <button disabled={busy} className="mt-1 flex items-center gap-1 text-[10.5px] font-sans text-[var(--accent-soft)] hover:underline disabled:opacity-40"
                     onClick={() => onAsk(`I ran \`${e.command}\` in the terminal and it failed:\n\n\`\`\`\n${(e.output ?? '').slice(-6000)}\n\`\`\`\n\nFind the root cause and fix it, then run it again to confirm.`)}>
-                    <Wand2 className="w-3 h-3" />Ask to fix
+                    <Wand2 className="w-3 h-3" />{t('Ask to fix')}
                   </button>
                 )}
               </>
@@ -77,7 +78,7 @@ export function Terminal({ projectId, busy, pending, onClose, onRan, onAsk }: {
         <div className="flex items-center gap-1.5">
           <span className="text-[var(--text-muted)] select-none">$</span>
           <input ref={input} value={cmd} onChange={e => setCmd(e.target.value)} disabled={running} autoFocus spellCheck={false}
-            aria-label="Command"
+            aria-label={t('Command')}
             onKeyDown={e => {
               if (e.key === 'Enter') { e.preventDefault(); run(); }
               if (e.key === 'ArrowUp' && past.length) {

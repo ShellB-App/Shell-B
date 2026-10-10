@@ -11,6 +11,7 @@ import { AssetPicker } from '../components/Assets';
 import { openContextMenu, type MenuEntry } from '../components/ContextMenu';
 import { toast } from '../components/toast';
 import { copyText } from '../quote';
+import { t as tx } from '../i18n';
 
 type Node = { name: string; path: string; file?: ProjectFile; children: Node[] };
 
@@ -69,7 +70,7 @@ export function FilesPanel({ projectId, files, selected, entry, onSelect, onChan
 
   // file actions report failures (a remote workspace refuses deletes, a name may be taken) instead of failing silently
   const run = async (what: string, fn: () => Promise<unknown>) => {
-    try { await fn(); } catch (e) { toast(`Couldn’t ${what}: ${String(e instanceof Error ? e.message : e).replace(/^\d+: /, '')}`, { kind: 'error' }); }
+    try { await fn(); } catch (e) { toast(tx('Couldn’t {what}: {v0}', { what: what, v0: String(e instanceof Error ? e.message : e).replace(/^\d+: /, '') }), { kind: 'error' }); }
   };
 
   const upload = async (list: File[], dir = home) => {
@@ -80,7 +81,7 @@ export function FilesPanel({ projectId, files, selected, entry, onSelect, onChan
       onChanged();
       if (r.saved.length === 1) onSelect(r.saved[0]);
     } catch (e) {
-      toast(`Couldn’t upload: ${String(e instanceof Error ? e.message : e).replace(/^\d+: /, '')}`, { kind: 'error' });
+      toast(tx('Couldn’t upload: {v0}', { v0: String(e instanceof Error ? e.message : e).replace(/^\d+: /, '') }), { kind: 'error' });
     } finally { setUploading(0); }
   };
   const pickUploads = (dir: string | null) => { uploadDir.current = dir; input.current?.click(); };
@@ -147,12 +148,12 @@ export function FilesPanel({ projectId, files, selected, entry, onSelect, onChan
     { label: 'Open', icon: FileText, onSelect: () => onSelect(f.path) },
     { label: f.kind === 'html' ? 'Preview in new tab' : 'Open in new tab', icon: ExternalLink, onSelect: () => window.open(rawUrl(projectId, f.path), '_blank', 'noopener') },
     'sep',
-    { label: 'Rename / move…', icon: Pencil, hint: 'F2', onSelect: () => startRename(f.path) },
-    !f.path.toLowerCase().endsWith('.zip') && { label: 'Duplicate', icon: Copy, onSelect: () => duplicate(f) },
-    !code && f.kind === 'html' && f.path !== entry && { label: 'Make this the entry page', icon: Home,
+    { label: tx('Rename / move…'), icon: Pencil, hint: 'F2', onSelect: () => startRename(f.path) },
+    !f.path.toLowerCase().endsWith('.zip') && { label: tx('Duplicate'), icon: Copy, onSelect: () => duplicate(f) },
+    !code && f.kind === 'html' && f.path !== entry && { label: tx('Make this the entry page'), icon: Home,
       onSelect: () => run('set the entry page', async () => { await api.patchProject(projectId, { entry: f.path }); onChanged(); }) },
     'sep',
-    { label: 'Copy path', icon: Link2, onSelect: () => copyText(f.path, 'Path copied') },
+    { label: tx('Copy path'), icon: Link2, onSelect: () => copyText(f.path, 'Path copied') },
     { label: 'Download', icon: Download, onSelect: () => download(f.path) },
     'sep',
     { label: 'Delete…', icon: Trash2, danger: true, hint: 'Del', onSelect: () => remove(f.path) },
@@ -161,22 +162,22 @@ export function FilesPanel({ projectId, files, selected, entry, onSelect, onChan
   const folderMenu = (n: Node): MenuEntry[] => [
     { label: closed.has(n.path) ? 'Expand' : 'Collapse', icon: closed.has(n.path) ? ChevronRight : ChevronDown, onSelect: () => toggle(n.path) },
     'sep',
-    { label: 'New file here…', icon: FilePlus, onSelect: () => newFile(`${n.path}/`) },
-    { label: 'Upload here…', icon: Upload, onSelect: () => pickUploads(n.path) },
+    { label: tx('New file here…'), icon: FilePlus, onSelect: () => newFile(`${n.path}/`) },
+    { label: tx('Upload here…'), icon: Upload, onSelect: () => pickUploads(n.path) },
     'sep',
-    { label: 'Rename / move…', icon: Pencil, hint: 'F2', onSelect: () => startRename(n.path) },
-    { label: 'Copy path', icon: Link2, onSelect: () => copyText(n.path, 'Path copied') },
+    { label: tx('Rename / move…'), icon: Pencil, hint: 'F2', onSelect: () => startRename(n.path) },
+    { label: tx('Copy path'), icon: Link2, onSelect: () => copyText(n.path, 'Path copied') },
     'sep',
-    { label: 'Delete folder…', icon: Trash2, danger: true, hint: 'Del', onSelect: () => remove(n.path, countFiles(n)) },
+    { label: tx('Delete folder…'), icon: Trash2, danger: true, hint: 'Del', onSelect: () => remove(n.path, countFiles(n)) },
   ];
 
   const panelMenu: MenuEntry[] = [
-    { label: 'New file…', icon: FilePlus, onSelect: () => newFile() },
+    { label: tx('New file…'), icon: FilePlus, onSelect: () => newFile() },
     { label: code ? 'Upload files…' : 'Upload assets…', icon: Upload, onSelect: () => pickUploads(null) },
-    { label: 'Add from an asset library…', icon: Shapes, onSelect: () => setPicking(true) },
+    { label: tx('Add from an asset library…'), icon: Shapes, onSelect: () => setPicking(true) },
     folders.length > 0 && 'sep',
-    folders.length > 0 && { label: 'Expand all', icon: ChevronDown, disabled: closed.size === 0, onSelect: () => setClosed(new Set()) },
-    folders.length > 0 && { label: 'Collapse all', icon: ChevronRight, disabled: closed.size === folders.length, onSelect: () => setClosed(new Set(folders)) },
+    folders.length > 0 && { label: tx('Expand all'), icon: ChevronDown, disabled: closed.size === 0, onSelect: () => setClosed(new Set()) },
+    folders.length > 0 && { label: tx('Collapse all'), icon: ChevronRight, disabled: closed.size === folders.length, onSelect: () => setClosed(new Set(folders)) },
   ];
 
   const renameBox = (path: string, mono = true) => (
@@ -234,16 +235,16 @@ export function FilesPanel({ projectId, files, selected, entry, onSelect, onChan
         <span className="w-3" />
         <FileIcon f={f} projectId={projectId} />
         {renaming === f.path ? renameBox(f.path) : <span className="flex-1 min-w-0 truncate">{n.name}</span>}
-        {!code && f.path === entry && <Home className="w-3 h-3 text-[var(--accent)] shrink-0" aria-label="Entry page" />}
+        {!code && f.path === entry && <Home className="w-3 h-3 text-[var(--accent)] shrink-0" aria-label={tx('Entry page')} />}
         {renaming !== f.path && (
           <span className="hidden group-hover:flex items-center shrink-0" onClick={e => e.stopPropagation()}>
             {!code && f.kind === 'html' && f.path !== entry && (
-              <button className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--accent)]" title="Make this the entry page" tabIndex={-1}
+              <button className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--accent)]" title={tx('Make this the entry page')} tabIndex={-1}
                 onClick={() => run('set the entry page', async () => { await api.patchProject(projectId, { entry: f.path }); onChanged(); })}><Home className="w-3 h-3" /></button>
             )}
-            <button className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)]" title="Rename / move (F2)" tabIndex={-1}
+            <button className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)]" title={tx('Rename / move (F2)')} tabIndex={-1}
               onClick={() => startRename(f.path)}><Pencil className="w-3 h-3" /></button>
-            <button className="p-0.5 rounded text-[var(--text-muted)] hover:text-red-400" title="Delete (Del)" tabIndex={-1}
+            <button className="p-0.5 rounded text-[var(--text-muted)] hover:text-red-400" title={tx('Delete (Del)')} tabIndex={-1}
               onClick={() => remove(f.path)}>
               <Trash2 className="w-3 h-3" />
             </button>
@@ -262,19 +263,19 @@ export function FilesPanel({ projectId, files, selected, entry, onSelect, onChan
           onChange={e => { upload(Array.from(e.target.files ?? []), uploadDir.current ?? home); uploadDir.current = null; e.target.value = ''; }} />
         <button onClick={() => pickUploads(null)} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] hover:bg-[var(--bg-hover)]">
           {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-          {uploading ? `Uploading ${uploading}…` : code ? 'Upload files' : 'Upload assets'}
+          {uploading ? tx('Uploading {uploading}…', { uploading: uploading }) : code ? tx('Upload files') : tx('Upload assets')}
         </button>
-        <button title="Add from an asset library" className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
+        <button title={tx('Add from an asset library')} className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
           onClick={() => setPicking(true)}><Shapes className="w-4 h-4" /></button>
-        <button title="New file" className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
+        <button title={tx('New file')} className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
           onClick={() => newFile()}><FilePlus className="w-4 h-4" /></button>
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto px-1 pb-2" onContextMenu={e => openContextMenu(e, panelMenu)}>
         {tree.map(n => node(n, 0))}
         <p className="px-3 pt-3 text-[10.5px] leading-relaxed text-[var(--text-muted)]">
-          {code ? <>Drop data files, logs, specs or a .zip here. Uploads go to <span className="font-mono">uploads/</span> and the agent can read them.</>
-            : <>Drop logos, photos, fonts, PDFs or a .zip here. Uploads go to <span className="font-mono">assets/</span> and the agent can see them.</>}
-          {' '}Right-click a file or folder for more.
+          {code ? <>{tx('Drop data files, logs, specs or a .zip here. Uploads go to')} <span className="font-mono">uploads/</span> {tx('and the agent can read them.')}</>
+            : <>{tx('Drop logos, photos, fonts, PDFs or a .zip here. Uploads go to')} <span className="font-mono">assets/</span> {tx('and the agent can see them.')}</>}
+          {' '}{tx('Right-click a file or folder for more.')}
         </p>
       </div>
       {picking && <AssetPicker projectId={projectId} onClose={() => setPicking(false)}
@@ -326,11 +327,11 @@ export function HistoryPanel({ projectId, version, onRestored }: { projectId: st
                 {i > 0 && (
                   <button disabled={busy} className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs bg-[var(--bg-hover)] hover:brightness-110 disabled:opacity-50"
                     onClick={async () => {
-                      if (!confirm(`Restore the project to ${c.sha}? Your current state stays in history, so this is undoable.`)) return;
+                      if (!confirm(tx('Restore the project to {sha}? Your current state stays in history, so this is undoable.', { sha: c.sha }))) return;
                       setBusy(true);
                       try { await api.restore(projectId, c.sha); onRestored(); setOpen(null); } finally { setBusy(false); }
                     }}>
-                    <RotateCcw className="w-3.5 h-3.5" /> Restore this version
+                    <RotateCcw className="w-3.5 h-3.5" /> {tx('Restore this version')}
                   </button>
                 )}
               </div>
@@ -338,7 +339,7 @@ export function HistoryPanel({ projectId, version, onRestored }: { projectId: st
           </div>
         );
       })}
-      {commits.length === 0 && <div className="text-xs text-[var(--text-muted)] text-center py-6 flex items-center justify-center gap-1.5"><History className="w-3.5 h-3.5" />No versions yet</div>}
+      {commits.length === 0 && <div className="text-xs text-[var(--text-muted)] text-center py-6 flex items-center justify-center gap-1.5"><History className="w-3.5 h-3.5" />{tx('No versions yet')}</div>}
     </div>
   );
 }
@@ -369,23 +370,23 @@ export function RemotePanel({ projectId, onChanged }: { projectId: string; onCha
     try { const r = await f(); if (r && typeof r === 'object' && 'remote' in (r as RemoteInfo)) setInfo(r as RemoteInfo); else await load(); onChanged(); }
     catch (e) { setErr(friendly(e)); } finally { setBusy(''); }
   };
-  if (!info) return <div className="p-3 text-xs text-[var(--text-muted)]">Loading…</div>;
+  if (!info) return <div className="p-3 text-xs text-[var(--text-muted)]">{tx('Loading…')}</div>;
   const r = info.remote;
   const form = edit ?? (r ? null : { url: '', branch: 'main', secretId: '' });
   return (
     <div className="flex-1 overflow-y-auto p-3 space-y-3 text-xs">
       {form ? (
         <form className="space-y-2" onSubmit={e => { e.preventDefault(); act('save', () => req<RemoteInfo>(`/api/projects/${projectId}/git`, { method: 'PUT', body: JSON.stringify(form) })).then(() => setEdit(null)); }}>
-          <div className="text-[11px] text-[var(--text-muted)] max-w-[40ch]">An https remote (GitHub, GitLab, Gitea…). The token comes from a Codex secret (Codex → Secrets), so it never sits in the URL or in this workspace.</div>
+          <div className="text-[11px] text-[var(--text-muted)] max-w-[40ch]">{tx('An https remote (GitHub, GitLab, Gitea…). The token comes from a Codex secret (Codex → Secrets), so it never sits in the URL or in this workspace.')}</div>
           <input className={btn.input} placeholder="https://github.com/owner/repo.git" value={form.url} onChange={e => setEdit({ ...form, url: e.target.value })} required />
-          <input className={btn.input} placeholder="Branch (main)" value={form.branch} onChange={e => setEdit({ ...form, branch: e.target.value })} />
+          <input className={btn.input} placeholder={tx('Branch (main)')} value={form.branch} onChange={e => setEdit({ ...form, branch: e.target.value })} />
           <select className={btn.input} value={form.secretId} onChange={e => setEdit({ ...form, secretId: e.target.value })}>
-            <option value="">No credential (public repository, fetch and pull only)</option>
-            {secrets.map(sct => <option key={sct.id} value={sct.id}>{sct.title}</option>)}
+            <option value="">{tx('No credential (public repository, fetch and pull only)')}</option>
+            {secrets.map(sct => <option key={sct.id} value={sct.id}>{tx(sct.title)}</option>)}
           </select>
           <div className="flex gap-1.5">
-            <button className={btn.primary} type="submit" disabled={busy === 'save' || !form.url.trim()}>{busy === 'save' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}Save remote</button>
-            {r && <button className={btn.ghost} type="button" onClick={() => setEdit(null)}>Cancel</button>}
+            <button className={btn.primary} type="submit" disabled={busy === 'save' || !form.url.trim()}>{busy === 'save' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}{tx('Save remote')}</button>
+            {r && <button className={btn.ghost} type="button" onClick={() => setEdit(null)}>{tx('Cancel')}</button>}
           </div>
         </form>
       ) : r && (
@@ -393,27 +394,27 @@ export function RemotePanel({ projectId, onChanged }: { projectId: string; onCha
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 font-medium"><GitBranch className="w-3.5 h-3.5 text-[var(--accent)]" /><span className="truncate" title={r.url}>{r.url.replace(/^https:\/\//, '')}</span></div>
             <div className="text-[var(--text-muted)]">
-              {r.localBranch} → origin/{r.branch}{r.hasCredential ? '' : ' · no credential'}
-              {r.ahead !== null && <> · {r.ahead ? <span className="text-amber-400">{r.ahead} to push</span> : 'nothing to push'}{r.behind ? <>, <span className="text-sky-400">{r.behind} to pull</span></> : ''}</>}
-              {r.lastFetch && <> · fetched {relTime(r.lastFetch * 1000)}</>}
+              {r.localBranch} {tx('→ origin/')}{r.branch}{r.hasCredential ? '' : tx(' · no credential')}
+              {r.ahead !== null && <> · {r.ahead ? <span className="text-amber-400">{tx('{ahead} to push', { ahead: r.ahead })}</span> : tx('nothing to push')}{r.behind ? <>, <span className="text-sky-400">{tx('{behind} to pull', { behind: r.behind })}</span></> : ''}</>}
+              {r.lastFetch && <> {tx('· fetched')} {relTime(r.lastFetch * 1000)}</>}
             </div>
-            {r.dirty && <div className="text-[var(--text-muted)]">Uncommitted edits are committed before a pull or push.</div>}
+            {r.dirty && <div className="text-[var(--text-muted)]">{tx('Uncommitted edits are committed before a pull or push.')}</div>}
           </div>
           <div className="flex flex-wrap gap-1.5">
-            <button className={btn.subtle} disabled={!!busy} onClick={() => act('fetch', () => req<RemoteInfo>(`/api/projects/${projectId}/git/fetch`, { method: 'POST' }))}>{busy === 'fetch' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}Fetch</button>
-            <button className={btn.subtle} disabled={!!busy} onClick={() => act('pull', () => req<RemoteInfo>(`/api/projects/${projectId}/git/pull`, { method: 'POST' }))}>{busy === 'pull' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowDownToLine className="w-3.5 h-3.5" />}Pull</button>
-            <button className={btn.primary} disabled={!!busy || !r.hasCredential} title={r.hasCredential ? 'Push HEAD to the remote branch' : 'Pushing needs a credential'}
-              onClick={() => { if (confirm(`Push to ${r.url} (${r.branch})?`)) act('push', () => req<RemoteInfo>(`/api/projects/${projectId}/git/push`, { method: 'POST' })); }}>{busy === 'push' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowUpFromLine className="w-3.5 h-3.5" />}Push</button>
-            <button className={btn.icon} title="Change the remote" onClick={() => setEdit({ url: r.url, branch: r.branch, secretId: r.secretId ?? '' })}><Settings2 className="w-3.5 h-3.5" /></button>
-            <button className={btn.icon} title="Forget the remote" onClick={() => { if (confirm('Forget this remote? The local history stays.')) act('clear', () => req(`/api/projects/${projectId}/git`, { method: 'DELETE' })); }}><Trash2 className="w-3.5 h-3.5" /></button>
+            <button className={btn.subtle} disabled={!!busy} onClick={() => act('fetch', () => req<RemoteInfo>(`/api/projects/${projectId}/git/fetch`, { method: 'POST' }))}>{busy === 'fetch' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}{tx('Fetch')}</button>
+            <button className={btn.subtle} disabled={!!busy} onClick={() => act('pull', () => req<RemoteInfo>(`/api/projects/${projectId}/git/pull`, { method: 'POST' }))}>{busy === 'pull' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowDownToLine className="w-3.5 h-3.5" />}{tx('Pull')}</button>
+            <button className={btn.primary} disabled={!!busy || !r.hasCredential} title={r.hasCredential ? tx('Push HEAD to the remote branch') : tx('Pushing needs a credential')}
+              onClick={() => { if (confirm(tx('Push to {url} ({branch})?', { url: r.url, branch: r.branch }))) act('push', () => req<RemoteInfo>(`/api/projects/${projectId}/git/push`, { method: 'POST' })); }}>{busy === 'push' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowUpFromLine className="w-3.5 h-3.5" />}{tx('Push')}</button>
+            <button className={btn.icon} title={tx('Change the remote')} onClick={() => setEdit({ url: r.url, branch: r.branch, secretId: r.secretId ?? '' })}><Settings2 className="w-3.5 h-3.5" /></button>
+            <button className={btn.icon} title={tx('Forget the remote')} onClick={() => { if (confirm(tx('Forget this remote? The local history stays.'))) act('clear', () => req(`/api/projects/${projectId}/git`, { method: 'DELETE' })); }}><Trash2 className="w-3.5 h-3.5" /></button>
           </div>
           {info.outgoing && info.outgoing.length > 0 && (
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Not on the remote yet</div>
+              <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">{tx('Not on the remote yet')}</div>
               <ul className="font-mono text-[11px] space-y-0.5 text-[var(--text-secondary)]">{info.outgoing.map(l => <li key={l} className="truncate">{l}</li>)}</ul>
             </div>
           )}
-          <p className="text-[11px] text-[var(--text-muted)] max-w-[40ch]">Agents in this project can fetch and pull on their own; a push shows an approval card in the chat first.</p>
+          <p className="text-[11px] text-[var(--text-muted)] max-w-[40ch]">{tx('Agents in this project can fetch and pull on their own; a push shows an approval card in the chat first.')}</p>
         </>
       )}
       {err && <div className="text-red-400 whitespace-pre-wrap break-words">{err}</div>}

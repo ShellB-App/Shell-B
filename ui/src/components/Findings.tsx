@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import { CheckCircle2, CircleDot, Loader2, XCircle } from 'lucide-react';
 import { req } from '../api';
 import { relTime } from './common';
+import { t } from '../i18n';
 
 export interface Finding {
   id: string; title: string; severity: 'critical' | 'high' | 'medium' | 'low'; file: string;
@@ -35,8 +36,7 @@ export function FindingsPanel() {
   return (
     <div>
       <p className="text-sm text-[var(--text-secondary)] mb-4 max-w-[65ch]">
-        Issues Shell:B's reviews found in her own code. Each night the review reads the live source, re-checks what is
-        still open, and adds only what's new.
+        {t('Issues Shell:B\'s reviews found in her own code. Each night the review reads the live source, re-checks what is still open, and adds only what\'s new.')}
       </p>
       <div role="tablist" className="flex gap-1.5 mb-4">
         {(['open', 'fixed', 'wontfix'] as const).map(s => (
@@ -44,16 +44,16 @@ export function FindingsPanel() {
             className={clsx('px-2.5 py-1 rounded-lg text-xs border transition',
               status === s ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] border-[var(--accent)]/60 font-medium'
                 : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]')}>
-            {s === 'wontfix' ? "Won't fix" : s[0].toUpperCase() + s.slice(1)}
+            {s === 'wontfix' ? t('Won\'t fix') : s[0].toUpperCase() + s.slice(1)}
           </button>
         ))}
       </div>
       {error && <div className="mb-3 text-xs text-red-500 dark:text-red-400">{error}</div>}
       {items === null ? (
-        <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-[var(--text-muted)]" aria-label="Loading" /></div>
+        <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-[var(--text-muted)]" aria-label={t('Loading')} /></div>
       ) : items.length === 0 ? (
         <div className="py-12 text-center text-sm text-[var(--text-muted)]">
-          {status === 'open' ? 'Nothing open. The next nightly review will add anything it finds.' : 'Nothing here yet.'}
+          {status === 'open' ? t('Nothing open. The next nightly review will add anything it finds.') : t('Nothing here yet.')}
         </div>
       ) : (
         <ul className="space-y-2">
@@ -64,9 +64,9 @@ export function FindingsPanel() {
                   {f.severity}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium leading-snug">{f.title}</div>
+                  <div className="text-sm font-medium leading-snug">{t(f.title)}</div>
                   <div className="text-[11px] text-[var(--text-muted)] mt-0.5 font-mono truncate">
-                    {f.file || 'no file'} · first seen {relTime(f.firstSeen)} · last seen {relTime(f.lastSeen)}
+                    {f.file || t('no file')} {t('· first seen')} {relTime(f.firstSeen)} {t('· last seen')} {relTime(f.lastSeen)}
                   </div>
                   {(f.note || f.evidence) && (
                     <div className="text-xs text-[var(--text-secondary)] mt-1.5 whitespace-pre-wrap break-words max-w-[75ch]">{f.note || f.evidence}</div>
@@ -74,15 +74,15 @@ export function FindingsPanel() {
                 </div>
                 <div className="flex shrink-0 gap-1">
                   {f.status !== 'fixed' && (
-                    <button onClick={() => mark(f, 'fixed')} title="Mark fixed" aria-label={`Mark "${f.title}" fixed`}
+                    <button onClick={() => mark(f, 'fixed')} title={t('Mark fixed')} aria-label={t('Mark "{title}" fixed', { title: f.title })}
                       className="p-1.5 rounded-lg text-emerald-600 dark:text-emerald-400 hover:bg-[var(--bg-hover)]"><CheckCircle2 className="w-4 h-4" /></button>
                   )}
                   {f.status !== 'wontfix' && (
-                    <button onClick={() => mark(f, 'wontfix')} title="Won't fix" aria-label={`Won't fix "${f.title}"`}
+                    <button onClick={() => mark(f, 'wontfix')} title={t('Won\'t fix')} aria-label={t('Won\'t fix "{title}"', { title: f.title })}
                       className="p-1.5 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-hover)]"><XCircle className="w-4 h-4" /></button>
                   )}
                   {f.status !== 'open' && (
-                    <button onClick={() => mark(f, 'open')} title="Reopen" aria-label={`Reopen "${f.title}"`}
+                    <button onClick={() => mark(f, 'open')} title={t('Reopen')} aria-label={t('Reopen "{title}"', { title: f.title })}
                       className="p-1.5 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-hover)]"><CircleDot className="w-4 h-4" /></button>
                   )}
                 </div>

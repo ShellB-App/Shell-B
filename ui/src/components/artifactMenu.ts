@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { AppWindow, Copy, Download, ExternalLink, Link2, Share2, Star, StarOff, UsersRound } from 'lucide-react';
 import { shareLink } from '../shareLink';
 import { openShareToCircle } from './CircleCards';
@@ -47,13 +48,13 @@ export function artifactMenu(a: {
   const page = artifactViewUrl(a.convId, a.id);
   return [
     a.onOpen && { label: a.openLabel ?? 'Open', icon: AppWindow, onSelect: a.onOpen },
-    { label: 'Open full page in new tab', icon: ExternalLink, onSelect: () => window.open(page, '_blank', 'noopener') },
+    { label: t('Open full page in new tab'), icon: ExternalLink, onSelect: () => window.open(page, '_blank', 'noopener') },
     'sep',
     { label: COPY_LABEL[a.type] ?? 'Copy content', icon: Copy, onSelect: () => { load().then(v => copyText(v.content)).catch(fail); } },
-    { label: 'Download', icon: Download, onSelect: () => { load().then(downloadArtifact).catch(fail); } },
-    { label: 'Copy link', icon: Link2, onSelect: () => copyText(`${location.origin}${page}`, 'Link copied') },
-    { label: 'Share read-only link…', icon: Share2, onSelect: () => shareLink({ kind: 'artifact', conversation: a.convId, artifact: a.id, version: a.version }) },
-    { label: 'Share to a circle…', icon: UsersRound, onSelect: () => openShareToCircle({ kind: 'artifact', conv: a.convId, artifact: a.id, version: a.version, title: a.title }) },
+    { label: t('Download'), icon: Download, onSelect: () => { load().then(downloadArtifact).catch(fail); } },
+    { label: t('Copy link'), icon: Link2, onSelect: () => copyText(`${location.origin}${page}`, 'Link copied') },
+    { label: t('Share read-only link…'), icon: Share2, onSelect: () => shareLink({ kind: 'artifact', conversation: a.convId, artifact: a.id, version: a.version }) },
+    { label: t('Share to a circle…'), icon: UsersRound, onSelect: () => openShareToCircle({ kind: 'artifact', conv: a.convId, artifact: a.id, version: a.version, title: a.title }) },
     { label: fav ? 'Remove from Favorites' : 'Add to Favorites', icon: fav ? StarOff : Star, onSelect: () => { setFavorite('artifact', a.convId, a.id, !fav, a.title); } },
   ];
 }

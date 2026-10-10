@@ -8,6 +8,7 @@ import { btn, relTime } from './common';
 import { BriefNowButton, BriefRow, FollowUpsPanel, useFollowUpCounts } from './FollowUps';
 import { FindingsPanel } from './Findings';
 import { NightShiftPanel } from './NightShift';
+import { t as tx } from '../i18n';
 
 const SOURCES: Record<ActivitySource, { label: string; icon: typeof Inbox; color: string }> = {
   schedule: { label: 'Scheduled', icon: CalendarClock, color: 'text-emerald-400' },
@@ -48,8 +49,8 @@ type Filter = 'all' | 'attention' | 'unread';
 function dayLabel(ts: number) {
   const d = new Date(ts), today = new Date();
   const days = Math.round((new Date(today.toDateString()).getTime() - new Date(d.toDateString()).getTime()) / 86400000);
-  if (days === 0) return 'Today';
-  if (days === 1) return 'Yesterday';
+  if (days === 0) return tx('Today');
+  if (days === 1) return tx('Yesterday');
   return d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric', year: days > 300 ? 'numeric' : undefined });
 }
 
@@ -69,14 +70,14 @@ function Waiting({ p, onDeny }: { p: PendingApproval; onDeny: () => Promise<void
       <div className="flex items-start gap-3">
         <ShieldQuestion className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium">{p.kind === 'question' ? p.title : self ? `${p.title}?` : `Allow ${p.title}?`}</div>
+          <div className="text-sm font-medium">{p.kind === 'question' ? tx(p.title) : self ? `${p.title}?` : tx('Allow {title}?', { title: p.title })}</div>
           <div className="text-xs text-[var(--text-secondary)] mt-0.5">
-            {p.convTitle ? <>In “{p.convTitle}”</> : 'In a chat'} · waiting {relTime(p.since).replace(' ago', '')}
-            <span className="text-[var(--text-muted)]"> · {p.kind === 'question' ? 'the agent moves on after 30 minutes' : 'the agent gives up after 15 minutes'}</span>
+            {p.convTitle ? <>{tx('In “')}{p.convTitle}”</> : tx('In a chat')} {tx('· waiting')} {relTime(p.since).replace(' ago', '')}
+            <span className="text-[var(--text-muted)]"> · {p.kind === 'question' ? tx('the agent moves on after 30 minutes') : tx('the agent gives up after 15 minutes')}</span>
           </div>
           {p.detail && (
             <button className="mt-1.5 flex items-center gap-1 text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)]" onClick={() => setOpen(!open)}>
-              <ChevronDown className={clsx('w-3 h-3 transition', !open && '-rotate-90')} />{diff ? 'Preview the change' : p.kind === 'secret' ? 'Preview the request' : p.kind === 'email' ? 'Read the email' : p.kind === 'git' ? 'Show the commits' : p.kind === 'question' ? 'Show the options' : 'Preview the call'}
+              <ChevronDown className={clsx('w-3 h-3 transition', !open && '-rotate-90')} />{diff ? tx('Preview the change') : p.kind === 'secret' ? tx('Preview the request') : p.kind === 'email' ? tx('Read the email') : p.kind === 'git' ? tx('Show the commits') : p.kind === 'question' ? tx('Show the options') : tx('Preview the call')}
             </button>
           )}
           {open && (
@@ -87,8 +88,8 @@ function Waiting({ p, onDeny }: { p: PendingApproval; onDeny: () => Promise<void
           )}
           {error && <div className="mt-1.5 text-[11px] text-red-400">{error}</div>}
           <div className="mt-2.5 flex flex-wrap gap-1.5">
-            {p.convId && <a href={`#/c/${p.convId}`} className={btn.primary}><MessageSquare className="w-3.5 h-3.5" />{p.kind === 'question' ? 'Answer in chat' : 'Review in chat'}</a>}
-            <button disabled={busy} onClick={deny} className="px-2.5 py-1 rounded-lg text-xs text-red-400 border border-red-500/30 hover:bg-red-500/10 disabled:opacity-50">{p.kind === 'question' ? 'Skip' : 'Deny'}</button>
+            {p.convId && <a href={`#/c/${p.convId}`} className={btn.primary}><MessageSquare className="w-3.5 h-3.5" />{p.kind === 'question' ? tx('Answer in chat') : tx('Review in chat')}</a>}
+            <button disabled={busy} onClick={deny} className="px-2.5 py-1 rounded-lg text-xs text-red-400 border border-red-500/30 hover:bg-red-500/10 disabled:opacity-50">{p.kind === 'question' ? tx('Skip') : tx('Deny')}</button>
           </div>
         </div>
       </div>
@@ -99,18 +100,19 @@ function Waiting({ p, onDeny }: { p: PendingApproval; onDeny: () => Promise<void
 function Row({ it, onOpen, onToggle, onDelete }: { it: ActivityItem; onOpen: () => void; onToggle: () => void; onDelete: () => void }) {
   const src = SOURCES[it.source] ?? SOURCES.schedule;
   const Icon = src.icon;
-  const [label, tone] = STATUS[it.status] ?? [it.status, 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] border-[var(--border-subtle)]'];
+  const [label0, tone] = STATUS[it.status] ?? [it.status, 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] border-[var(--border-subtle)]'];
+  const label = STATUS[it.status] ? tx(label0) : label0;
   return (
     <div className={clsx('group relative flex items-start gap-3 px-3.5 py-3 rounded-xl border transition cursor-pointer',
       it.read ? 'border-transparent hover:bg-[var(--bg-hover)]' : 'border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-hover)]')}
       onClick={onOpen} role="link" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') onOpen(); }}>
       <span className={clsx('absolute left-1 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full', it.read ? 'bg-transparent' : it.attention ? 'bg-amber-400' : 'bg-[var(--accent)]')} />
-      <span className="mt-0.5 w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-[var(--bg-tertiary)] border border-[var(--border-subtle)]" title={src.label}>
+      <span className="mt-0.5 w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-[var(--bg-tertiary)] border border-[var(--border-subtle)]" title={tx(src.label)}>
         <Icon className={clsx('w-4 h-4', src.color)} />
       </span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 min-w-0">
-          <span className={clsx('text-sm truncate', it.read ? 'text-[var(--text-secondary)]' : 'font-medium')}>{it.title}</span>
+          <span className={clsx('text-sm truncate', it.read ? 'text-[var(--text-secondary)]' : 'font-medium')}>{tx(it.title)}</span>
           <span className={clsx('px-1.5 py-px rounded-md border text-[10px] font-medium shrink-0', tone)}>{label}</span>
         </div>
         {it.body && <p className="text-xs text-[var(--text-muted)] mt-0.5 line-clamp-2 break-words">{it.body}</p>}
@@ -120,10 +122,10 @@ function Row({ it, onOpen, onToggle, onDelete }: { it: ActivityItem; onOpen: () 
           {new Date(it.ts).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
         </span>
         <span className="hidden group-hover:flex group-focus-within:flex items-center gap-0.5" onClick={e => e.stopPropagation()}>
-          <button className={btn.icon} title={it.read ? 'Mark as unread' : 'Mark as read'} onClick={onToggle}>
+          <button className={btn.icon} title={it.read ? tx('Mark as unread') : tx('Mark as read')} onClick={onToggle}>
             {it.read ? <Mail className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
           </button>
-          <button className={clsx(btn.icon, 'hover:text-red-400')} title="Delete" onClick={onDelete}><Trash2 className="w-3.5 h-3.5" /></button>
+          <button className={clsx(btn.icon, 'hover:text-red-400')} title={tx('Delete')} onClick={onDelete}><Trash2 className="w-3.5 h-3.5" /></button>
         </span>
       </div>
     </div>
@@ -208,16 +210,16 @@ export function Activity({ live }: { live?: ActivitySummary }) {
     <div className="h-full overflow-y-auto">
       <div className="max-w-3xl mx-auto px-4 py-8 animate-fade-in">
         <div className="flex flex-wrap items-center gap-2 mb-1">
-          <h1 className="text-2xl font-semibold tracking-tight flex-1">Activity</h1>
+          <h1 className="text-2xl font-semibold tracking-tight flex-1">{tx('Activity')}</h1>
           <BriefNowButton onDone={() => { load(); setFuTick(t => t + 1); }} />
-          <button className={btn.ghost} onClick={allRead} disabled={!counts.unread}><CheckCheck className="w-3.5 h-3.5" />Mark all read</button>
-          <button className={btn.ghost} onClick={clearRead}><Trash2 className="w-3.5 h-3.5" />Clear read</button>
+          <button className={btn.ghost} onClick={allRead} disabled={!counts.unread}><CheckCheck className="w-3.5 h-3.5" />{tx('Mark all read')}</button>
+          <button className={btn.ghost} onClick={clearRead}><Trash2 className="w-3.5 h-3.5" />{tx('Clear read')}</button>
         </div>
-        <p className="text-sm text-[var(--text-secondary)] mb-5">What scheduled runs, to-dos, Mega Plans, asset scouts, notebooks and self-deploys did while you were away, and anything agents are waiting on you for.</p>
+        <p className="text-sm text-[var(--text-secondary)] mb-5">{tx('What scheduled runs, to-dos, Mega Plans, asset scouts, notebooks and self-deploys did while you were away, and anything agents are waiting on you for.')}</p>
         {error && <div className="mb-4 text-xs text-red-500 dark:text-red-400">{error}</div>}
         <div role="tablist" className="flex gap-4 mb-5 border-b border-[var(--border-subtle)]">
-          {([['feed', 'Feed', counts.unread], ['follow-ups', 'Follow-ups', fuCounts ? fuCounts.overdue + fuCounts.today || fuCounts.open : 0],
-             ['night-shift', 'Night shift', 0], ['findings', 'Self-review', 0]] as const).map(([id, label, n]) => (
+          {([['feed', tx('Feed'), counts.unread], ['follow-ups', tx('Follow-ups'), fuCounts ? fuCounts.overdue + fuCounts.today || fuCounts.open : 0],
+             ['night-shift', tx('Night shift'), 0], ['findings', tx('Self-review'), 0]] as const).map(([id, label, n]) => (
             <button key={id} role="tab" aria-selected={tab === id}
               onClick={() => { location.hash = id === 'feed' ? '#/activity' : `#/activity/${id}`; setTab(id); }}
               className={clsx('-mb-px pb-2 text-sm border-b-2 transition flex items-center gap-1.5 focus-visible:outline-none focus-visible:text-[var(--text-primary)]',
@@ -230,7 +232,7 @@ export function Activity({ live }: { live?: ActivitySummary }) {
 
         {pending.length > 0 && (
           <section className="mb-6">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-amber-500 mb-2">Waiting for you · {pending.length}</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-amber-500 mb-2">{tx('Waiting for you · {length}', { length: pending.length })}</h2>
             <div className="space-y-2">
               {pending.map(p => <Waiting key={p.id} p={p} onDeny={async () => { await api.answerApproval(p.id, 'deny'); await load(); }} />)}
             </div>
@@ -239,13 +241,13 @@ export function Activity({ live }: { live?: ActivitySummary }) {
 
         {tab === 'findings' ? <FindingsPanel /> : tab === 'night-shift' ? <NightShiftPanel /> : tab === 'follow-ups' ? <FollowUpsPanel onChange={() => setFuTick(t => t + 1)} /> : (<>
         <div className="flex flex-wrap gap-1.5 mb-2">
-          {chip(filter === 'all', 'All', () => setFilter('all'))}
-          {chip(filter === 'attention', 'Needs you', () => setFilter('attention'), counts.attention)}
-          {chip(filter === 'unread', 'Unread', () => setFilter('unread'), counts.unread)}
+          {chip(filter === 'all', tx('All'), () => setFilter('all'))}
+          {chip(filter === 'attention', tx('Needs you'), () => setFilter('attention'), counts.attention)}
+          {chip(filter === 'unread', tx('Unread'), () => setFilter('unread'), counts.unread)}
         </div>
         <div className="flex flex-wrap gap-1.5 mb-5">
-          {chip(source === '', 'Everything', () => setSource(''))}
-          {(Object.keys(SOURCES) as ActivitySource[]).map(k => chip(source === k, SOURCES[k].label, () => setSource(source === k ? '' : k)))}
+          {chip(source === '', tx('Everything'), () => setSource(''))}
+          {(Object.keys(SOURCES) as ActivitySource[]).map(k => chip(source === k, tx(SOURCES[k].label), () => setSource(source === k ? '' : k)))}
         </div>
 
         {!loaded ? (
@@ -254,9 +256,9 @@ export function Activity({ live }: { live?: ActivitySummary }) {
           <div className="text-center py-16 text-sm text-[var(--text-muted)]">
             {filter === 'all' && !source ? (<>
               <Inbox className="w-8 h-8 mx-auto mb-2" />
-              Nothing yet. When scheduled tasks, to-dos, Mega Plans, asset scouts or notebook outputs finish, they show up here.
+              {tx('Nothing yet. When scheduled tasks, to-dos, Mega Plans, asset scouts or notebook outputs finish, they show up here.')}
             </>) : (<>
-              <XCircle className="w-8 h-8 mx-auto mb-2" />Nothing matches this filter.
+              <XCircle className="w-8 h-8 mx-auto mb-2" />{tx('Nothing matches this filter.')}
             </>)}
           </div>
         ) : (
@@ -271,7 +273,7 @@ export function Activity({ live }: { live?: ActivitySummary }) {
                 </div>
               </section>
             ))}
-            {more && <div className="flex justify-center"><button className={btn.subtle} onClick={older}>Show older</button></div>}
+            {more && <div className="flex justify-center"><button className={btn.subtle} onClick={older}>{tx('Show older')}</button></div>}
           </div>
         )}
         </>)}

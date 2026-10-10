@@ -7,6 +7,7 @@ import type { ProjectFile, ProjectKind } from '../types';
 import { api, frameRawUrl, rawUrl } from '../api';
 import { Markdown } from '../components/Markdown';
 import { btn } from '../components/common';
+import { t as tx } from '../i18n';
 
 const CodeEditor = lazy(() => import('./CodeEditor'));
 
@@ -201,8 +202,8 @@ export function Canvas({ projectId, kind, file, pages, entry, viewport, version,
     return (
       <div className="flex-1 flex items-center justify-center text-center p-8 bg-[var(--bg-primary)]">
         <div className="max-w-sm">
-          <div className="text-sm font-medium">Nothing to preview yet</div>
-          <p className="text-xs text-[var(--text-muted)] mt-1">Describe what you want in the chat. Files the agent creates appear here live, and you can drop assets into the file panel.</p>
+          <div className="text-sm font-medium">{tx('Nothing to preview yet')}</div>
+          <p className="text-xs text-[var(--text-muted)] mt-1">{tx('Describe what you want in the chat. Files the agent creates appear here live, and you can drop assets into the file panel.')}</p>
         </div>
       </div>
     );
@@ -217,28 +218,28 @@ export function Canvas({ projectId, kind, file, pages, entry, viewport, version,
       {/* toolbar */}
       <div className="h-11 shrink-0 flex items-center gap-1.5 px-2.5 border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-xs">
         {showLive ? (
-          <input value={livePath} onChange={e => setLivePath(e.target.value)} aria-label="Path on the live server"
+          <input value={livePath} onChange={e => setLivePath(e.target.value)} aria-label={tx('Path on the live server')}
             onKeyDown={e => { if (e.key === 'Enter') setReloadKey(k => k + 1); }}
             className="font-mono text-[12px] min-w-0 w-40 bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-md px-1.5 py-0.5 focus:outline-none focus:border-[var(--accent)]/60" />
         ) : <span className="font-mono text-[12px] truncate min-w-0 px-1">{file.path}</span>}
         {configured && (
           <div className="flex items-center gap-0.5 bg-[var(--bg-tertiary)] p-0.5 rounded-lg border border-[var(--border-subtle)] ml-1 shrink-0"
-            title={dev?.error ?? (dev?.running ? `Live server: ${dev.command}` : 'Dev server stopped')}>
+            title={dev?.error ?? (dev?.running ? tx('Live server: {command}', { command: dev.command ?? '' }) : tx('Dev server stopped'))}>
             <button onClick={() => dev?.running && setLive(v => !v)}
               className={clsx('flex items-center gap-1 px-2 py-1 rounded-md transition', showLive ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]')}>
               <Server className="w-3.5 h-3.5" />
               <span className={clsx('w-1.5 h-1.5 rounded-full', dev?.running ? 'bg-emerald-400' : 'bg-[var(--text-muted)]/50')} />
-              <span className="hidden lg:inline">{dev?.running ? (showLive ? 'Live' : 'Files') : 'Server'}</span>
+              <span className="hidden lg:inline">{dev?.running ? (showLive ? tx('Live') : tx('Files')) : tx('Server')}</span>
             </button>
             <button className="px-1.5 py-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-40" disabled={devBusy}
-              title={dev?.running ? 'Restart the server' : 'Start the server'} onClick={() => devAction(dev?.running ? 'restart' : 'start')}>
+              title={dev?.running ? tx('Restart the server') : tx('Start the server')} onClick={() => devAction(dev?.running ? 'restart' : 'start')}>
               {devBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : dev?.running ? <RotateCw className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
             </button>
             {dev?.running && (
               <button className="px-1.5 py-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-40" disabled={devBusy}
-                title="Stop the server" onClick={() => devAction('stop')}><Square className="w-3.5 h-3.5" /></button>
+                title={tx('Stop the server')} onClick={() => devAction('stop')}><Square className="w-3.5 h-3.5" /></button>
             )}
-            <button className="px-1.5 py-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)]" title="Server logs" onClick={showDevLogs}>
+            <button className="px-1.5 py-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)]" title={tx('Server logs')} onClick={showDevLogs}>
               <ScrollText className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -247,7 +248,7 @@ export function Canvas({ projectId, kind, file, pages, entry, viewport, version,
           <div className="flex items-center bg-[var(--bg-tertiary)] p-0.5 rounded-lg border border-[var(--border-subtle)] ml-1 shrink-0">
             {(['preview', 'split', 'code'] as const).map(m => (
               <button key={m} onClick={() => setMode(m)} disabled={file.kind === 'text' && (m === 'preview' || (m === 'split' && !companion))}
-                title={m === 'split' ? (companion && file.kind === 'text' ? `Edit ${file.path.split('/').pop()} beside ${companion.path}; the preview follows your edits` : 'Code and preview side by side; the preview follows your edits') : undefined}
+                title={m === 'split' ? (companion && file.kind === 'text' ? tx('Edit {v0} beside {path}; the preview follows your edits', { v0: file.path.split('/').pop() ?? '', path: companion.path }) : tx('Code and preview side by side; the preview follows your edits')) : undefined}
                 className={clsx('flex items-center gap-1 px-2 py-1 rounded-md transition disabled:opacity-30', mode === m ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]')}>
                 {m === 'preview' ? <Eye className="w-3.5 h-3.5" /> : m === 'split' ? <Columns2 className="w-3.5 h-3.5" /> : <Code className="w-3.5 h-3.5" />}<span className="hidden lg:inline capitalize">{m}</span>
               </button>
@@ -259,7 +260,7 @@ export function Canvas({ projectId, kind, file, pages, entry, viewport, version,
           <>
             <div className="hidden md:flex items-center bg-[var(--bg-tertiary)] p-0.5 rounded-lg border border-[var(--border-subtle)]">
               {([
-                ['native', NATIVE_LABEL[kind], kind === 'mobile' ? Smartphone : kind === 'deck' ? Monitor : Laptop],
+                ['native', tx(NATIVE_LABEL[kind]), kind === 'mobile' ? Smartphone : kind === 'deck' ? Monitor : Laptop],
                 ['desktop', 'Desktop 1440', Monitor], ['tablet', 'Tablet 834', Tablet], ['mobile', 'Mobile 390', Smartphone],
               ] as const).map(([id, label, Icon]) => (
                 <button key={id} title={label} onClick={() => setDevice(id)}
@@ -269,27 +270,27 @@ export function Canvas({ projectId, kind, file, pages, entry, viewport, version,
               ))}
             </div>
             <select value={String(zoom)} onChange={e => setZoom(e.target.value === 'fit' ? 'fit' : Number(e.target.value))}
-              className="bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-lg px-1.5 py-1 text-[11px] focus:outline-none" aria-label="Zoom">
-              <option value="fit">Fit {zoom === 'fit' ? `(${Math.round(scale * 100)}%)` : ''}</option>
+              className="bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-lg px-1.5 py-1 text-[11px] focus:outline-none" aria-label={tx('Zoom')}>
+              <option value="fit">{tx('Fit')} {zoom === 'fit' ? `(${Math.round(scale * 100)}%)` : ''}</option>
               {[0.25, 0.5, 0.75, 1].map(z => <option key={z} value={z}>{z * 100}%</option>)}
             </select>
-            <button onClick={() => setInspect(v => !v)} title="Point at an element to comment on it"
+            <button onClick={() => setInspect(v => !v)} title={tx('Point at an element to comment on it')}
               className={clsx('flex items-center gap-1 px-2 py-1 rounded-lg border transition', inspect ? 'bg-[var(--accent)] text-[var(--accent-fg)] border-transparent' : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]')}>
-              <Crosshair className="w-3.5 h-3.5" /><span className="hidden lg:inline">Comment</span>
+              <Crosshair className="w-3.5 h-3.5" /><span className="hidden lg:inline">{tx('Comment')}</span>
             </button>
           </>
         )}
-        <button className={btn.icon} title="Reload preview" onClick={() => setReloadKey(k => k + 1)}><RotateCw className="w-3.5 h-3.5" /></button>
-        <a className={btn.icon} title="Open in a new tab" href={plainSrc} target="_blank" rel="noreferrer"><ExternalLink className="w-3.5 h-3.5" /></a>
+        <button className={btn.icon} title={tx('Reload preview')} onClick={() => setReloadKey(k => k + 1)}><RotateCw className="w-3.5 h-3.5" /></button>
+        <a className={btn.icon} title={tx('Open in a new tab')} href={plainSrc} target="_blank" rel="noreferrer"><ExternalLink className="w-3.5 h-3.5" /></a>
       </div>
 
       {devLogs !== null && (
         <div className="shrink-0 max-h-56 flex flex-col border-b border-[var(--border-subtle)] bg-[var(--bg-tertiary)]">
           <div className="flex items-center gap-2 px-3 py-1 text-[11px] text-[var(--text-muted)]">
-            <ScrollText className="w-3.5 h-3.5" /><span>Dev server logs</span>
+            <ScrollText className="w-3.5 h-3.5" /><span>{tx('Dev server logs')}</span>
             <button className="ml-auto underline disabled:opacity-40" disabled={busy}
-              onClick={() => { onAsk(`The dev server has a problem. Read its logs (dev_server action=logs), find the cause and fix it. Latest output:\n${devLogs.slice(-1500)}`); setDevLogs(null); }}>Ask to fix</button>
-            <button onClick={() => setDevLogs(null)} aria-label="Close logs"><X className="w-3.5 h-3.5" /></button>
+              onClick={() => { onAsk(`The dev server has a problem. Read its logs (dev_server action=logs), find the cause and fix it. Latest output:\n${devLogs.slice(-1500)}`); setDevLogs(null); }}>{tx('Ask to fix')}</button>
+            <button onClick={() => setDevLogs(null)} aria-label={tx('Close logs')}><X className="w-3.5 h-3.5" /></button>
           </div>
           <pre className="flex-1 overflow-auto px-3 pb-2 text-[11px] font-mono whitespace-pre-wrap">{devLogs}</pre>
         </div>
@@ -298,10 +299,10 @@ export function Canvas({ projectId, kind, file, pages, entry, viewport, version,
       {errors.length > 0 && mode !== 'code' && (
         <div className="shrink-0 flex items-start gap-2 px-3 py-1.5 text-[11px] bg-red-500/10 border-b border-red-500/20 text-red-300">
           <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-          <span className="flex-1 min-w-0 font-mono truncate" title={errors.join('\n')}>{errors.length} script error{errors.length > 1 ? 's' : ''}: {errors[errors.length - 1]}</span>
+          <span className="flex-1 min-w-0 font-mono truncate" title={errors.join('\n')}>{errors.length} {tx('script error')}{errors.length > 1 ? 's' : ''}: {errors[errors.length - 1]}</span>
           <button className="underline shrink-0 disabled:opacity-40" disabled={busy}
-            onClick={() => onAsk(`The preview of ${view!.path} throws JavaScript errors. Find and fix the cause:\n${errors.map(e => `- ${e}`).join('\n')}`)}>Ask to fix</button>
-          <button onClick={() => setErrors([])} aria-label="Dismiss"><X className="w-3.5 h-3.5" /></button>
+            onClick={() => onAsk(`The preview of ${view!.path} throws JavaScript errors. Find and fix the cause:\n${errors.map(e => `- ${e}`).join('\n')}`)}>{tx('Ask to fix')}</button>
+          <button onClick={() => setErrors([])} aria-label={tx('Dismiss')}><X className="w-3.5 h-3.5" /></button>
         </div>
       )}
 
@@ -317,7 +318,7 @@ export function Canvas({ projectId, kind, file, pages, entry, viewport, version,
           <div className="min-w-0 min-h-0 flex flex-col shrink-0 basis-1/2 lg:basis-[var(--split)]" style={{ '--split': `${splitPct}%` } as React.CSSProperties}>
             <CodePane projectId={projectId} path={file.path} version={version} dark={dark} onSaved={onSaved} onRun={onRun} />
           </div>
-          <div role="separator" aria-orientation="vertical" title="Drag to resize · double-click to reset"
+          <div role="separator" aria-orientation="vertical" title={tx('Drag to resize · double-click to reset')}
             className={clsx('hidden lg:block w-1.5 shrink-0 cursor-col-resize border-x border-[var(--border-subtle)] transition',
               dragging ? 'bg-[var(--accent)]/60' : 'bg-[var(--bg-secondary)] hover:bg-[var(--accent)]/30')}
             onDoubleClick={() => { setSplitPct(50); try { localStorage.setItem('shellb.splitPct', '50'); } catch { /* private mode */ } }}
@@ -355,14 +356,14 @@ export function Canvas({ projectId, kind, file, pages, entry, viewport, version,
                     top: Math.min((pick.rect.y + pick.rect.h) * scale + 8, frameH * scale - 120),
                   }}>
                   <div className="flex items-center gap-1.5 text-[11px] font-mono text-[var(--accent-soft)] mb-1.5">
-                    <Crosshair className="w-3 h-3 shrink-0" /><span className="truncate">{pick.label}</span>
-                    <button className="ml-auto text-[var(--text-muted)] hover:text-[var(--text-primary)]" onClick={() => { setPick(null); post({ type: 'clear' }); }} aria-label="Cancel"><X className="w-3.5 h-3.5" /></button>
+                    <Crosshair className="w-3 h-3 shrink-0" /><span className="truncate">{tx(pick.label)}</span>
+                    <button className="ml-auto text-[var(--text-muted)] hover:text-[var(--text-primary)]" onClick={() => { setPick(null); post({ type: 'clear' }); }} aria-label={tx('Cancel')}><X className="w-3.5 h-3.5" /></button>
                   </div>
                   <div className="flex items-end gap-1.5">
-                    <textarea autoFocus rows={2} value={ask} onChange={e => setAsk(e.target.value)} placeholder="What should change here?"
+                    <textarea autoFocus rows={2} value={ask} onChange={e => setAsk(e.target.value)} placeholder={tx('What should change here?')}
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitAsk(); } if (e.key === 'Escape') setPick(null); }}
                       className="flex-1 resize-none bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-[var(--accent)]/60" />
-                    <button onClick={submitAsk} disabled={!ask.trim() || busy} className="p-2 rounded-lg bg-[var(--accent)] text-[var(--accent-fg)] disabled:opacity-40" title="Send to the agent">
+                    <button onClick={submitAsk} disabled={!ask.trim() || busy} className="p-2 rounded-lg bg-[var(--accent)] text-[var(--accent-fg)] disabled:opacity-40" title={tx('Send to the agent')}>
                       <ArrowUp className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -401,10 +402,10 @@ function AssetView({ projectId, file, src, version, draftRev, dark }: { projectI
           <style>{`@font-face { font-family: "${fontFamily}"; src: url("${src}"); }`}</style>
           <div className="text-[11px] font-mono text-[var(--text-muted)] mb-4">{file.path}</div>
           <div style={{ fontFamily }} className="space-y-4">
-            <div className="text-6xl leading-tight">Overthink. Overcomplicate. Overengineer.</div>
-            <div className="text-3xl">The quick brown fox jumps over the lazy dog</div>
+            <div className="text-6xl leading-tight">{tx('Overthink. Overcomplicate. Overengineer.')}</div>
+            <div className="text-3xl">{tx('The quick brown fox jumps over the lazy dog')}</div>
             <div className="text-xl">ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789 &amp;@#%?!</div>
-            <div className="text-base leading-relaxed max-w-2xl">Shell:B Studio previews uploaded typefaces at several sizes so you can judge texture, rhythm and legibility before the agent puts them to work in a layout.</div>
+            <div className="text-base leading-relaxed max-w-2xl">{tx('Shell:B Studio previews uploaded typefaces at several sizes so you can judge texture, rhythm and legibility before the agent puts them to work in a layout.')}</div>
           </div>
         </div>
       );
@@ -419,7 +420,7 @@ function AssetView({ projectId, file, src, version, draftRev, dark }: { projectI
     case 'model':
       return <iframe src={`/vendor/three/viewer.html?src=${encodeURIComponent(src)}&dark=${dark ? 1 : 0}`} title={file.path} className="w-full h-full border-0" />;
     default:
-      return <div className="min-h-full flex items-center justify-center text-xs text-[var(--text-muted)]">No preview for this file type. <a className="underline ml-1" href={src} download>Download</a></div>;
+      return <div className="min-h-full flex items-center justify-center text-xs text-[var(--text-muted)]">{tx('No preview for this file type.')} <a className="underline ml-1" href={src} download>{tx('Download')}</a></div>;
   }
 }
 
@@ -485,31 +486,31 @@ function CodePane({ projectId, path, version, dark, onSaved, onRun }: {
     <div className="flex-1 min-h-0 flex flex-col">
       {stale && (
         <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 text-[11px] bg-amber-500/10 border-b border-amber-500/20 text-amber-300">
-          The agent changed this file while you were editing.
-          <button className="underline" onClick={load}>Load theirs</button>
-          <button className="underline" onClick={() => setStale(false)}>Keep mine</button>
+          {tx('The agent changed this file while you were editing.')}
+          <button className="underline" onClick={load}>{tx('Load theirs')}</button>
+          <button className="underline" onClick={() => setStale(false)}>{tx('Keep mine')}</button>
         </div>
       )}
       <div className="flex-1 min-h-0">
-        <Suspense fallback={<div className="p-4 text-xs text-[var(--text-muted)]">Loading editor…</div>}>
+        <Suspense fallback={<div className="p-4 text-xs text-[var(--text-muted)]">{tx('Loading editor…')}</div>}>
           <CodeEditor path={path} value={value} onChange={setValue} onSave={save} onRun={command ? run : undefined} dark={dark} />
         </Suspense>
       </div>
       <div className="h-8 shrink-0 flex items-center justify-between px-3 border-t border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[11px] text-[var(--text-muted)]">
-        <span>{dirty ? 'Unsaved changes' : 'Saved · every save is a version'}</span>
+        <span>{dirty ? tx('Unsaved changes') : tx('Saved · every save is a version')}</span>
         <div className="flex items-center gap-1.5">
           {command && (
             <input value={args} onChange={e => setArgs(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); run(); } }}
-              placeholder="arguments" spellCheck={false} aria-label="Arguments for Run" title="Command-line arguments, e.g. 100 C F"
+              placeholder="arguments" spellCheck={false} aria-label={tx('Arguments for Run')} title={tx('Command-line arguments, e.g. 100 C F')}
               className="w-28 sm:w-44 h-6 px-2 rounded-md bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] font-mono text-[11px] text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]" />
           )}
           {command && (
-            <button className={btn.subtle} disabled={saving} onClick={run} title={`Save and run \`${command}\` in the terminal (sandbox, no network)`}>
-              <Play className="w-3.5 h-3.5" />Run <kbd className="opacity-70 font-mono text-[10px]">Ctrl ↵</kbd>
+            <button className={btn.subtle} disabled={saving} onClick={run} title={tx('Save and run `{command}` in the terminal (sandbox, no network)', { command: command })}>
+              <Play className="w-3.5 h-3.5" />{tx('Run')} <kbd className="opacity-70 font-mono text-[10px]">Ctrl ↵</kbd>
             </button>
           )}
-          {dirty && <button className={btn.subtle} disabled={saving} onClick={load} title="Throw away your changes and reload the saved file">Discard</button>}
-          <button className={btn.primary} disabled={!dirty || saving} onClick={save}>{saving ? 'Saving…' : 'Save'} <kbd className="opacity-70 font-mono text-[10px]">Ctrl S</kbd></button>
+          {dirty && <button className={btn.subtle} disabled={saving} onClick={load} title={tx('Throw away your changes and reload the saved file')}>{tx('Discard')}</button>}
+          <button className={btn.primary} disabled={!dirty || saving} onClick={save}>{saving ? tx('Saving…') : tx('Save')} <kbd className="opacity-70 font-mono text-[10px]">Ctrl S</kbd></button>
         </div>
       </div>
     </div>
@@ -535,10 +536,10 @@ function UnsavedBar({ projectId, onSaved, onEdit }: { projectId: string; onSaved
   return (
     <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 text-[11px] bg-sky-500/10 border-b border-sky-500/20 text-sky-300">
       <span className="flex-1 min-w-0 truncate" title={list.map(d => d.path).join('\n')}>
-        Previewing your unsaved changes{list.length > 1 ? ` to ${list.length} files` : ''}: {names}
+        {tx('Previewing your unsaved changes')}{list.length > 1 ? tx(' to {length} files', { length: list.length }) : ''}: {names}
       </span>
-      {onEdit && <button className="underline shrink-0" onClick={onEdit}>Back to code</button>}
-      <button className={clsx(btn.primary, 'shrink-0')} disabled={saving} onClick={saveAll}>{saving ? 'Saving…' : list.length > 1 ? 'Save all' : 'Save'}</button>
+      {onEdit && <button className="underline shrink-0" onClick={onEdit}>{tx('Back to code')}</button>}
+      <button className={clsx(btn.primary, 'shrink-0')} disabled={saving} onClick={saveAll}>{saving ? tx('Saving…') : list.length > 1 ? tx('Save all') : tx('Save')}</button>
     </div>
   );
 }
