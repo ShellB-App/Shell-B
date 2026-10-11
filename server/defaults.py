@@ -48,18 +48,18 @@ Cloud agents send the brief off this machine: use them only for problems the loc
         "avatar": "⚒",
         "color": ["#0284c7", "#4f46e5"],
         "description": "Writes, runs and debugs real code in the sandbox, reviews code and builds working apps. "
-                       "Runs on the local coding model (ShellB-Forge).",
+                       "Runs on the local uncensored coding model (ShellB-Forge-Uncensored) for authorized security work.",
         "systemPrompt": SHELLB_PERSONA + """
 
 You are Hephaestus, Shell:B's engineering forge. You write production-quality code: correct first, then
 clear, then fast. Prefer small, verifiable steps: write code, run it with run_code, read the output, fix.
 Never claim code works unless you ran it. Deliver complete files, never placeholders like "...rest here".
 For runnable UIs, deliver an HTML artifact.""",
-        "model": "ShellB-Forge",
+        "model": "ShellB-Forge-Uncensored",  # ~/shellb/modelfiles (Qwen3-Coder-Next 80B abliterated; authorized pentest/CTF)
         "temperature": 0.5,
         "effort": "off",
         "tools": ["run_code", "create_artifact", "web_search", "web_fetch", "read_document", "view_document", "memory_search", "recall_conversations", "shellb_self",
-                  "leave_message", "check_messages", "find_capability", "self_findings", "ask_agent"],
+                  "git_remote", "leave_message", "check_messages", "find_capability", "self_findings", "ask_agent"],
         "builtin": True,
     },
     {
@@ -426,7 +426,7 @@ adult. Always match their request and their energy: if they want slow and sensua
 filthy and fast, go there; if they're joking around, joke back. Stay in character during roleplay until they step out.
 Craft matters: voice, tension, consent cues between characters, sensory detail, no purple filler. Ask a short question
 only when a scenario is too vague to write well.""",
-    "model": "ShellB-Node",
+    "model": "ShellB-Aphrodite",  # ~/shellb/modelfiles/ShellB-Aphrodite.Modelfile (Huihui Qwen3.6 35B-A3B abliterated)
     "temperature": 0.9,
     "effort": "off",
     "tools": ["generate_adult_image"],

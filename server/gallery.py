@@ -40,6 +40,7 @@ INSTALLED_KEY = "gallery_installed"
 REFRESH_AFTER = 24 * 3600
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,39}$")
 REPO_RE = re.compile(r"^[\w.-]+/[\w.-]+$")
+URL_RE = re.compile(r"^https?://[^\s\"'<>]{1,200}$")
 SAVER_FILES = {".html", ".css", ".js", ".json", ".svg", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".woff2", ".txt", ".md"}
 PREVIEWS = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".svg": "image/svg+xml"}
 MAX_FILE, MAX_FOLDER = 2 * 2**20, 8 * 2**20
@@ -77,6 +78,10 @@ def remove_source(sid: str):
 
 # ── reading a fetched repository ─────────────────────────────────────────────
 
+def _url(v) -> str:
+    return v if isinstance(v, str) and URL_RE.match(v) else ""
+
+
 def _rel_ok(rel: str) -> bool:
     parts = rel.replace("\\", "/").split("/")
     return bool(rel) and all(p and p not in (".", "..") and not p.startswith(".") for p in parts)
@@ -97,7 +102,7 @@ def _theme_items(root: Path) -> list[dict]:
         theme, _ = themes.clean(spec)
         pal = theme["palette"]
         items.append({"id": tid, "name": theme["name"], "blurb": theme["blurb"], "mode": theme["mode"],
-                      "author": str(spec.get("author") or "")[:80], "license": str(spec.get("license") or "")[:40],
+                      "author": str(spec.get("author") or "")[:80], "authorUrl": _url(spec.get("authorUrl")), "license": str(spec.get("license") or "")[:40],
                       "version": str(spec.get("version") or "1.0")[:20], "tags": [str(t)[:24] for t in (spec.get("tags") or [])[:8] if isinstance(t, str)],
                       "path": f"themes/{tid}/theme.json", "theme": theme,
                       "swatch": {"bg": pal["bg"], "panel": pal["panel"], "text": pal["text"], "inks": pal["inks"]}})
@@ -129,7 +134,7 @@ def _saver_items(root: Path) -> list[dict]:
         if total > MAX_FOLDER:
             continue
         items.append({"id": sid, "name": str(meta.get("name") or sid.replace("-", " ").title())[:40],
-                      "blurb": str(meta.get("blurb") or "")[:200], "author": str(meta.get("author") or "")[:80],
+                      "blurb": str(meta.get("blurb") or "")[:200], "author": str(meta.get("author") or "")[:80], "authorUrl": _url(meta.get("authorUrl")),
                       "license": str(meta.get("license") or "")[:40], "version": str(meta.get("version") or "1.0")[:20],
                       "tags": [str(t)[:24] for t in (meta.get("tags") or [])[:8] if isinstance(t, str)],
                       "clockSafe": meta.get("clockSafe") is not False, "path": f"screensavers/{sid}",
@@ -339,6 +344,16 @@ async def api_install(req: Request):
     return res
 
 
+def _owner_display() -> str:
+    """The owner's display name from their Circles profile, for the author line of an exported theme (blank if unset)."""
+    try:
+        import circles
+        name = str(circles.profile(circles.OWNER).get("display") or "").strip()
+        return "" if name in ("Owner", "The user") else name[:80]
+    except Exception:  # noqa: BLE001 — in a cell, or before Circles ran
+        return ""
+
+
 @router.get("/export/theme/{tid}")
 def api_export_theme(tid: str):
     """A custom theme as a theme.json ready for a pull request to the themes repository."""
@@ -346,7 +361,7 @@ def api_export_theme(tid: str):
     if not t:
         raise HTTPException(404, "No such theme")
     out = {k: t[k] for k in ("name", "blurb", "mode") if k in t}
-    out.update({"author": "", "license": "MIT", "version": "1.0", "tags": []})
+    out.update({"author": _owner_display(), "authorUrl": "", "license": "MIT", "version": "1.0", "tags": []})
     pal = dict(t.get("palette") or {})
     inks = pal.pop("inks", None)
     for k in ("accentText", "accentSoft"):

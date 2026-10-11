@@ -13,7 +13,7 @@ import { Modal, btn } from './common';
 import { toast } from './toast';
 import { t as tx } from '../i18n';
 
-interface Item { id: string; name: string; blurb: string; author: string; license: string; version: string; tags: string[];
+interface Item { id: string; name: string; blurb: string; author: string; authorUrl?: string; license: string; version: string; tags: string[];
   installed?: string | null; installedVersion?: string | null }
 export interface GalleryTheme extends Item { mode: Mode; theme: CustomTheme }
 export interface GallerySaver extends Item { clockSafe: boolean; preview: string | null; files: string[] }
@@ -32,6 +32,19 @@ function useListing<T>(kind: 'theme' | 'screensaver', open = true) {
   }, [kind]);
   useEffect(() => { if (open) load(); }, [load, open]);
   return { data, loading, error, load };
+}
+
+/** "by Author · MIT", the author linked when the item gives a URL. */
+function Credit({ it }: { it: Item }) {
+  if (!it.author) return <span className="text-[10.5px] text-[var(--text-muted)] truncate">{it.license}</span>;
+  return (
+    <span className="text-[10.5px] text-[var(--text-muted)] truncate">
+      {it.authorUrl
+        ? <>{tx('by')} <a href={it.authorUrl} target="_blank" rel="noreferrer" className="underline decoration-dotted hover:text-[var(--text-primary)]">{it.author}</a></>
+        : tx('by {author}', { author: it.author })}
+      {it.license ? ` · ${it.license}` : ''}
+    </span>
+  );
 }
 
 const installError = (e: unknown) => {
@@ -113,7 +126,7 @@ export function CommunityThemes({ settings, mode }: { settings?: Settings; mode:
                 </div>
                 <div className="mt-0.5 text-[11px] leading-snug text-[var(--text-secondary)] line-clamp-3">{it.blurb}</div>
                 <div className="mt-2 flex items-center gap-2">
-                  <span className="text-[10.5px] text-[var(--text-muted)] truncate">{it.author ? tx('by {author}', { author: it.author }) : ''}{it.license ? ` · ${it.license}` : ''}</span>
+                  <Credit it={it} />
                   <div className="ml-auto flex gap-1.5">
                     {it.installed && !update && (
                       <button className={btn.subtle} disabled={on} onClick={() => apply(`custom:${it.installed}`)}>
@@ -179,7 +192,7 @@ export function CommunitySavers({ open, onClose, onInstalled }: { open: boolean;
                     </div>
                     <div className="mt-0.5 text-[11px] leading-snug text-[var(--text-secondary)] line-clamp-3">{it.blurb}</div>
                     <div className="mt-2 flex items-center gap-2">
-                      <span className="text-[10.5px] text-[var(--text-muted)] truncate">{it.author ? tx('by {author}', { author: it.author }) : ''}{it.license ? ` · ${it.license}` : ''}</span>
+                      <Credit it={it} />
                       <div className="ml-auto flex gap-1.5">
                         {it.installed && (
                           <button className={btn.icon} title={tx('Preview')} aria-label={tx('Preview')}

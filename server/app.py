@@ -223,6 +223,7 @@ roster.grant_tools("tools_feeds_2026_10_10", {"shellb": ["feeds", "translate"], 
 roster.grant_tools("tools_deeptime_2026_10_10", {"shellb": ["deep_time"], "mimir": ["deep_time"], "minerva": ["deep_time"], "atlas": ["deep_time"]})
 roster.grant_tools("tools_marine_2026_10_11", {"shellb": ["marine"], "minerva": ["marine"], "mimir": ["marine"], "atlas": ["marine"]})
 roster.grant_tools("tools_media_2026_10_10", {"shellb": ["transcribe"], "minerva": ["transcribe"], "heimdall": ["transcribe"], "nyx": ["edit_image"], "daedalus": ["edit_image"]})
+roster.grant_tools("tools_git_2026_10_11", {"hephaestus": ["git_remote"]})  # the engineer can check/fetch/pull its project's remote; push still waits for the owner
 compaction.migrate_legacy()  # after episodes.init: the FTS triggers index the messages it puts back
 feedback.init()
 guests.init()

@@ -3919,6 +3919,8 @@
  "Only for guests you know are adults. They still switch her on themselves in their Shell:B, after confirming they're 18 or older. Same limits and background checks as yours; her chats and her memory of their tastes stay in their cell, and her pictures are deleted from this machine once their cell has them.": "Seulement pour les invités dont vous savez qu’ils sont adultes. Ils l’activent eux-mêmes dans leur Shell:B, après avoir confirmé avoir 18 ans ou plus. Mêmes limites et mêmes vérifications que pour vous ; ses conversations et sa mémoire de leurs goûts restent dans leur cellule, et ses images sont supprimées de cette machine dès que leur cellule les a reçues.",
  "What she remembers": "Ce qu’elle retient",
  "Your preferences, kinks and no-gos, saved by Aphrodite as you tell her. Only she sees them: never Shell:B's shared memory or any other agent. Not saved in incognito chats.": "Vos préférences, vos envies et vos interdits, notés par Aphrodite au fil de ce que vous lui dites. Elle seule les voit : jamais la mémoire partagée de Shell:B ni aucun autre agent. Rien n’est enregistré dans les conversations incognito.",
+ "Wind": "Vent",
+ "Animated GFS winds with speed, temperature and pressure overlays": "Vents GFS animés, avec calques de vitesse, température et pression",
  "Sent. The chat is answering now.": "Envoyé. La discussion répond maintenant.",
  "Sent. The chat will answer when its current reply ends.": "Envoyé. La discussion répondra quand sa réponse en cours sera terminée.",
  "Left in the mailbox: the chat can't be woken right now.": "Laissé dans la boîte aux lettres : la discussion ne peut pas être réveillée pour l’instant.",
@@ -3926,8 +3928,6 @@
  "Wake on: the chat starts a turn on your note (click to just leave it)": "Réveil activé : la discussion démarre un tour sur votre note (cliquez pour simplement la laisser)",
  "Wake off: the note waits for the chat's next turn (click to wake it)": "Réveil désactivé : la note attend le prochain tour de la discussion (cliquez pour la réveiller)",
  "Send and wake the chat": "Envoyer et réveiller la discussion",
- "Wind": "Vent",
- "Animated GFS winds with speed, temperature and pressure overlays": "Vents GFS animés, avec calques de vitesse, température et pression",
  "Sign in as the owner to install from the gallery": "Connectez-vous comme propriétaire pour installer depuis la galerie",
  "Couldn't install: {e}": "Installation impossible : {e}",
  "Fetch the latest from GitHub": "Récupérer la dernière version depuis GitHub",
@@ -3954,5 +3954,6 @@
  "In use": "Utilisé",
  "Export {label} as theme.json, ready to share in the community themes repository": "Exporter {label} en theme.json, prêt à partager dans le dépôt des thèmes de la communauté",
  "Screensavers other people shared on GitHub; install one with a click": "Écrans de veille partagés par d'autres sur GitHub ; installez-en un d'un clic",
- "Browse community": "Parcourir la communauté"
+ "Browse community": "Parcourir la communauté",
+ "by": "par"
 }
