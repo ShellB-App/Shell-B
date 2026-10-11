@@ -4,6 +4,7 @@
   GET /api/earth/imagery/{layer}/{date}/{z}/{x}/{y}.jpg   one Web Mercator tile (GoogleMapsCompatible), cached on disk
   GET /api/earth/radar                                 precipitation frames (NASA IMERG, half-hourly, a few hours behind)
   GET /api/earth/radar/{time}/{z}/{x}/{y}.png          one precipitation tile for a frame time (ISO, UTC)
+  GET /api/earth/aurora                                NOAA OVATION aurora forecast: a 360 × 181 probability grid
 
 Everything comes from NASA GIBS (free, keyless, public domain; https://nasa-gibs.github.io/gibs-api-docs/). The browser never
 talks to it directly (this proxy adds the User-Agent and keeps the owner's IP out of it), and tiles are cached under
@@ -185,3 +186,42 @@ def prune_radar(max_age_h: int = 48):
                 sub.rmdir()
             d.rmdir()
 
+
+
+# ── Aurora (NOAA SWPC OVATION) ───────────────────────────────────────────────
+OVATION = "https://services.swpc.noaa.gov/json/ovation_aurora_latest.json"
+_aurora: dict = {"at": 0.0, "data": None}
+
+
+def parse_ovation(j: dict) -> dict:
+    """The OVATION JSON as a compact grid: `grid[lat + 90][lon]` = probability 0-100, lon 0..359 east."""
+    grid = [[0] * 360 for _ in range(181)]
+    for row in j.get("coordinates") or []:
+        try:
+            lon, lat, p = int(row[0]) % 360, int(row[1]), int(row[2])
+        except (TypeError, ValueError, IndexError):
+            continue
+        if -90 <= lat <= 90:
+            grid[lat + 90][lon] = max(0, min(100, p))
+    peak = max((max(r) for r in grid), default=0)
+    return {"observed": j.get("Observation Time"), "forecast": j.get("Forecast Time"), "grid": grid, "peak": peak}
+
+
+@router.get("/aurora")
+async def aurora():
+    """Where the aurora is likely in the next half hour (NOAA's 30-minute OVATION forecast), cached 5 minutes."""
+    async with _lock:
+        if _aurora["data"] and time.time() - _aurora["at"] < 300:
+            return _aurora["data"]
+        try:
+            async with httpx.AsyncClient(timeout=15, headers=UA, event_hooks=GUARD_HOOKS) as c:
+                r = await c.get(OVATION)
+                r.raise_for_status()
+                data = parse_ovation(r.json())
+        except (httpx.HTTPError, ValueError) as e:
+            if _aurora["data"]:
+                return {**_aurora["data"], "stale": True}
+            raise HTTPException(503, f"NOAA SWPC unreachable: {e.__class__.__name__}")
+        data["fetched"] = int(time.time())
+        _aurora.update(at=time.time(), data=data)
+        return data

@@ -105,6 +105,8 @@ export interface MapSpec {
   /** show this 3D model (id from /api/maps/models) */
   model?: string;
   tour?: TourStop[];
+  /** open the 3D terrain view (dive view under the sea) at a point */
+  view3d?: { lat: number; lon: number; label: string; spanKm?: number; depthM?: number };
 }
 
 const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : typeof v === 'string' && v.trim() && Number.isFinite(+v) ? +v : NaN);
@@ -142,6 +144,11 @@ export function parseSpec(text: string): MapSpec | null {
     ? Object.fromEntries(Object.entries(r.layers as Record<string, unknown>).filter(([k, v]) => /^[a-z0-9]+$/.test(k) && typeof v === 'boolean') as [string, boolean][])
     : Array.isArray(r.layers) ? Object.fromEntries((r.layers as unknown[]).filter((k): k is string => typeof k === 'string').map(k => [k, true])) : undefined;
   const focus = r.focus && typeof r.focus === 'object' ? (r.focus as Record<string, unknown>).feature ?? (r.focus as Record<string, unknown>).name : r.focus;
+  const v3raw = (r.view3d ?? r.dive) as Record<string, unknown> | undefined;
+  const v3pt = v3raw && typeof v3raw === 'object' ? point(v3raw) : null;
+  const v3span = v3raw ? num(v3raw.span_km ?? v3raw.spanKm) : NaN, v3depth = v3raw ? num(v3raw.depth_m ?? v3raw.depthM) : NaN;
+  const view3d = v3pt ? { lat: v3pt.lat, lon: v3pt.lon, label: v3pt.label ?? (typeof v3raw!.label === 'string' ? v3raw!.label as string : 'Here'),
+    spanKm: Number.isFinite(v3span) ? Math.max(5, Math.min(400, v3span)) : undefined, depthM: Number.isFinite(v3depth) && v3depth > 0 ? v3depth : undefined } : undefined;
   const tour = Array.isArray(r.tour) ? (r.tour as unknown[]).flatMap(st => {
     const o = (st && typeof st === 'object' ? st : {}) as Record<string, unknown>;
     const pt = point(o);
@@ -167,12 +174,13 @@ export function parseSpec(text: string): MapSpec | null {
     model: [r.model, ...(Array.isArray(r.markers) ? r.markers.map(m => (m && typeof m === 'object' ? (m as Record<string, unknown>).model : undefined)) : [])]
       .find((m): m is string => typeof m === 'string' && /^[a-z0-9-]{1,40}$/.test(m)),
     tour: tour?.length ? tour : undefined,
+    view3d,
   };
 }
 
 /** True when a spec carries anything beyond markers and lines (something only the Worlds app can show). */
 export const hasScene = (s: MapSpec) =>
-  s.pitch !== undefined || s.bearing !== undefined || !!s.layers || !!s.time || s.yearsAgo !== undefined || !!s.focus || !!s.model || !!s.tour;
+  s.pitch !== undefined || s.bearing !== undefined || !!s.layers || !!s.time || s.yearsAgo !== undefined || !!s.focus || !!s.model || !!s.tour || !!s.view3d;
 
 const ACCENT = '#ff5a36';
 

@@ -2,9 +2,10 @@
 import { useState } from 'react';
 import clsx from 'clsx';
 import {
-  Anchor, Check, Compass, Copy, ExternalLink, Globe2, Navigation,
+  Anchor, Check, Compass, Copy, ExternalLink, Globe2, Mountain, Navigation,
   Radio, Rocket, Shield, Sparkles, Video, Waves, X
 } from 'lucide-react';
+import { openView3D } from './notes';
 import { fmtCoord } from './core';
 import { FeatureNotes } from './FeatureNotes';
 import type { Shipwreck } from './shipwrecks';
@@ -22,9 +23,11 @@ interface MapFeatureModalProps {
   feature: AnyFeature;
   onClose: () => void;
   onFlyTo: (lat: number, lon: number) => void;
+  /** elevation tiles exist for this world: the 3D view / dive button shows */
+  terrain?: boolean;
 }
 
-export function MapFeatureModal({ feature, onClose, onFlyTo }: MapFeatureModalProps) {
+export function MapFeatureModal({ feature, onClose, onFlyTo, terrain }: MapFeatureModalProps) {
   const [copied, setCopied] = useState(false);
 
   let lat = 0, lon = 0, title = '', subtitle = '', desc = '', highlight: string | undefined;
@@ -172,6 +175,26 @@ export function MapFeatureModal({ feature, onClose, onFlyTo }: MapFeatureModalPr
           <Navigation className="w-3.5 h-3.5" />
           <span>Fly to Location</span>
         </button>
+        {terrain && feature.kind === 'shipwreck' && (
+          <button
+            onClick={() => openView3D({ lat, lon, label: title, kind: 'wreck', depthM: feature.item.depthMeters, spanKm: 40 })}
+            className="py-1.5 px-2.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 text-cyan-200 hover:bg-cyan-500/20 text-[11px] font-medium flex items-center gap-1 transition"
+            title="Dive to the sea floor around the wreck (3D)"
+          >
+            <Waves className="w-3.5 h-3.5" />
+            <span>Dive</span>
+          </button>
+        )}
+        {terrain && feature.kind === 'wonder' && (
+          <button
+            onClick={() => openView3D({ lat, lon, label: title, kind: 'wonder', spanKm: 40 })}
+            className="py-1.5 px-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20 text-[11px] font-medium flex items-center gap-1 transition"
+            title="See the terrain around it in 3D"
+          >
+            <Mountain className="w-3.5 h-3.5" />
+            <span>3D</span>
+          </button>
+        )}
         {streamUrl && (
           <a
             href={streamUrl}

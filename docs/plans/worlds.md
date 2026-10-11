@@ -22,7 +22,10 @@ Shell:B's Worlds has, and what is worth building next on a local-first machine w
 | Photos layer | No | Wikimedia Commons geosearch would do it (online) |
 | Weather: clouds, radar | Satellite precipitation (IMERG, hours behind) yes; clouds come with the daily imagery | True ground radar has no free global feed; RainViewer's tiles stopped answering |
 | Sun and shadows | Day & night terminator yes; building shadows no | MapLibre has no shadow casting yet |
-| Ocean floor, dive below the surface | Bathymetry tint and relief yes; diving no | See "Dive view" below |
+| Atmosphere / sky | Per-world sky and limb glow (Mars, Venus, Titan, Pluto, airless worlds) | Beyond Google Earth |
+| Live space weather | Aurora forecast ovals (NOAA OVATION), Kp in the copilot | |
+| Animated phenomena | Enceladus geysers, Io plumes, Mars dust-storm season (impressions at real sites) | |
+| Ocean floor, dive below the surface | Yes: dive view from any wreck card or pin at sea | three.js over the GEBCO/ETOPO cells; coarse but true to shape |
 | Moon, Mars, Sky modes | 21 worlds, orrery, local sky view, spacecraft | Beyond Google Earth here |
 | Flight simulator | No | Could be built on the terrain (see below) |
 | Timelapse (yearly, 1984 to now) | No | Google Earth Engine product; Landsat annual composites exist on GIBS only for some years |
@@ -41,14 +44,17 @@ Shell:B's Worlds has, and what is worth building next on a local-first machine w
 
 ## Explored, worth building next
 
-### Dive view (underwater 3D)
-MapLibre's camera cannot go below the terrain, so "diving" to the Titanic needs its own renderer. The pieces exist: the
-Earth DEM includes GEBCO/ETOPO bathymetry, three.js is already in the bundle, and `elevation.ts` decodes terrarium tiles
-in the browser. Plan: a `DiveView` component that fetches a 64 x 64 grid of heights around a point (z 8 to 10, 20 to
-200 km across), builds a `PlaneGeometry` mesh with depth-tinted vertex colours, adds fog and a blue gradient sky, places
-a wreck marker (or a GLB model when one exists) at the seabed, and lets the user orbit and fly. Entry points: a "Dive
-here" button on shipwreck cards and on the pin when the pin is at sea; Atlas via a `dive: {lat, lon}` scene key.
-Effort: about a day. Same component gives "fly-through" views of canyons (Valles Marineris) with the Mars DEM.
+### Dive view (underwater 3D): shipped 2026-10-11
+`DiveView.tsx` as planned: a 128 × 128 height grid around the point, depth-banded mesh, water surface, marine snow, fog,
+target marker; the same component flies through Martian canyons with a dust-storm toggle. Next steps if wanted: place
+the wreck's GLB when one exists (none of the NASA set are ships), a first-person "swim" mode with WASD, higher-resolution
+bathymetry insets (GEBCO 2024 is 15 arc-seconds, ~450 m; multibeam surveys of famous wrecks are published at metres).
+
+### Effects shipped alongside
+Per-world sky (`atmosphere.ts`), Enceladus/Io plumes and Mars dust (`effects.ts`, custom WebGL layer), live aurora
+(`aurora.ts`, NOAA OVATION). Ideas on the same base: Saturn's and Jupiter's aurorae (no maps for the giants, so in the
+orrery instead), Triton's geysers, Martian dust devils at rover sites, Titan's methane rain, Venus lightning, Earth's
+lightning from a live feed (Blitzortung needs an account), city lights following the terminator (Black Marble is in).
 
 ### Procedural worlds (exoplanets)
 A MapLibre custom protocol (`proc://seed/{z}/{x}/{y}`) can render raster tiles on the fly in a Web Worker from layered

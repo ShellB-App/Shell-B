@@ -508,6 +508,26 @@ glyphs, sprites, terrain, 3D models), `server/planetary.py` (gazetteer, ephemeri
   of the Apollo sites").
 - **Import and export** (Bookmarks drawer): GeoJSON, KML or GPX files appear on the map as an overlay; bookmarks export
   as KML (opens in Google Earth) or GeoJSON.
+- **Dive view and 3D terrain** (`ui/src/maps/DiveView.tsx`): the *Dive* button on a shipwreck card, *3D* on landmark,
+  wonder and Atlas-place cards, the mountain button on a dropped pin, or Atlas's `view3d` key open a three.js view of
+  the terrain around a point, built from the same elevation tiles as the relief layers (`elevation.ts` samples a
+  128 × 128 grid, bilinear). Under the sea on Earth it is a dive: the sea floor lit from above, the surface seen from
+  below, marine snow, a dashed line from the target up to the surface, depth-banded colours. On land and on Mars, the
+  Moon and Mercury it is a fly-through with the world's own sky colour; on Mars a *Dust storm* toggle thickens the haze
+  and sends dust past the camera (an impression, not a forecast). Area 20 to 320 km, vertical exaggeration 1 to 8
+  (always shown), the cursor reads height and distance from the target. Cells are coarse (GEBCO ~300 m at 40 km,
+  MOLA ~2.5 km at 320 km): shapes, not details.
+- **Sky & haze**: each world's atmosphere colours MapLibre's sky (`ui/src/maps/atmosphere.ts`): Earth blue, Mars
+  butterscotch, Venus yellow-white, Titan orange, Pluto and Triton a faint blue haze, airless worlds black. Visible as
+  the limb glow on the globe and at the horizon when the map is tilted. The same palette lights the 3D views.
+- **Plumes and dust storms** (`ui/src/maps/effects.ts`, a custom WebGL layer like the spacecraft): Enceladus' geysers
+  rise along the four tiger stripes and Io's plumes from Pele, Loki, Prometheus, Tvashtar and four more, at the real
+  vents; Mars gets drifting dust clouds over the basins where regional storms start (Hellas, Argyre, Chryse, Noachis,
+  Isidis, Syria). The vents and basins are real, the motion is an impression, and the Layers menu says so. Plume heights
+  are capped at a fifth of the radius so they stay on screen when zoomed in.
+- **Aurora** (Earth, Live): NOAA's OVATION 30-minute forecast, a probability per 1° cell, painted as green-to-violet
+  ovals over the poles (`ui/src/maps/aurora.ts`; proxy `GET /api/earth/aurora`, cached 5 minutes), with the forecast
+  peak shown in a chip. Pair it with *Day & night* to see where the lights would be visible.
 
 ### Atlas in Worlds
 
@@ -519,8 +539,9 @@ the live map at once, and the "Open in Maps" button on a chat card does the same
 
 Scene keys of a map block (besides `markers`, `lines`, `body`, `center`, `zoom`, `globe`): `pitch`, `bearing`,
 `layers` (`{"terrain3d": true, "flights": false}`), `time` (ISO date-time or `"now"`), `years_ago` (Ice Age coast),
-`focus` (opens that feature's card), `model` (shows a 3D model by catalog id) and `tour` (stops with `title`, `text`,
-`lat`, `lon`, `zoom`, `pitch`, `bearing`, `body`, `seconds`). The keys are documented for every agent in
+`focus` (opens that feature's card), `model` (shows a 3D model by catalog id), `view3d` (`lat`, `lon`, `label`,
+`span_km`, `depth_m`: opens the dive / 3D terrain view there) and `tour` (stops with `title`, `text`, `lat`, `lon`,
+`zoom`, `pitch`, `bearing`, `body`, `seconds`). The keys are documented for every agent in
 `server/prompts.py` (MAP_CARDS); Atlas's own prompt (`server/defaults.py`) tells it how to drive the app and the cards.
 
 Card tools: `read_map_card` (what a card already holds, or every annotated card) and `annotate_map_feature` (summary,

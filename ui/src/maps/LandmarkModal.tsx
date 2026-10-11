@@ -1,21 +1,25 @@
 // Floating inspection card for planetary landmarks and historic space exploration landing sites.
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
-import { Check, Compass, Copy, ExternalLink, Flag, MapPin, Navigation, Rocket, X } from 'lucide-react';
+import { Check, Compass, Copy, ExternalLink, Flag, MapPin, Mountain, Navigation, Rocket, X } from 'lucide-react';
 import type { Landmark } from './landmarks';
 import { FeatureNotes } from './FeatureNotes';
 import { fmtCoord } from './core';
 import { fetchModels, modelsForLandmark, type ModelInfo } from './models';
 import { ModelStrip } from './ModelViewer';
-import { openModel } from './notes';
+import { openModel, openView3D } from './notes';
 
 interface LandmarkModalProps {
   landmark: Landmark;
   onClose: () => void;
   onFlyTo: (lat: number, lon: number) => void;
+  /** elevation tiles exist for this world: the 3D view button shows */
+  terrain?: boolean;
 }
 
-export function LandmarkModal({ landmark, onClose, onFlyTo }: LandmarkModalProps) {
+const SPAN_BY_KIND: Partial<Record<Landmark['kind'], number>> = { canyon: 320, volcano: 320, mountain: 160, crater: 160, plain: 320, sea: 320, mission: 80, spaceport: 40 };
+
+export function LandmarkModal({ landmark, onClose, onFlyTo, terrain }: LandmarkModalProps) {
   const [copied, setCopied] = useState(false);
   const [models, setModels] = useState<ModelInfo[]>([]);
   useEffect(() => {
@@ -135,6 +139,16 @@ export function LandmarkModal({ landmark, onClose, onFlyTo }: LandmarkModalProps
           <Navigation className="w-3.5 h-3.5" />
           <span>Fly to Site</span>
         </button>
+        {terrain && (
+          <button
+            onClick={() => openView3D({ lat: landmark.lat, lon: landmark.lon, label: landmark.name, kind: landmark.kind, spanKm: SPAN_BY_KIND[landmark.kind] ?? 80 })}
+            className="py-1.5 px-2.5 rounded-md border border-amber-500/40 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20 text-[11px] font-medium flex items-center gap-1 transition"
+            title="Fly through the terrain here in 3D"
+          >
+            <Mountain className="w-3.5 h-3.5" />
+            <span>3D</span>
+          </button>
+        )}
         <button
           onClick={copyCoords}
           className="py-1.5 px-2.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-primary)]/80 text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-[11px] flex items-center gap-1 transition"

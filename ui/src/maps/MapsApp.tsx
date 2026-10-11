@@ -13,7 +13,7 @@ import type { FeatureCollection, Point } from 'geojson';
 import {
   Activity, Anchor, Bookmark, Check, Compass, Copy, Crosshair, Download, Eye, Flag, Globe2, Info, Loader2, LocateFixed,
   Map as MapIcon, MapPin, Navigation, Orbit, PanelLeftClose, PanelLeftOpen, Radar, Rocket, Route as RouteIcon, Ruler,
-  Satellite, Search, Sparkles, Thermometer, Video, Wheat, Hand, X, Image as ImageIcon, CloudRain,
+  Satellite, Search, Sparkles, Thermometer, Video, Wheat, Hand, X, Image as ImageIcon, CloudRain, Mountain, Zap,
 } from 'lucide-react';
 import { drawOverlays, fetchBodies, fmtCoord, frameSpec, hasScene, loadMapLib, styleFor, type MapBody, type MapLib, type MapSpec, type TourStop } from './core';
 import { MAPS_HANDOFF, useDarkTheme } from './MapCard';
@@ -54,7 +54,7 @@ import { DeepTimePanel } from './DeepTimePanel';
 import { attachIceAge, attachSolarLines, seaLevelAt } from './deeptime';
 import { t } from '../i18n';
 import { clockNow, goLive, setClock, useClockState, useClockTime } from './clock';
-import { ASK_ATLAS, NOTES_CHANGED, OPEN_MEDIA, OPEN_MODEL, mediaSrc, type NoteMedia } from './notes';
+import { ASK_ATLAS, NOTES_CHANGED, OPEN_MEDIA, OPEN_MODEL, OPEN_VIEW3D, mediaSrc, type NoteMedia } from './notes';
 import { PLACE_COLOR, fetchPlaces, type Place } from './places';
 import { PlaceCard } from './PlaceCard';
 import { attachBuildings } from './buildings';
@@ -63,6 +63,10 @@ import { TourPlayer } from './TourPlayer';
 import { ModelLightbox, ModelStrip, ModelViewer } from './ModelViewer';
 import { fetchModels, modelById, modelsForSpacecraft, type ModelInfo } from './models';
 import { MeasureProfile } from './MeasureProfile';
+import { DiveView, type View3DTarget } from './DiveView';
+import { attachEffects, effectFor } from './effects';
+import { attachAurora, fetchAurora, type AuroraData } from './aurora';
+import { applySky } from './atmosphere';
 
 export const WORLD_PALETTE: Record<string, { color: string; label?: string }> = {
   sol: { color: '#f59e0b', label: 'Star' },
@@ -240,6 +244,8 @@ export function MapsApp() {
   const setDeepYears = (y: number) => { setDeepYearsState(y); store.set(DEEP, y); };
   const [tour, setTour] = useState<{ title?: string; stops: TourStop[] } | null>(null);
   const [modelBox, setModelBox] = useState<ModelInfo | null>(null);
+  const [view3d, setView3d] = useState<View3DTarget | null>(null);
+  const [aurora, setAurora] = useState<AuroraData | null>(null);
   const [places, setPlaces] = useState<Place[]>([]);
   const [imageryLayer, setImageryLayerState] = useState<string>(() => store.get<string>(IMAGERY_PREF) ?? 'modis');
   const setImageryLayer = (id: string) => { setImageryLayerState(id); store.set(IMAGERY_PREF, id); };
@@ -255,10 +261,12 @@ export function MapsApp() {
     const ask = (e: Event) => { setDrawer('atlas'); setAtlasRequest(r => ({ text: String((e as CustomEvent).detail), n: (r?.n ?? 0) + 1 })); };
     const show = (e: Event) => setLightbox((e as CustomEvent<NoteMedia>).detail);
     const model = (e: Event) => setModelBox((e as CustomEvent<ModelInfo>).detail);
+    const v3 = (e: Event) => setView3d((e as CustomEvent<View3DTarget>).detail);
     window.addEventListener(ASK_ATLAS, ask);
     window.addEventListener(OPEN_MEDIA, show);
     window.addEventListener(OPEN_MODEL, model);
-    return () => { window.removeEventListener(ASK_ATLAS, ask); window.removeEventListener(OPEN_MEDIA, show); window.removeEventListener(OPEN_MODEL, model); };
+    window.addEventListener(OPEN_VIEW3D, v3);
+    return () => { window.removeEventListener(ASK_ATLAS, ask); window.removeEventListener(OPEN_MEDIA, show); window.removeEventListener(OPEN_MODEL, model); window.removeEventListener(OPEN_VIEW3D, v3); };
   }, []);
 
   // Atlas places for this world; refreshed whenever a card changes (Atlas may have added or removed a place)
@@ -526,6 +534,33 @@ export function MapsApp() {
     return own(() => { if (radarRef.current === h) radarRef.current = null; h.detach(); });
   }, [map, radarOn, radarFrame == null, mapState?.body, own]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (radarFrame != null) radarRef.current?.setFrame(radarFrame); }, [radarFrame]);
+
+  // ── Sky & haze, plumes and dust, aurora ──────────────────────────────────
+  const skyOn = has('atmosphere');
+  useEffect(() => {
+    if (!map || mapState?.body !== bodyId) return;
+    applySky(map, bodyId, skyOn);
+  }, [map, mapState?.body, bodyId, skyOn, dark]);
+
+  const effectsOn = (has('plumes') || has('dust')) && !!effectFor(bodyId);
+  useEffect(() => {
+    if (!map || !effectsOn || mapState?.body !== bodyId) return;
+    return own(attachEffects(map, bodyId, body?.radius_km ?? 6371));
+  }, [map, effectsOn, bodyId, mapState?.body, own]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const auroraOn = has('aurora');
+  useEffect(() => {
+    if (!auroraOn) { setAurora(null); return; }
+    let gone = false;
+    const load = () => fetchAurora().then(d => { if (!gone && d) setAurora(d); });
+    load();
+    const t = setInterval(load, 5 * 60_000);
+    return () => { gone = true; clearInterval(t); };
+  }, [auroraOn]);
+  useEffect(() => {
+    if (!map || !auroraOn || !aurora || mapState?.body !== 'earth') return;
+    return own(attachAurora(map, aurora));
+  }, [map, auroraOn, aurora, mapState?.body, own]);
 
   // ── Traverses (Moon, Mars) ──────────────────────────────────────────────
   const traversesOn = has('traverses');
@@ -886,6 +921,7 @@ export function MapsApp() {
     }
     if (spec.model) fetchModels().then(all => { const m = modelById(all, spec.model!); if (m) setModelBox(m); });
     if (spec.tour?.length) { setTour({ title: spec.title, stops: spec.tour }); setSelection(null); }
+    if (spec.view3d) setView3d(spec.view3d);
   }, [bodyId, overlay, globe, prefs, map, goTo, findFeature]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -1027,6 +1063,8 @@ export function MapsApp() {
     caves: PREHISTORY.filter(p => isCaveSite(p) && yearsAgo(p) >= deepCut).length,
     neolithic: PREHISTORY.filter(p => !isCaveSite(p) && yearsAgo(p) >= deepCut).length,
     places: places.length || undefined,
+    aurora: auroraOn && aurora ? `peak ${aurora.peak}%` : undefined,
+    plumes: effectFor(bodyId)?.kind === 'plumes' ? effectFor(bodyId)!.sources.length : undefined,
     imagery: imageryOn ? imageryDay : undefined,
     radar: radarOn && radarFrame ? new Date(radarFrame).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : undefined,
   };
@@ -1046,6 +1084,7 @@ export function MapsApp() {
     pin ? `Dropped pin at ${fmtCoord(pin.lat, pin.lon)}` : '',
     flightQ ? `Following flight ${flightQ}` : '',
     tour ? `A tour is playing (${tour.stops.length} stops)` : '',
+    view3d ? `3D terrain view open at ${view3d.label}` : '',
     `Annotated places on this world: ${places.length}`,
   ].filter(Boolean).join('; ');
   const status = (has('satellites') && (orbStatus?.error ? `Spacecraft: ${orbStatus.error}` : orbStatus?.note))
@@ -1241,7 +1280,7 @@ export function MapsApp() {
               {selection && (
                 <div className="absolute top-16 left-3 z-30 max-h-[calc(100%-8rem)] overflow-y-auto rounded-xl max-w-[calc(100%-1.5rem)]">
                   {selection.kind === 'landmark' ? (
-                    <LandmarkModal landmark={selection.item} onClose={clearSelection} onFlyTo={(la, lo) => flyNear(la, lo, isEarth ? 12 : 7)} />
+                    <LandmarkModal landmark={selection.item} onClose={clearSelection} onFlyTo={(la, lo) => flyNear(la, lo, isEarth ? 12 : 7)} terrain={!!body?.terrain} />
                   ) : selection.kind === 'traverse' ? (
                     <TraverseModal traverse={selection.traverse} waypoint={selection.waypoint}
                       onSelectWaypoint={wp => setSelection({ kind: 'traverse', traverse: selection.traverse, waypoint: wp })}
@@ -1252,9 +1291,9 @@ export function MapsApp() {
                     <PrehistoryCard site={selection.item} onClose={clearSelection} onFlyTo={(la, lo) => flyNear(la, lo, 13)}
                       onDeepTime={y => { setDeepYears(y); if (!prefs.iceage) toggleLayer('iceage', true); flyNear(selection.item.lat, selection.item.lon, 6); }} />
                   ) : selection.kind === 'place' ? (
-                    <PlaceCard place={selection.item} onClose={clearSelection} onFlyTo={(la, lo) => flyNear(la, lo, isEarth ? 12 : 7)} />
+                    <PlaceCard place={selection.item} onClose={clearSelection} onFlyTo={(la, lo) => flyNear(la, lo, isEarth ? 12 : 7)} terrain={!!body?.terrain} />
                   ) : (
-                    <MapFeatureModal feature={selection} onClose={clearSelection} onFlyTo={(la, lo) => flyNear(la, lo, 12)} />
+                    <MapFeatureModal feature={selection} onClose={clearSelection} onFlyTo={(la, lo) => flyNear(la, lo, 12)} terrain={!!body?.terrain} />
                   )}
                 </div>
               )}
@@ -1339,6 +1378,7 @@ export function MapsApp() {
                       {hasSky(bodyId) && <PinButton on={pinCard === 'sky'} onClick={() => setPinCard(c => (c === 'sky' ? null : 'sky'))} title="The sky from here"><Eye className="w-3.5 h-3.5" /></PinButton>}
                       {isEarth && <PinButton on={pinCard === 'weather'} onClick={() => setPinCard(c => (c === 'weather' ? null : 'weather'))} title="Weather here"><Thermometer className="w-3.5 h-3.5" /></PinButton>}
                       {isEarth && <PinButton onClick={() => setDrawer('directions')} title="Directions to or from here"><RouteIcon className="w-3.5 h-3.5" /></PinButton>}
+                      {body?.terrain && <PinButton onClick={() => setView3d({ lat: pin.lat, lon: pin.lon, label: fmtCoord(pin.lat, pin.lon), spanKm: isEarth ? 40 : 160 })} title="3D terrain here (a dive, at sea)"><Mountain className="w-3.5 h-3.5" /></PinButton>}
                       <PinButton onClick={() => { setPin(null); setPinCard(null); }} title="Remove pin"><X className="w-3.5 h-3.5" /></PinButton>
                     </div>
                   )}
@@ -1360,6 +1400,17 @@ export function MapsApp() {
               )}
 
               {modelBox && <ModelLightbox model={modelBox} onClose={() => setModelBox(null)} />}
+              {view3d && body && (body.terrain
+                ? <DiveView body={body} target={view3d} onClose={() => setView3d(null)} />
+                : <div className="absolute top-16 right-14 z-30 rounded-lg border border-amber-500/40 sb-map-glass px-2.5 py-1 text-[11px] text-amber-500 flex items-center gap-2">No elevation data for {body.name}, so no 3D view here.<button onClick={() => setView3d(null)} className="hover:text-[var(--text-primary)]"><X className="w-3.5 h-3.5" /></button></div>)}
+              {hasMap && isEarth && auroraOn && aurora && (
+                <div className={clsx('absolute right-14 z-20 rounded-xl border border-[var(--border-subtle)] sb-map-glass px-2.5 py-1.5 text-[11px] flex items-center gap-2 pointer-events-auto', iceOn ? 'top-28' : 'top-16')} title={aurora.forecast ? `NOAA OVATION forecast for ${new Date(aurora.forecast).toLocaleTimeString()}` : undefined}>
+                  <Zap className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-[var(--text-secondary)]">Aurora forecast</span>
+                  <span className="font-mono tabular-nums text-[var(--text-primary)]">peak {aurora.peak}%</span>
+                  {aurora.stale && <span className="text-amber-400">stale</span>}
+                </div>
+              )}
 
               {hasMap && (
                 <MapClock className="absolute z-20 left-1/2 -translate-x-1/2 bottom-16 2xl:bottom-3 max-w-[calc(100%-1.5rem)]"

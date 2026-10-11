@@ -3845,5 +3845,13 @@
  "3D buildings": "Bâtiments 3D",
  "Building heights from OpenStreetMap, from street zoom": "Hauteurs des bâtiments d’OpenStreetMap, au zoom rue",
  "Rain & snow": "Pluie et neige",
- "NASA satellite precipitation, half-hourly, a few hours behind": "Précipitations vues par satellite (NASA), toutes les demi-heures, quelques heures de retard"
+ "NASA satellite precipitation, half-hourly, a few hours behind": "Précipitations vues par satellite (NASA), toutes les demi-heures, quelques heures de retard",
+ "Aurora": "Aurores",
+ "Where the northern and southern lights are likely in the next half hour (NOAA)": "Où les aurores boréales et australes sont probables dans la demi-heure (NOAA)",
+ "Sky & haze": "Ciel et brume",
+ "This world’s own sky colour at the limb and horizon": "La couleur de ciel propre à ce monde, au limbe et à l’horizon",
+ "Plumes": "Panaches",
+ "Geysers and volcanic plumes at the real vents, animated impression": "Geysers et panaches volcaniques aux vrais évents, animation d’illustration",
+ "Dust storms": "Tempêtes de poussière",
+ "Dust-storm season over the basins where storms start, animated impression": "Saison des tempêtes sur les bassins où elles naissent, animation d’illustration"
 }

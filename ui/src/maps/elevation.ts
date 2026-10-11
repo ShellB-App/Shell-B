@@ -83,3 +83,64 @@ export async function profileAlong(body: MapBody, pts: { lat: number; lon: numbe
   for (const h of hs) { if (prev !== null) { const dh = h - prev; if (dh > 0) climb += dh; else descent -= dh; } prev = h; }
   return { samples, min: Math.min(...hs), max: Math.max(...hs), climb, descent, totalKm: total };
 }
+
+/** Bilinear height at fractional tile pixel coordinates (terrarium). */
+function sampleBilinear(data: Uint8ClampedArray, size: number, px: number, py: number): number {
+  const x0 = Math.max(0, Math.min(size - 1, Math.floor(px))), y0 = Math.max(0, Math.min(size - 1, Math.floor(py)));
+  const x1 = Math.min(size - 1, x0 + 1), y1 = Math.min(size - 1, y0 + 1);
+  const fx = Math.min(1, Math.max(0, px - x0)), fy = Math.min(1, Math.max(0, py - y0));
+  const h = (x: number, y: number) => { const i = (y * size + x) * 4; return data[i] * 256 + data[i + 1] + data[i + 2] / 256 - 32768; };
+  return (h(x0, y0) * (1 - fx) + h(x1, y0) * fx) * (1 - fy) + (h(x0, y1) * (1 - fx) + h(x1, y1) * fx) * fy;
+}
+
+export interface HeightGrid {
+  /** n × n heights in metres, row 0 = north edge, column 0 = west edge; NaN where no data */
+  heights: Float32Array;
+  n: number;
+  spanKm: number;
+  /** metres per grid step, east-west and north-south */
+  stepM: number;
+  zoom: number;
+  center: { lat: number; lon: number };
+  min: number; max: number;
+}
+
+/** A square grid of heights `spanKm` across centred on a point, for 3D views (dive, fly-through). */
+export async function elevationGrid(body: MapBody, lat: number, lon: number, spanKm: number, n = 128): Promise<HeightGrid | null> {
+  const t = body.terrain;
+  if (!t) return null;
+  const R = body.radius_km || 6371;
+  const size = t.tileSize || 256;
+  const cosLat = Math.max(0.05, Math.cos((lat * Math.PI) / 180));
+  // zoom where the span covers about n tile pixels (never past the tiles we have)
+  const zoom = Math.max(0, Math.min(t.maxzoom, Math.ceil(Math.log2((n * 2 * Math.PI * R * cosLat) / (size * spanKm)))));
+  const N = 2 ** zoom;
+  const kmPerDegLat = (2 * Math.PI * R) / 360;
+  const dLat = spanKm / kmPerDegLat, dLon = spanKm / (kmPerDegLat * cosLat);
+  const heights = new Float32Array(n * n).fill(NaN);
+  const byTile = new Map<string, { tx: number; ty: number; items: { i: number; px: number; py: number }[] }>();
+  for (let r = 0; r < n; r++) {
+    const la = lat + dLat / 2 - (r / (n - 1)) * dLat;
+    const laR = (Math.max(-85.05, Math.min(85.05, la)) * Math.PI) / 180;
+    const fy = ((1 - Math.log(Math.tan(laR) + 1 / Math.cos(laR)) / Math.PI) / 2) * N;
+    for (let c = 0; c < n; c++) {
+      let lo = lon - dLon / 2 + (c / (n - 1)) * dLon;
+      if (lo > 180) lo -= 360; else if (lo < -180) lo += 360;
+      const fx = ((lo + 180) / 360) * N;
+      const tx = Math.floor(fx), ty = Math.floor(fy);
+      const key = `${tx}/${ty}`;
+      let g = byTile.get(key);
+      if (!g) { g = { tx, ty, items: [] }; byTile.set(key, g); }
+      g.items.push({ i: r * n + c, px: (fx - tx) * size - 0.5, py: (fy - ty) * size - 0.5 });
+    }
+  }
+  await Promise.all([...byTile.values()].map(async g => {
+    const data = await tile(body, zoom, g.tx, g.ty);
+    if (!data) return;
+    for (const it of g.items) heights[it.i] = sampleBilinear(data, size, it.px, it.py);
+  }));
+  let min = Infinity, max = -Infinity;
+  for (const h of heights) if (!Number.isNaN(h)) { if (h < min) min = h; if (h > max) max = h; }
+  if (!Number.isFinite(min)) return null;
+  return { heights, n, spanKm, stepM: (spanKm * 1000) / (n - 1), zoom, center: { lat, lon }, min, max };
+}

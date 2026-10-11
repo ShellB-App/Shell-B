@@ -102,12 +102,12 @@ function unwrapped(pts: Position[], anchorIdx: number): Position[] {
 }
 
 type Vec4 = [number, number, number, number];
-function mul(m: ArrayLike<number>, x: number, y: number, z: number, w = 1): Vec4 {
+export function mul(m: ArrayLike<number>, x: number, y: number, z: number, w = 1): Vec4 {
   return [m[0] * x + m[4] * y + m[8] * z + m[12] * w, m[1] * x + m[5] * y + m[9] * z + m[13] * w,
     m[2] * x + m[6] * y + m[10] * z + m[14] * w, m[3] * x + m[7] * y + m[11] * z + m[15] * w];
 }
 /** 4×4 inverse (column-major), or null if singular. */
-function invert(a: ArrayLike<number>): number[] | null {
+export function invert(a: ArrayLike<number>): number[] | null {
   const [a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22, a23, a30, a31, a32, a33] = Array.from(a);
   const b00 = a00 * a11 - a01 * a10, b01 = a00 * a12 - a02 * a10, b02 = a00 * a13 - a03 * a10, b03 = a01 * a12 - a02 * a11;
   const b04 = a01 * a13 - a03 * a11, b05 = a02 * a13 - a03 * a12, b06 = a20 * a31 - a21 * a30, b07 = a20 * a32 - a22 * a30;
@@ -123,12 +123,12 @@ function invert(a: ArrayLike<number>): number[] | null {
   ];
 }
 /** MapLibre's globe frame (same formula as its projectToSphere shader). */
-function sphere(lon: number, lat: number, r: number): [number, number, number] {
+export function sphere(lon: number, lat: number, r: number): [number, number, number] {
   const lo = (lon * Math.PI) / 180, la = (lat * Math.PI) / 180, c = Math.cos(la);
   return [Math.sin(lo) * c * r, Math.sin(la) * r, Math.cos(lo) * c * r];
 }
 /** Web Mercator 0..1 coordinates (what mainMatrix takes on a flat map). */
-function merc(lon: number, lat: number): [number, number, number] {
+export function merc(lon: number, lat: number): [number, number, number] {
   const la = Math.max(-85.05, Math.min(85.05, lat)) * (Math.PI / 180);
   return [(lon + 180) / 360, 0.5 - Math.log(Math.tan(Math.PI / 4 + la / 2)) / (2 * Math.PI), 0];
 }

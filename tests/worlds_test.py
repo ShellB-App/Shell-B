@@ -173,5 +173,43 @@ class Imagery(unittest.TestCase):
             self.assertEqual(C.calls, 1)  # second time from disk
 
 
+class Aurora(unittest.TestCase):
+    def test_parse_and_route(self):
+        j = {"Observation Time": "2026-10-11T00:38:00Z", "Forecast Time": "2026-10-11T01:21:00Z",
+             "coordinates": [[0, -90, 6], [359, 67, 49], [400, 0, 5], ["x", 1, 2], [10, 95, 3]]}
+        g = earthview.parse_ovation(j)
+        self.assertEqual(g["grid"][0][0], 6)
+        self.assertEqual(g["grid"][67 + 90][359], 49)
+        self.assertEqual(g["grid"][90][40], 5)   # 400° wraps to 40°E
+        self.assertEqual(g["peak"], 49)
+        self.assertEqual(len(g["grid"]), 181)
+
+        class Resp:
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                return j
+
+        class C:
+            def __init__(self, *a, **k):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *a):
+                return False
+
+            async def get(self, url):
+                return Resp()
+
+        with mock.patch.object(earthview.httpx, "AsyncClient", C), mock.patch.dict(earthview._aurora, {"at": 0.0, "data": None}):
+            r = client.get("/api/earth/aurora")
+            self.assertEqual(r.status_code, 200)
+            self.assertEqual(r.json()["forecast"], "2026-10-11T01:21:00Z")
+            self.assertEqual(r.json()["grid"][157][359], 49)
+
+
 if __name__ == "__main__":
     unittest.main()

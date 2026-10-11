@@ -22,6 +22,8 @@ export const OPEN_MEDIA = 'shellb:worlds-media';
 export const ASK_ATLAS = 'shellb:worlds-ask-atlas';
 /** Fired by a card to show a catalog 3D model big: detail = ModelInfo. */
 export const OPEN_MODEL = 'shellb:worlds-model';
+/** Fired by a card to open the 3D terrain / dive view: detail = View3DTarget. */
+export const OPEN_VIEW3D = 'shellb:worlds-view3d';
 
 export const mediaSrc = (m: NoteMedia) => `/api/worlds/media/${m.file}`;
 
@@ -44,3 +46,4 @@ export const askAtlas = (prompt: string) => window.dispatchEvent(new CustomEvent
 export const openMedia = (m: NoteMedia) => window.dispatchEvent(new CustomEvent(OPEN_MEDIA, { detail: m }));
 
 export const openModel = (m: import('./models').ModelInfo) => window.dispatchEvent(new CustomEvent(OPEN_MODEL, { detail: m }));
+export const openView3D = (t: import('./DiveView').View3DTarget) => window.dispatchEvent(new CustomEvent(OPEN_VIEW3D, { detail: t }));

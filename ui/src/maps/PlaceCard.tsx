@@ -1,12 +1,12 @@
 // Card for an Atlas place: the header is the place itself, the body is whatever its note holds (FeatureNotes).
 import { useState } from 'react';
-import { Check, Copy, MapPin, Navigation, Trash2, X } from 'lucide-react';
+import { Check, Copy, MapPin, Mountain, Navigation, Trash2, X } from 'lucide-react';
 import { fmtCoord } from './core';
 import { FeatureNotes } from './FeatureNotes';
-import { removeNotePart } from './notes';
+import { openView3D, removeNotePart } from './notes';
 import { PLACE_COLOR, PLACE_KIND_LABEL, type Place } from './places';
 
-export function PlaceCard({ place, onClose, onFlyTo }: { place: Place; onClose: () => void; onFlyTo: (lat: number, lon: number) => void }) {
+export function PlaceCard({ place, onClose, onFlyTo, terrain }: { place: Place; onClose: () => void; onFlyTo: (lat: number, lon: number) => void; terrain?: boolean }) {
   const [copied, setCopied] = useState(false);
   const copy = () => navigator.clipboard?.writeText(`${place.lat.toFixed(5)}, ${place.lon.toFixed(5)}`).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1400); }).catch(() => {});
   const remove = () => {
@@ -32,6 +32,7 @@ export function PlaceCard({ place, onClose, onFlyTo }: { place: Place; onClose: 
         <span className="font-mono tabular-nums text-[var(--text-secondary)]">{fmtCoord(place.lat, place.lon)}</span>
         <button onClick={copy} className="ml-auto p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)]" title="Copy coordinates">{copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}</button>
         <button onClick={() => onFlyTo(place.lat, place.lon)} className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)]" title="Fly here"><Navigation className="w-3.5 h-3.5" /></button>
+        {terrain && <button onClick={() => openView3D({ lat: place.lat, lon: place.lon, label: place.feature, kind: place.kind, spanKm: place.kind === 'wreck' ? 40 : 80 })} className="p-1 rounded text-[var(--text-muted)] hover:text-amber-300" title="3D terrain view here"><Mountain className="w-3.5 h-3.5" /></button>}
         <button onClick={remove} className="p-1 rounded text-[var(--text-muted)] hover:text-rose-500" title="Remove this place"><Trash2 className="w-3.5 h-3.5" /></button>
       </div>
       <FeatureNotes body={place.body} feature={place.feature} />

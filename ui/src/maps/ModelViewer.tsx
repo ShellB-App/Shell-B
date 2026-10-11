@@ -9,7 +9,7 @@ type Three = typeof import('three');
 type Loader = import('three/examples/jsm/loaders/GLTFLoader.js').GLTFLoader;
 let threeP: Promise<{ THREE: Three; OrbitControls: typeof import('three/examples/jsm/controls/OrbitControls.js').OrbitControls; loader: () => Loader }> | null = null;
 // NASA's GLBs are Draco-compressed: the decoder (three's own copy) is served from /vendor/draco (ui/public)
-const loadThree = () => (threeP ??= Promise.all([
+export const loadThree = () => (threeP ??= Promise.all([
   import('three'), import('three/examples/jsm/loaders/GLTFLoader.js'), import('three/examples/jsm/controls/OrbitControls.js'),
   import('three/examples/jsm/loaders/DRACOLoader.js'),
 ]).then(([THREE, g, o, d]) => {
