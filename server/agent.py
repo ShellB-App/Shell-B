@@ -485,6 +485,8 @@ class Turn:
                       if t not in names and t in TOOLS and switches.get(t, True)]
         if skills.for_agent(self.agent):  # agents with skills get the loader tools automatically
             names += [t for t in ("use_skill", "read_skill_file") if t in TOOLS and switches.get(t, True)]
+        if "leave_message" in names and "list_sessions" not in names and "list_sessions" in TOOLS and switches.get("list_sessions", True):
+            names.append("list_sessions")  # chatmail.py: whoever can message other chats can see which ones exist
         if self.remote:  # the remote kit replaces the local project tools and the sandbox
             names = [t for t in names if t not in remote.TOOLS] + [t for t in remote.TOOLS if switches.get(t, True)]
         elif self.project_id:  # every agent working in a Studio project gets the file + vision tools

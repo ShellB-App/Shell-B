@@ -996,6 +996,7 @@ def _abort_turn(conv_id):
 public_api.begin_turn, public_api.ACTIVE, public_api.abort_turn, public_api.OLLAMA = begin_turn, ACTIVE, _abort_turn, OLLAMA
 hooks.begin_turn = begin_turn
 inbox.begin_turn = begin_turn
+chatmail.begin_turn, chatmail.ACTIVE = begin_turn, ACTIVE
 
 
 async def _run_scheduled(t, on_conv):

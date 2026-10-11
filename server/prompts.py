@@ -267,7 +267,7 @@ system. Your tools still run on Shell:B's own machine; your reasoning runs on {p
         latest = episodes.recent(exclude=conv_id)
         guide.append(episodes.GUIDE + (f"\n  Your most recent other conversations:\n" + "\n".join("  " + l for l in latest.splitlines())
                                        if latest else ""))
-    if "leave_message" in tool_names or "check_messages" in tool_names:
+    if "leave_message" in tool_names or "check_messages" in tool_names or "list_sessions" in tool_names:
         guide.append(chatmail.GUIDE)
         note = chatmail.prompt_note(conv_id)
         if note:
