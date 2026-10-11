@@ -355,8 +355,8 @@ address (`_ShortNameRedirect` in app.py). Check with `tailscale serve status`; r
   (`GET /api/audit-log`), and the Agent Lab shows each agent's thumbs over the last 30 days.
 - **Appearance and the community gallery** (Settings → Appearance; `server/gallery.py`, `ui/src/components/Gallery.tsx`):
   the built-in themes, the ones Shell:B designs in chat (`design_theme`, `server/themes.py`), and *Community themes*
-  from github.com/EveAeternam/Shell-B-Themes; under *Screensaver style*, *Browse community* lists
-  github.com/EveAeternam/Shell-B-Screensavers. Repositories are fetched like Community Hub skill repositories (one
+  from github.com/ShellB-App/Shell-B-Themes; under *Screensaver style*, *Browse community* lists
+  github.com/ShellB-App/Shell-B-Screensavers. Repositories are fetched like Community Hub skill repositories (one
   tarball at a pinned commit through `community.fetch_repo`, cached in `data/community/repos`, catalogue in kv
   `gallery_<kind>`), so the gallery works offline once fetched and a refresh pulls the latest. A theme installs through
   `themes.clean` (same checks as a chat-designed one) and joins the custom themes with its provenance; a screensaver
@@ -365,10 +365,10 @@ address (`_ShortNameRedirect` in app.py). Check with `tailscale serve status`; r
   newer version; reinstalling updates in place. Installing needs the owner (or the admin key) and is audit-logged;
   there is no agent tool for it. Custom themes have an Export button (`GET /api/gallery/export/theme/<id>`) that
   saves a `theme.json` ready for a pull request. More sources: `POST /api/gallery/sources {kind, repo, ref}` (owner).
-  The same module serves Studio → New project → *Start from a template* (kind `template`, github.com/EveAeternam/
+  The same module serves Studio → New project → *Start from a template* (kind `template`, github.com/ShellB-App/
   Shell-B-Studio-Templates): a template makes a new project of its kind with a copy of its files and its brief in
   DESIGN.md, every time (nothing is marked installed). Skills for designing themes (`shellb-theme-design`) and building
-  screensavers (`shellb-screensaver`) live in github.com/EveAeternam/Shell-B-Skills, a default Community Hub source.
+  screensavers (`shellb-screensaver`) live in github.com/ShellB-App/Shell-B-Skills, a default Community Hub source.
   Shell:B's own repositories are looked up through `git.shellb.app/<name>` (themes, screensavers, templates, skills,
   agents, translations; `community.resolve_repo`), a Cloudflare redirect to where each one lives now, so they can
   move without an app update; if the link can't be followed, the GitHub name above is used.
@@ -719,7 +719,7 @@ docs/plans/social.md).
 ## Community repositories
 
 **Settings → Community** (`server/family.py`, `ui/src/components/CommunityRepos.tsx`) lists every GitHub repository
-Shell:B installs community work from. The nine official ones (`EveAeternam/Shell-B-Themes`, `-Screensavers`,
+Shell:B installs community work from. The nine official ones (`ShellB-App/Shell-B-Themes`, `-Screensavers`,
 `-Studio-Templates`, `-Skills`, `-Agents`, `-Worlds`, `-Voices`, `-Apps`, `-Translations`) are always listed and can't be
 removed; each row says what the repository holds, where its items show up in the app, how many items it has and when it
 was last fetched. The owner can add any public GitHub repository laid out like the official one of its kind (a folder

@@ -8,12 +8,12 @@ ComfyUI pipeline, a UI polish: each one makes Shell:B better for everyone who ru
 | You have… | Take it to |
 | :--- | :--- |
 | A fix or a feature for the app itself | A pull request here (read on) |
-| A theme | [Shell-B-Themes](https://github.com/EveAeternam/Shell-B-Themes): `theme.json`, validator, one-screen checklist |
-| A screensaver | [Shell-B-Screensavers](https://github.com/EveAeternam/Shell-B-Screensavers): one `index.html`, no network, no audio |
-| An agent persona | [Shell-B-Agents](https://github.com/EveAeternam/Shell-B-Agents): `agent.json` for the Agent Lab |
-| A Studio template, a skill, a world, a voice, an app, a translation | [Shell-B-Studio-Templates](https://github.com/EveAeternam/Shell-B-Studio-Templates), [Shell-B-Skills](https://github.com/EveAeternam/Shell-B-Skills), [Shell-B-Worlds](https://github.com/EveAeternam/Shell-B-Worlds), [Shell-B-Voices](https://github.com/EveAeternam/Shell-B-Voices), [Shell-B-Apps](https://github.com/EveAeternam/Shell-B-Apps), [Shell-B-Translations](https://github.com/EveAeternam/Shell-B-Translations) |
-| A question, an idea, something to show | [Discussions](https://github.com/EveAeternam/Shell-B/discussions) |
-| A bug | [Issues](https://github.com/EveAeternam/Shell-B/issues/new/choose), with the form filled in |
+| A theme | [Shell-B-Themes](https://github.com/ShellB-App/Shell-B-Themes): `theme.json`, validator, one-screen checklist |
+| A screensaver | [Shell-B-Screensavers](https://github.com/ShellB-App/Shell-B-Screensavers): one `index.html`, no network, no audio |
+| An agent persona | [Shell-B-Agents](https://github.com/ShellB-App/Shell-B-Agents): `agent.json` for the Agent Lab |
+| A Studio template, a skill, a world, a voice, an app, a translation | [Shell-B-Studio-Templates](https://github.com/ShellB-App/Shell-B-Studio-Templates), [Shell-B-Skills](https://github.com/ShellB-App/Shell-B-Skills), [Shell-B-Worlds](https://github.com/ShellB-App/Shell-B-Worlds), [Shell-B-Voices](https://github.com/ShellB-App/Shell-B-Voices), [Shell-B-Apps](https://github.com/ShellB-App/Shell-B-Apps), [Shell-B-Translations](https://github.com/ShellB-App/Shell-B-Translations) |
+| A question, an idea, something to show | [Discussions](https://github.com/ShellB-App/Shell-B/discussions) |
+| A bug | [Issues](https://github.com/ShellB-App/Shell-B/issues/new/choose), with the form filled in |
 | A security hole | [SECURITY.md](SECURITY.md), privately. Please not an issue |
 
 ## 💛 The ethos
@@ -46,7 +46,7 @@ Shell:B is a **FastAPI (Python 3.12)** server, a **React 19 + TypeScript + Vite 
 serves from `ui/dist`, and a **Docker** sandbox image for code execution. Models come from **Ollama**.
 
 ```bash
-git clone https://github.com/EveAeternam/Shell-B.git ~/shellb/web
+git clone https://github.com/ShellB-App/Shell-B.git ~/shellb/web
 cd ~/shellb/web
 python3 -m venv venv && venv/bin/pip install -r requirements.txt
 cd ui && npm ci && npm run vendor && cd ..     # vendor: offline copies of tailwind, chart.js, mermaid, three
@@ -138,13 +138,13 @@ git tag v2026.10.11 && git push origin v2026.10.11
 
 ## 🐛 Reporting bugs
 
-Use the [bug report form](https://github.com/EveAeternam/Shell-B/issues/new/choose). It asks for the steps, what you
+Use the [bug report form](https://github.com/ShellB-App/Shell-B/issues/new/choose). It asks for the steps, what you
 expected, your hardware and model engine, and redacted logs (`journalctl --user -u shellb-web -f`). Search first; a
 thumbs-up on an existing issue helps more than a duplicate.
 
 ## 💡 Suggesting features
 
-Open a thread in [Discussions → Ideas](https://github.com/EveAeternam/Shell-B/discussions). Say what problem you are
+Open a thread in [Discussions → Ideas](https://github.com/ShellB-App/Shell-B/discussions). Say what problem you are
 solving, how it fits a local-first workflow, and what it costs in memory or GPU. Once an idea has a shape it becomes an
 issue.
 

@@ -1,6 +1,6 @@
 """The Shell:B family: the GitHub repositories Shell:B installs community work from, listed in Settings → Community.
 
-The official repositories (EveAeternam/Shell-B-*) are always listed and can't be removed. Anyone can run their own
+The official repositories (ShellB-App/Shell-B-*) are always listed and can't be removed. Anyone can run their own
 collection: a repository laid out like the official one of the same kind (folder per item, index.json) that the owner
 adds here with its kind. Adding a theme, screensaver or template repository also registers it as a gallery source
 (server/gallery.py) and a skills repository as a Community Hub source (server/community.py), so the matching picker
@@ -22,7 +22,7 @@ import community
 import db
 
 router = APIRouter(prefix="/api/family")
-GITHUB = "EveAeternam"
+GITHUB = "ShellB-App"
 KINDS = {  # kind → how it is laid out and where it shows up in the app
     "theme": {"label": "Themes", "folder": "themes", "where": "Settings → Appearance → Community themes", "installs": True},
     "screensaver": {"label": "Screensavers", "folder": "screensavers", "where": "Settings → Appearance → Screensaver → Browse community", "installs": True},

@@ -43,7 +43,7 @@ class Family(unittest.TestCase):
     def test_official_always_listed(self):
         rows = client.get("/api/family").json()["repos"]
         self.assertEqual([r["id"] for r in rows if r["official"]], [o["id"] for o in family.OFFICIAL])
-        self.assertTrue(all(r["url"].startswith("https://github.com/EveAeternam/Shell-B") for r in rows if r["official"]))
+        self.assertTrue(all(r["url"].startswith("https://github.com/ShellB-App/Shell-B") for r in rows if r["official"]))
         self.assertEqual({r["kind"] for r in rows}, set(family.KINDS))
         self.assertTrue(all(r["where"] and r["kindLabel"] for r in rows))
 
@@ -68,7 +68,7 @@ class Family(unittest.TestCase):
         with self.assertRaises(ValueError):
             family.add("theme", "someone/Their-Themes")           # twice
         with self.assertRaises(ValueError):
-            family.add("theme", "EveAeternam/Shell-B-Themes")      # an official one
+            family.add("theme", "ShellB-App/Shell-B-Themes")      # an official one
         with self.assertRaises(ValueError):
             family.add("poem", "a/b")                              # unknown kind
         with self.assertRaises(ValueError):

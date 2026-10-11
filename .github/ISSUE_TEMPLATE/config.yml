@@ -1,20 +1,20 @@
 blank_issues_enabled: false
 contact_links:
   - name: Question, idea or show-and-tell
-    url: https://github.com/EveAeternam/Shell-B/discussions
+    url: https://github.com/ShellB-App/Shell-B/discussions
     about: Discussions are the place for anything that isn't a reproducible bug.
   - name: Security problem
-    url: https://github.com/EveAeternam/Shell-B/security/advisories/new
+    url: https://github.com/ShellB-App/Shell-B/security/advisories/new
     about: Report privately. Please don't put exploits in a public issue.
   - name: A theme
-    url: https://github.com/EveAeternam/Shell-B-Themes
+    url: https://github.com/ShellB-App/Shell-B-Themes
     about: Themes have their own repository, validator and checklist.
   - name: A screensaver
-    url: https://github.com/EveAeternam/Shell-B-Screensavers
+    url: https://github.com/ShellB-App/Shell-B-Screensavers
     about: Screensavers have their own repository, validator and checklist.
   - name: An agent persona
-    url: https://github.com/EveAeternam/Shell-B-Agents
+    url: https://github.com/ShellB-App/Shell-B-Agents
     about: Agents for the Agent Lab have their own repository.
   - name: A template, skill, world, voice, app or translation
-    url: https://github.com/EveAeternam?tab=repositories&q=Shell-B-
+    url: https://github.com/orgs/ShellB-App/repositories
     about: Every Shell-B-* repository has its own validator and a one-screen checklist.

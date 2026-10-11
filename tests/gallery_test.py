@@ -185,14 +185,14 @@ class Via(unittest.TestCase):
     def test_resolve(self):
         import httpx
         moved = (302, {"location": "https://github.com/shellb-org/Themes"})
-        self.assertEqual(self.resolve("EveAeternam/Shell-B-Themes", moved), "shellb-org/Themes")
-        same = (302, {"location": "https://github.com/eveaeternam/shell-b-themes"})
-        self.assertEqual(self.resolve("EveAeternam/Shell-B-Themes", same), "EveAeternam/Shell-B-Themes")
-        self.assertEqual(self.resolve("EveAeternam/Shell-B-Themes", (404, {})), "EveAeternam/Shell-B-Themes")
-        self.assertEqual(self.resolve("EveAeternam/Shell-B-Themes", (302, {"location": "https://evil.example/x/y"})),
-                         "EveAeternam/Shell-B-Themes")
-        self.assertEqual(self.resolve("EveAeternam/Shell-B-Themes", error=httpx.ConnectError("down")),
-                         "EveAeternam/Shell-B-Themes")
+        self.assertEqual(self.resolve("ShellB-App/Shell-B-Themes", moved), "shellb-org/Themes")
+        same = (302, {"location": "https://github.com/shellb-app/shell-b-themes"})
+        self.assertEqual(self.resolve("ShellB-App/Shell-B-Themes", same), "ShellB-App/Shell-B-Themes")
+        self.assertEqual(self.resolve("ShellB-App/Shell-B-Themes", (404, {})), "ShellB-App/Shell-B-Themes")
+        self.assertEqual(self.resolve("ShellB-App/Shell-B-Themes", (302, {"location": "https://evil.example/x/y"})),
+                         "ShellB-App/Shell-B-Themes")
+        self.assertEqual(self.resolve("ShellB-App/Shell-B-Themes", error=httpx.ConnectError("down")),
+                         "ShellB-App/Shell-B-Themes")
         self.assertEqual(self.resolve("someone/else", moved), "someone/else")
         community._via_cache.clear()
 

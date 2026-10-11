@@ -8,7 +8,7 @@ the most important kind of bug we can have. Thank you for looking.
 Please **don't open a public issue** for anything that could let someone read, change or run what they shouldn't.
 Instead:
 
-1. Use GitHub's private reporting: **[Report a vulnerability](https://github.com/EveAeternam/Shell-B/security/advisories/new)**.
+1. Use GitHub's private reporting: **[Report a vulnerability](https://github.com/ShellB-App/Shell-B/security/advisories/new)**.
 2. Or email the maintainer at the address on the [EveAeternam](https://github.com/EveAeternam) profile, with
    `Shell:B security` in the subject.
 
@@ -34,7 +34,7 @@ Anything that breaks one of these promises:
 
 Things like a prompt that makes a local model say something rude, or a model that can be talked into using a tool it
 legitimately has, are model-behaviour questions rather than security holes, though we still like to hear about them in
-[Discussions](https://github.com/EveAeternam/Shell-B/discussions).
+[Discussions](https://github.com/ShellB-App/Shell-B/discussions).
 
 ## Hardening a deployment
 

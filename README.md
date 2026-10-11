@@ -8,9 +8,9 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-blue.svg?style=for-the-badge&logo=gnu" alt="License: AGPL v3" /></a>
-  <a href="https://github.com/EveAeternam/Shell-B/actions/workflows/check.yml"><img src="https://img.shields.io/github/actions/workflow/status/EveAeternam/Shell-B/check.yml?branch=main&style=for-the-badge&label=checks" alt="Checks" /></a>
-  <a href="https://github.com/EveAeternam/Shell-B/releases"><img src="https://img.shields.io/github/v/release/EveAeternam/Shell-B?style=for-the-badge&label=release&color=c96442" alt="Latest release" /></a>
-  <a href="https://github.com/EveAeternam/Shell-B/discussions"><img src="https://img.shields.io/badge/Discussions-open-c96442.svg?style=for-the-badge&logo=github" alt="Discussions" /></a>
+  <a href="https://github.com/ShellB-App/Shell-B/actions/workflows/check.yml"><img src="https://img.shields.io/github/actions/workflow/status/ShellB-App/Shell-B/check.yml?branch=main&style=for-the-badge&label=checks" alt="Checks" /></a>
+  <a href="https://github.com/ShellB-App/Shell-B/releases"><img src="https://img.shields.io/github/v/release/ShellB-App/Shell-B?style=for-the-badge&label=release&color=c96442" alt="Latest release" /></a>
+  <a href="https://github.com/ShellB-App/Shell-B/discussions"><img src="https://img.shields.io/badge/Discussions-open-c96442.svg?style=for-the-badge&logo=github" alt="Discussions" /></a>
 </p>
 <p align="center">
   <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.12" /></a>
@@ -55,7 +55,7 @@ It isn't a finished appliance. It's a living scaffold, made to be taken apart an
 Not one generic chatbot but a team of specialists. Each has its own model, prompt, temperature, reasoning effort, tools
 and context size, all editable live in the **Agent Lab**. They hand work to each other through `ask_agent` and leave
 each other notes across chats. Want more? The community keeps a roster in
-[Shell-B-Agents](https://github.com/EveAeternam/Shell-B-Agents).
+[Shell-B-Agents](https://github.com/ShellB-App/Shell-B-Agents).
 
 | | Agent | Role | What they reach for |
 | :---: | :--- | :--- | :--- |
@@ -129,16 +129,16 @@ picker opens, and everything is checked again on install.
 
 | Repository | What's in it | Where it shows up |
 | :--- | :--- | :--- |
-| **[Shell-B](https://github.com/EveAeternam/Shell-B)** · this one | The app: server, UI, sandbox, manual | |
-| **[Shell-B-Themes](https://github.com/EveAeternam/Shell-B-Themes)** | Themes as data: palette, fonts, backdrop, particles. Contrast-checked on install | Settings → Appearance → *Community themes* |
-| **[Shell-B-Screensavers](https://github.com/EveAeternam/Shell-B-Screensavers)** | Self-contained `index.html` pieces that run in a sandboxed frame when you're idle | Settings → Appearance → Screensaver → *Browse community* |
-| **[Shell-B-Agents](https://github.com/EveAeternam/Shell-B-Agents)** | Agent personas: prompt, model hints, temperature, effort and tool list, ready for the Agent Lab | Agent Lab → *New agent* |
-| **[Shell-B-Studio-Templates](https://github.com/EveAeternam/Shell-B-Studio-Templates)** | Starting points for Studio projects: a launch page, a deck, a dashboard, a full-stack starter | Studio → New project → *Start from a template* |
-| **[Shell-B-Skills](https://github.com/EveAeternam/Shell-B-Skills)** | Agent skills in the Claude Agent Skills format, with references | Tools & Connectors → *Community*, then *Skills* |
-| **[Shell-B-Worlds](https://github.com/EveAeternam/Shell-B-Worlds)** | Guided tours, places with cards and GeoJSON overlays for the Worlds app | A map block in chat, Worlds → Bookmarks → *Import* |
-| **[Shell-B-Voices](https://github.com/EveAeternam/Shell-B-Voices)** | Voice descriptions HERMES designs into expressive voices on your machine. No recordings | Settings → Speech → *Describe* |
-| **[Shell-B-Apps](https://github.com/EveAeternam/Shell-B-Apps)** | Finished Studio projects that run offline in the preview: a timer, a notebook, a converter, a board | Studio → *New project* |
-| **[Shell-B-Translations](https://github.com/EveAeternam/Shell-B-Translations)** | Interface catalogues, one file per language | A pull request to `ui/src/i18n` |
+| **[Shell-B](https://github.com/ShellB-App/Shell-B)** · this one | The app: server, UI, sandbox, manual | |
+| **[Shell-B-Themes](https://github.com/ShellB-App/Shell-B-Themes)** | Themes as data: palette, fonts, backdrop, particles. Contrast-checked on install | Settings → Appearance → *Community themes* |
+| **[Shell-B-Screensavers](https://github.com/ShellB-App/Shell-B-Screensavers)** | Self-contained `index.html` pieces that run in a sandboxed frame when you're idle | Settings → Appearance → Screensaver → *Browse community* |
+| **[Shell-B-Agents](https://github.com/ShellB-App/Shell-B-Agents)** | Agent personas: prompt, model hints, temperature, effort and tool list, ready for the Agent Lab | Agent Lab → *New agent* |
+| **[Shell-B-Studio-Templates](https://github.com/ShellB-App/Shell-B-Studio-Templates)** | Starting points for Studio projects: a launch page, a deck, a dashboard, a full-stack starter | Studio → New project → *Start from a template* |
+| **[Shell-B-Skills](https://github.com/ShellB-App/Shell-B-Skills)** | Agent skills in the Claude Agent Skills format, with references | Tools & Connectors → *Community*, then *Skills* |
+| **[Shell-B-Worlds](https://github.com/ShellB-App/Shell-B-Worlds)** | Guided tours, places with cards and GeoJSON overlays for the Worlds app | A map block in chat, Worlds → Bookmarks → *Import* |
+| **[Shell-B-Voices](https://github.com/ShellB-App/Shell-B-Voices)** | Voice descriptions HERMES designs into expressive voices on your machine. No recordings | Settings → Speech → *Describe* |
+| **[Shell-B-Apps](https://github.com/ShellB-App/Shell-B-Apps)** | Finished Studio projects that run offline in the preview: a timer, a notebook, a converter, a board | Studio → *New project* |
+| **[Shell-B-Translations](https://github.com/ShellB-App/Shell-B-Translations)** | Interface catalogues, one file per language | A pull request to `ui/src/i18n` |
 | **[get.shellb.app](https://get.shellb.app)** | The desktop helpers (Screen, Node, link handler) and how to connect to the API | |
 
 Made something you like? Export it from Shell:B and open a pull request in the matching repository. Their CONTRIBUTING
@@ -183,7 +183,7 @@ You need **Python 3.12**, **Node 20+**, **Docker** (for the code sandbox) and **
 supports tools. Voice, music, images and the offline wiki each come from an optional local service you can add later.
 
 ```bash
-git clone https://github.com/EveAeternam/Shell-B.git ~/shellb/web
+git clone https://github.com/ShellB-App/Shell-B.git ~/shellb/web
 cd ~/shellb/web
 python3 -m venv venv && venv/bin/pip install -r requirements.txt
 cd ui && npm ci && npm run vendor && npm run build && cd ..
@@ -222,8 +222,8 @@ Login, networking, guests, backups and the rest of the operating notes are in th
 | **[Manual](docs/MANUAL.md)** | Every feature, how it works, which file does it |
 | **[API](docs/API.md)** | Keys and modes, the native and OpenAI-compatible endpoints, the MCP server |
 | **[Changelog](docs/changelog.json)** | What shipped, newest first. Also under Settings → Changelog inside the app |
-| **[Releases](https://github.com/EveAeternam/Shell-B/releases)** | Tagged snapshots with notes generated from the changelog |
-| **[Discussions](https://github.com/EveAeternam/Shell-B/discussions)** | Questions, show and tell, ideas. Bugs go to [Issues](https://github.com/EveAeternam/Shell-B/issues) |
+| **[Releases](https://github.com/ShellB-App/Shell-B/releases)** | Tagged snapshots with notes generated from the changelog |
+| **[Discussions](https://github.com/ShellB-App/Shell-B/discussions)** | Questions, show and tell, ideas. Bugs go to [Issues](https://github.com/ShellB-App/Shell-B/issues) |
 | **[Security](SECURITY.md)** | What Shell:B's privacy model promises, and how to report a hole in it privately |
 
 ## 🤝 Contributing

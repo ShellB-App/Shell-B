@@ -1,8 +1,8 @@
 """Community gallery: themes and screensavers other people published on GitHub, browsed and installed from Settings.
 
 Sources (kv `gallery_sources`, the owner can add more): a GitHub repository per kind, laid out like
-EveAeternam/Shell-B-Themes (themes/<id>/theme.json), EveAeternam/Shell-B-Screensavers (screensavers/<id>/index.html
-+ saver.json + preview image) and EveAeternam/Shell-B-Studio-Templates (templates/<id>/template.json + project files). Each is fetched the way the Community Hub fetches skill repositories: one tarball at a
+ShellB-App/Shell-B-Themes (themes/<id>/theme.json), ShellB-App/Shell-B-Screensavers (screensavers/<id>/index.html
++ saver.json + preview image) and ShellB-App/Shell-B-Studio-Templates (templates/<id>/template.json + project files). Each is fetched the way the Community Hub fetches skill repositories: one tarball at a
 pinned commit (community.fetch_repo, public-internet guard, tarfile "data" filter, size cap), kept under data/community/
 repos, so browsing works offline once a source has been fetched. The catalogue (index.json, or the folders when a fork
 has none) is cached in kv `gallery_<kind>` with the commit it came from.
@@ -35,9 +35,9 @@ import themes
 router = APIRouter(prefix="/api/gallery")
 KINDS = ("theme", "screensaver", "template")
 DEFAULT_SOURCES = [
-    {"id": "shellb-themes", "kind": "theme", "repo": "EveAeternam/Shell-B-Themes", "ref": "main"},
-    {"id": "shellb-screensavers", "kind": "screensaver", "repo": "EveAeternam/Shell-B-Screensavers", "ref": "main"},
-    {"id": "shellb-templates", "kind": "template", "repo": "EveAeternam/Shell-B-Studio-Templates", "ref": "main"},
+    {"id": "shellb-themes", "kind": "theme", "repo": "ShellB-App/Shell-B-Themes", "ref": "main"},
+    {"id": "shellb-screensavers", "kind": "screensaver", "repo": "ShellB-App/Shell-B-Screensavers", "ref": "main"},
+    {"id": "shellb-templates", "kind": "template", "repo": "ShellB-App/Shell-B-Studio-Templates", "ref": "main"},
 ]
 INSTALLED_KEY = "gallery_installed"
 REFRESH_AFTER = 24 * 3600

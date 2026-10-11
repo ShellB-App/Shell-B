@@ -47,7 +47,7 @@ GH = re.compile(r"^(?:https?://github\.com/)?([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+?
 
 DEFAULT_SOURCES = [
     {"id": "mcp-registry", "kind": "registry", "name": "Official MCP Registry", "url": REGISTRY},
-    {"id": "shellb-skills", "kind": "github", "name": "Shell:B community skills", "repo": "EveAeternam/Shell-B-Skills", "ref": "HEAD",
+    {"id": "shellb-skills", "kind": "github", "name": "Shell:B community skills", "repo": "ShellB-App/Shell-B-Skills", "ref": "HEAD",
      "subdir": "skills"},
     {"id": "anthropic-skills", "kind": "github", "name": "Anthropic skills", "repo": "anthropics/skills", "ref": "HEAD",
      "subdir": "skills"},
@@ -118,11 +118,11 @@ def remove_source(sid: str):
 
 # Shell:B's own repositories are looked up through git.shellb.app/<name>, a redirect (Cloudflare, not this machine) to
 # wherever each one lives now, so they can move without an app update. The GitHub name stays the fallback.
-SHELLB_VIA = {"EveAeternam/Shell-B-Themes": "themes", "EveAeternam/Shell-B-Screensavers": "screensavers",
-              "EveAeternam/Shell-B-Studio-Templates": "templates", "EveAeternam/Shell-B-Skills": "skills",
-              "EveAeternam/Shell-B-Agents": "agents", "EveAeternam/Shell-B-Translations": "translations",
-              "EveAeternam/Shell-B-Worlds": "worlds", "EveAeternam/Shell-B-Voices": "voices",
-              "EveAeternam/Shell-B-Apps": "apps"}
+SHELLB_VIA = {"ShellB-App/Shell-B-Themes": "themes", "ShellB-App/Shell-B-Screensavers": "screensavers",
+              "ShellB-App/Shell-B-Studio-Templates": "templates", "ShellB-App/Shell-B-Skills": "skills",
+              "ShellB-App/Shell-B-Agents": "agents", "ShellB-App/Shell-B-Translations": "translations",
+              "ShellB-App/Shell-B-Worlds": "worlds", "ShellB-App/Shell-B-Voices": "voices",
+              "ShellB-App/Shell-B-Apps": "apps"}
 VIA_HOST = "https://git.shellb.app"
 _via_cache: dict[str, tuple[float, str]] = {}
 

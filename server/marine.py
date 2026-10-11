@@ -21,7 +21,7 @@ router = APIRouter(prefix="/api/marine")
 WORMS = "https://www.marinespecies.org/rest"
 OBIS = "https://api.obis.org/v3"
 OPEN_METEO = "https://marine-api.open-meteo.com/v1/marine"
-UA = {"User-Agent": "Shell:B marine (local assistant; https://github.com/EveAeternam/Shell-B)"}
+UA = {"User-Agent": "Shell:B marine (local assistant; https://github.com/ShellB-App/Shell-B)"}
 
 
 _cache: dict[str, tuple[float, object]] = {}
