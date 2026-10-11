@@ -43,6 +43,15 @@ LAYERS = {
                    "note": "NASA's cloud-free composite of the whole planet (2004), with shaded relief and the ocean floor."},
     "nightlights": {"layer": "VIIRS_Black_Marble", "name": "Black Marble, night lights", "since": "2012-01-01", "level": 8, "ext": "png", "daily": False,
                     "note": "City lights at night, the 2016 Black Marble composite."},
+    # the sea layers (server/marine.py, the Worlds "Sea surface" layer): PNGs, transparent over land, drawn over the map
+    # rather than picked as imagery. `lag`: days behind today that GIBS normally has the image complete.
+    "sst": {"layer": "GHRSST_L4_MUR_Sea_Surface_Temperature", "name": "Sea surface temperature (MUR)", "since": "2002-06-01", "level": 7,
+            "ext": "png", "daily": True, "sea": True, "lag": 2, "note": "Daily foundation SST, 1 km blended from satellites and buoys, 0–32 °C."},
+    "sstanom": {"layer": "GHRSST_L4_MUR_Sea_Surface_Temperature_Anomalies", "name": "Sea temperature anomaly (MUR)", "since": "2002-06-01",
+                "level": 7, "ext": "png", "daily": True, "sea": True, "lag": 2,
+                "note": "Difference from the 2003–2014 mean for the day, −3 to +3 °C: marine heatwaves show red."},
+    "chl": {"layer": "OCI_PACE_Chlorophyll_a", "name": "Chlorophyll a (PACE)", "since": "2024-04-10", "level": 7, "ext": "png",
+            "daily": True, "sea": True, "lag": 1, "note": "Phytoplankton pigment from NASA's PACE ocean colour satellite; clouds leave gaps."},
 }
 _ID = re.compile(r"^[a-z0-9-]{1,20}$")
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -50,22 +59,23 @@ _writes = 0
 _lock = asyncio.Lock()
 
 
-def latest_date() -> str:
+def latest_date(lag: int = 1) -> str:
     """GIBS usually has yesterday's daily imagery complete; today's arrives in swaths through the day."""
-    return (date.today() - timedelta(days=1)).isoformat()
+    return (date.today() - timedelta(days=lag)).isoformat()
 
 
 def clamp_date(layer: dict, d: str) -> str:
     """The date GIBS should be asked for: within the layer's range, and a fixed one for composites."""
     if not layer["daily"]:
         return layer["since"]
-    lo, hi = layer["since"], latest_date()
+    lo, hi = layer["since"], latest_date(layer.get("lag", 1))
     return lo if d < lo else hi if d > hi else d
 
 
 @router.get("/imagery")
 def imagery():
-    return {"layers": [{"id": k, **{x: v[x] for x in ("name", "since", "level", "daily", "note")}} for k, v in LAYERS.items()], "latest": latest_date()}
+    return {"layers": [{"id": k, **{x: v[x] for x in ("name", "since", "level", "daily", "note")}} for k, v in LAYERS.items() if not v.get("sea")],
+            "latest": latest_date()}
 
 
 def _tile_ok(z: int, x: int, y: int, level: int) -> bool:

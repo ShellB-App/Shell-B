@@ -48,6 +48,7 @@ import studio_edit
 import transcribe
 import translate
 import deeptime
+import marine
 import media
 import generate
 import modelhub
@@ -158,6 +159,7 @@ feeds.register()
 shares.init()
 translate.register()
 deeptime.register()
+marine.register()
 gitremote.register()
 inbox.init()
 inbox.register()
@@ -217,6 +219,7 @@ roster.grant_tools("tools_2026_10_10", {  # tools that reached no stored agent b
 roster.grant_tools("tools_worlds_2026_10_11", {"atlas": ["read_map_card"]})
 roster.grant_tools("tools_feeds_2026_10_10", {"shellb": ["feeds", "translate"], "minerva": ["feeds"], "mimir": ["feeds", "translate"], "spark": ["translate"]})
 roster.grant_tools("tools_deeptime_2026_10_10", {"shellb": ["deep_time"], "mimir": ["deep_time"], "minerva": ["deep_time"], "atlas": ["deep_time"]})
+roster.grant_tools("tools_marine_2026_10_11", {"shellb": ["marine"], "minerva": ["marine"], "mimir": ["marine"], "atlas": ["marine"]})
 roster.grant_tools("tools_media_2026_10_10", {"shellb": ["transcribe"], "minerva": ["transcribe"], "heimdall": ["transcribe"], "nyx": ["edit_image"], "daedalus": ["edit_image"]})
 compaction.migrate_legacy()  # after episodes.init: the FTS triggers index the messages it puts back
 feedback.init()
@@ -286,6 +289,7 @@ app.include_router(feeds.router)
 app.include_router(shares.router)
 app.include_router(shares.public_router)
 app.include_router(translate.router)
+app.include_router(marine.router)
 app.include_router(gitremote.router)
 app.include_router(inbox.router)
 app.include_router(guests.admin_router)  # owner side of Shell:B Guest; the guests' own app is guest_app.py

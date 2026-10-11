@@ -1,13 +1,14 @@
 // The Worlds app's toggleable overlays: one table drives the Layers menu, the saved prefs and which world offers what.
 import type { LucideIcon } from 'lucide-react';
-import { Anchor, Building2, CloudRain, Compass, Earth, Flame, Footprints, Grid3x3, Hand, Image as ImageIcon, Landmark as LandmarkIcon, Mountain, MountainSnow, Plane, Rocket, Satellite, Snowflake, Sparkles, Sun, SunMoon, Tornado, Video, Wheat, Activity, Zap } from 'lucide-react';
+import { Anchor, Building2, CloudRain, Compass, Earth, Flame, Footprints, Grid3x3, Hand, Image as ImageIcon, Landmark as LandmarkIcon, Mountain, MountainSnow, Plane, Rocket, Satellite, Snowflake, Sparkles, Sun, SunMoon, Tornado, Video, Wheat, Activity, Zap, Waves, Fish } from 'lucide-react';
 import { getLandmarksForBody } from './landmarks';
 import { getTraversesForBody } from './traverses';
 
 export type OverlayId =
   | 'flights' | 'satellites' | 'quakes' | 'daynight' | 'grid' | 'stars'
   | 'landmarks' | 'traverses' | 'wonders' | 'shipwrecks' | 'launchsites' | 'webcams' | 'relief' | 'terrain3d'
-  | 'caves' | 'neolithic' | 'iceage' | 'imagery' | 'radar' | 'buildings' | 'places' | 'aurora' | 'plumes' | 'dust' | 'atmosphere';
+  | 'caves' | 'neolithic' | 'iceage' | 'imagery' | 'radar' | 'buildings' | 'places' | 'aurora' | 'plumes' | 'dust' | 'atmosphere'
+  | 'sea' | 'marinelife';
 
 /** What the current world offers beyond its id: whether elevation tiles are installed, whether it is the OSM vector map. */
 export interface WorldCtx { terrain: boolean; vector?: boolean }
@@ -35,12 +36,14 @@ export const OVERLAYS: OverlayDef[] = [
   { id: 'imagery', label: 'Satellite imagery', hint: 'NASA daily true colour; follows the clock’s date', icon: ImageIcon, color: '#34d399', group: 'Live', on: earth, default: false },
   { id: 'aurora', label: 'Aurora', hint: 'Where the northern and southern lights are likely in the next half hour (NOAA)', icon: Zap, color: '#4ade80', group: 'Live', on: earth, default: false },
   { id: 'radar', label: 'Rain & snow', hint: 'NASA satellite precipitation, half-hourly, a few hours behind', icon: CloudRain, color: '#60a5fa', group: 'Live', on: earth, default: false },
+  { id: 'sea', label: 'Sea surface', hint: 'Temperature, heatwave anomaly and chlorophyll from NASA satellites; follows the clock’s date', icon: Waves, color: '#22d3ee', group: 'Live', on: earth, default: false },
   { id: 'landmarks', label: 'Landmarks', hint: 'Landing sites and major features', icon: LandmarkIcon, color: '#10b981', group: 'Places', on: b => getLandmarksForBody(b).length > 0, default: true },
   { id: 'traverses', label: 'Rover traverses', hint: 'Routes driven and walked', icon: Footprints, color: '#a78bfa', group: 'Places', on: b => getTraversesForBody(b).length > 0, default: true },
   { id: 'wonders', label: 'Wonders', hint: 'Ancient, modern and natural', icon: Sparkles, color: '#f59e0b', group: 'Places', on: earth, default: false },
   { id: 'shipwrecks', label: 'Shipwrecks', hint: 'Famous wrecks and their depths', icon: Anchor, color: '#22d3ee', group: 'Places', on: earth, default: false },
   { id: 'caves', label: 'Painted caves', hint: 'Ice Age art, shelters and caves', icon: Hand, color: '#e2725b', group: 'Places', on: earth, default: false },
   { id: 'neolithic', label: 'Neolithic', hint: 'First villages, temples and megaliths', icon: Wheat, color: '#cbd5e1', group: 'Places', on: earth, default: false },
+  { id: 'marinelife', label: 'Marine life', hint: 'Where a species has been recorded (OBIS)', icon: Fish, color: '#2dd4bf', group: 'Places', on: earth, default: false },
   { id: 'launchsites', label: 'Spaceports', hint: 'Orbital launch sites', icon: Rocket, color: '#fb923c', group: 'Places', on: earth, default: false },
   { id: 'webcams', label: 'Webcams', hint: 'Links to public live streams', icon: Video, color: '#f472b6', group: 'Places', on: earth, default: false },
   { id: 'places', label: 'Atlas places', hint: 'Points Atlas added, each with its card', icon: Compass, color: '#f472b6', group: 'Places', on: () => true, default: true },

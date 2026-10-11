@@ -13,7 +13,7 @@ import type { FeatureCollection, Point } from 'geojson';
 import {
   Activity, Anchor, Bookmark, Check, Compass, Copy, Crosshair, Download, Eye, Flag, Globe2, Info, Loader2, LocateFixed,
   Map as MapIcon, MapPin, Navigation, Orbit, PanelLeftClose, PanelLeftOpen, Radar, Rocket, Route as RouteIcon, Ruler,
-  Satellite, Search, Sparkles, Thermometer, Video, Wheat, Hand, X, Image as ImageIcon, CloudRain, Mountain, Zap,
+  Satellite, Search, Sparkles, Thermometer, Video, Wheat, Hand, X, Image as ImageIcon, CloudRain, Mountain, Zap, Waves,
 } from 'lucide-react';
 import { drawOverlays, fetchBodies, fmtCoord, frameSpec, hasScene, loadMapLib, styleFor, type MapBody, type MapLib, type MapSpec, type TourStop } from './core';
 import { MAPS_HANDOFF, useDarkTheme } from './MapCard';
@@ -58,6 +58,8 @@ import { ASK_ATLAS, NOTES_CHANGED, OPEN_MEDIA, OPEN_MODEL, OPEN_VIEW3D, mediaSrc
 import { PLACE_COLOR, fetchPlaces, type Place } from './places';
 import { PlaceCard } from './PlaceCard';
 import { attachBuildings } from './buildings';
+import { LIFE_PREF, SEA_PREF, attachLife, attachSea, fetchGrid, seaDay, type GridStats, type SeaHandle, type SeaVar, type Taxon } from './marine';
+import { LifeChip, SeaCard, SeaChip } from './MarinePanels';
 import { IMAGERY_PREF, attachImagery, attachRadar, dayOf, fetchImageryCatalog, fetchRadarFrames, type ImageryHandle, type ImageryLayer, type RadarFrames, type RadarHandle } from './imagery';
 import { TourPlayer } from './TourPlayer';
 import { ModelLightbox, ModelStrip, ModelViewer } from './ModelViewer';
@@ -236,7 +238,7 @@ export function MapsApp() {
     const q = location.hash + location.search;
     return /[?&]directions\b/.test(q) ? 'directions' : /[?&]dossier\b/.test(q) ? 'dossier' : /[?&]bookmarks\b/.test(q) ? 'bookmarks' : null;
   });
-  const [pinCard, setPinCard] = useState<'weather' | 'sky' | null>(null);
+  const [pinCard, setPinCard] = useState<'weather' | 'sky' | 'sea' | null>(null);
   const [viewport, setViewport] = useState({ lat: 0, lon: 0, zoom: 2 });
   const [atlasRequest, setAtlasRequest] = useState<{ text: string; n: number } | null>(null);
   const [lightbox, setLightbox] = useState<NoteMedia | null>(null);
@@ -515,6 +517,38 @@ export function MapsApp() {
     return own(() => { if (imageryRef.current === h) imageryRef.current = null; h.detach(); });
   }, [map, imageryOn, imageryLayer, mapState?.body, reliefOn, own]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { imageryRef.current?.setDay(imageryDay); }, [imageryDay]);
+
+  // ── The sea, for marine biology: satellite sea surface and species records ──
+  const seaOn = has('sea');
+  const [seaVar, setSeaVarState] = useState<SeaVar>(() => store.get<SeaVar>(SEA_PREF) ?? 'sst');
+  const setSeaVar = (v: SeaVar) => { setSeaVarState(v); store.set(SEA_PREF, v); };
+  const seaShownDay = seaDay(seaVar, imageryDay);
+  const seaRef = useRef<SeaHandle | null>(null);
+  useEffect(() => {
+    if (!map || !seaOn || mapState?.body !== 'earth') return;
+    const h = attachSea(map, seaVar, seaShownDay);
+    seaRef.current = h;
+    return own(() => { if (seaRef.current === h) seaRef.current = null; h.detach(); });
+  }, [map, seaOn, mapState?.body, reliefOn, imageryOn, own]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { seaRef.current?.set(seaVar, seaShownDay); }, [seaVar, seaShownDay]);
+
+  const lifeOn = has('marinelife');
+  const [lifeTaxon, setLifeTaxonState] = useState<Taxon | null>(() => store.get<Taxon>(LIFE_PREF) ?? null);
+  const setLifeTaxon = (x: Taxon | null) => { setLifeTaxonState(x); store.set(LIFE_PREF, x); };
+  const [life, setLife] = useState<{ aphia: number; grid: FeatureCollection; stats: GridStats } | null>(null);
+  const [lifeLoading, setLifeLoading] = useState(false);
+  useEffect(() => {
+    if (!lifeOn || !lifeTaxon) { setLife(null); return; }
+    let alive = true;
+    setLifeLoading(true);
+    fetchGrid(lifeTaxon.aphia).then(r => { if (alive) setLife(r ? { aphia: lifeTaxon.aphia, ...r } : null); }).finally(() => { if (alive) setLifeLoading(false); });
+    return () => { alive = false; };
+  }, [lifeOn, lifeTaxon?.aphia]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!map || !lifeOn || !life || mapState?.body !== 'earth') return;
+    return own(attachLife(map, life.grid));
+  }, [map, lifeOn, life, mapState?.body, seaOn, reliefOn, imageryOn, own]);
+  const showSpecies = (x: Taxon) => { setLifeTaxon(x); if (!prefs.marinelife) toggleLayer('marinelife', true); };
 
   // ── Rain radar (RainViewer) ─────────────────────────────────────────────
   const radarOn = has('radar') && clock.live;
@@ -1298,7 +1332,7 @@ export function MapsApp() {
                 </div>
               )}
 
-              {hasMap && isEarth && (imageryOn || (radarOn && radarFrames)) && (
+              {hasMap && isEarth && (imageryOn || (radarOn && radarFrames) || seaOn || lifeOn) && (
                 <div className={clsx('absolute left-3 z-20 flex flex-col gap-1.5 pointer-events-none', selection ? 'bottom-14' : 'top-16')}>
                   {imageryOn && (
                     <div className="pointer-events-auto flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] sb-map-glass px-2.5 py-1.5 text-[11px]">
@@ -1310,6 +1344,8 @@ export function MapsApp() {
                       <span className="font-mono tabular-nums text-[var(--text-secondary)]" title="Follows the map clock; use the time bar to pick a day">{imageryCat.find(l => l.id === imageryLayer)?.daily === false ? 'composite' : imageryDay}</span>
                     </div>
                   )}
+                  {seaOn && <SeaChip v={seaVar} onChange={setSeaVar} day={seaShownDay} />}
+                  {lifeOn && <LifeChip taxon={lifeTaxon} stats={life?.stats ?? null} loading={lifeLoading} onPick={setLifeTaxon} onClear={() => setLifeTaxon(null)} />}
                   {radarOn && radarFrames && radarFrame != null && (
                     <div className="pointer-events-auto flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] sb-map-glass px-2.5 py-1.5 text-[11px]">
                       <CloudRain className="w-3.5 h-3.5 text-sky-400 shrink-0" />
@@ -1377,6 +1413,7 @@ export function MapsApp() {
                       <PinButton onClick={copyPin} title="Copy coordinates">{copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}</PinButton>
                       {hasSky(bodyId) && <PinButton on={pinCard === 'sky'} onClick={() => setPinCard(c => (c === 'sky' ? null : 'sky'))} title="The sky from here"><Eye className="w-3.5 h-3.5" /></PinButton>}
                       {isEarth && <PinButton on={pinCard === 'weather'} onClick={() => setPinCard(c => (c === 'weather' ? null : 'weather'))} title="Weather here"><Thermometer className="w-3.5 h-3.5" /></PinButton>}
+                      {isEarth && <PinButton on={pinCard === 'sea'} onClick={() => setPinCard(c => (c === 'sea' ? null : 'sea'))} title={t('The sea here: conditions and species recorded')}><Waves className="w-3.5 h-3.5" /></PinButton>}
                       {isEarth && <PinButton onClick={() => setDrawer('directions')} title="Directions to or from here"><RouteIcon className="w-3.5 h-3.5" /></PinButton>}
                       {body?.terrain && <PinButton onClick={() => setView3d({ lat: pin.lat, lon: pin.lon, label: fmtCoord(pin.lat, pin.lon), spanKm: isEarth ? 40 : 160 })} title="3D terrain here (a dive, at sea)"><Mountain className="w-3.5 h-3.5" /></PinButton>}
                       <PinButton onClick={() => { setPin(null); setPinCard(null); }} title="Remove pin"><X className="w-3.5 h-3.5" /></PinButton>
@@ -1420,6 +1457,11 @@ export function MapsApp() {
               {pinCard === 'weather' && pin && isEarth && (
                 <div className="absolute bottom-14 left-3 z-30">
                   <LiveWeatherWidget lat={pin.lat} lon={pin.lon} onClose={() => setPinCard(null)} />
+                </div>
+              )}
+              {pinCard === 'sea' && pin && isEarth && (
+                <div className="absolute bottom-14 left-3 z-30">
+                  <SeaCard lat={pin.lat} lon={pin.lon} onClose={() => setPinCard(null)} onShowSpecies={showSpecies} />
                 </div>
               )}
               {pinCard === 'sky' && pin && (

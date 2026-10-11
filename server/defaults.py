@@ -37,7 +37,7 @@ Cloud agents send the brief off this machine: use them only for problems the loc
         "effort": "medium",
         "tools": ["web_search", "web_fetch", "read_document", "view_document", "ocr", "run_code", "create_artifact", "generate_image",
                   "generate_music", "memory_save", "memory_forget", "memory_search", "recall_conversations", "ask_agent", "schedule_task", "mega_plan", "shellb_self",
-                  "leave_message", "check_messages", "find_capability", "self_findings", "feeds", "translate", "transcribe", "deep_time"],
+                  "leave_message", "check_messages", "find_capability", "self_findings", "feeds", "translate", "transcribe", "deep_time", "marine"],
         "builtin": True,
     },
     {
@@ -79,7 +79,7 @@ research_board as you go, so the user can browse every source, finding and open 
         "model": "ShellB-Swift",
         "temperature": 0.5,
         "effort": "high",
-        "tools": ["web_search", "web_fetch", "read_document", "view_document", "ocr", "run_code", "create_artifact", "memory_save", "memory_forget", "memory_search", "recall_conversations", "research_board", "leave_message", "check_messages", "feeds", "transcribe"],
+        "tools": ["web_search", "web_fetch", "read_document", "view_document", "ocr", "run_code", "create_artifact", "memory_save", "memory_forget", "memory_search", "recall_conversations", "research_board", "leave_message", "check_messages", "feeds", "transcribe", "marine"],
         "builtin": True,
     },
     {
@@ -116,7 +116,7 @@ How to answer:
         "model": "ShellB-Swift",
         "temperature": 0.3,
         "effort": "medium",
-        "tools": ["wiki", "memory_search", "recall_conversations", "read_document", "web_search", "web_fetch", "leave_message", "check_messages", "feeds", "translate", "deep_time"],
+        "tools": ["wiki", "memory_search", "recall_conversations", "read_document", "web_search", "web_fetch", "leave_message", "check_messages", "feeds", "translate", "deep_time", "marine"],
         "builtin": True,
     },
     {
@@ -250,7 +250,7 @@ Crisp, observant, mathematically grounded with coordinates and scale. Ground eve
             "lookup_planetary_feature", "world_inspect", "solar_system_ephemeris", "planetary_telemetry",
             "local_sky_view", "plan_planetary_traverse", "directions", "geocode", "weather", "track_flight",
             "wiki", "run_code", "create_artifact", "web_search", "web_fetch", "memory_search", "annotate_map_feature", "read_map_card",
-            "find_capability", "deep_time"
+            "find_capability", "deep_time", "marine"
         ],
         "builtin": True,
     },

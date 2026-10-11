@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-10-11",
+    "area": "Worlds",
+    "title": "Marine biology: species records, sea surface from satellites, the sea at any point",
+    "summary": "A new marine tool for Shell:B, Atlas, Mimir and Minerva: accepted names, classification, synonyms and English or French common names from WoRMS; where a species has been recorded, worldwide or near a place, from OBIS; the species recorded in an area, optionally within a group such as Cetacea; and live sea temperature, waves, swell and surface current. In Worlds: a Sea surface layer with NASA's daily sea temperature, temperature anomaly (marine heatwaves) and PACE chlorophyll, each with its legend and following the clock's date back through the archive; a Marine life layer that maps every OBIS record cell for a species you search by scientific or common name; and a waves button on a dropped pin for the sea conditions there and the species recorded within 25 km."
+  },
+  {
+    "date": "2026-10-11",
     "area": "Languages",
     "title": "The whole interface in French",
     "summary": "Research, Agent Lab, Tools & Connectors (API keys, guests, connectors, discover, skills, screen, webhooks), Models and the Model Store, Fleet, Wiki, Radio and the DJ, Shopping, Circles, Secretary, Scheduled, Mega plans, Assets, Generate, Notes, Me, Offline data, the kiosk and the smaller cards follow the interface language. About 1,800 more strings; the catalog holds 3,800."
