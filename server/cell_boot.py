@@ -75,7 +75,7 @@ def auth_me():
 
 
 def _host_path(path: str) -> bool:
-    if ADULT and path.startswith("/api/adult/files/"):  # Aphrodite's pictures, stored in the cell (its own data)
+    if ADULT and path.startswith(("/api/adult/files/", "/api/adult/memories")):  # her pictures and memory: the cell's own data
         return False
     return path.startswith(HOST_PATHS)
 

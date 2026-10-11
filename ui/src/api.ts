@@ -355,6 +355,8 @@ export const api = {
   claudeSkills: () => req<ClaudeSkill[]>('/api/skill-import/claude'),
   importClaudeSkills: (names: string[]) => req<{ imported: string[] }>('/api/skill-import/claude', { method: 'POST', body: json({ names }) }),
   providers: () => req<Record<string, Provider>>('/api/providers'),
+  adultMemories: () => req<{ id: string; text: string; created: number; updated: number }[]>('/api/adult/memories'),
+  adultForget: (id?: string) => req(id ? `/api/adult/memories/${encodeURIComponent(id)}` : '/api/adult/memories', { method: 'DELETE' }),
   adultCheckpoints: () => req<{ checkpoints: { name: string; size: number }[]; fluxDev: boolean }>('/api/adult/checkpoints'),
   saveProvider: (id: string, p: { apiKey?: string; baseUrl?: string }) =>
     req<Provider>(`/api/providers/${id}`, { method: 'PUT', body: json(p) }),

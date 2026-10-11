@@ -83,7 +83,7 @@ def text_search(q: str, mode="any", limit=60, exclude=None, conv_id=None) -> dic
         sql += " AND conv_id = ?"
         params.append(conv_id)
     else:  # incognito chats are never found from outside (privacy.py)
-        sql += " AND conv_id NOT IN (SELECT id FROM conversations WHERE incognito=1)"
+        sql += " AND conv_id NOT IN (SELECT id FROM conversations WHERE incognito=1 OR adult=1)"
     sql += " ORDER BY rank LIMIT ?"
     params.append(limit)
     with db.conn() as c:
@@ -105,7 +105,7 @@ def text_search(q: str, mode="any", limit=60, exclude=None, conv_id=None) -> dic
 async def semantic_search(q: str, settings: dict, k=8, exclude=None) -> dict[str, float]:
     with db.conn() as c:
         rows = c.execute("SELECT conv_id, embedding FROM conv_summary WHERE embedding IS NOT NULL "
-                         "AND conv_id NOT IN (SELECT id FROM conversations WHERE incognito=1)").fetchall()
+                         "AND conv_id NOT IN (SELECT id FROM conversations WHERE incognito=1 OR adult=1)").fetchall()
     rows = [r for r in rows if r["conv_id"] != exclude]
     if not rows or not q.strip():
         return {}
@@ -147,7 +147,7 @@ def _clip(text: str, n: int) -> str:
 
 def read(conv_id: str, around: str = "", budget=12000) -> str | None:
     conv = db.get_conversation(conv_id)
-    if not conv or conv.get("incognito"):  # incognito chats can't be read back (privacy.py)
+    if not conv or conv.get("incognito") or conv.get("adult"):  # incognito chats can't be read back (privacy.py)
         return None
     msgs = [m for m in db.list_messages(conv_id) if (m["content"] or "").strip()]
     start = 0

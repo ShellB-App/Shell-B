@@ -58,9 +58,9 @@ def send(to_conv: str, text: str, from_conv: str | None = None, sender: str = ""
     text = (text or "").strip()[:MAX_TEXT]
     if not text:
         raise ValueError("The message is empty.")
-    if not db.get_conversation(to_conv) or privacy.is_incognito(to_conv):
+    if not db.get_conversation(to_conv) or privacy.is_hidden(to_conv):
         raise LookupError(f"No conversation {to_conv}.")
-    if from_conv and privacy.is_incognito(from_conv):
+    if from_conv and privacy.is_hidden(from_conv):
         raise PermissionError("Incognito chats can't send messages.")
     if from_conv == to_conv:
         raise ValueError("That's this conversation; write it in your reply instead.")
@@ -94,7 +94,7 @@ def unread_count(conv_id: str | None) -> int:
 def prompt_note(conv_id: str | None) -> str:
     """System-prompt section for a chat with unread mail; empty otherwise. Shows the newest notes in full, so a quick
     one needs no tool call, and marks nothing read (check_messages does)."""
-    if not conv_id or privacy.is_incognito(conv_id):
+    if not conv_id or privacy.is_hidden(conv_id):
         return ""
     rows = _rows(conv_id, True)
     if not rows:

@@ -428,7 +428,7 @@ function AphroditeTab({ settings, locked, onChanged }: { settings?: Settings; lo
           <div className="flex-1">
             <div className="text-sm font-semibold">{on ? tx('Aphrodite is on') : tx('Aphrodite is off')}</div>
             <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed max-w-[65ch]">
-              {tx('An adult (18+) agent for explicit fiction, roleplay and images of fictional adult characters. It appears in your signed-in session, and for guests you allow one by one in the Guests tab. It runs on local models only, never delegates or is delegated to, and every chat is incognito. Original adult characters only; background checks run quietly on each request.')}
+              {tx('An adult (18+) agent for explicit fiction, roleplay and images of fictional adult characters. It appears in your signed-in session, and for guests you allow one by one in the Guests tab. It runs on local models only and never delegates or is delegated to. Her chats are kept, but nothing in them reaches Shell:B\'s shared memory, search or other agents; she remembers your tastes in her own memory, below. Original adult characters only; background checks run quietly on each request.')}
             </p>
           </div>
           <Toggle on={on} disabled={locked} label={tx('Aphrodite')} onChange={v => save({ adultEnabled: v })} />
@@ -448,6 +448,7 @@ function AphroditeTab({ settings, locked, onChanged }: { settings?: Settings; lo
         </select>
         {ckpts && ckpts.length === 0 && <div className="text-[11px] text-amber-400">{tx('No SDXL checkpoints installed yet.')}</div>}
       </div>
+      {on && !locked && <AphroditeMemories />}
       {error && <div className="text-xs text-red-400">{error}</div>}
     </div>
   );
@@ -471,7 +472,7 @@ function AphroditeGuestTab({ settings, onChanged }: { settings?: Settings; onCha
           <div className="flex-1">
             <div className="text-sm font-semibold">{on ? tx('Aphrodite is on') : tx('Aphrodite is off')}</div>
             <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed max-w-[65ch]">
-              {tx('Aphrodite writes explicit fiction and roleplay, and can make adult pictures, of fictional adult characters. She\'s available to you because the owner allowed it; whether she appears is up to you. Her chats are always incognito: nothing is remembered, and they delete themselves. Two limits always apply: every character is an adult, and never real people.')}
+              {tx('Aphrodite writes explicit fiction and roleplay, and can make adult pictures, of fictional adult characters. She\'s available to you because the owner allowed it; whether she appears is up to you. Her chats are kept, but nothing in them reaches your other agents, memory or search; she remembers your tastes in her own memory, below. Two limits always apply: every character is an adult, and never real people.')}
             </p>
           </div>
           {on && <Toggle on label={tx('Aphrodite')} onChange={() => save(false)} />}
@@ -486,6 +487,43 @@ function AphroditeGuestTab({ settings, onChanged }: { settings?: Settings; onCha
           </div>
         )}
       </div>
+      {on && <AphroditeMemories />}
+      {error && <div className="text-xs text-red-400">{error}</div>}
+    </div>
+  );
+}
+
+/** What Aphrodite remembers about your tastes (server/adult.py adult_memories): hers alone, yours to prune. */
+function AphroditeMemories() {
+  const [items, setItems] = useState<{ id: string; text: string; updated: number }[] | null>(null);
+  const [error, setError] = useState('');
+  const load = useCallback(() => api.adultMemories().then(setItems).catch(e => { setItems([]); setError(String(e)); }), []);
+  useEffect(() => { load(); }, [load]);
+  const forget = async (id?: string) => {
+    if (!id && !confirm(tx('Forget everything Aphrodite remembers about you?'))) return;
+    try { await api.adultForget(id); } catch (e) { setError(String(e)); }
+    load();
+  };
+  return (
+    <div className="p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] space-y-2">
+      <div className="flex items-center gap-2">
+        <div className="text-sm font-semibold flex-1">{tx('What she remembers')}</div>
+        {!!items?.length && <button className={btn.ghost} onClick={() => forget()}><Trash2 className="w-3.5 h-3.5" />{tx('Forget everything')}</button>}
+      </div>
+      <p className="text-xs text-[var(--text-muted)] leading-relaxed max-w-[65ch]">
+        {tx('Your preferences, kinks and no-gos, saved by Aphrodite as you tell her. Only she sees them: never Shell:B\'s shared memory or any other agent. Not saved in incognito chats.')}
+      </p>
+      {items === null ? <Loader2 className="w-4 h-4 animate-spin text-[var(--text-muted)]" />
+        : items.length === 0 ? <p className="text-xs text-[var(--text-muted)]">{tx('Nothing yet.')}</p>
+        : <ul className="divide-y divide-[var(--border-subtle)] rounded-lg border border-[var(--border-subtle)]">
+          {items.map(m => (
+            <li key={m.id} className="flex items-start gap-2 px-3 py-2 text-xs">
+              <span className="flex-1 leading-relaxed">{m.text}</span>
+              <button className={clsx(btn.icon, 'hover:text-red-400 -my-1')} title={tx('Forget')} aria-label={tx('Forget')} onClick={() => forget(m.id)}>
+                <Trash2 className="w-3.5 h-3.5" /></button>
+            </li>
+          ))}
+        </ul>}
       {error && <div className="text-xs text-red-400">{error}</div>}
     </div>
   );

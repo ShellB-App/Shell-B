@@ -530,7 +530,7 @@ class Turn:
         import adult
         if adult.is_adult(self.agent):
             self.mcp_specs = {}
-            return [t for t in names if t in adult.TOOLS_ALLOWED]
+            return adult.tools_for(names, self.conv_id)
         names = [t for t in names if t not in adult.TOOLS_ALLOWED]
         if self.plan:  # MCP tools are unknown quantities, so planning goes without them
             self.mcp_specs = {}

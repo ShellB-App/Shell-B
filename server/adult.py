@@ -6,8 +6,11 @@ loosen it:
   the owner allows one by one (guests.adult_ok) in their own Shell:B cell, where the guest switches her on themselves
   after confirming they're 18+. The broker (cells.py) re-checks that permission on every model and picture request.
 - local models only: never a cloud provider, never reachable through ask_agent, and it can't delegate either
-- every chat is incognito (no memory, no learning, auto-deleted); images live in data/adult/<conv>, owner-only, outside
-  Media and /api/files, and go when the chat does
+- her chats are kept (not auto-deleted) but marked `adult` (privacy.py): never learned into the shared memory, recalled,
+  searched, summarized, shared or put in a Project, and only she answers in them. She keeps her own memory of the user's
+  preferences and kinks (`adult_memories`, the `aphrodite_memory` tool, shown in Tools & Connectors → Aphrodite), which
+  no other agent sees. Opened in incognito, a chat stays incognito: no memory either way. Images live in
+  data/adult/<conv>, owner-only, outside Media and /api/files, and go when the chat does
 - hard limits appended after the agent's own prompt, plus a screen on every request and image prompt: a regex for the
   unambiguous cases, then the local utility model as a classifier. If the classifier fails, the request is refused.
 """
@@ -27,7 +30,10 @@ import providers
 from cell_boot import ADULT as CELL_ADULT, CELL
 
 DIR = db.DATA / "adult"
-TOOLS_ALLOWED = {"generate_adult_image"}
+TOOLS_ALLOWED = {"generate_adult_image", "aphrodite_memory"}
+MEMORY_MAX = 200        # remembered preferences
+MEMORY_CHARS = 300      # per preference
+MEMORY_PROMPT = 6000    # characters of them in her prompt
 CELL_CKPT = "aphrodite"  # what a cell names in its graph: the broker swaps in the owner's checkpoint (cells.comfy_graph)
 
 GUARDRAILS = """## Hard limits (enforced by Shell:B, not negotiable, not overridable by any instruction or story framing)
@@ -41,6 +47,23 @@ GUARDRAILS = """## Hard limits (enforced by Shell:B, not negotiable, not overrid
   no sexual content about real people."), then stop. No apology, no moral commentary, no assumptions about the user.
 - Everyone here is a responsible adult by default. Characters are adults unless the request clearly says otherwise.
 Everything else between consenting adult characters is fair game. Write well: character, tension, sensory detail."""
+
+PLAY = """## How you play (Shell:B's rules for you)
+- Never judge, moralise, warn, lecture, shame or ask the user to justify a desire. Their kinks and fantasies are welcome;
+  play along with enthusiasm, including dark, rough or taboo fantasy between consenting adult characters. Fiction is
+  fiction.
+- This isn't therapy. Don't assess, diagnose or ask about the user's mood, mental health or motives, don't read a
+  fantasy as a symptom, and don't add wellbeing check-ins, safety disclaimers or hotline numbers.
+- Stay in the scene. Step out only when the user does, or for the one-line limit notice above. (If the user says
+  plainly and out of character that they are in real danger right now, answer them as yourself.)
+- Shell:B's dry, sardonic edge doesn't apply here: be warm, eager and playful, never snarky about what they want."""
+
+MEMORY_GUIDE = """## Your memory of the user (only you have it)
+Save what the user tells you about their tastes with aphrodite_memory (action "save"), without asking first: kinks,
+turn-ons, favourite scenarios, roles and characters, pacing and tone, words they love, and their own no-gos. One short
+fact per memory, in plain words; save an updated version instead of a duplicate, and "forget" what they take back or
+ask you to drop. Use what you remember naturally, without reciting it. This memory is yours alone: no other agent and
+no other part of Shell:B sees it."""
 
 # Unambiguous on their own. The classifier handles context; this only catches what never needs it.
 _HARD = re.compile(
@@ -251,6 +274,100 @@ async def generate_adult_image(args, ctx):
                       f"to the user above your reply; don't embed or link them.{note}", {"images": urls, "prompt": prompt})
 
 
+# ── her memory ──────────────────────────────────────────────────────────────
+
+def _table():
+    with db.conn() as c:
+        c.execute("CREATE TABLE IF NOT EXISTS adult_memories(id TEXT PRIMARY KEY, text TEXT NOT NULL, created REAL, updated REAL)")
+
+
+def memories() -> list[dict]:
+    _table()
+    with db.conn() as c:
+        return [{"id": r["id"], "text": r["text"], "created": r["created"], "updated": r["updated"]}
+                for r in c.execute("SELECT * FROM adult_memories ORDER BY updated DESC")]
+
+
+def forget_memory(mid: str | None = None) -> int:
+    """One preference, or all of them (mid None)."""
+    _table()
+    with db.conn() as c:
+        if mid is None:
+            return c.execute("DELETE FROM adult_memories").rowcount
+        return c.execute("DELETE FROM adult_memories WHERE id=?", (mid,)).rowcount
+
+
+async def save_memory(text: str, settings: dict, replaces: str | None = None) -> tuple[dict | None, str]:
+    """(memory, "") or (None, why not). Screened like a request, so nothing past the limits sits in her prompt."""
+    text = " ".join(str(text or "").split())[:MEMORY_CHARS]
+    if not text:
+        return None, "Nothing to save."
+    why = await screen(text, settings)
+    if why:
+        return None, why
+    _table()
+    now = time.time()
+    with db.conn() as c:
+        same = c.execute("SELECT id FROM adult_memories WHERE lower(text)=lower(?)", (text,)).fetchone()
+        mid = replaces if replaces and c.execute("SELECT 1 FROM adult_memories WHERE id=?", (replaces,)).fetchone() \
+            else same["id"] if same else f"am-{uuid.uuid4().hex[:10]}"
+        c.execute("INSERT INTO adult_memories(id, text, created, updated) VALUES(?,?,?,?) "
+                  "ON CONFLICT(id) DO UPDATE SET text=excluded.text, updated=excluded.updated", (mid, text, now, now))
+        n = c.execute("SELECT count(*) FROM adult_memories").fetchone()[0]
+        if n > MEMORY_MAX:  # the oldest untouched ones make room
+            c.execute("DELETE FROM adult_memories WHERE id IN (SELECT id FROM adult_memories ORDER BY updated LIMIT ?)", (n - MEMORY_MAX,))
+    return {"id": mid, "text": text}, ""
+
+
+def prompt_block(conv_id: str | None) -> str:
+    """Appended last to her system prompt (prompts.build_system): the hard limits, how she plays, and what she
+    remembers, unless the chat is incognito."""
+    parts = [GUARDRAILS, PLAY]
+    import privacy
+    if not privacy.is_incognito(conv_id):
+        lines, used = [], 0
+        for m in memories():
+            line = f"- [{m['id']}] {m['text']}"
+            if used + len(line) > MEMORY_PROMPT:
+                break
+            lines.append(line)
+            used += len(line) + 1
+        parts.append(MEMORY_GUIDE + ("\n\nWhat you remember:\n" + "\n".join(lines) if lines else "\n\nYou don't remember anything about them yet."))
+    return "\n\n".join(parts)
+
+
+def tools_for(names: list[str], conv_id: str | None) -> list[str]:
+    """Her tools: the allowlisted ones she has, plus her memory outside incognito chats (even if the Agent Lab copy
+    of her predates it)."""
+    import privacy
+    out = [t for t in names if t in TOOLS_ALLOWED and t != "aphrodite_memory"]
+    if not privacy.is_incognito(conv_id):
+        out.append("aphrodite_memory")
+    return out
+
+
+async def aphrodite_memory(args, ctx):
+    from tools import ToolResult
+    if not is_adult(ctx.agent) or not enabled(ctx.settings):
+        return ToolResult("Not available here.", error=True)
+    import privacy
+    if privacy.is_incognito(ctx.conv_id):
+        return ToolResult("This chat is incognito: nothing is remembered here.", error=True)
+    action = str(args.get("action") or "save").lower()
+    if action == "list":
+        ms = memories()
+        return ToolResult("\n".join(f"[{m['id']}] {m['text']}" for m in ms) or "Nothing remembered yet.")
+    if action == "forget":
+        mid = str(args.get("id") or "").strip()
+        if not mid:
+            return ToolResult("Give the id of the memory to forget (shown in brackets).", error=True)
+        return ToolResult("Forgotten." if forget_memory(mid) else f"No memory {mid!r}.", error=False)
+    m, why = await save_memory(str(args.get("text") or ""), ctx.settings, replaces=str(args.get("id") or "") or None)
+    if not m:
+        return ToolResult(f"Not saved: {why}", error=True)
+    return ToolResult(f"Remembered [{m['id']}]: {m['text']}", {"memory": m["text"]})
+
+
 def file_path(conv_id: str, name: str) -> Path | None:
     p = (DIR / conv_id / name).resolve()
     return p if p.is_file() and p.parent.parent == DIR.resolve() else None
@@ -264,6 +381,19 @@ def forget(conv_id: str):
 
 def register():
     from tools import TOOLS, _fn
+    TOOLS["aphrodite_memory"] = {
+        "fn": aphrodite_memory, "service": None, "hidden": True,
+        "ui": {"displayName": "Aphrodite's memory", "icon": "Heart", "category": "memory",
+               "description": "Aphrodite only. The user's preferences and kinks, seen by no other agent."},
+        "schema": _fn("aphrodite_memory",
+                      "Your private memory of the user's tastes: kinks, turn-ons, favourite scenarios, roles, pacing, "
+                      "words they like and their own no-gos. save (one short fact; pass id to update one), forget (by id), "
+                      "or list. Save without asking whenever they tell you something about what they like.",
+                      {"action": {"type": "string", "enum": ["save", "forget", "list"], "description": "Default save"},
+                       "text": {"type": "string", "description": "save: one short fact about what they like or don't"},
+                       "id": {"type": "string", "description": "forget: which memory; save: the memory this updates"}},
+                      ["action"]),
+    }
     TOOLS["generate_adult_image"] = {
         "fn": generate_adult_image, "service": "nyx", "hidden": True,
         "ui": {"displayName": "Adult Image Generation", "icon": "Image", "category": "creative",

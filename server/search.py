@@ -274,12 +274,12 @@ def files(words: list[str], limit: int) -> list[dict]:
     ids = list({f[3] for f in hits})
     with db.conn() as c:
         meta = {r["id"]: r for r in c.execute(
-            f"SELECT c.id, c.title, c.project_id, c.incognito, p.kind FROM conversations c "
+            f"SELECT c.id, c.title, c.project_id, c.incognito, c.adult, p.kind FROM conversations c "
             f"LEFT JOIN projects p ON p.id=c.project_id WHERE c.id IN ({','.join('?' * len(ids))})", ids)}
     out = []
     for low, name, rel, cid, mtime in hits:
         m = meta.get(cid)
-        if not m or m["incognito"]:   # deleted or made incognito since the index was built
+        if not m or m["incognito"] or m["adult"]:   # deleted, or made incognito or an Aphrodite chat since the index was built
             continue
         route = f"#/{'code' if m['kind'] == 'code' else 'studio'}/{m['project_id']}" if m["project_id"] else f"#/c/{cid}"
         out.append({"id": f"file:{cid}/{rel}", "title": os.path.basename(rel), "snippet": f"/work/{rel}",

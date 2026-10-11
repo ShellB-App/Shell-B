@@ -3900,5 +3900,17 @@
  "Anomaly": "Anomalie",
  "Chlorophyll": "Chlorophylle",
  "low": "faible",
- "high": "forte"
+ "high": "forte",
+ "Secret found": "Secret découvert",
+ "Districts": "Quartiers",
+ "Descend in the bathysphere": "Descendre en bathysphère",
+ "The lighthouse": "Le phare",
+ "Real sea floor": "Le vrai fond marin",
+ "Depth": "Profondeur",
+ "Sound off": "Couper le son",
+ "Sound on": "Activer le son",
+ "Surface": "Remonter",
+ "Go there": "Y aller",
+ "Secret found: {name} ({n} of {total})": "Secret découvert : {name} ({n} sur {total})",
+ "Konami code! Every secret in Worlds is lit up until you leave.": "Code Konami ! Tous les secrets de Worlds s’allument jusqu’à ce que vous quittiez."
 }

@@ -354,7 +354,7 @@ function AphroditeSwitch({ guest: g, hostOn, onChange }: { guest: Guest; hostOn:
         <input type="checkbox" checked={allowed} disabled={!!why && !allowed} onChange={e => onChange(e.target.checked)} className="mt-0.5 accent-[var(--accent)]" />
         <span className="leading-relaxed text-[var(--text-secondary)] max-w-[65ch]">
           <span className="text-[var(--text-primary)] inline-flex items-center gap-1"><Heart className="w-3 h-3 text-rose-400" />{t('Aphrodite (18+).')}</span>{' '}
-          {t('Only for guests you know are adults. They still switch her on themselves in their Shell:B, after confirming they\'re 18 or older. Same limits and background checks as yours; her chats stay incognito in their cell, and her pictures are deleted from this machine once their cell has them.')}
+          {t('Only for guests you know are adults. They still switch her on themselves in their Shell:B, after confirming they\'re 18 or older. Same limits and background checks as yours; her chats and her memory of their tastes stay in their cell, and her pictures are deleted from this machine once their cell has them.')}
         </span>
       </label>
       {why && <p className="pl-6 text-amber-500">{allowed ? t('Allowed, but not active: {why}', { why }) : why}</p>}

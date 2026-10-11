@@ -98,6 +98,8 @@ that feature's card, "model": "<3D model id>" to show a spacecraft model, "view3
 "depth_m"} to open the 3D terrain view there (under the sea it is a dive to the sea floor; on Mars, the Moon and Mercury
 a fly-through of the relief), and "tour": [{"title", "text", "lat", "lon", "zoom", "pitch", "bearing", "body", "seconds"}]
 for a guided fly-through the user can play.
+Worlds also hides easter eggs, fictional places at their canonical spots (Rapture from BioShock, R'lyeh): never volunteer
+them, but if the user asks to go to one, a block with "focus" {"feature": "Rapture"} flies there and opens its card.
 
 Live flights: a fenced block with info string `flight` shows a live-updating tracker card. {"q": "UAL123"} follows one
 flight (callsign like UAL123 or UA123, registration, or ICAO hex) with its route and trail; {"area": {"lat": 51.47,
@@ -333,7 +335,7 @@ system. Your tools still run on Shell:B's own machine; your reasoning runs on {p
                      "and the complete new content.\n\n" + "\n\n".join(blocks[::-1]))
     import adult
     if adult.is_adult(agent):
-        parts.append(adult.GUARDRAILS)  # last, so nothing earlier in the prompt can talk it down
+        parts.append(adult.prompt_block(conv_id))  # last, so nothing earlier in the prompt can talk it down
     return "\n\n".join(parts)
 
 

@@ -69,6 +69,8 @@ def init():
             c.execute("ALTER TABLE conversations ADD COLUMN group_id TEXT")
         if "incognito" not in cols:  # privacy.py: never remembered, learned from or searched; deleted after a while
             c.execute("ALTER TABLE conversations ADD COLUMN incognito INTEGER DEFAULT 0")
+        if "adult" not in cols:  # adult.py: an Aphrodite chat; kept, but out of everything shared between chats (privacy.HIDDEN_SQL)
+            c.execute("ALTER TABLE conversations ADD COLUMN adult INTEGER DEFAULT 0")
         if "tenant" not in cols:  # guests.py: a guest's chat (always incognito too); never in the owner's lists
             c.execute("ALTER TABLE conversations ADD COLUMN tenant TEXT")
         c.executescript("""
@@ -102,6 +104,7 @@ def _conv(row):
         "projectId": row["project_id"],
         "groupId": row["group_id"] if "group_id" in row.keys() else None,
         "incognito": bool(row["incognito"]) if "incognito" in row.keys() else False,
+        "adult": bool(row["adult"]) if "adult" in row.keys() else False,
     }
 
 

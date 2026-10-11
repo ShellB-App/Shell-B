@@ -557,7 +557,7 @@ def after_turn(conv_id: str, msg_id: str, user_text: str, reply: str, agent: dic
     if mode not in ("auto", "review") or len(text) < 12 or not agent:
         return
     import privacy
-    if privacy.is_incognito(conv_id):  # incognito chats teach Shell:B nothing
+    if privacy.is_hidden(conv_id):  # incognito and Aphrodite chats teach the shared memory nothing
         return
     _learned[msg_id] = {"state": "running", "items": []}
     t = asyncio.create_task(_learn_turn(conv_id, msg_id, text, reply, settings, mode))
@@ -621,7 +621,7 @@ def _history_convs() -> list[dict]:
     done = set(db.kv_get("memory_backfilled", []))
     out = []
     for conv in db.list_conversations():
-        if conv["id"] in done or conv.get("incognito") or (conv.get("title") or "").startswith(SKIP_TITLES):
+        if conv["id"] in done or conv.get("incognito") or conv.get("adult") or (conv.get("title") or "").startswith(SKIP_TITLES):
             continue
         try:
             if megaplan.link_of(conv["id"]):

@@ -1580,7 +1580,7 @@ def share_router(person_of) -> APIRouter:
                 conv = db.get_conversation(str(b.get("conv") or ""))
                 if not conv or (conv.get("tenant") or None) != (person if person != OWNER else None):
                     raise LookupError("No such conversation.")
-                if viewer == OWNER and conv.get("incognito"):
+                if viewer == OWNER and (conv.get("incognito") or conv.get("adult")):
                     raise ValueError("Incognito chats can't be shared.")
                 if kind == "chat":
                     msgs = [m for m in db.list_messages(conv["id"]) if not m.get("summarizedBy") and m.get("role") in ("user", "assistant")][-200:]

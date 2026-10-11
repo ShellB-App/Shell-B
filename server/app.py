@@ -501,8 +501,8 @@ async def patch_conversation(conv_id: str, req: Request):
     if "groupId" in body:
         if body["groupId"] and not groups.get(body["groupId"]):
             raise HTTPException(404, "No such project")
-        if body["groupId"] and (db.get_conversation(conv_id) or {}).get("incognito"):
-            raise HTTPException(400, "Incognito chats can't join a project")
+        if body["groupId"] and any((db.get_conversation(conv_id) or {}).get(k) for k in ("incognito", "adult")):
+            raise HTTPException(400, "Incognito and Aphrodite chats can't join a project")
         extra["groupId"] = body["groupId"]
     return db.update_conversation(conv_id, title=body.get("title"), agentId=body.get("agentId"), pinned=body.get("pinned"), **extra)
 
@@ -514,6 +514,7 @@ def delete_conversation(conv_id: str):
     db.delete_conversation(conv_id)
     compaction.forget(conv_id)
     research.unlink(conv_id)
+    adult.forget(conv_id)  # Aphrodite's pictures for this chat, if any
     with db.conn() as c:
         c.execute("DELETE FROM mega_links WHERE conv_id=?", (conv_id,))
     return {"ok": True}
@@ -588,6 +589,9 @@ async def fork_conversation(conv_id: str, req: Request):
     if conv.get("incognito"):  # a fork of an incognito chat is incognito too
         import privacy
         privacy.mark_incognito(new_cid)
+    if conv.get("adult"):  # and of an Aphrodite chat, hers
+        import privacy
+        privacy.mark_adult(new_cid)
 
     # Duplicate messages and map IDs
     msg_id_map = {m["id"]: db.new_id("msg") for m in msgs_to_copy}
@@ -709,6 +713,8 @@ async def chat(conv_id: str, req: Request):
         raise HTTPException(409, "This conversation is already generating")
     agent, _ = find_agent(body.get("agentId") or conv["agentId"])
     adult_ok = False
+    if conv.get("adult") and not adult.is_adult(agent):  # her history stays hers: other agents start their own chat
+        raise HTTPException(400, "This is an Aphrodite chat. Start a new chat to talk to another agent.")
     if adult.is_adult(agent):
         settings = get_settings()
         why = adult.refuse_reason(agent, settings, auth.is_owner(req))
@@ -717,9 +723,9 @@ async def chat(conv_id: str, req: Request):
         why = await adult.screen(body.get("content") or "", settings) or await adult.screen_attachments(body.get("attachments"), settings)
         if why:
             raise HTTPException(400, why)
-        if not conv.get("incognito"):  # Aphrodite's chats are never remembered and expire on their own
+        if not conv.get("adult"):  # kept like any chat, but hidden from everything shared between chats (privacy.py)
             import privacy
-            conv = privacy.mark_incognito(conv_id)
+            conv = privacy.mark_adult(conv_id)
         adult_ok = True
         if conv_id in ACTIVE:
             raise HTTPException(409, "This conversation is already generating")
@@ -764,6 +770,8 @@ def begin_turn(conv, body, stream=True, note="", adult_ok=False, interactive=Non
         settings = {**settings, "maxToolRounds": int(body["maxToolRounds"])}
     project_id = conv.get("projectId")
     agent, agents = find_agent(body.get("agentId") or conv["agentId"])
+    if conv.get("adult") and not adult.is_adult(agent):
+        raise RuntimeError("This is an Aphrodite chat; other agents don't answer in it.")
     if adult.is_adult(agent) and not adult_ok:  # schedules, plans, retries: nobody there to check, so never
         raise RuntimeError(adult.refuse_reason(agent, settings, owner=False, interactive=False) or "Aphrodite is interactive-only.")
     pick, own = body.get("model"), providers.split(agent.get("model", ""))
@@ -849,7 +857,7 @@ def begin_turn(conv, body, stream=True, note="", adult_ok=False, interactive=Non
                 info = await model_info(turn.model)
             num_ctx = int(agent.get("numCtx") or info["numCtx"] or 32768)
             memories = await guests.recall(guest, content, settings) if guest \
-                else [] if conv.get("incognito") or sealed else await recall(agent, content, settings)
+                else [] if conv.get("incognito") or sealed or adult.is_adult(agent) else await recall(agent, content, settings)
             if sealed:
                 turn.only_tools = set(api.get("tools") or ())
                 turn.tenant = guest
@@ -863,7 +871,7 @@ def begin_turn(conv, body, stream=True, note="", adult_ok=False, interactive=Non
             if "circles" in tool_names:
                 system += "\n\n" + circles.GUIDE
             # other people's circle notes, as labelled data: live chats only, never persona API turns or incognito
-            if turn.interactive and (guest or not sealed) and (guest or not conv.get("incognito")) \
+            if turn.interactive and (guest or not sealed) and (guest or not (conv.get("incognito") or conv.get("adult"))) \
                     and circles.tool_allowed(agent):
                 block, used = await circles.turn_block(guest, content, conv_id=conv_id, project_id=project_id,
                                                        group_id=None if project_id else conv.get("groupId"),
@@ -1333,6 +1341,31 @@ def adult_checkpoints(req: Request):
     require_admin(req)
     from tools import flux_dev_available
     return {"checkpoints": adult.checkpoints(), "fluxDev": flux_dev_available()}
+
+
+@app.get("/api/adult/memories")
+def adult_memories(req: Request):
+    """What Aphrodite remembers about the user's tastes (adult.py): theirs to read and prune, in the owner's session or
+    the guest's own cell."""
+    if not adult.visible(get_settings(), auth.is_owner(req)):
+        raise HTTPException(404)
+    return adult.memories()
+
+
+@app.delete("/api/adult/memories")
+def adult_memories_clear(req: Request):
+    if not adult.visible(get_settings(), auth.is_owner(req)):
+        raise HTTPException(404)
+    return {"forgotten": adult.forget_memory()}
+
+
+@app.delete("/api/adult/memories/{mid}")
+def adult_memory_forget(mid: str, req: Request):
+    if not adult.visible(get_settings(), auth.is_owner(req)):
+        raise HTTPException(404)
+    if not adult.forget_memory(mid):
+        raise HTTPException(404)
+    return {"ok": True}
 
 
 @app.get("/api/adult/files/{conv_id}/{name}")

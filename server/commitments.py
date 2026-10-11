@@ -280,7 +280,7 @@ def _incognito(conv_id: str) -> bool:
     """Incognito chats (privacy.py) teach Shell:B nothing."""
     try:
         import privacy
-        return privacy.is_incognito(conv_id)
+        return privacy.is_hidden(conv_id)
     except ImportError:
         pass
     except Exception:  # noqa: BLE001  fall through to reading the row directly
@@ -291,7 +291,7 @@ def _incognito(conv_id: str) -> bool:
         if not r:
             return False
         keys = r.keys()
-        if "incognito" in keys and r["incognito"]:
+        if ("incognito" in keys and r["incognito"]) or ("adult" in keys and r["adult"]):
             return True
         if "data" in keys and r["data"]:
             return bool(json.loads(r["data"] or "{}").get("incognito"))

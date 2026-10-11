@@ -76,7 +76,7 @@ def record(tool: str, display: dict, conv_id=None, agent_id=None, project_id=Non
         if not rows:
             return
         import privacy
-        if privacy.is_incognito(conv_id):  # incognito chats leave nothing behind in the gallery
+        if privacy.is_hidden(conv_id):  # incognito chats leave nothing behind in the gallery
             return
         now = time.time()
         with db.conn() as c:

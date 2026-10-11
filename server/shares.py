@@ -54,8 +54,8 @@ def link(token: str) -> str:
 
 
 def _shareable(conv: dict):
-    if conv.get("incognito"):
-        raise ValueError("Incognito chats can't be shared")
+    if conv.get("incognito") or conv.get("adult"):
+        raise ValueError("Incognito and Aphrodite chats can't be shared")
     if conv.get("tenant"):
         raise ValueError("A guest's chat isn't yours to share")
     with db.conn() as c:

@@ -250,6 +250,8 @@ print("CELLOUT" + json.dumps({"paths": paths, "tools": sorted(TOOLS), "before": 
     def test_her_pieces_stay(self):
         self.assertIn("generate_adult_image", self.out["tools"])
         self.assertIn("/api/adult/files/{conv_id}/{name}", self.out["paths"])
+        self.assertIn("/api/adult/memories", self.out["paths"])  # her memory lives in the cell
+        self.assertIn("aphrodite_memory", self.out["tools"])
         self.assertNotIn("/api/adult/checkpoints", self.out["paths"])  # the owner's files are not the guest's business
         self.assertEqual(self.out["model"], "Some-Local-Model")  # the model the host serves her on
         self.assertEqual(self.out["me"], {"guest": "Robin", "adult": True})
@@ -261,6 +263,74 @@ print("CELLOUT" + json.dumps({"paths": paths, "tools": sorted(TOOLS), "before": 
         self.assertEqual(self.out["optin"], 200)
         self.assertIn("aphrodite", self.out["after"])
         self.assertEqual(self.out["nogate"], 401)
+
+
+class HerChatsAndMemory(unittest.IsolatedAsyncioTestCase):
+    """Her chats are kept but hidden from everything shared between chats; she has her own memory of the user."""
+
+    async def asyncSetUp(self):
+        import privacy
+        self.privacy = privacy
+        self.conv = db.create_conversation("aphrodite")
+        self.plain = db.create_conversation("shellb")
+        privacy.mark_adult(self.conv["id"])
+        adult.forget_memory()
+        self._screen = adult.screen
+
+    async def asyncTearDown(self):
+        adult.screen = self._screen
+        adult.forget_memory()
+        for c in (self.conv, self.plain):
+            db.delete_conversation(c["id"])
+
+    def test_kept_but_hidden(self):
+        c = db.get_conversation(self.conv["id"])
+        self.assertTrue(c["adult"])
+        self.assertFalse(c["incognito"])  # not incognito: the sweep never deletes it
+        self.assertNotIn(self.conv["id"], self.privacy.expired(now=9e12))
+        self.assertTrue(self.privacy.is_hidden(self.conv["id"]))
+        self.assertFalse(self.privacy.is_hidden(self.plain["id"]))
+        with db.conn() as cx:
+            hidden = {r["id"] for r in cx.execute(self.privacy.HIDDEN_SQL)}
+        self.assertIn(self.conv["id"], hidden)
+
+    def test_only_she_answers_in_her_chat(self):
+        r = client.post(f"/api/conversations/{self.conv['id']}/chat", json={"content": "hi", "agentId": "shellb"})
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("Aphrodite chat", r.text)
+
+    def test_memory_api_is_not_for_others(self):
+        self.assertEqual(client.get("/api/adult/memories").status_code, 404)  # localhost isn't the owner's session
+        self.assertEqual(client.delete("/api/adult/memories").status_code, 404)
+
+    async def test_memory_saves_screens_and_reaches_only_her_prompt(self):
+        async def ok(text, settings, image=False):
+            return ""
+        adult.screen = ok
+        m, why = await adult.save_memory("Loves slow teasing and being called 'darling'", {})
+        self.assertEqual(why, "")
+        again, _ = await adult.save_memory("loves slow teasing and being called 'darling'", {})
+        self.assertEqual(again["id"], m["id"])  # the same fact isn't stored twice
+        upd, _ = await adult.save_memory("Loves slow teasing; hates being rushed", {}, replaces=m["id"])
+        self.assertEqual([x["text"] for x in adult.memories()], ["Loves slow teasing; hates being rushed"])
+        block = adult.prompt_block(self.conv["id"])
+        self.assertIn(f"[{upd['id']}] Loves slow teasing; hates being rushed", block)
+        self.assertIn("This isn't therapy", block)
+        self.assertIn("Hard limits", block)
+        self.assertEqual(adult.tools_for(["generate_adult_image", "memory_save"], self.conv["id"]), ["generate_adult_image", "aphrodite_memory"])
+        inc = db.create_conversation("aphrodite")
+        try:
+            self.privacy.mark_incognito(inc["id"])
+            self.assertNotIn("Loves slow teasing", adult.prompt_block(inc["id"]))  # incognito: no memory either way
+            self.assertNotIn("aphrodite_memory", adult.tools_for(["generate_adult_image"], inc["id"]))
+        finally:
+            db.delete_conversation(inc["id"])
+        adult.screen = self._screen
+        bad, why = await adult.save_memory("wants a 16 year old", {})  # the keyword check, before any classifier
+        self.assertIsNone(bad)
+        self.assertIn("adults", why)
+        self.assertEqual(adult.forget_memory(upd["id"]), 1)
+        self.assertEqual(adult.memories(), [])
 
 
 if __name__ == "__main__":

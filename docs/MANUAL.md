@@ -80,6 +80,17 @@ address (`_ShortNameRedirect` in app.py). Check with `tailscale serve status`; r
   `conversations.incognito`) get no memory in the prompt and no memory tools, teach the learner, feedback and "Learn from
   past chats" nothing, are never summarized or found by past-conversation/sidebar search, can't join a chat Project, and
   are deleted `incognitoHours` (default 24) after their last message by the episodes sweep; forks stay incognito.
+  **Aphrodite chats** (column `conversations.adult`, set when she first answers) are kept like normal chats and listed
+  in the sidebar, but are hidden like incognito ones from everything shared between chats (`privacy.HIDDEN_SQL`,
+  `is_hidden`): no shared-memory learning or recall, no summaries, search, follow-ups, chat messages, shares, circles
+  or chat Projects. Only she answers in one (other agents get "Start a new chat"); forks stay hers; deleting one
+  deletes its pictures. She keeps her own memory of the user's tastes (table `adult_memories`, tool
+  `aphrodite_memory`, up to 200 short facts, each screened like a request, put in her prompt; listed with a forget
+  button in Tools & Connectors → Aphrodite, `GET/DELETE /api/adult/memories`), which no other agent or memory view
+  sees. In an incognito Aphrodite chat she neither reads nor saves it. Her prompt ends with the hard limits and her
+  play rules (adult.py `GUARDRAILS`, `PLAY`): never judge or moralise, play along, and no therapy: no guessing at
+  mood or mental health, no wellbeing check-ins or hotlines, out of character only when the user steps out (or says
+  plainly that they are in real danger).
   **Local-only memories** (the lock on a memory row; `PATCH /api/memory/{id} {"localOnly": true}`, column
   `memories.local_only`) never reach a cloud agent's prompt or its memory_search, even with `cloudMemory` on; a
   correction or merge of one stays local-only.
@@ -829,9 +840,10 @@ Friends and coworkers can have their own Shell:B on this machine, without access
 - **Aphrodite for a guest (off by default):** tick *Aphrodite (18+)* on a guest's row, only for guests you know are
   adults. It counts only while Aphrodite is on for you (Tools & Connectors → Aphrodite) and the guest has their own
   Shell:B; the lighter guest app never runs her. Their cell then keeps her (on the host's model for her), her picture
-  tool and `/api/adult/files`, and the guest gets an Aphrodite tab in Tools & Connectors where they switch her on
+  tool, her memory and `/api/adult/files` and `/api/adult/memories`, and the guest gets an Aphrodite tab in Tools & Connectors where they switch her on
   themselves after ticking "I'm 18 or older". Everything in adult.py applies in the cell as it does for you (limits,
-  background checks that fail closed, incognito chats, no delegation, interactive turns only). The broker checks the
+  background checks that fail closed, kept-but-hidden chats, her own memory in their cell, no delegation, interactive
+  turns only). The broker checks the
   permission on every request (`guests.adult_ok`): only then does it serve her model and her picture graph, with your
   checkpoint swapped in for the placeholder `aphrodite`, previews instead of saved files, the keyword screen on the
   prompt, and each picture deleted from ComfyUI's temp folder once the cell has fetched it. Pictures need an SDXL
