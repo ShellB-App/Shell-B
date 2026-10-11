@@ -14,7 +14,7 @@
       // a custom theme ('custom:<id>', designed by Shell:B) paints from its cached stylesheet (src/themes/index.ts)
       (function () {
         var sk = 'synthfield', d = document.documentElement; try { sk = localStorage.getItem('shellb.skin') || sk; } catch {}
-        if (['synthfield', 'synthwave', 'normandy', 'sakura', 'pandora', 'rain', 'abyss', 'arrakis', 'borealis', 'ghibli'].indexOf(sk) >= 0) d.dataset.skin = sk;
+        if (['synthfield', 'synthwave', 'normandy', 'sakura', 'pandora', 'rain', 'abyss', 'arrakis', 'borealis', 'ghibli', 'lascaux'].indexOf(sk) >= 0) d.dataset.skin = sk;
         else if (/^custom:[\w-]{1,40}$/.test(sk)) {
           try { var css = localStorage.getItem('shellb.customCss'); if (css) { var st = document.createElement('style'); st.id = 'shellb-custom-theme'; st.textContent = css; document.head.appendChild(st); d.dataset.skin = 'custom'; d.dataset.custom = sk.slice(7); } } catch {}
         }

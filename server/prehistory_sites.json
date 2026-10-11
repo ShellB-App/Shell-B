@@ -1,0 +1,1498 @@
+[
+ {
+  "id": "lascaux",
+  "name": "Lascaux",
+  "nameFr": "Grotte de Lascaux",
+  "kind": "cave",
+  "place": "Montignac, Vézère valley",
+  "country": "France",
+  "lat": 45.0537,
+  "lon": 1.1679,
+  "when": [
+   -19000,
+   -17000
+  ],
+  "period": "Magdalenian",
+  "discovered": "1940",
+  "unesco": 1979,
+  "visit": "replica",
+  "replica": "Lascaux IV, Montignac (2016)",
+  "desc": "Some 600 paintings and 1,500 engravings: aurochs, horses, stags and a mysterious wounded bison facing a bird-headed man in the Shaft. The Hall of the Bulls has aurochs over 5 m long.",
+  "highlight": "Found on 12 September 1940 by 18-year-old Marcel Ravidat and three friends. Closed in 1963 because visitors’ breath was damaging the paint.",
+  "fr": {
+   "desc": "Quelque 600 peintures et 1 500 gravures : aurochs, chevaux, cerfs, et la scène énigmatique du Puits où un bison blessé fait face à un homme à tête d’oiseau. Dans la Salle des Taureaux, certains aurochs dépassent 5 m.",
+   "highlight": "Découverte le 12 septembre 1940 par Marcel Ravidat, 18 ans, et trois camarades. Fermée en 1963 : le souffle des visiteurs abîmait les peintures."
+  }
+ },
+ {
+  "id": "chauvet",
+  "name": "Chauvet-Pont d’Arc Cave",
+  "nameFr": "Grotte Chauvet-Pont d’Arc",
+  "kind": "cave",
+  "place": "Vallon-Pont-d’Arc, Ardèche",
+  "country": "France",
+  "lat": 44.3894,
+  "lon": 4.4161,
+  "when": [
+   -35000,
+   -29000
+  ],
+  "period": "Aurignacian",
+  "discovered": "1994",
+  "unesco": 2014,
+  "visit": "replica",
+  "replica": "Grotte Chauvet 2 – Ardèche (2015)",
+  "desc": "The oldest great painted cave known in Europe, used in two phases about 37,000–33,500 and 31,000–28,000 years ago. Lions, rhinoceroses, mammoths and cave bears drawn with shading and perspective.",
+  "highlight": "Entered on 18 December 1994 by Jean-Marie Chauvet, Éliette Brunel and Christian Hillaire. A rockfall had sealed it for over 20,000 years, keeping cave bear skulls and a child’s footprints in place.",
+  "fr": {
+   "desc": "La plus ancienne grande grotte ornée connue en Europe, fréquentée en deux temps, vers 37 000–33 500 et 31 000–28 000 ans. Lions, rhinocéros, mammouths et ours des cavernes dessinés avec estompe et perspective.",
+   "highlight": "Explorée le 18 décembre 1994 par Jean-Marie Chauvet, Éliette Brunel et Christian Hillaire. Un éboulement l’avait scellée plus de 20 000 ans : crânes d’ours et empreintes d’enfant sont restés en place."
+  }
+ },
+ {
+  "id": "cosquer",
+  "name": "Cosquer Cave",
+  "nameFr": "Grotte Cosquer",
+  "kind": "cave",
+  "place": "Calanque de la Triperie, Marseille",
+  "country": "France",
+  "lat": 43.2027,
+  "lon": 5.4483,
+  "when": [
+   -31000,
+   -17000
+  ],
+  "period": "Gravettian & Solutrean",
+  "discovered": "1985",
+  "visit": "replica",
+  "replica": "Cosquer Méditerranée, Marseille (2022)",
+  "desc": "Painted when the coast lay several kilometres further out; its entrance is now a long flooded tunnel opening 37 m under the sea. Seals, great auks and jellyfish-like signs beside horses, bison and 65 hand stencils.",
+  "highlight": "Found by diver Henri Cosquer, who kept it secret until 1991. Rising water has already swallowed most of the art. Switch on Ice Age coast to see the dry shelf it opened onto.",
+  "fr": {
+   "desc": "Ornée quand le rivage était plusieurs kilomètres plus loin ; l’entrée est aujourd’hui un long boyau noyé qui débouche à 37 m sous la mer. Phoques, grands pingouins et signes en forme de méduse côtoient chevaux, bisons et 65 mains négatives.",
+   "highlight": "Découverte par le plongeur Henri Cosquer, qui l’a gardée secrète jusqu’en 1991. La montée des eaux a déjà englouti la plupart des œuvres. Activez « Côte glaciaire » pour voir le plateau à sec sur lequel elle s’ouvrait."
+  }
+ },
+ {
+  "id": "altamira",
+  "name": "Altamira",
+  "nameFr": "Grotte d’Altamira",
+  "kind": "cave",
+  "place": "Santillana del Mar, Cantabria",
+  "country": "Spain",
+  "lat": 43.3772,
+  "lon": -4.1225,
+  "when": [
+   -34000,
+   -11000
+  ],
+  "period": "Aurignacian to Magdalenian",
+  "discovered": "1868",
+  "unesco": 1985,
+  "visit": "replica",
+  "replica": "Neocueva, Museo de Altamira",
+  "desc": "The polychrome ceiling: a herd of red and black bison painted over the bulges of the rock so they seem to move in torchlight, about 14,500 years ago, above signs far older.",
+  "highlight": "In 1879 eight-year-old María Sanz de Sautuola looked up and said “Look, papa, oxen!”. Experts called the paintings a fake for twenty years.",
+  "fr": {
+   "desc": "Le plafond polychrome : un troupeau de bisons rouges et noirs peints sur les reliefs de la roche, qui semblent bouger à la lueur d’une torche, il y a environ 14 500 ans, au-dessus de signes bien plus anciens.",
+   "highlight": "En 1879, María Sanz de Sautuola, huit ans, lève les yeux : « Regarde, papa, des bœufs ! ». Les spécialistes ont crié au faux pendant vingt ans."
+  }
+ },
+ {
+  "id": "font-de-gaume",
+  "name": "Font-de-Gaume",
+  "nameFr": "Grotte de Font-de-Gaume",
+  "kind": "cave",
+  "place": "Les Eyzies, Dordogne",
+  "country": "France",
+  "lat": 44.937,
+  "lon": 1.0337,
+  "when": [
+   -17000,
+   -15000
+  ],
+  "period": "Magdalenian",
+  "discovered": "1901",
+  "unesco": 1979,
+  "visit": "open",
+  "desc": "More than 200 figures, among them some 80 bison, painted in red and black. One of the last caves in France with polychrome paintings that the public can still visit, in small groups.",
+  "highlight": "The famous pair of reindeer: a male bends to lick the forehead of a kneeling female.",
+  "fr": {
+   "desc": "Plus de 200 figures, dont quelque 80 bisons, peints en rouge et noir. L’une des dernières grottes à polychromies encore ouvertes au public en France, par petits groupes.",
+   "highlight": "Le célèbre couple de rennes : un mâle se penche pour lécher le front d’une femelle agenouillée."
+  }
+ },
+ {
+  "id": "combarelles",
+  "name": "Les Combarelles",
+  "nameFr": "Grotte des Combarelles",
+  "kind": "cave",
+  "place": "Les Eyzies, Dordogne",
+  "country": "France",
+  "lat": 44.9396,
+  "lon": 1.0465,
+  "when": [
+   -15000,
+   -12000
+  ],
+  "period": "Magdalenian",
+  "discovered": "1901",
+  "unesco": 1979,
+  "visit": "open",
+  "desc": "A narrow 300 m gallery with about 800 engravings: horses, mammoths, reindeer, lions, and some fifty rare human or half-human faces.",
+  "fr": {
+   "desc": "Une galerie étroite de 300 m et près de 800 gravures : chevaux, mammouths, rennes, lions, et une cinquantaine de rares visages humains ou mi-humains."
+  }
+ },
+ {
+  "id": "cap-blanc",
+  "name": "Abri du Cap Blanc",
+  "kind": "shelter",
+  "place": "Marquay, Dordogne",
+  "country": "France",
+  "lat": 44.945,
+  "lon": 1.0975,
+  "when": [
+   -15000,
+   -13000
+  ],
+  "period": "Magdalenian",
+  "discovered": "1909",
+  "unesco": 1979,
+  "visit": "open",
+  "desc": "A 13 m frieze of horses and bison carved in deep relief into the back of a rock shelter, lit by daylight rather than torches.",
+  "highlight": "A Magdalenian burial was found at the foot of the frieze.",
+  "fr": {
+   "desc": "Une frise de 13 m de chevaux et de bisons sculptés en haut-relief au fond d’un abri sous roche, éclairée par le jour plutôt que par des torches.",
+   "highlight": "Une sépulture magdalénienne a été trouvée au pied de la frise."
+  }
+ },
+ {
+  "id": "cro-magnon",
+  "name": "Abri de Cro-Magnon",
+  "kind": "shelter",
+  "place": "Les Eyzies, Dordogne",
+  "country": "France",
+  "lat": 44.9367,
+  "lon": 1.0144,
+  "when": [
+   -28000
+  ],
+  "period": "Gravettian",
+  "discovered": "1868",
+  "unesco": 1979,
+  "visit": "site",
+  "desc": "The rock shelter that gave its name to Europe’s early modern humans: railway workers uncovered five skeletons buried with shell beads.",
+  "highlight": "Louis Lartet excavated it in 1868; the “Old Man of Cro-Magnon” is in the Musée de l’Homme in Paris.",
+  "fr": {
+   "desc": "L’abri qui a donné son nom aux premiers humains modernes d’Europe : des ouvriers du chemin de fer y mirent au jour cinq squelettes inhumés avec des parures de coquillages.",
+   "highlight": "Fouillé par Louis Lartet en 1868 ; le « Vieillard de Cro-Magnon » est au Musée de l’Homme à Paris."
+  }
+ },
+ {
+  "id": "rouffignac",
+  "name": "Rouffignac Cave",
+  "nameFr": "Grotte de Rouffignac",
+  "kind": "cave",
+  "place": "Rouffignac-Saint-Cernin, Dordogne",
+  "country": "France",
+  "lat": 44.9933,
+  "lon": 0.9997,
+  "when": [
+   -14000,
+   -12000
+  ],
+  "period": "Magdalenian",
+  "unesco": 1979,
+  "visit": "open",
+  "desc": "The “Cave of a Hundred Mammoths”: more than 250 figures along 8 km of galleries, visited by a small electric train. The Great Ceiling holds over 60 animals.",
+  "highlight": "Cave bears dug hundreds of hibernation hollows in the floor long before the artists came.",
+  "fr": {
+   "desc": "La « grotte aux cent mammouths » : plus de 250 figures sur 8 km de galeries, que l’on parcourt en petit train électrique. Le Grand Plafond compte plus de 60 animaux.",
+   "highlight": "Bien avant les artistes, les ours des cavernes y avaient creusé des centaines de bauges d’hibernation."
+  }
+ },
+ {
+  "id": "pech-merle",
+  "name": "Pech Merle",
+  "nameFr": "Grotte du Pech Merle",
+  "kind": "cave",
+  "place": "Cabrerets, Lot",
+  "country": "France",
+  "lat": 44.5072,
+  "lon": 1.6447,
+  "when": [
+   -27000,
+   -15000
+  ],
+  "period": "Gravettian",
+  "discovered": "1922",
+  "visit": "open",
+  "desc": "The spotted horses panel, about 29,000 years old, framed by hand stencils, beside fossil footprints of a child in the clay. One of the few painted caves whose originals are still open.",
+  "highlight": "Discovered by two teenagers, André David and Henri Dutertre, guided by the local priest Amédée Lemozi.",
+  "fr": {
+   "desc": "Le panneau des chevaux ponctués, vieux d’environ 29 000 ans, entouré de mains négatives, près d’empreintes de pas d’enfant fossilisées dans l’argile. L’une des rares grottes ornées dont les originaux se visitent encore.",
+   "highlight": "Découverte par deux adolescents, André David et Henri Dutertre, guidés par l’abbé Amédée Lemozi."
+  }
+ },
+ {
+  "id": "cussac",
+  "name": "Cussac Cave",
+  "nameFr": "Grotte de Cussac",
+  "kind": "cave",
+  "place": "Le Buisson-de-Cadouin, Dordogne",
+  "country": "France",
+  "lat": 44.8006,
+  "lon": 0.8622,
+  "when": [
+   -29000,
+   -26000
+  ],
+  "period": "Gravettian",
+  "discovered": "2000",
+  "visit": "closed",
+  "desc": "Monumental engravings, some over 4 m long, and the remains of at least six people laid in cave bear hollows: a rare case of art and burials in the same cave.",
+  "highlight": "Found by caver Marc Delluc in September 2000 and kept untouched for research.",
+  "fr": {
+   "desc": "Des gravures monumentales, certaines de plus de 4 m, et les restes d’au moins six personnes déposés dans des bauges d’ours : un cas rare d’art et de sépultures dans la même grotte.",
+   "highlight": "Découverte par le spéléologue Marc Delluc en septembre 2000 et laissée intacte pour la recherche."
+  }
+ },
+ {
+  "id": "niaux",
+  "name": "Niaux Cave",
+  "nameFr": "Grotte de Niaux",
+  "kind": "cave",
+  "place": "Niaux, Ariège",
+  "country": "France",
+  "lat": 42.8197,
+  "lon": 1.5939,
+  "when": [
+   -15000,
+   -12000
+  ],
+  "period": "Magdalenian",
+  "visit": "open",
+  "desc": "Nearly a kilometre inside the mountain, the Salon Noir: black-outlined bison, horses and ibex drawn with charcoal and manganese. Visited by lamp, as the painters saw it.",
+  "highlight": "Visitors’ names from 1602 are scratched near the entrance, long before anyone recognised the paintings as prehistoric.",
+  "fr": {
+   "desc": "À près d’un kilomètre sous la montagne, le Salon noir : bisons, chevaux et bouquetins cernés de noir, au charbon et au manganèse. On le visite à la lampe, comme le voyaient les peintres.",
+   "highlight": "Des graffitis de visiteurs de 1602 sont gravés près de l’entrée, bien avant qu’on reconnaisse les peintures comme préhistoriques."
+  }
+ },
+ {
+  "id": "gargas",
+  "name": "Gargas Cave",
+  "nameFr": "Grotte de Gargas",
+  "kind": "cave",
+  "place": "Aventignan, Hautes-Pyrénées",
+  "country": "France",
+  "lat": 43.0539,
+  "lon": 0.5361,
+  "when": [
+   -25000
+  ],
+  "period": "Gravettian",
+  "visit": "open",
+  "desc": "Over 200 hand stencils in red and black, many with fingers seemingly missing: folded in a sign language, or lost to frostbite? The debate is still open.",
+  "fr": {
+   "desc": "Plus de 200 mains négatives rouges et noires, dont beaucoup semblent amputées de doigts : doigts repliés en langage de signes, ou perdus au gel ? Le débat reste ouvert."
+  }
+ },
+ {
+  "id": "arcy",
+  "name": "Grande Grotte d’Arcy-sur-Cure",
+  "kind": "cave",
+  "place": "Arcy-sur-Cure, Yonne",
+  "country": "France",
+  "lat": 47.5875,
+  "lon": 3.765,
+  "when": [
+   -26000
+  ],
+  "period": "Gravettian",
+  "visit": "open",
+  "desc": "Mammoths, bears, rhinoceroses and hand stencils about 28,000 years old, the second oldest painted cave in France after Chauvet. They were hidden under soot until the 1990s.",
+  "fr": {
+   "desc": "Mammouths, ours, rhinocéros et mains négatives vieux d’environ 28 000 ans : la deuxième grotte ornée la plus ancienne de France après Chauvet. Ils étaient cachés sous la suie jusque dans les années 1990."
+  }
+ },
+ {
+  "id": "ekain",
+  "name": "Ekain",
+  "nameFr": "Grotte d’Ekain",
+  "kind": "cave",
+  "place": "Deba, Gipuzkoa",
+  "country": "Spain",
+  "lat": 43.2361,
+  "lon": -2.2747,
+  "when": [
+   -14000,
+   -12000
+  ],
+  "period": "Magdalenian",
+  "discovered": "1969",
+  "unesco": 2008,
+  "visit": "replica",
+  "replica": "Ekainberri, Zestoa",
+  "desc": "The finest horse panel of the Basque coast: some thirty horses with shaggy winter manes, drawn in black and red.",
+  "fr": {
+   "desc": "Le plus beau panneau de chevaux de la côte basque : une trentaine de chevaux à crinière d’hiver hirsute, en noir et rouge."
+  }
+ },
+ {
+  "id": "el-castillo",
+  "name": "El Castillo",
+  "nameFr": "Grotte d’El Castillo",
+  "kind": "cave",
+  "place": "Puente Viesgo, Cantabria",
+  "country": "Spain",
+  "lat": 43.2925,
+  "lon": -3.9653,
+  "when": [
+   -39000,
+   -11000
+  ],
+  "period": "Aurignacian to Magdalenian",
+  "discovered": "1903",
+  "unesco": 2008,
+  "visit": "open",
+  "desc": "Uranium dating gave one red disk a minimum age of 40,800 years, among the oldest cave art known: made by the first modern humans in Europe, or by Neanderthals.",
+  "fr": {
+   "desc": "La datation à l’uranium a donné à un disque rouge un âge minimum de 40 800 ans, parmi l’art pariétal le plus ancien connu : œuvre des premiers humains modernes d’Europe, ou des Néandertaliens."
+  }
+ },
+ {
+  "id": "coa",
+  "name": "Côa Valley",
+  "nameFr": "Vallée du Côa",
+  "kind": "rockart",
+  "place": "Vila Nova de Foz Côa",
+  "country": "Portugal",
+  "lat": 41.0786,
+  "lon": -7.1053,
+  "when": [
+   -28000,
+   -10000
+  ],
+  "period": "Gravettian to Magdalenian",
+  "discovered": "1991",
+  "unesco": 1998,
+  "visit": "open",
+  "desc": "Thousands of animals pecked and engraved on open-air schist rocks along 17 km of river: the largest open-air Ice Age art site known.",
+  "highlight": "A dam that would have drowned it was abandoned in 1995 after a national campaign: “the engravings can’t swim”.",
+  "fr": {
+   "desc": "Des milliers d’animaux piquetés et gravés sur des rochers de schiste en plein air, le long de 17 km de rivière : le plus grand site d’art glaciaire de plein air connu.",
+   "highlight": "Le barrage qui devait l’engloutir fut abandonné en 1995 après une campagne nationale : « les gravures ne savent pas nager »."
+  }
+ },
+ {
+  "id": "hohle-fels",
+  "name": "Hohle Fels",
+  "kind": "cave",
+  "place": "Schelklingen, Swabian Jura",
+  "country": "Germany",
+  "lat": 48.3793,
+  "lon": 9.7544,
+  "when": [
+   -38000
+  ],
+  "period": "Aurignacian",
+  "unesco": 2017,
+  "visit": "open",
+  "desc": "Home of the Venus of Hohle Fels, a mammoth-ivory figurine at least 40,000 years old, and a flute made from a griffon vulture’s wing bone: the oldest figurative sculpture and among the oldest instruments known.",
+  "fr": {
+   "desc": "La Vénus de Hohle Fels, statuette en ivoire de mammouth d’au moins 40 000 ans, et une flûte taillée dans un os d’aile de vautour fauve : la plus ancienne sculpture figurative et l’un des plus anciens instruments connus."
+  }
+ },
+ {
+  "id": "gorham",
+  "name": "Gorham’s Cave",
+  "nameFr": "Grotte de Gorham",
+  "kind": "cave",
+  "place": "Gibraltar",
+  "country": "Gibraltar",
+  "lat": 36.1206,
+  "lon": -5.3422,
+  "when": [
+   -37000
+  ],
+  "period": "Neanderthal",
+  "unesco": 2016,
+  "visit": "closed",
+  "desc": "One of the last places Neanderthals lived. A cross-hatched engraving cut into the bedrock is credited to them.",
+  "fr": {
+   "desc": "L’un des derniers lieux de vie des Néandertaliens. Une gravure quadrillée creusée dans la roche leur est attribuée."
+  }
+ },
+ {
+  "id": "shanidar",
+  "name": "Shanidar Cave",
+  "nameFr": "Grotte de Shanidar",
+  "kind": "cave",
+  "place": "Zagros, Kurdistan",
+  "country": "Iraq",
+  "lat": 36.8333,
+  "lon": 44.2167,
+  "approx": true,
+  "when": [
+   -73000
+  ],
+  "period": "Neanderthal",
+  "discovered": "1951",
+  "desc": "Remains of ten Neanderthals, among them an old man who survived a crushed arm and blindness in one eye: he must have been cared for by others.",
+  "fr": {
+   "desc": "Les restes de dix Néandertaliens, dont un vieil homme qui avait survécu à un bras broyé et à la perte d’un œil : d’autres ont dû prendre soin de lui."
+  }
+ },
+ {
+  "id": "denisova",
+  "name": "Denisova Cave",
+  "nameFr": "Grotte de Denisova",
+  "kind": "cave",
+  "place": "Altai Krai",
+  "country": "Russia",
+  "lat": 51.3975,
+  "lon": 84.6764,
+  "when": [
+   -200000,
+   -50000
+  ],
+  "period": "Middle Palaeolithic",
+  "desc": "A finger bone found here in 2008 revealed, through its DNA alone, a human group nobody knew: the Denisovans. A bone of “Denny”, daughter of a Neanderthal mother and a Denisovan father, followed.",
+  "fr": {
+   "desc": "Un os de doigt trouvé ici en 2008 a révélé, par son seul ADN, un groupe humain inconnu : les Dénisoviens. Puis un os de « Denny », fille d’une mère néandertalienne et d’un père dénisovien."
+  }
+ },
+ {
+  "id": "blombos",
+  "name": "Blombos Cave",
+  "nameFr": "Grotte de Blombos",
+  "kind": "cave",
+  "place": "Southern Cape",
+  "country": "South Africa",
+  "lat": -34.4136,
+  "lon": 21.2195,
+  "approx": true,
+  "when": [
+   -98000,
+   -70000
+  ],
+  "period": "Middle Stone Age",
+  "desc": "Ochre blocks engraved with cross-hatching, shell beads and an ochre-paint workshop 100,000 years old; a crayon drawing on stone from 73,000 years ago is the oldest drawing known.",
+  "fr": {
+   "desc": "Des blocs d’ocre gravés de croisillons, des perles en coquillage et un atelier de peinture à l’ocre vieux de 100 000 ans ; un dessin au crayon d’ocre sur pierre, vieux de 73 000 ans, est le plus ancien dessin connu."
+  }
+ },
+ {
+  "id": "maros",
+  "name": "Maros-Pangkep caves",
+  "nameFr": "Grottes de Maros-Pangkep",
+  "kind": "cave",
+  "place": "South Sulawesi",
+  "country": "Indonesia",
+  "lat": -4.96,
+  "lon": 119.66,
+  "approx": true,
+  "when": [
+   -49000,
+   -40000
+  ],
+  "period": "Late Pleistocene",
+  "visit": "site",
+  "desc": "Limestone caves with the oldest figurative paintings known: a Sulawesi warty pig in Leang Tedongnge at least 45,500 years old, and a hunting scene in Leang Karampuang at least 51,200.",
+  "fr": {
+   "desc": "Des grottes calcaires où se trouvent les plus anciennes peintures figuratives connues : un sanglier des Célèbes à Leang Tedongnge, d’au moins 45 500 ans, et une scène à Leang Karampuang, d’au moins 51 200 ans."
+  }
+ },
+ {
+  "id": "bhimbetka",
+  "name": "Bhimbetka rock shelters",
+  "nameFr": "Abris sous roche de Bhimbetka",
+  "kind": "rockart",
+  "place": "Raisen, Madhya Pradesh",
+  "country": "India",
+  "lat": 22.9378,
+  "lon": 77.6125,
+  "when": [
+   -10000,
+   1000
+  ],
+  "period": "Mesolithic onward",
+  "discovered": "1957",
+  "unesco": 2003,
+  "visit": "open",
+  "desc": "Over 750 shelters in sandstone hills, many painted with hunters, dancers and animals, from the Mesolithic to historical times.",
+  "fr": {
+   "desc": "Plus de 750 abris dans des collines de grès, beaucoup peints de chasseurs, de danseurs et d’animaux, du Mésolithique aux temps historiques."
+  }
+ },
+ {
+  "id": "cueva-manos",
+  "name": "Cueva de las Manos",
+  "nameFr": "Cueva de las Manos (grotte des Mains)",
+  "kind": "rockart",
+  "place": "Río Pinturas, Santa Cruz",
+  "country": "Argentina",
+  "lat": -47.15,
+  "lon": -70.6667,
+  "when": [
+   -7300,
+   700
+  ],
+  "period": "Patagonian hunter-gatherers",
+  "unesco": 1999,
+  "visit": "open",
+  "desc": "Hundreds of stencilled hands, mostly left hands of young men, sprayed in red, ochre and white through bone pipes, beside guanaco hunting scenes.",
+  "fr": {
+   "desc": "Des centaines de mains au pochoir, surtout des mains gauches de jeunes hommes, projetées en rouge, ocre et blanc par des tubes d’os, près de scènes de chasse au guanaco."
+  }
+ },
+ {
+  "id": "serra-capivara",
+  "name": "Serra da Capivara",
+  "kind": "rockart",
+  "place": "Piauí",
+  "country": "Brazil",
+  "lat": -8.83,
+  "lon": -42.55,
+  "approx": true,
+  "when": [
+   -10000,
+   -5000
+  ],
+  "period": "Early Holocene",
+  "unesco": 1991,
+  "visit": "open",
+  "desc": "The densest rock art in the Americas: over 1,000 painted shelters with dancers, hunters and animals; some layers in Pedra Furada are argued to be far older.",
+  "fr": {
+   "desc": "La plus forte densité d’art rupestre des Amériques : plus de 1 000 abris peints de danseurs, de chasseurs et d’animaux ; certains niveaux de Pedra Furada seraient bien plus anciens."
+  }
+ },
+ {
+  "id": "ubirr",
+  "name": "Ubirr",
+  "kind": "rockart",
+  "place": "Kakadu National Park",
+  "country": "Australia",
+  "lat": -12.4097,
+  "lon": 132.9567,
+  "when": [
+   -20000,
+   1900
+  ],
+  "period": "Aboriginal rock art",
+  "unesco": 1981,
+  "visit": "open",
+  "desc": "X-ray style paintings of fish, turtles and wallabies showing bones and organs, part of a tradition in Arnhem Land that continued into living memory.",
+  "fr": {
+   "desc": "Des peintures « en rayons X » de poissons, tortues et wallabies montrant os et organes, d’une tradition de la terre d’Arnhem poursuivie jusqu’à nos jours."
+  }
+ },
+ {
+  "id": "tassili",
+  "name": "Tassili n’Ajjer",
+  "kind": "rockart",
+  "place": "Djanet, Sahara",
+  "country": "Algeria",
+  "lat": 25.5,
+  "lon": 8.75,
+  "approx": true,
+  "when": [
+   -10000,
+   -1000
+  ],
+  "period": "Saharan Neolithic",
+  "unesco": 1982,
+  "visit": "site",
+  "desc": "Over 15,000 paintings and engravings from a green Sahara: giraffes, hippos, and later herds of cattle with their herders, the first pastoralists of Africa.",
+  "fr": {
+   "desc": "Plus de 15 000 peintures et gravures d’un Sahara vert : girafes, hippopotames, puis troupeaux de bœufs et leurs bouviers, les premiers pasteurs d’Afrique."
+  }
+ },
+ {
+  "id": "laas-geel",
+  "name": "Laas Geel",
+  "kind": "rockart",
+  "place": "near Hargeisa",
+  "country": "Somaliland",
+  "lat": 9.7833,
+  "lon": 44.45,
+  "approx": true,
+  "when": [
+   -3500,
+   -1500
+  ],
+  "period": "Pastoral Neolithic",
+  "discovered": "2002",
+  "desc": "Brilliantly coloured cattle with ceremonial robes and lyre-shaped horns, worshipped by small human figures, painted in a group of granite shelters.",
+  "fr": {
+   "desc": "Des bovins aux couleurs vives, parés de robes cérémonielles et de cornes en lyre, vénérés par de petites figures humaines, peints dans un ensemble d’abris de granite."
+  }
+ },
+ {
+  "id": "gobekli-tepe",
+  "name": "Göbekli Tepe",
+  "kind": "temple",
+  "place": "Şanlıurfa",
+  "country": "Turkey",
+  "lat": 37.2231,
+  "lon": 38.9225,
+  "when": [
+   -9600,
+   -8200
+  ],
+  "period": "Pre-Pottery Neolithic",
+  "discovered": "1994",
+  "unesco": 2018,
+  "visit": "open",
+  "desc": "Rings of T-shaped limestone pillars up to 5.5 m tall, carved with foxes, boars, vultures and scorpions, raised by hunter-gatherers some 6,000 years before Stonehenge.",
+  "highlight": "Klaus Schmidt, who dug here from 1995, called it “first the temple, then the city”: monumental building may have pushed people towards farming, not the other way round.",
+  "fr": {
+   "desc": "Des enceintes de piliers en T jusqu’à 5,5 m, sculptés de renards, sangliers, vautours et scorpions, dressés par des chasseurs-cueilleurs quelque 6 000 ans avant Stonehenge.",
+   "highlight": "Pour Klaus Schmidt, qui y fouilla dès 1995 : « d’abord le temple, puis la ville ». Les grands chantiers auraient poussé vers l’agriculture, et non l’inverse."
+  }
+ },
+ {
+  "id": "jericho",
+  "name": "Jericho (Tell es-Sultan)",
+  "nameFr": "Jéricho (Tell es-Sultan)",
+  "kind": "settlement",
+  "place": "Jericho",
+  "country": "Palestine",
+  "lat": 31.8711,
+  "lon": 35.4436,
+  "when": [
+   -9500,
+   -6000
+  ],
+  "period": "Pre-Pottery Neolithic",
+  "unesco": 2023,
+  "visit": "open",
+  "desc": "One of the oldest towns on Earth, with a stone wall and an 8.5 m tower built around 8000 BC, and later plastered skulls with shell eyes.",
+  "fr": {
+   "desc": "L’une des plus anciennes villes du monde, avec un mur de pierre et une tour de 8,5 m bâtie vers 8000 av. J.-C., puis des crânes surmodelés aux yeux de coquillage."
+  }
+ },
+ {
+  "id": "abu-hureyra",
+  "name": "Tell Abu Hureyra",
+  "kind": "settlement",
+  "place": "Euphrates valley (now Lake Assad)",
+  "country": "Syria",
+  "lat": 35.8667,
+  "lon": 38.4,
+  "approx": true,
+  "when": [
+   -11500,
+   -6000
+  ],
+  "period": "Epipalaeolithic & Neolithic",
+  "desc": "A village where people turned from gathering wild cereals to growing rye, wheat and lentils, one of the earliest records of the change. Hurriedly excavated in 1972–73, then drowned by the Tabqa dam.",
+  "fr": {
+   "desc": "Un village où l’on est passé de la cueillette des céréales sauvages à la culture du seigle, du blé et des lentilles, l’un des plus anciens témoins de ce basculement. Fouillé en hâte en 1972–73, puis noyé par le barrage de Tabqa."
+  }
+ },
+ {
+  "id": "ain-ghazal",
+  "name": "‘Ain Ghazal",
+  "kind": "settlement",
+  "place": "Amman",
+  "country": "Jordan",
+  "lat": 31.9883,
+  "lon": 36.0083,
+  "when": [
+   -7250,
+   -5000
+  ],
+  "period": "Pre-Pottery Neolithic",
+  "desc": "A large farming town that left about thirty lime-plaster statues with wide painted eyes, among the oldest large human figures ever made.",
+  "fr": {
+   "desc": "Une grande bourgade agricole qui a livré une trentaine de statues en plâtre de chaux aux grands yeux peints, parmi les plus anciennes grandes figures humaines."
+  }
+ },
+ {
+  "id": "catalhoyuk",
+  "name": "Çatalhöyük",
+  "kind": "settlement",
+  "place": "Konya plain",
+  "country": "Turkey",
+  "lat": 37.6667,
+  "lon": 32.8278,
+  "when": [
+   -7100,
+   -5950
+  ],
+  "period": "Neolithic",
+  "discovered": "1958",
+  "unesco": 2012,
+  "visit": "open",
+  "desc": "A town of up to 8,000 people with no streets: mud-brick houses packed wall to wall, entered by ladders through the roof, with the dead buried beneath the floors and bull horns set in the walls.",
+  "highlight": "A wall painting here is often read as the oldest map, a town below an erupting twin-peaked volcano.",
+  "fr": {
+   "desc": "Une ville de 5 000 à 8 000 habitants sans rues : maisons de brique crue serrées les unes contre les autres, où l’on entrait par le toit, morts enterrés sous les sols et cornes d’aurochs dans les murs.",
+   "highlight": "Une peinture murale y est souvent lue comme la plus ancienne carte : une ville au pied d’un volcan à deux sommets en éruption."
+  }
+ },
+ {
+  "id": "choirokoitia",
+  "name": "Choirokoitia",
+  "nameFr": "Khirokitia",
+  "kind": "settlement",
+  "place": "Larnaca District",
+  "country": "Cyprus",
+  "lat": 34.7967,
+  "lon": 33.3439,
+  "when": [
+   -7000,
+   -5200
+  ],
+  "period": "Aceramic Neolithic",
+  "unesco": 1998,
+  "visit": "open",
+  "desc": "A walled village of round stone houses on a hillside, with reconstructions you can walk into. Its first settlers brought animals and crops over the sea.",
+  "fr": {
+   "desc": "Un village fortifié de maisons rondes en pierre à flanc de colline, avec des reconstitutions où l’on peut entrer. Ses premiers habitants ont apporté bêtes et semences par la mer."
+  }
+ },
+ {
+  "id": "mehrgarh",
+  "name": "Mehrgarh",
+  "kind": "settlement",
+  "place": "Kachi plain, Balochistan",
+  "country": "Pakistan",
+  "lat": 29.39,
+  "lon": 67.62,
+  "approx": true,
+  "when": [
+   -7000,
+   -2600
+  ],
+  "period": "Neolithic",
+  "discovered": "1974",
+  "desc": "The earliest farming village of South Asia, growing barley and herding cattle; teeth found here show holes drilled by early dentists around 7,000 BC.",
+  "fr": {
+   "desc": "Le plus ancien village agricole d’Asie du Sud, cultivant l’orge et élevant des bovins ; des dents y portent des trous forés par des dentistes vers 7000 av. J.-C."
+  }
+ },
+ {
+  "id": "jiahu",
+  "name": "Jiahu",
+  "kind": "settlement",
+  "place": "Wuyang, Henan",
+  "country": "China",
+  "lat": 33.613,
+  "lon": 113.668,
+  "approx": true,
+  "when": [
+   -7000,
+   -5700
+  ],
+  "period": "Peiligang culture",
+  "desc": "Rice farmers who left playable flutes made from crane wing bones and traces of the oldest known fermented drink, of rice, honey and fruit.",
+  "fr": {
+   "desc": "Des riziculteurs qui ont laissé des flûtes jouables en os d’aile de grue et les traces de la plus ancienne boisson fermentée connue, de riz, de miel et de fruits."
+  }
+ },
+ {
+  "id": "banpo",
+  "name": "Banpo",
+  "kind": "settlement",
+  "place": "Xi’an, Shaanxi",
+  "country": "China",
+  "lat": 34.2725,
+  "lon": 109.0533,
+  "when": [
+   -4800,
+   -4300
+  ],
+  "period": "Yangshao culture",
+  "discovered": "1953",
+  "visit": "open",
+  "desc": "A ditched millet farmers’ village with round houses, pottery kilns and painted bowls with fish and human faces, now a museum under a roof.",
+  "fr": {
+   "desc": "Un village de cultivateurs de millet entouré d’un fossé, avec maisons rondes, fours de potier et bols peints de poissons et de visages, aujourd’hui un musée couvert."
+  }
+ },
+ {
+  "id": "nabta-playa",
+  "name": "Nabta Playa",
+  "kind": "megalith",
+  "place": "Nubian Desert",
+  "country": "Egypt",
+  "lat": 22.5089,
+  "lon": 30.7253,
+  "approx": true,
+  "when": [
+   -5000,
+   -3500
+  ],
+  "period": "Saharan Neolithic",
+  "align": [
+   "ss-rise"
+  ],
+  "desc": "A small stone circle and stone lines left by cattle herders beside a seasonal lake; gaps in the circle are thought to face the summer-solstice sunrise, which brought the rains.",
+  "fr": {
+   "desc": "Un petit cercle et des alignements de pierres laissés par des pasteurs au bord d’un lac saisonnier ; des ouvertures du cercle feraient face au lever du soleil du solstice d’été, qui annonçait les pluies."
+  }
+ },
+ {
+  "id": "lepenski-vir",
+  "name": "Lepenski Vir",
+  "kind": "settlement",
+  "place": "Iron Gates, Danube",
+  "country": "Serbia",
+  "lat": 44.5572,
+  "lon": 22.0264,
+  "when": [
+   -9500,
+   -6000
+  ],
+  "period": "Mesolithic–Neolithic",
+  "discovered": "1960",
+  "visit": "open",
+  "desc": "Fishers on a Danube whirlpool built trapezoid houses and carved river boulders into fish-human faces. The site was lifted 30 m uphill when the Iron Gates dam raised the river.",
+  "fr": {
+   "desc": "Des pêcheurs installés près d’un tourbillon du Danube ont bâti des maisons trapézoïdales et sculpté des galets en visages mi-poissons mi-humains. Le site a été remonté de 30 m quand le barrage des Portes de Fer a élevé le fleuve."
+  }
+ },
+ {
+  "id": "sesklo",
+  "name": "Sesklo",
+  "kind": "settlement",
+  "place": "near Volos, Thessaly",
+  "country": "Greece",
+  "lat": 39.3625,
+  "lon": 22.8467,
+  "when": [
+   -6800,
+   -4400
+  ],
+  "period": "Neolithic",
+  "visit": "open",
+  "desc": "One of Europe’s first farming villages, on an acropolis with fine red-on-white pottery; neighbouring Dimini followed with its concentric walls.",
+  "fr": {
+   "desc": "L’un des premiers villages agricoles d’Europe, sur une acropole, aux belles céramiques rouges sur fond blanc ; sa voisine Dimini a suivi avec ses enceintes concentriques."
+  }
+ },
+ {
+  "id": "varna",
+  "name": "Varna Necropolis",
+  "nameFr": "Nécropole de Varna",
+  "kind": "tomb",
+  "place": "Varna",
+  "country": "Bulgaria",
+  "lat": 43.214,
+  "lon": 27.866,
+  "approx": true,
+  "when": [
+   -4600,
+   -4200
+  ],
+  "period": "Chalcolithic",
+  "discovered": "1972",
+  "desc": "About 300 graves with over 3,000 gold objects, the oldest worked gold in the world; one man was buried with more gold than all other sites of the time combined.",
+  "highlight": "Found by an excavator driver, Raycho Marinov, digging a trench for a power cable.",
+  "fr": {
+   "desc": "Environ 300 tombes et plus de 3 000 objets en or, le plus ancien or travaillé du monde ; un homme fut enterré avec plus d’or que tous les autres sites de l’époque réunis.",
+   "highlight": "Découverte par un conducteur de pelleteuse, Raycho Marinov, qui creusait une tranchée pour un câble électrique."
+  }
+ },
+ {
+  "id": "otzi",
+  "name": "Ötzi find site",
+  "nameFr": "Lieu de découverte d’Ötzi",
+  "kind": "find",
+  "place": "Tisenjoch, Ötztal Alps",
+  "country": "Italy",
+  "lat": 46.7789,
+  "lon": 10.8394,
+  "when": [
+   -3300
+  ],
+  "period": "Copper Age",
+  "discovered": "1991",
+  "visit": "site",
+  "desc": "At 3,210 m, a man killed by an arrow about 3300 BC, preserved by the ice with his copper axe, bow, quiver, birch-bark containers and grass cape. A stone pyramid marks the spot.",
+  "highlight": "Found on 19 September 1991 by Erika and Helmut Simon, hikers from Nuremberg. He is now in the South Tyrol Museum of Archaeology in Bolzano.",
+  "fr": {
+   "desc": "À 3 210 m, un homme tué par une flèche vers 3300 av. J.-C., conservé par la glace avec sa hache de cuivre, son arc, son carquois, ses récipients d’écorce et sa cape d’herbes. Une pyramide de pierre marque l’endroit.",
+   "highlight": "Trouvé le 19 septembre 1991 par Erika et Helmut Simon, randonneurs de Nuremberg. Il repose au musée d’archéologie du Haut-Adige, à Bolzano."
+  }
+ },
+ {
+  "id": "goseck",
+  "name": "Goseck circle",
+  "nameFr": "Cercle de Goseck",
+  "kind": "temple",
+  "place": "Saxony-Anhalt",
+  "country": "Germany",
+  "lat": 51.1983,
+  "lon": 11.8644,
+  "when": [
+   -4900,
+   -4700
+  ],
+  "period": "Stroked Pottery culture",
+  "discovered": "1991",
+  "visit": "open",
+  "align": [
+   "ws-rise",
+   "ws-set"
+  ],
+  "desc": "A ring ditch with palisades whose two southern gates line up with sunrise and sunset at the winter solstice; reconstructed on the spot.",
+  "highlight": "Spotted on an aerial photograph in 1991. One of many circular enclosures of central Europe, and among the oldest solar observatories proposed.",
+  "fr": {
+   "desc": "Un fossé circulaire à palissades dont les deux portes sud s’alignent sur le lever et le coucher du soleil au solstice d’hiver ; reconstruit sur place.",
+   "highlight": "Repéré sur une photo aérienne en 1991. L’une des nombreuses enceintes circulaires d’Europe centrale, parmi les plus anciens observatoires solaires proposés."
+  }
+ },
+ {
+  "id": "almendres",
+  "name": "Almendres Cromlech",
+  "nameFr": "Cromlech des Almendres",
+  "kind": "megalith",
+  "place": "Évora",
+  "country": "Portugal",
+  "lat": 38.5575,
+  "lon": -8.0614,
+  "when": [
+   -6000,
+   -3000
+  ],
+  "period": "Neolithic",
+  "discovered": "1964",
+  "visit": "open",
+  "desc": "Nearly 100 granite stones in two linked rings on a hillside, one of the largest and oldest megalithic groups of Iberia; some bear carved circles and crooks.",
+  "fr": {
+   "desc": "Près de 100 pierres de granite en deux enceintes reliées à flanc de colline, l’un des plus grands et des plus anciens ensembles mégalithiques de la péninsule Ibérique ; certaines portent des cercles et crosses gravés."
+  }
+ },
+ {
+  "id": "menga",
+  "name": "Dolmen of Menga",
+  "nameFr": "Dolmen de Menga",
+  "kind": "tomb",
+  "place": "Antequera, Málaga",
+  "country": "Spain",
+  "lat": 37.0233,
+  "lon": -4.5494,
+  "when": [
+   -3800,
+   -3600
+  ],
+  "period": "Neolithic",
+  "unesco": 2016,
+  "visit": "open",
+  "desc": "A chamber 27 m long roofed with slabs of well over 100 tonnes. Unusually, it faces not the Sun but the Peña de los Enamorados, a mountain shaped like a sleeping face.",
+  "fr": {
+   "desc": "Une chambre de 27 m couverte de dalles de bien plus de 100 tonnes. Fait rare, elle ne fait pas face au Soleil mais à la Peña de los Enamorados, une montagne en forme de visage endormi."
+  }
+ },
+ {
+  "id": "barnenez",
+  "name": "Cairn of Barnenez",
+  "nameFr": "Cairn de Barnenez",
+  "kind": "tomb",
+  "place": "Plouezoc’h, Finistère",
+  "country": "France",
+  "lat": 48.6683,
+  "lon": -3.8578,
+  "when": [
+   -4800,
+   -4500
+  ],
+  "period": "Neolithic",
+  "visit": "open",
+  "desc": "A stepped stone mound 72 m long holding eleven passage graves, one of the oldest buildings in Europe.",
+  "highlight": "A quarry was eating into it in 1955 before it was saved; André Malraux called it the “megalithic Parthenon”.",
+  "fr": {
+   "desc": "Un tumulus à gradins de 72 m abritant onze dolmens à couloir, l’un des plus anciens édifices d’Europe.",
+   "highlight": "Une carrière l’entamait en 1955 avant qu’il ne soit sauvé ; André Malraux l’appelait le « Parthénon mégalithique »."
+  }
+ },
+ {
+  "id": "carnac",
+  "name": "Carnac stones",
+  "nameFr": "Alignements de Carnac",
+  "kind": "megalith",
+  "place": "Carnac, Morbihan",
+  "country": "France",
+  "lat": 47.5947,
+  "lon": -3.082,
+  "when": [
+   -4500,
+   -3300
+  ],
+  "period": "Neolithic",
+  "unesco": 2025,
+  "visit": "open",
+  "desc": "More than 3,000 standing stones in rows running for about 4 km (Ménec, Kermario, Kerlescan), the largest megalithic group in the world.",
+  "highlight": "Local legend says they are Roman soldiers turned to stone by Saint Cornély. Inscribed by UNESCO in 2025 with the megaliths of the Morbihan shore.",
+  "fr": {
+   "desc": "Plus de 3 000 menhirs en files sur près de 4 km (Ménec, Kermario, Kerlescan), le plus grand ensemble mégalithique du monde.",
+   "highlight": "La légende y voit des soldats romains pétrifiés par saint Cornély. Inscrits à l’UNESCO en 2025 avec les mégalithes des rives du Morbihan."
+  }
+ },
+ {
+  "id": "locmariaquer",
+  "name": "Great Broken Menhir of Er Grah",
+  "nameFr": "Grand menhir brisé d’Er Grah",
+  "kind": "megalith",
+  "place": "Locmariaquer, Morbihan",
+  "country": "France",
+  "lat": 47.5703,
+  "lon": -2.9497,
+  "when": [
+   -4700,
+   -4300
+  ],
+  "period": "Neolithic",
+  "unesco": 2025,
+  "visit": "open",
+  "desc": "A 20.6 m granite menhir of about 280 tonnes, hauled from some 10 km away, now lying in four pieces; beside it the Table des Marchand dolmen.",
+  "fr": {
+   "desc": "Un menhir de granite de 20,6 m et d’environ 280 tonnes, amené de quelque 10 km, aujourd’hui couché en quatre morceaux ; à côté, le dolmen de la Table des Marchand."
+  }
+ },
+ {
+  "id": "gavrinis",
+  "name": "Gavrinis",
+  "nameFr": "Cairn de Gavrinis",
+  "kind": "tomb",
+  "place": "Larmor-Baden, Gulf of Morbihan",
+  "country": "France",
+  "lat": 47.5719,
+  "lon": -2.8994,
+  "when": [
+   -4200,
+   -4000
+  ],
+  "period": "Neolithic",
+  "unesco": 2025,
+  "visit": "open",
+  "align": [
+   "ws-rise"
+  ],
+  "desc": "A cairn on an island reached by boat, its passage lined with slabs covered in carved spirals and arcs, the richest megalithic art in Europe. Its axis faces the winter-solstice sunrise.",
+  "highlight": "A roof slab is a piece of a carved menhir broken up for reuse; its other part lies at Locmariaquer, 4 km away.",
+  "fr": {
+   "desc": "Un cairn sur une île où l’on va en bateau, dont le couloir est tapissé de dalles couvertes de spirales et d’arcs gravés, le plus riche art mégalithique d’Europe. Son axe fait face au lever du solstice d’hiver.",
+   "highlight": "Une dalle du plafond est un fragment de menhir gravé débité pour être réemployé ; l’autre morceau est à Locmariaquer, à 4 km."
+  }
+ },
+ {
+  "id": "roche-aux-fees",
+  "name": "La Roche-aux-Fées",
+  "kind": "tomb",
+  "place": "Essé, Ille-et-Vilaine",
+  "country": "France",
+  "lat": 47.9431,
+  "lon": -1.4031,
+  "when": [
+   -3000
+  ],
+  "period": "Neolithic",
+  "visit": "open",
+  "align": [
+   "ws-rise"
+  ],
+  "desc": "A covered gallery of 41 purple schist slabs, 19.5 m long, oriented towards the winter-solstice sunrise.",
+  "highlight": "By tradition, engaged couples counted the stones separately: if their totals matched, the marriage would be happy.",
+  "fr": {
+   "desc": "Une allée couverte de 41 dalles de schiste pourpre, longue de 19,5 m, orientée vers le lever du soleil au solstice d’hiver.",
+   "highlight": "Selon la tradition, les fiancés comptaient les pierres chacun de leur côté : si les nombres concordaient, le mariage serait heureux."
+  }
+ },
+ {
+  "id": "bagneux",
+  "name": "Great Dolmen of Bagneux",
+  "nameFr": "Grand dolmen de Bagneux",
+  "kind": "tomb",
+  "place": "Saumur, Maine-et-Loire",
+  "country": "France",
+  "lat": 47.2486,
+  "lon": -0.0861,
+  "when": [
+   -4000,
+   -3500
+  ],
+  "period": "Neolithic",
+  "visit": "open",
+  "desc": "One of the largest dolmens in Europe: a chamber 18 m long under four capstones, one of them about 86 tonnes. It stands in the garden of a café.",
+  "fr": {
+   "desc": "L’un des plus grands dolmens d’Europe : une chambre de 18 m sous quatre tables, dont l’une d’environ 86 tonnes. Il se dresse dans le jardin d’un café."
+  }
+ },
+ {
+  "id": "filitosa",
+  "name": "Filitosa",
+  "kind": "megalith",
+  "place": "Sollacaro, Corsica",
+  "country": "France",
+  "lat": 41.7306,
+  "lon": 8.8597,
+  "when": [
+   -3300,
+   -1000
+  ],
+  "period": "Neolithic to Bronze Age",
+  "discovered": "1946",
+  "visit": "open",
+  "desc": "Statue-menhirs with carved faces, and later swords and armour, standing among olive trees beside a Bronze Age fortified village.",
+  "fr": {
+   "desc": "Des statues-menhirs aux visages sculptés, puis armées d’épées et d’armures, dressées parmi les oliviers près d’un village fortifié de l’âge du bronze."
+  }
+ },
+ {
+  "id": "stonehenge-n",
+  "name": "Stonehenge",
+  "kind": "megalith",
+  "place": "Salisbury Plain, Wiltshire",
+  "country": "United Kingdom",
+  "lat": 51.1789,
+  "lon": -1.8262,
+  "when": [
+   -3000,
+   -1500
+  ],
+  "period": "Neolithic to Bronze Age",
+  "unesco": 1986,
+  "visit": "open",
+  "align": [
+   "ss-rise",
+   "ws-set"
+  ],
+  "desc": "Begun as a circular ditch about 3000 BC; the great sarsens rose about 2500 BC with bluestones brought 225 km from Wales. Its axis runs from midwinter sunset to midsummer sunrise.",
+  "highlight": "The Altar Stone came from northeast Scotland, over 700 km away, as shown in 2024.",
+  "fr": {
+   "desc": "Commencé par un fossé circulaire vers 3000 av. J.-C. ; les grands sarsens furent dressés vers 2500 av. J.-C., avec des pierres bleues venues du pays de Galles, à 225 km. Son axe va du coucher du solstice d’hiver au lever du solstice d’été.",
+   "highlight": "La « pierre d’autel » vient du nord-est de l’Écosse, à plus de 700 km, comme on l’a montré en 2024."
+  }
+ },
+ {
+  "id": "durrington",
+  "name": "Durrington Walls",
+  "kind": "settlement",
+  "place": "Wiltshire",
+  "country": "United Kingdom",
+  "lat": 51.1925,
+  "lon": -1.7864,
+  "when": [
+   -2500,
+   -2460
+  ],
+  "period": "Late Neolithic",
+  "visit": "open",
+  "align": [
+   "ws-rise"
+  ],
+  "desc": "A huge henge 3 km from Stonehenge where the builders seem to have lived and feasted at midwinter; its timber Southern Circle faces the winter-solstice sunrise.",
+  "fr": {
+   "desc": "Un immense henge à 3 km de Stonehenge où les bâtisseurs semblent avoir vécu et festoyé au solstice d’hiver ; son cercle de bois sud fait face au lever du solstice d’hiver."
+  }
+ },
+ {
+  "id": "avebury",
+  "name": "Avebury",
+  "kind": "megalith",
+  "place": "Wiltshire",
+  "country": "United Kingdom",
+  "lat": 51.4285,
+  "lon": -1.8544,
+  "when": [
+   -2850,
+   -2200
+  ],
+  "period": "Neolithic",
+  "unesco": 1986,
+  "visit": "open",
+  "desc": "The largest stone circle in the world, so big that a village grew up inside it, within a bank and ditch 420 m across; nearby are Silbury Hill and West Kennet long barrow.",
+  "fr": {
+   "desc": "Le plus grand cercle de pierres du monde, si vaste qu’un village s’est construit à l’intérieur, dans un talus et un fossé de 420 m de diamètre ; à côté, Silbury Hill et le long tumulus de West Kennet."
+  }
+ },
+ {
+  "id": "bryn-celli-ddu",
+  "name": "Bryn Celli Ddu",
+  "kind": "tomb",
+  "place": "Anglesey",
+  "country": "United Kingdom",
+  "lat": 53.2077,
+  "lon": -4.2361,
+  "when": [
+   -3000
+  ],
+  "period": "Neolithic",
+  "visit": "open",
+  "align": [
+   "ss-rise"
+  ],
+  "desc": "A passage grave whose passage lets the midsummer sunrise reach the inner chamber, built inside an older henge.",
+  "fr": {
+   "desc": "Un dolmen à couloir dont le passage laisse entrer le soleil levant du solstice d’été jusqu’à la chambre, bâti dans un henge plus ancien."
+  }
+ },
+ {
+  "id": "newgrange",
+  "name": "Newgrange",
+  "kind": "tomb",
+  "place": "Brú na Bóinne, County Meath",
+  "country": "Ireland",
+  "lat": 53.6947,
+  "lon": -6.4755,
+  "when": [
+   -3200
+  ],
+  "period": "Neolithic",
+  "unesco": 1993,
+  "visit": "open",
+  "align": [
+   "ws-rise"
+  ],
+  "desc": "A great mound ringed with carved kerbstones; for a few days around the winter solstice the rising Sun shines through a roof-box above the door, down the 19 m passage to the chamber floor.",
+  "highlight": "Older than Stonehenge and the Giza pyramids. Michael O’Kelly saw the midwinter light in 1967; each year a lottery chooses who may stand inside.",
+  "fr": {
+   "desc": "Un grand tumulus ceint de pierres gravées ; quelques jours autour du solstice d’hiver, le soleil levant passe par une lucarne au-dessus de l’entrée et parcourt les 19 m du couloir jusqu’au sol de la chambre.",
+   "highlight": "Plus ancien que Stonehenge et les pyramides de Gizeh. Michael O’Kelly a vu la lumière du solstice en 1967 ; chaque année, un tirage au sort désigne qui peut être à l’intérieur."
+  }
+ },
+ {
+  "id": "knowth",
+  "name": "Knowth",
+  "kind": "tomb",
+  "place": "Brú na Bóinne, County Meath",
+  "country": "Ireland",
+  "lat": 53.7013,
+  "lon": -6.4917,
+  "when": [
+   -3200
+  ],
+  "period": "Neolithic",
+  "unesco": 1993,
+  "visit": "open",
+  "align": [
+   "eq-rise",
+   "eq-set"
+  ],
+  "desc": "A mound with two passages, east and west, ringed by smaller tombs; it holds about a third of all the megalithic art in Western Europe.",
+  "fr": {
+   "desc": "Un tumulus à deux couloirs, est et ouest, entouré de tombes plus petites ; il réunit environ un tiers de tout l’art mégalithique d’Europe de l’Ouest."
+  }
+ },
+ {
+  "id": "callanish",
+  "name": "Calanais (Callanish)",
+  "kind": "megalith",
+  "place": "Isle of Lewis",
+  "country": "United Kingdom",
+  "lat": 58.1975,
+  "lon": -6.7453,
+  "when": [
+   -2900,
+   -2600
+  ],
+  "period": "Neolithic",
+  "visit": "open",
+  "desc": "A cross-shaped setting of tall Lewisian gneiss stones around a central monolith; every 18.6 years the Moon seems to skim the southern hills and set among them.",
+  "fr": {
+   "desc": "Un ensemble en croix de hautes pierres de gneiss autour d’un monolithe central ; tous les 18,6 ans, la Lune semble effleurer les collines du sud et se coucher parmi les pierres."
+  }
+ },
+ {
+  "id": "skara-brae",
+  "name": "Skara Brae",
+  "kind": "settlement",
+  "place": "Bay of Skaill, Orkney",
+  "country": "United Kingdom",
+  "lat": 59.0487,
+  "lon": -3.3418,
+  "when": [
+   -3180,
+   -2500
+  ],
+  "period": "Neolithic",
+  "unesco": 1999,
+  "visit": "open",
+  "desc": "Eight stone houses linked by covered passages, with stone beds, hearths and shelved dressers still in place: the best-preserved Neolithic village in Europe.",
+  "highlight": "A great storm in 1850 tore the turf off the dune and revealed it.",
+  "fr": {
+   "desc": "Huit maisons de pierre reliées par des passages couverts, avec lits, foyers et buffets à étagères de pierre encore en place : le village néolithique le mieux conservé d’Europe.",
+   "highlight": "Une grande tempête en 1850 arracha l’herbe de la dune et le révéla."
+  }
+ },
+ {
+  "id": "maeshowe",
+  "name": "Maeshowe",
+  "kind": "tomb",
+  "place": "Stenness, Orkney",
+  "country": "United Kingdom",
+  "lat": 58.9966,
+  "lon": -3.188,
+  "when": [
+   -2800
+  ],
+  "period": "Neolithic",
+  "unesco": 1999,
+  "visit": "open",
+  "align": [
+   "ws-set"
+  ],
+  "desc": "A chambered cairn of finely fitted stone. In the weeks around the winter solstice, the setting Sun shines down the passage onto the back wall.",
+  "highlight": "Viking raiders broke in during the 12th century and carved some thirty runic graffiti, among them a dragon.",
+  "fr": {
+   "desc": "Un cairn à chambre en pierres finement ajustées. Dans les semaines autour du solstice d’hiver, le soleil couchant éclaire le couloir jusqu’au mur du fond.",
+   "highlight": "Des Vikings y pénétrèrent au XIIe siècle et gravèrent une trentaine de graffitis runiques, dont un dragon."
+  }
+ },
+ {
+  "id": "brodgar",
+  "name": "Ring of Brodgar",
+  "nameFr": "Cercle de Brodgar",
+  "kind": "megalith",
+  "place": "Stenness, Orkney",
+  "country": "United Kingdom",
+  "lat": 59.0015,
+  "lon": -3.2297,
+  "when": [
+   -2500,
+   -2000
+  ],
+  "period": "Neolithic",
+  "unesco": 1999,
+  "visit": "open",
+  "desc": "A true circle of 104 m with 27 of its perhaps 60 stones still standing, on an isthmus between two lochs; between it and the Stones of Stenness lies the Ness of Brodgar, a complex of great stone halls.",
+  "fr": {
+   "desc": "Un cercle parfait de 104 m dont 27 des quelque 60 pierres sont encore debout, sur un isthme entre deux lochs ; entre lui et les pierres de Stenness s’étend le Ness of Brodgar, un ensemble de grands bâtiments de pierre."
+  }
+ },
+ {
+  "id": "la-hougue-bie",
+  "name": "La Hougue Bie",
+  "kind": "tomb",
+  "place": "Grouville",
+  "country": "Jersey",
+  "lat": 49.2042,
+  "lon": -2.0661,
+  "when": [
+   -3500
+  ],
+  "period": "Neolithic",
+  "visit": "open",
+  "align": [
+   "eq-rise"
+  ],
+  "desc": "A passage grave under a 12 m mound, crowned by a medieval chapel; at the spring and autumn equinoxes the rising Sun lights its chamber.",
+  "fr": {
+   "desc": "Un dolmen à couloir sous un tertre de 12 m couronné d’une chapelle médiévale ; aux équinoxes de printemps et d’automne, le soleil levant illumine sa chambre."
+  }
+ },
+ {
+  "id": "ggantija",
+  "name": "Ġgantija",
+  "kind": "temple",
+  "place": "Xagħra, Gozo",
+  "country": "Malta",
+  "lat": 36.0472,
+  "lon": 14.2689,
+  "when": [
+   -3600,
+   -3000
+  ],
+  "period": "Maltese Temple period",
+  "unesco": 1980,
+  "visit": "open",
+  "desc": "Two temples built side by side with blocks over 5 m long, older than Stonehenge; Gozitans long said a giantess built them.",
+  "fr": {
+   "desc": "Deux temples côte à côte bâtis de blocs de plus de 5 m, plus anciens que Stonehenge ; les Gozitains disaient qu’une géante les avait élevés."
+  }
+ },
+ {
+  "id": "mnajdra",
+  "name": "Mnajdra",
+  "kind": "temple",
+  "place": "Qrendi",
+  "country": "Malta",
+  "lat": 35.8267,
+  "lon": 14.4364,
+  "when": [
+   -3600,
+   -2500
+  ],
+  "period": "Maltese Temple period",
+  "unesco": 1992,
+  "visit": "open",
+  "align": [
+   "eq-rise"
+  ],
+  "desc": "On the cliffs facing the sea, the south temple’s doorway lets the equinox sunrise shine straight into its inner chamber; at the solstices the light falls on the edges of stone slabs.",
+  "fr": {
+   "desc": "Sur les falaises face à la mer, la porte du temple sud laisse le soleil levant de l’équinoxe pénétrer droit dans la chambre ; aux solstices, la lumière frappe les bords de dalles."
+  }
+ },
+ {
+  "id": "hypogeum",
+  "name": "Ħal Saflieni Hypogeum",
+  "nameFr": "Hypogée de Ħal Saflieni",
+  "kind": "tomb",
+  "place": "Paola",
+  "country": "Malta",
+  "lat": 35.8697,
+  "lon": 14.5069,
+  "when": [
+   -4000,
+   -2500
+  ],
+  "period": "Maltese Temple period",
+  "discovered": "1902",
+  "unesco": 1980,
+  "visit": "open",
+  "desc": "A three-level underground sanctuary carved out of the rock, where some 7,000 people were buried; its “Oracle Room” echoes a man’s low voice through the whole complex.",
+  "highlight": "The clay “Sleeping Lady”, now in Valletta’s archaeology museum, was found here.",
+  "fr": {
+   "desc": "Un sanctuaire souterrain sur trois niveaux taillé dans la roche, où furent inhumées quelque 7 000 personnes ; sa « salle de l’Oracle » fait résonner une voix grave dans tout l’ensemble.",
+   "highlight": "La « Dame endormie » en terre cuite, aujourd’hui au musée d’archéologie de La Valette, a été trouvée ici."
+  }
+ },
+ {
+  "id": "accoddi",
+  "name": "Monte d’Accoddi",
+  "kind": "temple",
+  "place": "Sassari, Sardinia",
+  "country": "Italy",
+  "lat": 40.7908,
+  "lon": 8.4486,
+  "when": [
+   -4000,
+   -2600
+  ],
+  "period": "Neolithic to Copper Age",
+  "visit": "open",
+  "desc": "A stepped platform with a long ramp, unique in Europe and often compared with Mesopotamian ziggurats, beside a menhir and a large stone altar.",
+  "fr": {
+   "desc": "Une plateforme à gradins avec une longue rampe, unique en Europe et souvent comparée aux ziggourats de Mésopotamie, près d’un menhir et d’une grande table de pierre."
+  }
+ },
+ {
+  "id": "gochang",
+  "name": "Gochang dolmens",
+  "nameFr": "Dolmens de Gochang",
+  "kind": "tomb",
+  "place": "North Jeolla",
+  "country": "South Korea",
+  "lat": 35.44,
+  "lon": 126.65,
+  "approx": true,
+  "when": [
+   -1000,
+   -300
+  ],
+  "period": "Mumun (Bronze Age)",
+  "unesco": 2000,
+  "visit": "open",
+  "desc": "Korea holds about 40% of the world’s dolmens; at Gochang over 440 of them lie along a hillside, of table and go-board types.",
+  "fr": {
+   "desc": "La Corée compte environ 40 % des dolmens du monde ; à Gochang, plus de 440 s’étendent sur un flanc de colline, de type table ou damier."
+  }
+ }
+]

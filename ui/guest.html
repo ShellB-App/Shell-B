@@ -14,7 +14,7 @@
       // theme before first paint: mirrors index.html (built-in themes only; guests can't design custom ones)
       (function () {
         var sk = 'synthfield', d = document.documentElement; try { sk = localStorage.getItem('shellb.skin') || sk; } catch {}
-        if (['synthfield', 'synthwave', 'normandy', 'sakura', 'pandora', 'rain', 'abyss', 'arrakis', 'borealis', 'ghibli'].indexOf(sk) >= 0) d.dataset.skin = sk;
+        if (['synthfield', 'synthwave', 'normandy', 'sakura', 'pandora', 'rain', 'abyss', 'arrakis', 'borealis', 'ghibli', 'lascaux'].indexOf(sk) >= 0) d.dataset.skin = sk;
       })();
       // ?shot[=ms] holds the load event for headless `firefox --screenshot` (shot.sh), like index.html
       var shot = /[?&]shot(?:=(\d+))?/.exec(location.search);

@@ -47,6 +47,7 @@ import shares
 import studio_edit
 import transcribe
 import translate
+import deeptime
 import media
 import generate
 import modelhub
@@ -155,6 +156,7 @@ feeds.init()
 feeds.register()
 shares.init()
 translate.register()
+deeptime.register()
 gitremote.register()
 inbox.init()
 inbox.register()
@@ -212,6 +214,7 @@ roster.grant_tools("tools_2026_10_10", {  # tools that reached no stored agent b
     "minerva": ["leave_message", "check_messages"], "mimir": ["leave_message", "check_messages"], "daedalus": ["leave_message", "check_messages"],
     "atlas": ["find_capability"], "claude": ["find_capability"]})
 roster.grant_tools("tools_feeds_2026_10_10", {"shellb": ["feeds", "translate"], "minerva": ["feeds"], "mimir": ["feeds", "translate"], "spark": ["translate"]})
+roster.grant_tools("tools_deeptime_2026_10_10", {"shellb": ["deep_time"], "mimir": ["deep_time"], "minerva": ["deep_time"], "atlas": ["deep_time"]})
 roster.grant_tools("tools_media_2026_10_10", {"shellb": ["transcribe"], "minerva": ["transcribe"], "heimdall": ["transcribe"], "nyx": ["edit_image"], "daedalus": ["edit_image"]})
 compaction.migrate_legacy()  # after episodes.init: the FTS triggers index the messages it puts back
 feedback.init()

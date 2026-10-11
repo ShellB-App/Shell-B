@@ -27,8 +27,9 @@ import './abyss.css';
 import './arrakis.css';
 import './borealis.css';
 import './ghibli.css';
+import './lascaux.css';
 
-export type BuiltinTheme = 'synthfield' | 'synthwave' | 'normandy' | 'sakura' | 'pandora' | 'rain' | 'abyss' | 'arrakis' | 'borealis' | 'ghibli' | 'classic';
+export type BuiltinTheme = 'synthfield' | 'synthwave' | 'normandy' | 'sakura' | 'pandora' | 'rain' | 'abyss' | 'arrakis' | 'borealis' | 'ghibli' | 'lascaux' | 'classic';
 export type ThemeId = BuiltinTheme | `custom:${string}`;
 export type Mode = 'dark' | 'light';
 export type { CustomTheme };
@@ -153,6 +154,15 @@ export const THEMES: ThemeInfo[] = [
       dark: { bg: '#1c1814', panel: '#24201a', text: '#f3ead8', inks: ['#e8743f', '#eda04a', '#a9c27a', '#7a4a5a'] },
     },
     ambient: { light: { kind: 'leaves' }, dark: { kind: 'leaves', density: 0.7 } },
+  },
+  {
+    id: 'lascaux', label: 'Lascaux', modes: ['dark', 'light'], font: "'Cormorant Garamond', serif",
+    blurb: 'A painted cave by torchlight: aurochs, a red horse, a stag and hand stencils along the rock, the flame breathing low on the left, embers rising. Light is the same wall under the restorers’ lamps.',
+    swatch: {
+      dark: { bg: '#17100b', panel: '#20160f', text: '#f2e4cc', inks: ['#c8553a', '#d9a441', '#1c120d', '#7a5638'] },
+      light: { bg: '#f2e8d6', panel: '#faf4e8', text: '#2a1a10', inks: ['#a3402a', '#b8762a', '#2a1a10'] },
+    },
+    ambient: { dark: { kind: 'embers', density: 0.7 }, light: { kind: 'motes', colors: ['#c9a27a', '#b88a5a', '#e0c49a'], blend: 'normal', density: 0.5 } },
   },
   {
     id: 'classic', label: 'Classic', modes: ['dark', 'light'],

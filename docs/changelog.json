@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-10-11",
+    "area": "Agents",
+    "title": "Deep time: prehistory for the agents, and a Lascaux theme",
+    "summary": "A new deep_time tool for Shell:B, Atlas, Mimir and Minerva: search the prehistoric sites shown in Worlds (by name, kind, country, distance or what already existed at a date), read a site's full card in English or French, get global sea level for any date back to 80,000 years ago, and find where the Sun rose and set at the solstices and equinoxes for any place and year, with Earth's tilt then. Answers come with a map to drop into the reply. New theme, Lascaux: a painted cave by torchlight with aurochs, a red horse, a stag, hand stencils and rising embers; light mode shows the same wall in pale limestone."
+  },
+  {
     "date": "2026-10-10",
     "area": "Worlds",
     "title": "Prehistory in Worlds: painted caves, the Neolithic and the Ice Age coast",

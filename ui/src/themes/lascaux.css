@@ -1,0 +1,229 @@
+/* ── Lascaux theme (dark, and a light version at the end of this file) ──────────────────────────────────────────
+   A painted cave by torchlight, for Guy. The wall is warm limestone that the flame lights from below and loses to
+   darkness at the edges; the light breathes and flickers; along the wall run aurochs, a red “Chinese horse”, a stag,
+   a bison, hand stencils and rows of red dots (./scenery/lascaux-frieze.svg); embers drift up from the torch
+   (./Ambient.tsx, kind 'embers'). Type is Cormorant Garamond, the accent red ochre, the second ink manganese black.
+   Reuses the .sf-* hooks Synthfield added to the TSX. Registered in ./index.ts.
+
+   Backdrop stacking, back to front (all position: fixed, behind the app):
+     body background    the wall: lit band low down, mottled rock, darkness at the edges
+     body::before   -3  the torch's glow, flickering
+     #root::before  -2  the painted frieze, multiplied into the rock
+     .shellb-ambient -1 embers                                                                                    */
+
+@font-face { font-family: 'Cormorant Garamond'; font-weight: 600; font-display: swap; src: url('/fonts/cormorant-garamond-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Cormorant Garamond'; font-style: italic; font-weight: 500; font-display: swap; src: url('/fonts/cormorant-garamond-latin-500-italic.woff2') format('woff2'); }
+
+html[data-skin='lascaux'] {
+  --lx-ochre: #c8553a;
+  --lx-ochre-soft: #e58a6c;
+  --lx-yellow: #d9a441;
+  --lx-black: #1c120d;
+  --lx-display: 'Cormorant Garamond', 'Georgia', serif;
+
+  --bg-primary: #17100b;
+  --bg-secondary: #20160f;
+  --bg-tertiary: #2c1f15;
+  --bg-hover: #38281b;
+  --bg-code: #120c08;
+  --border-subtle: rgba(232, 196, 150, 0.12);
+  --border-strong: rgba(232, 196, 150, 0.26);
+  --text-primary: #f2e4cc;
+  --text-secondary: #d0b896;
+  --text-muted: #ab9273;
+  --accent: #c8553a;
+  --accent-fg: #fff5ea;
+  --accent-soft: #e58a6c;
+  --accent-glow: rgba(200, 85, 58, 0.35);
+  --brand: #d9a441;
+  --brand-soft: #e8c06e;
+  --neon-pink: #c8553a;
+  --neon-cyan: #d9a441;
+  --sunset: linear-gradient(100deg, #9c3a22, #c8553a 55%, #d9a441);
+  --focus-ring: #e8c06e;
+  color-scheme: dark;
+}
+
+/* ── type ────────────────────────────────────────────────────────────────── */
+html[data-skin='lascaux'] .prose-shellb h1,
+html[data-skin='lascaux'] .prose-shellb h2,
+html[data-skin='lascaux'] .prose-shellb h3 { font-family: var(--lx-display); font-weight: 600; letter-spacing: 0.01em; }
+html[data-skin='lascaux'] .prose-shellb h1 { font-size: 1.6em; line-height: 1.15; }
+html[data-skin='lascaux'] .prose-shellb h2 { font-size: 1.32em; line-height: 1.2; padding-bottom: 0.3em; border-bottom: 1px solid var(--border-subtle); }
+html[data-skin='lascaux'] .prose-shellb h3 { font-size: 1.12em; }
+html[data-skin='lascaux'] .prose-shellb a { color: var(--accent-soft); text-decoration-color: rgba(229, 138, 108, 0.45); }
+html[data-skin='lascaux'] .prose-shellb li::marker { color: var(--lx-ochre); }
+html[data-skin='lascaux'] .prose-shellb blockquote { border-left: 3px solid var(--lx-ochre); font-family: var(--lx-display); font-style: italic; font-size: 1.08em; }
+html[data-skin='lascaux'] ::selection { background: rgba(200, 85, 58, 0.4); }
+
+/* ── geometry: worn stone, softly rounded ────────────────────────────────── */
+html[data-skin='lascaux'] .shadow-lg, html[data-skin='lascaux'] .shadow-xl, html[data-skin='lascaux'] .shadow-2xl {
+  box-shadow: 0 18px 44px -18px rgba(0, 0, 0, 0.85), 0 0 0 1px var(--border-subtle) !important;
+}
+
+/* ── backdrop ────────────────────────────────────────────────────────────── */
+html[data-skin='lascaux'] body {
+  background:
+    radial-gradient(ellipse 9% 6% at 18% 30%, rgba(255, 220, 170, 0.035), transparent 70%),
+    radial-gradient(ellipse 14% 7% at 63% 22%, rgba(0, 0, 0, 0.18), transparent 70%),
+    radial-gradient(ellipse 12% 9% at 82% 44%, rgba(255, 220, 170, 0.03), transparent 70%),
+    radial-gradient(ellipse 20% 8% at 40% 48%, rgba(0, 0, 0, 0.14), transparent 70%),
+    radial-gradient(ellipse 90% 46% at 40% 92%, #7a5638 0%, #5a3e28 30%, #3a281b 58%, transparent 80%),
+    radial-gradient(ellipse 130% 90% at 50% 110%, #2a1d14 0%, #1a120d 55%, #0d0906 100%);
+  background-attachment: fixed;
+}
+/* the torch, low on the left: a warm glow that breathes and gutters */
+html[data-skin='lascaux'] body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: -3;
+  background: radial-gradient(ellipse 55% 50% at 22% 96%, rgba(255, 160, 70, 0.28), rgba(255, 120, 40, 0.1) 45%, transparent 75%);
+  animation: lx-flicker 3.7s steps(1, end) infinite, lx-breathe 9s ease-in-out infinite;
+}
+/* the painted frieze, soaked into the lit rock */
+html[data-skin='lascaux'] #root::before {
+  content: ''; position: fixed; left: 0; right: 0; bottom: 11vh; height: 34vh; pointer-events: none; z-index: -2;
+  background: url("./scenery/lascaux-frieze.svg") repeat-x center bottom / auto 100%;
+  mix-blend-mode: multiply; opacity: 0.9;
+  transition: opacity 0.6s ease;
+}
+html[data-skin='lascaux']:not(:has(.sf-hero)) #root::before { opacity: 0.45; }
+html[data-skin='lascaux']:not(:has(.sf-hero)) .shellb-ambient { opacity: 0.55; }
+
+@keyframes lx-flicker {
+  0% { opacity: 1; } 11% { opacity: 0.86; } 19% { opacity: 0.97; } 34% { opacity: 0.8; } 41% { opacity: 1; }
+  57% { opacity: 0.9; } 66% { opacity: 0.75; } 72% { opacity: 0.95; } 88% { opacity: 0.84; }
+}
+@keyframes lx-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06) translateY(-1%); } }
+
+/* ── chrome ──────────────────────────────────────────────────────────────── */
+html[data-skin='lascaux'] .sf-sidebar { background: color-mix(in srgb, var(--bg-secondary) 88%, transparent); backdrop-filter: blur(10px); }
+html[data-skin='lascaux'] .sf-brand {
+  font-family: var(--lx-display); font-weight: 600; font-size: 1.15rem; letter-spacing: 0.04em;
+  color: var(--text-primary) !important; display: inline-flex; align-items: center; gap: 0.55rem;
+}
+/* three red dots, the commonest sign on the walls */
+html[data-skin='lascaux'] .sf-brand::before {
+  content: ''; width: 22px; height: 6px;
+  background: radial-gradient(circle, var(--lx-ochre) 0 2.6px, transparent 3px) 0 0 / 8px 6px repeat-x;
+}
+html[data-skin='lascaux'] .sf-label { font-family: var(--lx-display); font-weight: 600; font-size: 12px !important; letter-spacing: 0.06em; text-transform: none; }
+html[data-skin='lascaux'] .sf-sidebar [class*='bg-[var(--bg-hover)]'][class*='cursor-pointer'] {
+  box-shadow: inset 2px 0 0 var(--lx-ochre); background: linear-gradient(90deg, rgba(200, 85, 58, 0.16), transparent 80%);
+}
+html[data-skin='lascaux'] .sf-topbar, html[data-skin='lascaux'] header.h-12 {
+  background: color-mix(in srgb, var(--bg-primary) 70%, transparent); backdrop-filter: blur(8px); position: relative; z-index: 1;
+}
+html[data-skin='lascaux'] .sf-topbar .text-sm.font-medium,
+html[data-skin='lascaux'] .sf-topbar > div > span.text-sm,
+html[data-skin='lascaux'] header.h-12 > div > span.font-semibold { font-family: var(--lx-display); font-weight: 600; font-size: 15px; letter-spacing: 0.02em; }
+html[data-skin='lascaux'] nav [class*='rounded-r-full'] { background: var(--lx-ochre) !important; }
+
+/* ── welcome ─────────────────────────────────────────────────────────────── */
+/* the agent's mark sits in a halo of blown ochre, like a hand stencil */
+html[data-skin='lascaux'] .sf-hero > :first-child {
+  position: relative; overflow: visible; margin-bottom: 1.4rem;
+  box-shadow: 0 0 0 1px rgba(229, 138, 108, 0.35), 0 0 26px 8px rgba(200, 85, 58, 0.35), 0 0 70px 18px rgba(200, 85, 58, 0.14);
+}
+html[data-skin='lascaux'] .sf-hero h1 {
+  font-family: var(--lx-display); font-weight: 600; letter-spacing: 0.01em;
+  font-size: clamp(1.9rem, 4vw, 3rem); line-height: 1.1; padding-bottom: 0; background: none;
+  text-shadow: 0 2px 22px rgba(0, 0, 0, 0.6);
+}
+/* a row of red dots under the greeting */
+html[data-skin='lascaux'] .sf-hero h1::after {
+  content: ''; display: block; width: 76px; height: 10px; margin: 0.9rem auto 0.2rem;
+  background: radial-gradient(circle, var(--lx-ochre) 0 3.6px, transparent 4.2px) 0 0 / 15.2px 10px repeat-x;
+}
+html[data-skin='lascaux'] .sf-hero h1 + p > span:first-child { font-family: var(--lx-display); font-style: italic; font-weight: 500; font-size: 1.15em; color: var(--brand-soft) !important; }
+
+html[data-skin='lascaux'] .sf-card {
+  position: relative; background-color: color-mix(in srgb, var(--bg-secondary) 80%, transparent) !important; backdrop-filter: blur(8px);
+  transition: border-color .2s, background-color .2s, box-shadow .2s;
+}
+html[data-skin='lascaux'] .sf-card:hover {
+  background-color: color-mix(in srgb, var(--bg-hover) 82%, transparent) !important; border-color: rgba(229, 138, 108, 0.4) !important;
+  box-shadow: 0 0 24px -6px rgba(255, 140, 60, 0.25);
+}
+html[data-skin='lascaux'] .sf-card > div:first-child { font-family: var(--lx-display); font-weight: 600; font-size: 15px; letter-spacing: 0.01em; }
+html[data-skin='lascaux'] .sf-tagline {
+  font-family: var(--lx-display); font-style: italic; font-size: 12px !important; padding: 3px 12px;
+  color: var(--text-secondary) !important; background: color-mix(in srgb, var(--bg-primary) 72%, transparent);
+}
+
+/* ── composer ────────────────────────────────────────────────────────────── */
+html[data-skin='lascaux'] .sf-composer {
+  position: relative; z-index: 20;
+  background: color-mix(in srgb, var(--bg-secondary) 90%, transparent) !important; backdrop-filter: blur(12px);
+  box-shadow: inset 0 1px 0 rgba(232, 196, 150, 0.06), 0 20px 46px -20px rgba(0, 0, 0, 0.85);
+}
+html[data-skin='lascaux'] .sf-composer:focus-within { border-color: rgba(229, 138, 108, 0.55) !important; box-shadow: 0 0 30px -8px rgba(255, 140, 60, 0.3); }
+
+/* ── the other apps ──────────────────────────────────────────────────────── */
+html[data-skin='lascaux'] :where(h1[class*='tracking-tight']:not([class*='text-base'])) {
+  --dot: radial-gradient(circle, var(--lx-ochre) 0 2.6px, transparent 3px);
+  font-family: var(--lx-display); font-weight: 600; font-size: 1.6rem; letter-spacing: 0.01em; padding-bottom: 12px;
+  background: var(--dot) 0 100% / 9px 6px no-repeat, var(--dot) 11px 100% / 9px 6px no-repeat, var(--dot) 22px 100% / 9px 6px no-repeat;
+}
+
+/* ── misc ────────────────────────────────────────────────────────────────── */
+html[data-skin='lascaux'] * { scrollbar-width: thin; scrollbar-color: rgba(232, 196, 150, 0.22) transparent; }
+html[data-skin='lascaux'] .caret::after { background: var(--lx-ochre); }
+html[data-skin='lascaux'] .think-stream {
+  background: linear-gradient(90deg, transparent 0%, rgba(200, 85, 58, 0.18) 40%, rgba(217, 164, 65, 0.12) 60%, transparent 100%);
+  background-size: 200% 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-skin='lascaux'] body::before { animation: none; }
+}
+
+/* ── light: the cave under the restorers' lamps, as in the Lascaux IV replica. Pale limestone, the same paintings
+   crisp and close, red ochre and manganese black on cream, no flame ──────────────────────────────────────────── */
+html.light[data-skin='lascaux'] {
+  --lx-ochre: #a3402a;
+  --lx-ochre-soft: #8c3521;
+  --bg-primary: #f2e8d6;
+  --bg-secondary: #faf4e8;
+  --bg-tertiary: #eadcc4;
+  --bg-hover: #e1cfb2;
+  --bg-code: #f6eedf;
+  --border-subtle: rgba(80, 45, 20, 0.15);
+  --border-strong: rgba(80, 45, 20, 0.28);
+  --text-primary: #2a1a10;
+  --text-secondary: #5a3f2b;
+  --text-muted: #6e5440;
+  --accent: #a3402a;
+  --accent-fg: #ffffff;
+  --accent-soft: #8c3521;
+  --accent-glow: rgba(163, 64, 42, 0.22);
+  --brand: #8a5a12;
+  --brand-soft: #7a4f0f;
+  --neon-pink: #a3402a;
+  --neon-cyan: #8a5a12;
+  --sunset: linear-gradient(100deg, #8c3521, #a3402a 55%, #b8762a);
+  --focus-ring: #8a5a12;
+  color-scheme: light;
+}
+html.light[data-skin='lascaux'] body {
+  background:
+    radial-gradient(ellipse 14% 7% at 63% 22%, rgba(120, 80, 40, 0.06), transparent 70%),
+    radial-gradient(ellipse 20% 8% at 40% 48%, rgba(120, 80, 40, 0.05), transparent 70%),
+    radial-gradient(ellipse 90% 50% at 45% 90%, #e2cfae 0%, #ead9bd 40%, transparent 80%),
+    linear-gradient(180deg, #f5ecdc 0%, #f0e4cf 60%, #e6d4b6 100%);
+  background-attachment: fixed;
+}
+html.light[data-skin='lascaux'] body::before {
+  background: radial-gradient(ellipse 70% 40% at 50% 100%, rgba(255, 240, 210, 0.5), transparent 75%);
+  animation: none;
+}
+html.light[data-skin='lascaux'] #root::before { opacity: 0.75; }
+html.light[data-skin='lascaux']:not(:has(.sf-hero)) #root::before { opacity: 0.35; }
+html.light[data-skin='lascaux'] .sf-hero h1 { text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6); }
+html.light[data-skin='lascaux'] .sf-hero > :first-child {
+  box-shadow: 0 0 0 1px rgba(163, 64, 42, 0.3), 0 0 24px 6px rgba(163, 64, 42, 0.22), 0 0 60px 14px rgba(163, 64, 42, 0.08);
+}
+html.light[data-skin='lascaux'] .sf-card:hover { box-shadow: 0 10px 24px -14px rgba(42, 26, 16, 0.35); }
+html.light[data-skin='lascaux'] .sf-composer:focus-within { box-shadow: 0 10px 30px -16px rgba(42, 26, 16, 0.35); }
+html.light[data-skin='lascaux'] .shadow-lg, html.light[data-skin='lascaux'] .shadow-xl, html.light[data-skin='lascaux'] .shadow-2xl {
+  box-shadow: 0 14px 34px -16px rgba(42, 26, 16, 0.3), 0 0 0 1px var(--border-subtle) !important;
+}
+html.light[data-skin='lascaux'] ::selection { background: rgba(163, 64, 42, 0.22); }
