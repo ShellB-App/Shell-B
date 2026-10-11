@@ -41,6 +41,7 @@ TOOL_COMMANDS = {
     "recall": ("memory_search", "Search long-term memory"),
     "library": ("library", "Look it up in the library"),
     "translate": ("translate", "Translate this (local model)"),
+    "species": ("marine", "Marine species, records, papers or sea conditions (WoRMS, OBIS)"),
 }
 REF_INLINE = 60_000
 LISTING_INLINE = 8_000

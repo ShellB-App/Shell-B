@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-10-11",
+    "area": "Agents",
+    "title": "Thalassa, a marine biologist; species lists, survey diversity, literature and photo-ID checks",
+    "summary": "New built-in agent Thalassa (🐙) for marine science. The marine tool gains: match, which checks a species list or survey sheet (CSV, TSV, TXT or Excel, French headers too) against WoRMS for misspellings, outdated names and homonyms and saves the corrected table; diversity, with richness, Shannon, Pielou, Simpson and Chao1 per site and pooled; literature, which finds papers through OpenAlex with authors, journal, citations, DOI and open-access links; and verify, which checks whether candidate species for a photo or sighting have been recorded near where it was taken. Species cards now list the Habitats Directive, CITES, IUCN Red List and other policy lists. Type /species in the composer to use it from any chat."
+  },
+  {
+    "date": "2026-10-11",
     "area": "Worlds",
     "title": "Marine biology: species records, sea surface from satellites, the sea at any point",
     "summary": "A new marine tool for Shell:B, Atlas, Mimir and Minerva: accepted names, classification, synonyms and English or French common names from WoRMS; where a species has been recorded, worldwide or near a place, from OBIS; the species recorded in an area, optionally within a group such as Cetacea; and live sea temperature, waves, swell and surface current. In Worlds: a Sea surface layer with NASA's daily sea temperature, temperature anomaly (marine heatwaves) and PACE chlorophyll, each with its legend and following the clock's date back through the archive; a Marine life layer that maps every OBIS record cell for a species you search by scientific or common name; and a waves button on a dropped pin for the sea conditions there and the species recorded within 25 km."

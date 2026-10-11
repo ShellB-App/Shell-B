@@ -97,5 +97,38 @@ class Marine(unittest.TestCase):
         self.assertEqual(earthview.clamp_date(earthview.LAYERS["sst"], "2999-01-01"), earthview.latest_date(2))
 
 
+class SurveyTables(unittest.TestCase):
+    def test_diversity_maths(self):
+        d = marine.diversity({"a": 10, "b": 10, "c": 10, "d": 10})
+        self.assertEqual(d["S"], 4)
+        self.assertAlmostEqual(d["shannon"], 1.3863, places=3)  # ln 4
+        self.assertAlmostEqual(d["pielou"], 1.0, places=3)
+        self.assertAlmostEqual(d["simpson"], 0.75, places=3)
+        c = marine.diversity({"a": 5, "b": 1, "c": 1, "d": 2})  # two singletons, one doubleton
+        self.assertAlmostEqual(c["chao1"], 4 + 2 * 1 / (2 * 2), places=2)
+        self.assertIsNone(marine.diversity({"a": 0.5, "b": 1.5})["chao1"])  # cover or biomass: no Chao1
+
+    def test_survey_file_with_french_headers(self):
+        ctx = SimpleNamespace(conv_id="conv-marinetest", project_id=None, tenant=None)
+        from doc_tools import _work_root
+        root = _work_root(ctx)
+        (root / "releve.csv").write_text("Station;Espèce;Abondance\nA;Diplodus vulgaris;3\nA;Coris julis;1\nB;Coris julis;2\n", encoding="utf-8")
+        r = asyncio.run(marine.marine_tool({"action": "diversity", "file": "/work/releve.csv"}, ctx))
+        self.assertFalse(r.error, r.text)
+        self.assertIn("| A | 2 | 4.0 |", r.text)
+        self.assertIn("ALL (pooled)", r.text)
+        self.assertTrue((root / "releve_diversity.csv").is_file())
+        self.assertTrue(asyncio.run(marine.marine_tool({"action": "diversity", "file": "/work/../../etc/passwd"}, ctx)).error)
+
+    def test_thalassa_and_species_command(self):
+        import composer
+        import defaults
+        from tools import TOOLS
+        th = next(a for a in defaults.DEFAULT_AGENTS if a["id"] == "thalassa")
+        self.assertIn("marine", th["tools"])
+        self.assertEqual([t for t in th["tools"] if t not in TOOLS], [])
+        self.assertIn("marine tool", composer.tool_hint("/species Pinna nobilis", {"marine"}))
+
+
 if __name__ == "__main__":
     unittest.main()
