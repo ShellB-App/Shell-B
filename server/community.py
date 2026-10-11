@@ -120,7 +120,9 @@ def remove_source(sid: str):
 # wherever each one lives now, so they can move without an app update. The GitHub name stays the fallback.
 SHELLB_VIA = {"EveAeternam/Shell-B-Themes": "themes", "EveAeternam/Shell-B-Screensavers": "screensavers",
               "EveAeternam/Shell-B-Studio-Templates": "templates", "EveAeternam/Shell-B-Skills": "skills",
-              "EveAeternam/Shell-B-Agents": "agents", "EveAeternam/Shell-B-Translations": "translations"}
+              "EveAeternam/Shell-B-Agents": "agents", "EveAeternam/Shell-B-Translations": "translations",
+              "EveAeternam/Shell-B-Worlds": "worlds", "EveAeternam/Shell-B-Voices": "voices",
+              "EveAeternam/Shell-B-Apps": "apps"}
 VIA_HOST = "https://git.shellb.app"
 _via_cache: dict[str, tuple[float, str]] = {}
 

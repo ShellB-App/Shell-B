@@ -123,8 +123,9 @@ async def refresh(entry: dict) -> dict:
     """Fetch the repository and count its items: index.json when it has one, else the kind's folder."""
     kind = KINDS[entry["kind"]]
     try:
-        sha = await community._ls_remote(entry["repo"], entry.get("ref") or "main")
-        root = await community.fetch_repo(entry["repo"], sha)
+        repo = await community.resolve_repo(entry["repo"])
+        sha = await community._ls_remote(repo, entry.get("ref") or "main")
+        root = await community.fetch_repo(repo, sha)
         count, names, note = 0, [], ""
         idx = root / "index.json"
         if idx.is_file():
