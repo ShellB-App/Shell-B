@@ -1,6 +1,6 @@
 import { LOCALES, t } from '../i18n';
 import { useCallback, useEffect, useState } from 'react';
-import { Check, ChevronDown, Copy, Flag, KeyRound, Link2, Loader2, LockOpen, LogOut, Mail, Pause, Play, Plus, ShieldOff, Trash2, Users } from 'lucide-react';
+import { Check, ChevronDown, Copy, Flag, Heart, KeyRound, Link2, Loader2, LockOpen, LogOut, Mail, Pause, Play, Plus, ShieldOff, Trash2, Users } from 'lucide-react';
 import { fmtBytes, req } from '../api';
 import { btn, relTime } from './common';
 import { toast } from './toast';
@@ -16,7 +16,7 @@ const LIMIT_FIELDS = [
   ['audioPerDay', 'Audio clips a day'], ['storageMB', 'Space (MB)'],
 ] as const;
 type LimitKey = typeof LIMIT_FIELDS[number][0];
-type Config = Record<LimitKey, number> & { agents: string[]; tools: string[]; cell: boolean; language?: '' | 'en' | 'fr' };
+type Config = Record<LimitKey, number> & { agents: string[]; tools: string[]; cell: boolean; language?: '' | 'en' | 'fr'; adult?: boolean };
 interface Usage { turns: number; tokens: number; images: number; audio: number; reports: number }
 interface Guest {
   id: string; name: string; created: number; disabled: boolean; config: Config; lastSeen: number | null; today: Usage;
@@ -30,6 +30,8 @@ interface GuestSettings { models: string[]; slots: number; ownerWait: number; ur
 interface Listing {
   guests: Guest[]; settings: GuestSettings; allowedModels: string[]; tools: string[]; newReports: number;
   agents: { id: string; name: string; title: string; model: string }[];
+  /** the owner's Aphrodite switch (Tools & Connectors → Aphrodite): a guest's permission only counts while it's on */
+  aphrodite?: boolean;
 }
 interface Report {
   id: string; guestId: string; guestName: string; created: number; text: string; convId: string | null; msgId: string | null;
@@ -118,7 +120,7 @@ export function GuestsTab({ locked }: { locked: boolean }) {
       <section className="space-y-2">
         <h3 className="flex items-center gap-2 text-sm font-semibold"><Users className="w-4 h-4 text-[var(--accent)]" />{t('Shell:B Guest')}</h3>
         <p className="text-xs leading-relaxed text-[var(--text-secondary)] max-w-[70ch]">
-          {t('Friends get their own Shell:B at the guest address: their own chats, files and memory, the local agents below, and daily limits. Your invite link lets them choose a username and password; there\'s no other way to sign up. They can\'t reach anything of yours: the guest address only serves guest routes, cloud agents and Aphrodite are off, and their sandbox mounts none of your files. Their chats are stored here, on this machine.')}
+          {t('Friends get their own Shell:B at the guest address: their own chats, files and memory, the local agents below, and daily limits. Your invite link lets them choose a username and password; there\'s no other way to sign up. They can\'t reach anything of yours: the guest address only serves guest routes, cloud agents are off, Aphrodite is off unless you allow her for a guest below, and their sandbox mounts none of your files. Their chats are stored here, on this machine.')}
         </p>
       </section>
 
@@ -257,6 +259,8 @@ export function GuestsTab({ locked }: { locked: boolean }) {
                   <Account guest={g} onTwoStepOff={() => act(req(`/api/guests/${g.id}/two-step/off`, { method: 'POST' }), `Two-step sign-in is off for ${g.name}`)} />
                   <CellSwitch guest={g} onChange={cell => act(req(`/api/guests/${g.id}`, { method: 'PATCH', body: json({ config: { cell } }) }),
                     cell ? `${g.name} gets their own Shell:B on their next visit` : `${g.name} is back on the lighter guest app`)} />
+                  <AphroditeSwitch guest={g} hostOn={!!data.aphrodite} onChange={adult => act(req(`/api/guests/${g.id}`, { method: 'PATCH', body: json({ config: { adult } }) }),
+                    adult ? `${g.name} can turn on Aphrodite in their Shell:B (next visit)` : `Aphrodite is off for ${g.name}`)} />
                   <Limits guest={g} onSave={config => act(req(`/api/guests/${g.id}`, { method: 'PATCH', body: json({ config }) }), 'Saved')} />
                 </>
               )}
@@ -335,6 +339,25 @@ function CellSwitch({ guest: g, onChange }: { guest: Guest; onChange: (cell: boo
           {s.error && <span className="block text-red-400">{t('Last start failed: {error}', { error: s.error })}</span>}
         </p>
       )}
+    </div>
+  );
+}
+
+/** server/guests.py adult_ok: Aphrodite for one guest, off by default, in their own Shell:B only. */
+function AphroditeSwitch({ guest: g, hostOn, onChange }: { guest: Guest; hostOn: boolean; onChange: (adult: boolean) => void }) {
+  const allowed = !!g.config.adult;
+  const why = !hostOn ? t('Aphrodite is off for everyone (Tools & Connectors → Aphrodite).')
+    : !g.config.cell ? t('Only in their own Shell:B, not the lighter guest app.') : '';
+  return (
+    <div className="mt-3 p-3 rounded-lg bg-[var(--bg-tertiary)] text-xs space-y-1.5">
+      <label className={`flex items-start gap-2.5 ${why && !allowed ? 'opacity-60' : 'cursor-pointer'}`}>
+        <input type="checkbox" checked={allowed} disabled={!!why && !allowed} onChange={e => onChange(e.target.checked)} className="mt-0.5 accent-[var(--accent)]" />
+        <span className="leading-relaxed text-[var(--text-secondary)] max-w-[65ch]">
+          <span className="text-[var(--text-primary)] inline-flex items-center gap-1"><Heart className="w-3 h-3 text-rose-400" />{t('Aphrodite (18+).')}</span>{' '}
+          {t('Only for guests you know are adults. They still switch her on themselves in their Shell:B, after confirming they\'re 18 or older. Same limits and background checks as yours; her chats stay incognito in their cell, and her pictures are deleted from this machine once their cell has them.')}
+        </span>
+      </label>
+      {why && <p className="pl-6 text-amber-500">{allowed ? t('Allowed, but not active: {why}', { why }) : why}</p>}
     </div>
   );
 }

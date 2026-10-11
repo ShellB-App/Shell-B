@@ -7,7 +7,8 @@ import { setCellMode } from './components/apps';
  * owner's account, MCP connectors, cloud AI…) checks `isCell()` and steps aside; the gateway's own routes under
  * /api/guest/* (account, devices, limits, Report to Evie, sign-out) stand in for the owner's.
  */
-export interface CellGuest { id?: string; name: string; username?: string | null }
+/** `adult`: the owner allowed this guest Aphrodite (server/guests.py adult_ok); they still switch her on themselves */
+export interface CellGuest { id?: string; name: string; username?: string | null; adult?: boolean }
 
 let guest: CellGuest | null = null;
 

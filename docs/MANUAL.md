@@ -809,7 +809,7 @@ Friends and coworkers can have their own Shell:B on this machine, without access
   Radio, their own memory, Agent Lab, themes and screensavers, pictures, music, sound, Kokoro voices, the code sandbox
   and web reading. In a cell the UI knows it is one (`cell` on `/api/auth/me`, `ui/src/cell.ts`): the host's apps
   (Models, Offline data, Secretary, Gibberlink, Feeds) and tabs (API keys, Network, System, Backups, MCP connectors,
-  Discover, Cloud AI, Screen, API, Guests, Aphrodite) are not shown, the gear menu, Settings → Account and the command
+  Discover, Cloud AI, Screen, API, Guests) are not shown, the gear menu, Settings → Account and the command
   palette carry the gateway's own panels (Account and security, Your devices, About and limits, Report to Evie, Sign
   out), each reply has a Report flag, and the sidebar shows whose Shell:B it is. While the container boots, the sign-in
   screen says "Starting your Shell:B…" (`GET/POST /api/guest/cell` on the gateway) and offers Try again if it fails.
@@ -823,9 +823,20 @@ Friends and coworkers can have their own Shell:B on this machine, without access
   guest_app shares only the GET routes of those routers), and Radio / DJ. Each guest has their own memory
   (guest_memories), learned from their chats and editable in "What Shell:B remembers". Chats made in one mode don't
   show in the other (the cell keeps its own database).
-- **What neither gets:** cloud agents, Aphrodite, the owner's memory, Codex, Library or projects, MCP connectors,
-  Discover, SSH, self-edit, screen and browser, model downloads. Their sandbox mounts only their own /work. Nothing
-  they do asks the owner for approval.
+- **What neither gets:** cloud agents, the owner's memory, Codex, Library or projects, MCP connectors, Discover, SSH,
+  self-edit, screen and browser, model downloads. Their sandbox mounts only their own /work. Nothing they do asks the
+  owner for approval.
+- **Aphrodite for a guest (off by default):** tick *Aphrodite (18+)* on a guest's row, only for guests you know are
+  adults. It counts only while Aphrodite is on for you (Tools & Connectors → Aphrodite) and the guest has their own
+  Shell:B; the lighter guest app never runs her. Their cell then keeps her (on the host's model for her), her picture
+  tool and `/api/adult/files`, and the guest gets an Aphrodite tab in Tools & Connectors where they switch her on
+  themselves after ticking "I'm 18 or older". Everything in adult.py applies in the cell as it does for you (limits,
+  background checks that fail closed, incognito chats, no delegation, interactive turns only). The broker checks the
+  permission on every request (`guests.adult_ok`): only then does it serve her model and her picture graph, with your
+  checkpoint swapped in for the placeholder `aphrodite`, previews instead of saved files, the keyword screen on the
+  prompt, and each picture deleted from ComfyUI's temp folder once the cell has fetched it. Pictures need an SDXL
+  checkpoint (guests never get the FLUX.1-dev fallback). Changing the permission, your switch or the checkpoint
+  restarts the affected cells on their next visit.
 - **Fair use:** one guest reply at a time (configurable), started after the owner's own turns or `ownerWait` seconds;
   daily caps on pictures and audio and a storage quota per guest. Messages and tokens are unlimited unless the owner
   sets a cap (0 = no limit).

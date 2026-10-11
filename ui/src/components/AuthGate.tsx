@@ -26,7 +26,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
     if (i.language !== undefined) setLocalePref((i.language || '') as LocalePref);  // the server's choice for this person
     if (i.authenticated) {
       setFrameKey(i.frameKey);
-      setCell(i.cell ? { id: i.guest?.id, name: i.cell.guest, username: i.guest?.username } : null);
+      setCell(i.cell ? { id: i.guest?.id, name: i.cell.guest, username: i.guest?.username, adult: !!i.cell.adult } : null);
       setLost(false);
       if (i.cell) setCellState(c => c ?? { state: 'stopped' });
       else setMounted(true);

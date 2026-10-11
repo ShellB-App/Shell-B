@@ -192,7 +192,7 @@ def auth_me(req: Request):
     lang = (g.get("config") or {}).get("language", "")
     if g["passwordSet"] and cells.enabled(g):  # what the full Shell:B UI asks first (cell_boot.auth_me answers the same)
         return {"authenticated": True, "via": "session", "passwordSet": True, "needsAccount": False,
-                "frameKey": guests.frame_secret(g["id"]), "cell": {"guest": g["name"]}, "language": lang,
+                "frameKey": guests.frame_secret(g["id"]), "cell": {"guest": g["name"], **({"adult": True} if guests.adult_ok(g) else {})}, "language": lang,
                 "guest": {"id": g["id"], "name": g["name"], "username": g["username"]}}
     return {"authenticated": True, "via": "guest", "passwordSet": True, "needsAccount": not g["passwordSet"],
             "frameKey": guests.frame_secret(g["id"]) if g["passwordSet"] else None, "language": lang,

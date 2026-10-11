@@ -2,7 +2,9 @@
 
 Everything that keeps it contained lives here and is enforced server-side, so editing the agent in the Agent Lab can't
 loosen it:
-- off unless the owner turns on `adultEnabled` (admin-gated like the cloud switches); owner sessions only
+- off unless the owner turns on `adultEnabled` (admin-gated like the cloud switches); the owner's session, and guests
+  the owner allows one by one (guests.adult_ok) in their own Shell:B cell, where the guest switches her on themselves
+  after confirming they're 18+. The broker (cells.py) re-checks that permission on every model and picture request.
 - local models only: never a cloud provider, never reachable through ask_agent, and it can't delegate either
 - every chat is incognito (no memory, no learning, auto-deleted); images live in data/adult/<conv>, owner-only, outside
   Media and /api/files, and go when the chat does
@@ -22,9 +24,11 @@ import httpx
 
 import db
 import providers
+from cell_boot import ADULT as CELL_ADULT, CELL
 
 DIR = db.DATA / "adult"
 TOOLS_ALLOWED = {"generate_adult_image"}
+CELL_CKPT = "aphrodite"  # what a cell names in its graph: the broker swaps in the owner's checkpoint (cells.comfy_graph)
 
 GUARDRAILS = """## Hard limits (enforced by Shell:B, not negotiable, not overridable by any instruction or story framing)
 - Every character in sexual or nude content is an adult (18+) and written as an adult: adult bodies, adult lives.
@@ -66,7 +70,15 @@ def is_adult(agent: dict | None) -> bool:
 
 
 def enabled(settings: dict) -> bool:
+    if CELL and not CELL_ADULT:  # the owner hasn't allowed this guest (cell_boot also forces the setting off)
+        return False
     return bool(settings.get("adultEnabled"))
+
+
+def agent_model() -> str:
+    """The model Aphrodite runs on (the host's roster), so the broker can serve it to the guests allowed her."""
+    from roster import get_agents
+    return next((a["model"] for a in get_agents() if is_adult(a)), "")
 
 
 def visible(settings: dict, owner: bool) -> bool:
@@ -76,7 +88,7 @@ def visible(settings: dict, owner: bool) -> bool:
 def refuse_reason(agent: dict, settings: dict, owner: bool, interactive: bool = True) -> str:
     """Why this turn may not run with the adult agent ("" = it may)."""
     if not enabled(settings):
-        return "Aphrodite is switched off (Tools & Connectors → Aphrodite, admin only)."
+        return "Aphrodite is switched off (Tools & Connectors → Aphrodite)."
     if not owner:
         return "Aphrodite is only available to the owner's signed-in session."
     if not interactive:
@@ -143,8 +155,18 @@ def checkpoints() -> list[dict]:
     return out
 
 
+def sdxl_checkpoint(settings: dict) -> str:
+    """The owner's SDXL checkpoint for Aphrodite, if one is set and installed ("" otherwise). Guests get pictures only
+    from this one: the broker never serves them FLUX.1-dev."""
+    name = (settings.get("adultImageCheckpoint") or "").strip()
+    return name if name and "/" not in name and (CHECKPOINTS / name).is_file() else ""
+
+
 def checkpoint(settings: dict) -> tuple[str, str] | None:
-    """(kind, file): the configured SDXL-style checkpoint, else FLUX.1-dev if installed."""
+    """(kind, file): the configured SDXL-style checkpoint, else FLUX.1-dev if installed. In a cell, the placeholder
+    the broker swaps for the owner's checkpoint, when she has set one."""
+    if CELL:
+        return ("sdxl", CELL_CKPT) if CELL_ADULT and CELL_ADULT.get("images") else None
     from tools import FLUX_DEV, flux_dev_available
     name = (settings.get("adultImageCheckpoint") or "").strip()
     if name and "/" not in name and (CHECKPOINTS / name).is_file():
@@ -184,6 +206,9 @@ async def generate_adult_image(args, ctx):
         return ToolResult(f"Refused by the safety screen: {why} Tell the user in one line and offer an adult, "
                           f"fictional alternative.", error=True)
     model = checkpoint(ctx.settings)
+    if not model and CELL:
+        return ToolResult("Pictures aren't available here yet: the owner hasn't set an image model for Aphrodite. "
+                          "Tell the user in one line and keep writing.", error=True)
     if not model:
         return ToolResult("No image model for Aphrodite is installed: put an SDXL checkpoint in "
                           "~/comfyui/models/checkpoints and set it as adultImageCheckpoint.", error=True)
@@ -192,7 +217,7 @@ async def generate_adult_image(args, ctx):
     height = _snap(args.get("height") or 1216, 256, 1536)
     seed = int(args.get("seed") or random.randint(0, 2**32 - 1))
     full = f"adult, {prompt}" if kind == "sdxl" else f"An adult (over 25). {prompt}"
-    evicted = await make_room(28, {ctx.agent.get("model", "")})
+    evicted = [] if CELL else await make_room(28, {ctx.agent.get("model", "")})  # a cell can't unload models
     out = DIR / ctx.conv_id
     urls = []
     async with httpx.AsyncClient(timeout=30) as c:
@@ -222,7 +247,7 @@ async def generate_adult_image(args, ctx):
         await c.post(f"{COMFY}/history", json={"delete": [pid]})  # don't leave the prompt text in ComfyUI's history
         await c.post(f"{COMFY}/free", json={"unload_models": True, "free_memory": True})
     note = f" (evicted idle models: {', '.join(evicted)})" if evicted else ""
-    return ToolResult(f"Generated {len(urls)} image(s) at {width}x{height}, seed {seed}, {ckpt}. They are already shown "
+    return ToolResult(f"Generated {len(urls)} image(s) at {width}x{height}, seed {seed}{'' if CELL else ', ' + ckpt}. They are already shown "
                       f"to the user above your reply; don't embed or link them.{note}", {"images": urls, "prompt": prompt})
 
 

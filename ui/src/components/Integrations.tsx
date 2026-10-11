@@ -13,7 +13,7 @@ import { Discover } from './Discover';
 import { ScreenTab } from './ScreenTab';
 import { ApiTab } from './ApiTab';
 import { GuestsTab } from './GuestsTab';
-import { isCell } from '../cell';
+import { cellGuest, isCell } from '../cell';
 
 const ICONS: Record<string, LucideIcon> = {
   FolderOpen, Database, Workflow, Github: GitBranch, NotebookText, Share2, ListOrdered, Link, SquareTerminal, Plug, Compass,
@@ -37,9 +37,10 @@ interface Props {
   tab?: Tab;
 }
 
-// a guest's cell (cell.ts) has no connectors, MCP, cloud, screen, API keys, guests or Aphrodite: those are the host's
-const CELL_TABS = new Set<Tab>(['skills', 'tools']);
-const startTab = (t?: Tab): Tab => (isCell() ? (t && CELL_TABS.has(t) ? t : 'tools') : t ?? 'connectors');
+// a guest's cell (cell.ts) has no connectors, MCP, cloud, screen, API keys or guests: those are the host's. Aphrodite
+// only when the owner allowed this guest her, and then as the guest's own opt-in (AphroditeGuestTab)
+const cellTabs = () => new Set<Tab>(['skills', 'tools', ...(cellGuest()?.adult ? ['adult' as const] : [])]);
+const startTab = (t?: Tab): Tab => (isCell() ? (t && cellTabs().has(t) ? t : 'tools') : t ?? 'connectors');
 
 export function IntegrationsModal({ open, onClose, tools, settings, onChanged, tab: initial }: Props) {
   const [tab, setTab] = useState<Tab>(() => startTab(initial));
@@ -76,7 +77,7 @@ export function IntegrationsModal({ open, onClose, tools, settings, onChanged, t
     { id: 'api', label: 'API', icon: KeyRound },
     { id: 'guests', label: 'Guests', icon: Users },
     { id: 'adult', label: 'Aphrodite', icon: Heart },
-  ] as const).filter(t => !isCell() || CELL_TABS.has(t.id));
+  ] as const).filter(t => !isCell() || cellTabs().has(t.id));
 
   return (
     <Modal open={open} onClose={onClose} title={tx('Tools & Connectors')} icon={<Plug className="w-4 h-4 text-sky-400" />} wide>
@@ -90,7 +91,7 @@ export function IntegrationsModal({ open, onClose, tools, settings, onChanged, t
           ))}
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5">
-          {admin === false && (tab === 'connectors' || tab === 'servers' || tab === 'skills' || tab === 'discover' || tab === 'cloud' || tab === 'screen' || tab === 'api' || tab === 'guests' || tab === 'adult') && <AdminGate onUnlocked={() => setAdmin(true)} />}
+          {admin === false && !(isCell() && tab === 'adult') && (tab === 'connectors' || tab === 'servers' || tab === 'skills' || tab === 'discover' || tab === 'cloud' || tab === 'screen' || tab === 'api' || tab === 'guests' || tab === 'adult') && <AdminGate onUnlocked={() => setAdmin(true)} />}
           {tab === 'connectors' && !editing && (
             <ConnectorGallery connectors={connectors} servers={servers} onPick={c => setEditing({ connector: c })} />
           )}
@@ -119,7 +120,8 @@ export function IntegrationsModal({ open, onClose, tools, settings, onChanged, t
           {tab === 'screen' && <ScreenTab locked={!admin} cloudScreen={!!settings?.cloudScreen} />}
           {tab === 'api' && <ApiTab locked={!admin} />}
           {tab === 'guests' && <GuestsTab locked={!admin} />}
-          {tab === 'adult' && <AphroditeTab settings={settings} locked={!admin} onChanged={onChanged} />}
+          {tab === 'adult' && (isCell() ? <AphroditeGuestTab settings={settings} onChanged={onChanged} />
+            : <AphroditeTab settings={settings} locked={!admin} onChanged={onChanged} />)}
         </div>
       </div>
     </Modal>
@@ -426,7 +428,7 @@ function AphroditeTab({ settings, locked, onChanged }: { settings?: Settings; lo
           <div className="flex-1">
             <div className="text-sm font-semibold">{on ? tx('Aphrodite is on') : tx('Aphrodite is off')}</div>
             <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed max-w-[65ch]">
-              {tx('An adult (18+) agent for explicit fiction, roleplay and images of fictional adult characters. It appears only in the owner\'s signed-in session, runs on local models only, never delegates or is delegated to, and every chat is incognito. Original adult characters only; background checks run quietly on each request.')}
+              {tx('An adult (18+) agent for explicit fiction, roleplay and images of fictional adult characters. It appears in your signed-in session, and for guests you allow one by one in the Guests tab. It runs on local models only, never delegates or is delegated to, and every chat is incognito. Original adult characters only; background checks run quietly on each request.')}
             </p>
           </div>
           <Toggle on={on} disabled={locked} label={tx('Aphrodite')} onChange={v => save({ adultEnabled: v })} />
@@ -445,6 +447,44 @@ function AphroditeTab({ settings, locked, onChanged }: { settings?: Settings; lo
           {(ckpts ?? []).map(c => <option key={c.name} value={c.name}>{c.name} · {(c.size / 1e9).toFixed(1)} GB</option>)}
         </select>
         {ckpts && ckpts.length === 0 && <div className="text-[11px] text-amber-400">{tx('No SDXL checkpoints installed yet.')}</div>}
+      </div>
+      {error && <div className="text-xs text-red-400">{error}</div>}
+    </div>
+  );
+}
+
+/** In a guest's own Shell:B: the owner allowed them Aphrodite; switching her on is theirs, after confirming they're 18+. */
+function AphroditeGuestTab({ settings, onChanged }: { settings?: Settings; onChanged: () => void }) {
+  const [adult, setAdult] = useState(false);
+  const [error, setError] = useState('');
+  if (!settings) return null;
+  const on = !!settings.adultEnabled;
+  const save = async (v: boolean) => {
+    setError('');
+    try { await api.saveSettings({ adultEnabled: v }); onChanged(); } catch (e) { setError(String(e)); }
+  };
+  return (
+    <div className="space-y-4 max-w-3xl">
+      <div className={clsx('p-4 rounded-xl border', on ? 'border-rose-500/30 bg-rose-500/5' : 'border-[var(--border-subtle)] bg-[var(--bg-secondary)]')}>
+        <div className="flex items-start gap-3">
+          <Heart className={clsx('w-5 h-5 mt-0.5 shrink-0', on ? 'text-rose-400' : 'text-[var(--text-muted)]')} />
+          <div className="flex-1">
+            <div className="text-sm font-semibold">{on ? tx('Aphrodite is on') : tx('Aphrodite is off')}</div>
+            <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed max-w-[65ch]">
+              {tx('Aphrodite writes explicit fiction and roleplay, and can make adult pictures, of fictional adult characters. She\'s available to you because the owner allowed it; whether she appears is up to you. Her chats are always incognito: nothing is remembered, and they delete themselves. Two limits always apply: every character is an adult, and never real people.')}
+            </p>
+          </div>
+          {on && <Toggle on label={tx('Aphrodite')} onChange={() => save(false)} />}
+        </div>
+        {!on && (
+          <div className="mt-3 pt-3 border-t border-[var(--border-subtle)] flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <input type="checkbox" checked={adult} onChange={e => setAdult(e.target.checked)} className="accent-[var(--accent)]" />
+              {tx('I\'m 18 or older, and I want adult content.')}
+            </label>
+            <button className={btn.primary} disabled={!adult} onClick={() => save(true)}>{tx('Turn on Aphrodite')}</button>
+          </div>
+        )}
       </div>
       {error && <div className="text-xs text-red-400">{error}</div>}
     </div>

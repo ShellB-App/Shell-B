@@ -117,6 +117,8 @@ class Cell:
 _cells: dict[str, Cell] = {}
 _socks: dict[str, tuple[str, str]] = {}  # broker socket path → (gid, service)
 _prompts: dict[str, str] = {}  # ComfyUI prompt id → gid
+_adult_pics: dict[str, str] = {}  # Aphrodite pictures in ComfyUI's temp folder → gid, until the cell fetches them once
+COMFY_TEMP = Path.home() / "comfyui" / "temp"
 _searches: dict[str, list[float]] = {}
 _up: httpx.AsyncClient | None = None
 _reaper: asyncio.Task | None = None
@@ -194,6 +196,9 @@ def _run_args(cell: Cell, guest: dict) -> list[str]:
     d, s = _dir(cell.gid), get_settings()
     models = {"models": allowed_models(), "embeddingModel": s.get("embeddingModel"), "utilityModel": s.get("utilityModel"),
               "visionFallbackModel": s.get("visionFallbackModel"), "language": (guest.get("config") or {}).get("language", "")}
+    if guests.adult_ok(guest):  # Aphrodite (cell_boot.ADULT); the broker still checks guests.adult_ok on every request
+        import adult
+        models["adult"] = {"model": adult.agent_model(), "images": bool(adult.sdxl_checkpoint(s))}
     env = {"SHELLB_CELL": "1", "SHELLB_CELL_SECRET": cell.secret, "SHELLB_CELL_FRAME_SECRET": guests.frame_secret(cell.gid),
            "SHELLB_CELL_GUEST": guest["name"], "SHELLB_CELL_ID": cell.gid, "SHELLB_CELL_MODELS": json.dumps(models), "SHELLB_DEV_DIR": "/run/web/dev",
            "SHELLB_CELL_FORWARD": ",".join(f"{port}:{svc}" for svc, (port, _up) in SERVICES.items()),
@@ -286,6 +291,14 @@ async def _teardown(cell: Cell):
         await cell.listener.stop()
         cell.listener = None
     await _docker("rm", "-f", name(cell.gid), timeout=30)
+
+
+def restart_adult_cells():
+    """After the owner changes Aphrodite's switch or checkpoint: stop the running cells of guests she's allowed for, so
+    they boot with the new state on their next visit (the broker already applies it to every request)."""
+    for g in guests.list_guests():
+        if g["config"].get("adult") and status(g["id"])["state"] != "stopped":
+            asyncio.get_running_loop().create_task(stop(g["id"]))
 
 
 async def stop(gid: str):
@@ -531,10 +544,14 @@ def _upstream() -> httpx.AsyncClient:
     return _up
 
 
-def allowed_models() -> list[str]:
-    """What a cell's Ollama calls may name: the guest model list plus the embedding, utility and vision models."""
+def allowed_models(gid: str | None = None) -> list[str]:
+    """What a cell's Ollama calls may name: the guest model list plus the embedding, utility and vision models, and
+    Aphrodite's model for a guest the owner allowed her (asked again on every request, so revoking is immediate)."""
     s = get_settings()
     extra = [s.get("embeddingModel"), s.get("utilityModel"), s.get("visionFallbackModel")]
+    if gid and guests.adult_ok(guests.get_guest(gid)):
+        import adult
+        extra.append(adult.agent_model())
     out = []
     for m in guests.allowed_models() + extra:
         if m and not providers.is_cloud(m) and m not in out:
@@ -710,7 +727,7 @@ def ollama_body(path: str, body: dict, allowed: list[str], embed_model: str | No
 
 async def _ollama(req: Request, gid: str) -> Response:
     path, s = req.url.path, get_settings()
-    allowed = allowed_models()
+    allowed = allowed_models(gid)
     if req.method == "GET" and path in ("/api/tags", "/api/ps"):
         code, data = await _fetch_json("GET", f"{OLLAMA}{path}")
         names = {_tag(m) for m in allowed}
@@ -751,6 +768,9 @@ COMFY_CLAMP = {
     ("EmptyLatentHunyuan3Dv2", "resolution"): (256, 4096), ("EmptyLatentHunyuan3Dv2", "batch_size"): (1, 1),
     ("VAEDecodeHunyuan3D", "num_chunks"): (1000, 16000), ("VAEDecodeHunyuan3D", "octree_resolution"): (64, 512),
 }
+# Aphrodite's graph (adult._workflow), only for guests the owner allowed her: her checkpoint under a placeholder name
+# the broker swaps for the owner's file, and PreviewImage instead of SaveImage so nothing lands in ComfyUI's output
+ADULT_NODES = {"CheckpointLoaderSimple": {"ckpt_name": {"aphrodite"}}, "PreviewImage": {}}
 MAX_NODES = 64
 MAX_TEXT = 8000
 UPLOAD_MAX = 20 * 2**20
@@ -764,18 +784,24 @@ def comfy_prefix(gid: str, prefix) -> str:
     return f"cells/{gid}/{sub}{base}"
 
 
-def comfy_graph(gid: str, graph) -> dict:
+def comfy_graph(gid: str, graph, adult_ckpt: str | None = None) -> dict:
     """A ComfyUI graph a cell may queue: known nodes only, pinned model files, clamped sizes, its own uploads and
-    output folder, links only between its own nodes."""
+    output folder, links only between its own nodes. `adult_ckpt` (the owner's checkpoint, for a guest allowed
+    Aphrodite) also admits her graph: that checkpoint, a preview instead of a saved file, and the same keyword screen
+    on the prompt that adult.screen starts with."""
     if not isinstance(graph, dict) or not 0 < len(graph) <= MAX_NODES:
         raise Refused("the graph must be 1 to 64 nodes")
+    nodes = {**COMFY_NODES, **ADULT_NODES} if adult_ckpt else COMFY_NODES
+    is_adult = any(isinstance(n, dict) and n.get("class_type") in ADULT_NODES for n in graph.values())
     out = {}
     for nid, node in graph.items():
         if not isinstance(node, dict) or not isinstance(node.get("inputs"), dict):
             raise Refused(f"node {nid}: malformed")
         cls = node.get("class_type")
-        if cls not in COMFY_NODES:
+        if cls not in nodes:
             raise Refused(f"node type {cls!r} isn't available to guests")
+        if is_adult and cls in ("SaveImage", "SaveGLB", "LoadImage"):
+            raise Refused("Aphrodite's pictures are previews only")
         inputs = {}
         for k, v in node["inputs"].items():
             if isinstance(v, list):
@@ -787,22 +813,40 @@ def comfy_graph(gid: str, graph) -> dict:
                 raise Refused(f"node {nid}: bad value for {k}")
             if isinstance(v, str) and len(v) > MAX_TEXT:
                 raise Refused(f"node {nid}: {k} is too long")
-            pinned = COMFY_NODES[cls].get(k)
+            pinned = nodes[cls].get(k)
             if pinned is not None and v not in pinned:
                 raise Refused(f"node {nid}: {k} {v!r} isn't available to guests")
             lim = COMFY_CLAMP.get((cls, k))
             if lim and isinstance(v, (int, float)) and not isinstance(v, bool):
                 v = max(lim[0], min(lim[1], v))
             inputs[k] = v
-        for k in COMFY_NODES[cls]:
+        for k in nodes[cls]:
             if k not in inputs:
                 raise Refused(f"node {nid}: {k} is required")
+        if cls == "CheckpointLoaderSimple":
+            inputs["ckpt_name"] = adult_ckpt
         if cls in ("SaveImage", "SaveGLB"):
             inputs["filename_prefix"] = comfy_prefix(gid, inputs.get("filename_prefix"))
         if cls == "LoadImage" and not str(inputs.get("image", "")).startswith(f"cell-{gid}-"):
             raise Refused("LoadImage can only read pictures this guest uploaded")
         out[str(nid)] = {"class_type": cls, "inputs": inputs}
+    if is_adult:
+        import adult
+        positive = {str(n["inputs"]["positive"][0]) for n in out.values()
+                    if n["class_type"] == "KSampler" and isinstance(n["inputs"].get("positive"), list)}
+        for nid in positive:  # the negative prompt lists what to avoid ("child, teen…"), so only the positive is screened
+            text = str(out.get(nid, {}).get("inputs", {}).get("text") or "")
+            if adult._HARD.search(text) or adult._IMAGE.search(text):
+                raise Refused("Limit: characters must be adults (18+)")
     return out
+
+
+def _adult_checkpoint(gid: str) -> str | None:
+    """The owner's checkpoint, if this guest may make Aphrodite's pictures right now."""
+    if not guests.adult_ok(guests.get_guest(gid)):
+        return None
+    import adult
+    return adult.sdxl_checkpoint(get_settings()) or None
 
 
 async def _comfy(req: Request, gid: str) -> Response:
@@ -810,7 +854,7 @@ async def _comfy(req: Request, gid: str) -> Response:
     if method == "POST" and path == "/prompt":
         _caps(gid, "images")
         body = await _json(req)
-        graph = comfy_graph(gid, body.get("prompt"))
+        graph = comfy_graph(gid, body.get("prompt"), _adult_checkpoint(gid))
         async with _Turn():
             code, data = await _fetch_json("POST", f"{COMFY}/prompt", json={"prompt": graph, "client_id": f"cell-{gid}"})
         pid = data.get("prompt_id") if isinstance(data, dict) else None
@@ -826,7 +870,27 @@ async def _comfy(req: Request, gid: str) -> Response:
         if _prompts.get(m.group(1)) != gid:
             raise Refused("not one of this guest's pictures")
         code, data = await _fetch_json("GET", f"{COMFY}/history/{m.group(1)}")
+        for entry in (data.values() if isinstance(data, dict) else []):  # Aphrodite's previews: this cell may fetch each once
+            for node in ((entry or {}).get("outputs") or {}).values() if isinstance(entry, dict) else []:
+                for img in (node or {}).get("images") or []:
+                    if img.get("type") == "temp" and not img.get("subfolder") and re.fullmatch(r"[\w.-]{1,120}\.png", str(img.get("filename"))):
+                        _adult_pics[img["filename"]] = gid
         return JSONResponse(data, status_code=code)
+    if method == "POST" and path == "/history":  # a cell clearing its own prompts (Aphrodite's, so the text doesn't stay)
+        ids = [str(i) for i in ((await _json(req)).get("delete") or []) if _prompts.get(str(i)) == gid][:16]
+        if ids:
+            await _upstream().post(f"{COMFY}/history", json={"delete": ids})
+        return JSONResponse({})
+    if method == "GET" and path == "/view" and req.query_params.get("type") == "temp":
+        fname = req.query_params.get("filename", "")
+        if _adult_pics.get(fname) != gid or req.query_params.get("subfolder"):
+            raise Refused("not one of this guest's pictures")
+        r = await _upstream().get(f"{COMFY}/view", params={"filename": fname, "subfolder": "", "type": "temp"})
+        _adult_pics.pop(fname, None)
+        f = COMFY_TEMP / fname  # fetched once, then gone from the host: the picture lives in the guest's cell only
+        if f.parent == COMFY_TEMP and f.is_file():
+            f.unlink(missing_ok=True)
+        return Response(r.content, status_code=r.status_code, media_type=r.headers.get("content-type", "image/png"))
     if method == "GET" and path == "/view":
         q = req.query_params
         sub, fname = q.get("subfolder", ""), q.get("filename", "")

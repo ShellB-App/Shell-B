@@ -10,6 +10,9 @@ can't work or must not exist there, so the guest's UI and agents never offer it:
 - app.py routes for cloud CLI agents, the CLI bridge, cloud provider keys and Aphrodite.
 - host tools (shellb_self, shellb_source, self_findings, find_capability, look_at_screen, browser, night_shift,
   generate_adult_image) and the SSH tools. `apply` prunes them once everything has registered.
+- Aphrodite, unless the owner allowed this guest her (guests.adult_ok → SHELLB_CELL_MODELS "adult"): then the agent
+  (on the model the host names), her picture tool and /api/adult/files stay, and `adultEnabled` is the guest's own
+  opt-in instead of being forced off. The broker re-checks the permission on every request.
 - host loops: app.py's startup skips them when CELL is set.
 
 The guest is this instance's owner. auth.py trusts the gateway's X-Shellb-Cell-Gate header and nothing else, and
@@ -22,6 +25,9 @@ import os
 CELL = os.environ.get("SHELLB_CELL") == "1"
 GUEST = os.environ.get("SHELLB_CELL_GUEST", "")  # the guest's display name
 FRAME_SECRET = os.environ.get("SHELLB_CELL_FRAME_SECRET", "")
+CFG = json.loads(os.environ.get("SHELLB_CELL_MODELS") or "{}") if CELL else {}
+# {"model": Aphrodite's model, "images": whether the owner set a checkpoint} when the owner allows this guest Aphrodite
+ADULT = CFG.get("adult") if isinstance(CFG.get("adult"), dict) and CFG["adult"].get("model") else None
 
 # modules whose routers a cell never mounts (matched by the module of the router's endpoints)
 HOST_ROUTERS = frozenset({
@@ -65,7 +71,13 @@ def auth_me():
     """What the UI asks first: signed in (the gateway only forwards signed-in guests), and the frame key."""
     import db
     return {"authenticated": True, "via": "session", "passwordSet": True, "frameKey": FRAME_SECRET,
-            "cell": {"guest": GUEST}, "language": (db.kv_get("settings", {}) or {}).get("language", "")}
+            "cell": {"guest": GUEST, **({"adult": True} if ADULT else {})}, "language": (db.kv_get("settings", {}) or {}).get("language", "")}
+
+
+def _host_path(path: str) -> bool:
+    if ADULT and path.startswith("/api/adult/files/"):  # Aphrodite's pictures, stored in the cell (its own data)
+        return False
+    return path.startswith(HOST_PATHS)
 
 
 def not_here(rest: str):
@@ -91,7 +103,7 @@ def guard(app):
 
     def add_api_route(path, endpoint, *args, **kwargs):
         methods = {m.upper() for m in kwargs.get("methods") or ()}
-        if path.startswith(HOST_PATHS) or (path.startswith("/api/providers/") and methods - {"GET", "HEAD"}):
+        if _host_path(path) or (path.startswith("/api/providers/") and methods - {"GET", "HEAD"}):
             return
         add(path, endpoint, *args, **kwargs)
 
@@ -103,7 +115,8 @@ def apply():
     """Called once every module has registered its tools: drop the host ones, then set the cell's defaults."""
     import remote
     from tools import TOOLS
-    for name in [n for n, t in TOOLS.items() if getattr(t.get("fn"), "__module__", "") in HOST_TOOL_MODULES]:
+    host = HOST_TOOL_MODULES - ({"adult"} if ADULT else set())
+    for name in [n for n, t in TOOLS.items() if getattr(t.get("fn"), "__module__", "") in host]:
         del TOOLS[name]
     remote.TOOLS.clear()
     boot()
@@ -113,13 +126,13 @@ def boot():
     import db
     import providers
     from defaults import DEFAULT_AGENTS
-    cfg = json.loads(os.environ.get("SHELLB_CELL_MODELS") or "{}")
+    cfg = CFG
     models = set(cfg.get("models") or [])
     settings = dict(db.kv_get("settings", {}) or {})
     if not db.kv_get("cell_booted"):
         settings.update(FIRST_BOOT)
         db.kv_set("cell_booted", True)
-    settings.update(FORCED)
+    settings.update({k: v for k, v in FORCED.items() if not (ADULT and k == "adultEnabled")})
     for key in ("embeddingModel", "utilityModel", "visionFallbackModel"):
         if cfg.get(key):
             settings[key] = cfg[key]
@@ -127,13 +140,19 @@ def boot():
         settings["language"] = cfg["language"]
 
     def ok(a: dict) -> bool:
-        return a.get("model") in models and not a.get("adult") and not providers.is_cloud(a.get("model", ""))
+        if a.get("adult"):
+            return bool(ADULT)
+        return a.get("model") in models and not providers.is_cloud(a.get("model", ""))
 
     stored = db.kv_get("agents")
     agents = [a for a in (stored if stored is not None else DEFAULT_AGENTS) if ok(a)]
+    if ADULT:  # back in the roster (an earlier boot without the permission deleted her), on the model the host serves
+        agents += [dict(a) for a in DEFAULT_AGENTS if a.get("adult") and a["id"] not in {x["id"] for x in agents}]
+        agents = [{**a, "model": ADULT["model"]} if a.get("adult") else a for a in agents]
     db.kv_set("agents", [dict(a) for a in agents])
-    deleted = set(db.kv_get("deleted_agents", []) or []) | {a["id"] for a in DEFAULT_AGENTS if not ok(a)}
+    deleted = set(db.kv_get("deleted_agents", []) or []) - {a["id"] for a in agents} | {a["id"] for a in DEFAULT_AGENTS if not ok(a)}
     db.kv_set("deleted_agents", sorted(deleted))
-    if agents and settings.get("defaultAgent", "shellb") not in {a["id"] for a in agents}:
-        settings["defaultAgent"] = agents[0]["id"]
+    plain = [a for a in agents if not a.get("adult")]  # Aphrodite is never the default agent
+    if plain and settings.get("defaultAgent", "shellb") not in {a["id"] for a in plain}:
+        settings["defaultAgent"] = plain[0]["id"]
     db.kv_set("settings", settings)

@@ -20,7 +20,7 @@ export interface AuthInfo { authenticated: boolean; via: 'session' | 'local' | n
   /** two-step verification: the password was right, a code is still due for this login ticket */
   needsCode?: boolean; pending?: string;
   /** from the guest gateway (server/guest_app.py): this UI is a guest's own Shell:B in a container (cell.ts) */
-  cell?: { guest: string }; guest?: { id: string; name: string; username: string | null };
+  cell?: { guest: string; adult?: boolean }; guest?: { id: string; name: string; username: string | null };
   /** the guest gateway answered: a signed-out visitor gets its sign-in page, not the owner's login */
   gateway?: boolean;
   /** the interface language the server knows for this person ('' = browser), see ui/src/i18n */

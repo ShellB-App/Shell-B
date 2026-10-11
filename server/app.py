@@ -1162,6 +1162,9 @@ async def settings_put(req: Request):
     merged = {**old, **{k: v for k, v in body.items() if k in DEFAULT_SETTINGS}}
     db.kv_set("settings", merged)
     changed = {k: v for k, v in body.items() if k in DEFAULT_SETTINGS and old.get(k) != v}
+    if not auth.CELL and {"adultEnabled", "adultImageCheckpoint"} & set(changed):
+        import cells  # guests allowed Aphrodite get the new state when their cell next starts
+        cells.restart_adult_cells()
     if changed:
         db.audit_log("admin:settings_change", {
             "changed_keys": list(changed.keys()),

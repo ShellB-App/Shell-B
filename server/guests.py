@@ -211,6 +211,7 @@ def clean_config(cfg: dict | None) -> dict:
     # their own full Shell:B in a container (cells.py), the default since 2026-10-10; off = the lighter guest app (guest_app.py)
     out["cell"] = bool(cfg.get("cell", True))
     out["language"] = cfg.get("language") if cfg.get("language") in ("en", "fr") else ""  # "" = the browser's (ui/src/i18n)
+    out["adult"] = bool(cfg.get("adult", False))  # Aphrodite in their own Shell:B: the owner's call per guest, off by default
     return out
 
 
@@ -237,6 +238,14 @@ def list_guests() -> list[dict]:
 def tools_allowed(guest: dict) -> list[str]:
     pick = guest["config"]["tools"]
     return [t for t in GUEST_TOOLS if not pick or t in pick]
+
+
+def adult_ok(guest: dict | None) -> bool:
+    """Aphrodite for this guest: the owner allowed it for them, Aphrodite is on, and they have their own Shell:B (the
+    lighter guest app never runs her). The broker asks this on every request, so switching it off takes effect at once;
+    the guest still switches her on themselves in their Shell:B, after confirming they're 18 or older."""
+    return bool(guest and not guest["disabled"] and guest["config"].get("adult") and guest["config"].get("cell")
+                and adult.enabled(get_settings()))
 
 
 def agent_ok(agent: dict | None) -> str | None:
@@ -920,6 +929,7 @@ def api_list(req: Request):
         unread = c.execute("SELECT count(*) FROM guest_reports WHERE status='new'").fetchone()[0]
     return {"guests": [_summary(g) for g in list_guests()], "settings": settings(), "allowedModels": allowed_models(),
             "tools": list(GUEST_TOOLS), "limits": {k: v[0] for k, v in LIMITS.items()}, "newReports": unread,
+            "aphrodite": adult.enabled(get_settings()),
             "agents": [{"id": a["id"], "name": a.get("name"), "title": a.get("title"), "model": a["model"]}
                        for a in get_agents() if not adult.is_adult(a) and not providers.is_cloud(a["model"])]}
 
@@ -967,10 +977,12 @@ def api_report_delete(rid: str, req: Request):
 @admin_router.patch("/{gid}")
 async def api_update(gid: str, req: Request):
     auth.require_admin(req)
+    before = get_guest(gid)
     g = update_guest(gid, await req.json())
     if not g:
         raise HTTPException(404)
-    if g["disabled"] or not g["config"]["cell"]:
+    # a cell learns about Aphrodite when it starts (cells._run_args), so a change restarts it on the next visit
+    if g["disabled"] or not g["config"]["cell"] or adult_ok(before) != adult_ok(g):
         import cells
         if cells.status(gid)["state"] != "stopped":
             asyncio.get_running_loop().create_task(cells.stop(gid))
