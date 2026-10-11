@@ -11,6 +11,7 @@ ComfyUI pipeline, a UI polish: each one makes Shell:B better for everyone who ru
 | A theme | [Shell-B-Themes](https://github.com/EveAeternam/Shell-B-Themes): `theme.json`, validator, one-screen checklist |
 | A screensaver | [Shell-B-Screensavers](https://github.com/EveAeternam/Shell-B-Screensavers): one `index.html`, no network, no audio |
 | An agent persona | [Shell-B-Agents](https://github.com/EveAeternam/Shell-B-Agents): `agent.json` for the Agent Lab |
+| A Studio template, a skill, a world, a voice, an app, a translation | [Shell-B-Studio-Templates](https://github.com/EveAeternam/Shell-B-Studio-Templates), [Shell-B-Skills](https://github.com/EveAeternam/Shell-B-Skills), [Shell-B-Worlds](https://github.com/EveAeternam/Shell-B-Worlds), [Shell-B-Voices](https://github.com/EveAeternam/Shell-B-Voices), [Shell-B-Apps](https://github.com/EveAeternam/Shell-B-Apps), [Shell-B-Translations](https://github.com/EveAeternam/Shell-B-Translations) |
 | A question, an idea, something to show | [Discussions](https://github.com/EveAeternam/Shell-B/discussions) |
 | A bug | [Issues](https://github.com/EveAeternam/Shell-B/issues/new/choose), with the form filled in |
 | A security hole | [SECURITY.md](SECURITY.md), privately. Please not an issue |

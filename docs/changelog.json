@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-10-12",
+    "area": "Settings",
+    "title": "Settings → Community: every repository Shell:B installs from, and your own",
+    "summary": "A new Settings tab lists the GitHub repositories Shell:B installs community work from: the nine official Shell-B repositories (themes, screensavers, Studio templates, skills, agents, worlds, voices, apps, translations), each with what it holds, where it shows up in the app, how many items it has and when it was last fetched. They are always listed. Below them, your own: add any public GitHub repository laid out like the official one of its kind (fork one to start) and the matching picker begins browsing it; themes, screensavers and templates go to the Appearance and Studio galleries, skills to the Community Hub. Kinds without a one-click installer yet say where their items land. Reading is open; adding and removing need the owner, and everything is fetched the way the galleries fetch: one tarball at a pinned commit, counted from index.json. Six new official repositories were seeded alongside: Shell-B-Agents (six personas for the Agent Lab), Shell-B-Worlds (the Apollo sites, every Mars landing, the Ring of Fire, the Silk Road), Shell-B-Voices (six designed voices), Shell-B-Apps (a focus timer, a notebook, a unit converter, a kanban board), with Shell-B-Skills, Shell-B-Studio-Templates and Shell-B-Translations from the other session."
+  },
+  {
     "date": "2026-10-11",
     "area": "Studio",
     "title": "Community templates in the Studio, and skills for themes and screensavers",

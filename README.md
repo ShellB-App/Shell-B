@@ -122,8 +122,10 @@ Every feature, its code, API and tables: **[the Shell:B Manual →](docs/MANUAL.
 
 ## 🧩 The Shell:B Family
 
-Shell:B installs community work from GitHub with one click, and each kind lives in its own small repository with its
-own validator and CI. Nothing is fetched until you open the gallery, and everything is checked again on install.
+Shell:B installs community work from GitHub, and each kind lives in its own small repository with its own validator
+and CI. **Settings → Community** lists them all, with what each one holds and where it lands; the official ones are
+always there, and you can add your own collection or a friend's, laid out the same way. Nothing is fetched until a
+picker opens, and everything is checked again on install.
 
 | Repository | What's in it | Where it shows up |
 | :--- | :--- | :--- |
@@ -131,10 +133,16 @@ own validator and CI. Nothing is fetched until you open the gallery, and everyth
 | **[Shell-B-Themes](https://github.com/EveAeternam/Shell-B-Themes)** | Themes as data: palette, fonts, backdrop, particles. Contrast-checked on install | Settings → Appearance → *Community themes* |
 | **[Shell-B-Screensavers](https://github.com/EveAeternam/Shell-B-Screensavers)** | Self-contained `index.html` pieces that run in a sandboxed frame when you're idle | Settings → Appearance → Screensaver → *Browse community* |
 | **[Shell-B-Agents](https://github.com/EveAeternam/Shell-B-Agents)** | Agent personas: prompt, model hints, temperature, effort and tool list, ready for the Agent Lab | Agent Lab → *New agent* |
+| **[Shell-B-Studio-Templates](https://github.com/EveAeternam/Shell-B-Studio-Templates)** | Starting points for Studio projects: a launch page, a deck, a dashboard, a full-stack starter | Studio → New project → *Start from a template* |
+| **[Shell-B-Skills](https://github.com/EveAeternam/Shell-B-Skills)** | Agent skills in the Claude Agent Skills format, with references | Tools & Connectors → *Community*, then *Skills* |
+| **[Shell-B-Worlds](https://github.com/EveAeternam/Shell-B-Worlds)** | Guided tours, places with cards and GeoJSON overlays for the Worlds app | A map block in chat, Worlds → Bookmarks → *Import* |
+| **[Shell-B-Voices](https://github.com/EveAeternam/Shell-B-Voices)** | Voice descriptions HERMES designs into expressive voices on your machine. No recordings | Settings → Speech → *Describe* |
+| **[Shell-B-Apps](https://github.com/EveAeternam/Shell-B-Apps)** | Finished Studio projects that run offline in the preview: a timer, a notebook, a converter, a board | Studio → *New project* |
+| **[Shell-B-Translations](https://github.com/EveAeternam/Shell-B-Translations)** | Interface catalogues, one file per language | A pull request to `ui/src/i18n` |
 | **[get.shellb.app](https://get.shellb.app)** | The desktop helpers (Screen, Node, link handler) and how to connect to the API | |
 
-Made a theme, a screensaver or an agent you like? Export it from Shell:B and open a pull request in the matching
-repository. Their CONTRIBUTING files are one screen long.
+Made something you like? Export it from Shell:B and open a pull request in the matching repository. Their CONTRIBUTING
+files are one screen long.
 
 ## 🧬 How It Fits Together
 

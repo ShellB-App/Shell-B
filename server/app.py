@@ -84,6 +84,7 @@ import selfmod
 import selfreview
 import community
 import gallery
+import family
 import ask
 import themes
 import screen
@@ -240,6 +241,7 @@ app.include_router(selfmod.router)
 app.include_router(selfreview.router)
 app.include_router(community.router)
 app.include_router(gallery.router)
+app.include_router(family.router)
 app.include_router(composer.router)
 app.include_router(sysinfo.router)
 app.include_router(network.router)

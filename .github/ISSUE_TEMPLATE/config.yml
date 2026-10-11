@@ -15,3 +15,6 @@ contact_links:
   - name: An agent persona
     url: https://github.com/EveAeternam/Shell-B-Agents
     about: Agents for the Agent Lab have their own repository.
+  - name: A template, skill, world, voice, app or translation
+    url: https://github.com/EveAeternam?tab=repositories&q=Shell-B-
+    about: Every Shell-B-* repository has its own validator and a one-screen checklist.

@@ -1,10 +1,8 @@
 import { LOCALES, setLocalePref, t, type LocalePref } from '../i18n';
+import { CommunityRepos } from './CommunityRepos';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
-import {
-  Archive, AudioLines, Bell, BookMarked, Boxes, Brain, EyeOff, Inbox, Sparkles, Cpu, Monitor, Moon, Plus, Search, Settings as SettingsIcon, SlidersHorizontal, SquarePen, Star, Sun, Trash2, BrainCircuit, MessageSquare, KeyRound, Hash, Network, ShieldCheck, MonitorDown,
-  PictureInPicture2, History, Palette, MonitorPlay, Keyboard, BarChart3, Users, Globe, Plug, Rocket, ListTodo, ClipboardCheck, Store, RefreshCw, UserRound, Workflow,
-} from 'lucide-react';
+import { Archive, AudioLines, Bell, BookMarked, Boxes, Brain, EyeOff, Inbox, Sparkles, Cpu, Monitor, Moon, Plus, Search, Settings as SettingsIcon, SlidersHorizontal, SquarePen, Star, Sun, Trash2, BrainCircuit, MessageSquare, KeyRound, Hash, Network, ShieldCheck, MonitorDown, PictureInPicture2, History, Palette, MonitorPlay, Keyboard, BarChart3, Users, Globe, Plug, Rocket, ListTodo, ClipboardCheck, Store, RefreshCw, UserRound, Workflow, Library } from 'lucide-react';
 import type { ToolsTab } from './Integrations';
 import type { Agent, ChatHit, ConversationSummary, Memory, ModelInfo, Settings, SettingsTabId, Status, ToolInfo } from '../types';
 import { api, fmtBytes } from '../api';
@@ -106,6 +104,7 @@ export function SettingsContent(p: SettingsProps) {
   const tabs = ([
     { id: 'general', label: 'General', icon: SlidersHorizontal },
     { id: 'appearance', label: 'Appearance', icon: Palette },
+    { id: 'community', label: 'Community', icon: Library },
     { id: 'apikeys', label: 'API Keys', icon: KeyRound },
     { id: 'speech', label: 'Speech', icon: AudioLines },
     { id: 'network', label: 'Network', icon: Network },
@@ -132,6 +131,7 @@ export function SettingsContent(p: SettingsProps) {
       <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5">
         {tab === 'general' && <General {...p} onOpenTab={setTab} />}
         {tab === 'appearance' && <Appearance {...p} />}
+        {tab === 'community' && <CommunityRepos onOpenTab={setTab} />}
         {tab === 'apikeys' && <ApiKeysSettings settings={p.settings} onSaved={p.onSaved} />}
         {tab === 'speech' && <SpeechTab settings={p.settings} onSaved={p.onSaved} />}
         {tab === 'network' && <NetworkSettings />}

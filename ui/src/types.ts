@@ -963,7 +963,7 @@ export interface BackupRestoreResult {
   safetyBackup?: BackupInfo;
 }
 
-export type SettingsTabId = 'general' | 'appearance' | 'speech' | 'network' | 'memory' | 'shortcuts' | 'system' | 'backups' | 'account' | 'apikeys' | 'notifications' | 'changelog' | 'usage';
+export type SettingsTabId = 'general' | 'appearance' | 'community' | 'speech' | 'network' | 'memory' | 'shortcuts' | 'system' | 'backups' | 'account' | 'apikeys' | 'notifications' | 'changelog' | 'usage';
 
 /** server/tokens.py report(): Settings → Usage */
 export interface UsageRow { name: string; prompt: number; completion: number; turns: number; cost?: number }

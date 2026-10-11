@@ -716,6 +716,22 @@ docs/plans/social.md).
   endorsements, flags and profile.
 - Tests: `tests/circles_test.py`.
 
+## Community repositories
+
+**Settings → Community** (`server/family.py`, `ui/src/components/CommunityRepos.tsx`) lists every GitHub repository
+Shell:B installs community work from. The nine official ones (`EveAeternam/Shell-B-Themes`, `-Screensavers`,
+`-Studio-Templates`, `-Skills`, `-Agents`, `-Worlds`, `-Voices`, `-Apps`, `-Translations`) are always listed and can't be
+removed; each row says what the repository holds, where its items show up in the app, how many items it has and when it
+was last fetched. The owner can add any public GitHub repository laid out like the official one of its kind (a folder
+per item plus `index.json`; forking an official repository is the quickest start) and remove it again. Adding a theme,
+screensaver or template repository registers it as a gallery source (`gallery.add_source`), a skills repository as a
+Community Hub source (`community.add_source`); the kinds without an installer yet (agents, worlds, voices, apps,
+translations) are listed with where their items will land. Fetching reuses `community.fetch_repo` (one tarball at a
+pinned commit, public-internet guard, size cap); counts come from `index.json` (`items`) or, failing that, the kind's
+folder, and a repository whose `index.json` says another kind is flagged. kv `family_repos` holds the owner's list,
+`family_stats` the per-repository counts. `GET /api/family` (`?refresh=1` fetches them all), `POST /api/family`
+`{kind, repo, ref?, name?}` and `DELETE /api/family/<id>` (owner), `POST /api/family/<id>/refresh`.
+
 ## Shell:B links
 
 `shellb://<route>` names a place in the app, where the route is the app's hash route without `#/`:
