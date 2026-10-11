@@ -388,6 +388,38 @@ def forget(gid: str):
         c.execute("DELETE FROM guest_cells WHERE guest_id=?", (gid,))
 
 
+def _data_tool(gid: str, uid: int, cmd: str, opts: dict) -> list[str]:
+    """cell/datatar.py in a throwaway cell-image container as the cell's uid, with only the cell's data at /c."""
+    return ["docker", "run", "--rm", "-i", "--network", "none", "--read-only", "--cap-drop", "ALL", "--user", f"{uid}:{uid}",
+            "--tmpfs", "/tmp:rw,nosuid,nodev,size=512m", "-v", f"{WEB / 'cell'}:/app/cell:ro", "-v", f"{_dir(gid) / 'data'}:/c:rw",
+            IMAGE, "/opt/venv/bin/python", "/app/cell/datatar.py", cmd, json.dumps(opts)]
+
+
+def export_data(gid: str, dest: Path, exclude=(), secret=()) -> list[str]:
+    """Write a tar of the cell's data to dest (backup.create_backup; works whether the cell runs or not). Returns the
+    paths it had to leave out; raises if no archive could be made."""
+    with dest.open("wb") as out:
+        p = subprocess.run(_data_tool(gid, uid_of(gid), "export", {"exclude": sorted(exclude), "secret": sorted(secret)}),
+                           stdin=subprocess.DEVNULL, stdout=out, stderr=subprocess.PIPE, timeout=1800)
+    err = p.stderr.decode(errors="replace")
+    if p.returncode:
+        raise RuntimeError(f"cell data export failed ({p.returncode}): {err[-300:]}")
+    return [line[6:] for line in err.splitlines() if line.startswith("skip: ")]
+
+
+def import_data(gid: str, src: Path, keep=()):
+    """Replace the cell's data with the tar at src (backup.restore_backup, after the database: the cell's uid comes from
+    the restored guest_cells). Stops the cell first; it starts again on the guest's next visit."""
+    _cells.pop(gid, None)
+    subprocess.run(["docker", "rm", "-f", name(gid)], capture_output=True, timeout=60)
+    uid = uid_of(gid)
+    asyncio.run(_prepare(Cell(gid, uid)))
+    with src.open("rb") as f:
+        p = subprocess.run(_data_tool(gid, uid, "import", {"keep": sorted(keep)}), stdin=f, capture_output=True, timeout=1800)
+    if p.returncode:
+        raise RuntimeError(f"cell data import failed ({p.returncode}): {p.stderr.decode(errors='replace')[-300:]}")
+
+
 def status(gid: str) -> dict:
     c = _cells.get(gid)
     return {"state": c.state if c else "stopped", "started": c.started if c else None, "lastActive": c.last if c else None,

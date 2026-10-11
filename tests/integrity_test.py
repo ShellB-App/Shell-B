@@ -4,12 +4,22 @@ Shares smoke_test's scratch copy (server/ and the DB in a temp dir), so it never
     cd ~/shellb/web && venv/bin/python -m unittest discover -s tests -p '*_test.py' -v
 """
 import asyncio
+import importlib.util
+import io
+import os
 import shutil
+import socket
+import sqlite3
 import subprocess
+import sys
+import tarfile
+import tempfile
 import time
 import unittest
+from pathlib import Path
+from unittest import mock
 
-from smoke_test import client, shellb  # noqa: F401 — importing sets up the scratch copy
+from smoke_test import WEB, client, shellb  # noqa: F401 — importing sets up the scratch copy
 
 import backup
 import compaction
@@ -78,6 +88,142 @@ class Backups(unittest.TestCase):
 
     def test_backups_need_admin(self):
         self.assertEqual(client.get("/api/backup").status_code, 403)  # localhost alone isn't admin
+
+
+class CellBackups(unittest.TestCase):
+    """2026-10-11: every scheduled backup failed on the guest cells' sockets (Errno 6) and on their data folders, which
+    belong to the cells' uids (Errno 13). Special files are skipped, cell data goes through cells.export_data, and a
+    path that can't be copied is noted in the manifest instead of failing the archive."""
+
+    def setUp(self):
+        import cells
+        self.cells = cells
+        self.root = db.DATA / "cells"
+        self.good, self.bad = self.root / "guest-aaaaaaaaaaaa", self.root / "guest-bbbbbbbbbbbb"
+        for d in (self.good, self.bad):
+            for sub in ("data", "web", "sock"):
+                (d / sub).mkdir(parents=True, exist_ok=True)
+        (self.good / "data" / "notes.txt").write_text("guest notes")
+        cwd = os.getcwd()
+        os.chdir(self.good / "web")  # a relative bind keeps the socket path under 108 bytes
+        try:
+            self.sock = socket.socket(socket.AF_UNIX)
+            self.sock.bind("web.sock")
+        finally:
+            os.chdir(cwd)
+        self.fifo = db.DATA / "skills" / "pipe"
+        self.fifo.parent.mkdir(exist_ok=True)
+        os.mkfifo(self.fifo)
+        self.locked = db.DATA / "skills" / "locked.md"
+        self.locked.write_text("x")
+        self.locked.chmod(0)
+        self.exported = []
+
+        def export_data(gid, dest, exclude=(), secret=()):
+            if gid == self.bad.name:
+                raise RuntimeError("docker said no")
+            self.exported.append((gid, set(exclude), set(secret)))
+            with tarfile.open(dest, "w") as t:
+                t.add(self.good / "data" / "notes.txt", arcname="notes.txt")
+            return ["tmp/gone.txt: vanished"]
+        self.real_export, cells.export_data = cells.export_data, export_data
+
+    def tearDown(self):
+        self.cells.export_data = self.real_export
+        self.sock.close()
+        self.locked.chmod(0o600)
+        for p in (self.fifo, self.locked):
+            p.unlink(missing_ok=True)
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    def test_backup_survives_sockets_cells_and_unreadable_files(self):
+        m = backup.create_backup(scope="core", note="cell test")
+        path = backup.BACKUP_DIR / m["filename"]
+        try:
+            with tarfile.open(path) as t:
+                names = set(t.getnames())
+                cell_tar = tarfile.open(fileobj=t.extractfile(f"cells/{self.good.name}/data.tar"))
+                self.assertEqual(cell_tar.extractfile("notes.txt").read(), b"guest notes")
+            self.assertFalse({n for n in names if n.endswith(("web.sock", "skills/pipe")) or "/data/" in n or n.endswith("/data")})
+            self.assertNotIn(f"cells/{self.bad.name}/data.tar", names)
+            self.assertIn("shellb.db", names)
+            self.assertEqual(m["cells"], [self.good.name])
+            self.assertEqual(self.exported, [(self.good.name, backup.EXCLUDE_PATTERNS, set(backup.SECRET_FILES))])
+            skipped = "\n".join(m["skipped"])
+            self.assertIn("skills/locked.md", skipped)
+            self.assertIn(f"cells/{self.good.name}/data/tmp/gone.txt", skipped)
+            self.assertIn(f"cells/{self.bad.name}/data: docker said no", skipped)
+        finally:
+            path.unlink(missing_ok=True)
+            backup._rebuild_index()
+
+    def test_restore_hands_cells_to_import_data(self):
+        staged = Path(tempfile.mkdtemp())
+        (staged / self.good.name).mkdir()
+        (staged / self.good.name / "data.tar").write_bytes(b"")
+        (staged / "not-a-cell").mkdir()
+        (staged / self.bad.name).mkdir()  # no data.tar: left alone
+        calls = []
+        real, self.cells.import_data = self.cells.import_data, lambda gid, src, keep=(): calls.append((gid, src.name, list(keep)))
+        try:
+            self.assertEqual(backup._restore_cells(staged), [])
+        finally:
+            self.cells.import_data = real
+            shutil.rmtree(staged)
+        self.assertEqual(calls, [(self.good.name, "data.tar", backup.SECRET_FILES)])
+
+
+class CellDataTool(unittest.TestCase):
+    """cell/datatar.py, run here on plain folders (in production it runs in the cell image as the cell's uid)."""
+
+    def setUp(self):
+        spec = importlib.util.spec_from_file_location("datatar", WEB / "cell" / "datatar.py")
+        self.tool = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.tool)
+        self.src, self.dst = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
+        (self.src / "codex").mkdir()
+        (self.src / "codex" / ".key").write_text("secret")
+        (self.src / "codex" / "a.txt").write_text("a")
+        (self.src / "backups").mkdir()
+        (self.src / "backups" / "old.tar.gz").write_text("old")
+        (self.src / "link").symlink_to("codex/a.txt")
+        os.mkfifo(self.src / "fifo")
+        c = sqlite3.connect(self.src / "shellb.db")
+        c.execute("PRAGMA journal_mode=WAL")
+        c.execute("CREATE TABLE t(x)")
+        c.execute("INSERT INTO t VALUES(42)")
+        c.commit()
+        self.conn = c  # kept open: the -wal file holds the row, as in a running cell
+
+    def tearDown(self):
+        self.conn.close()
+        shutil.rmtree(self.src)
+        shutil.rmtree(self.dst)
+
+    def run_tool(self, cmd, root, opts, stdin=b""):
+        out, err = io.BytesIO(), io.StringIO()
+        fake_out = type("Out", (), {"buffer": out})()
+        fake_in = type("In", (), {"buffer": io.BytesIO(stdin)})()
+        self.tool.ROOT = str(root)
+        with mock.patch.object(sys, "stdout", fake_out), mock.patch.object(sys, "stdin", fake_in), \
+                mock.patch.object(sys, "stderr", err):
+            {"export": self.tool.export, "import": self.tool.import_}[cmd](opts)
+        return out.getvalue(), err.getvalue()
+
+    def test_round_trip(self):
+        data, err = self.run_tool("export", self.src, {"exclude": ["backups", "shellb.db-wal", "shellb.db-shm"],
+                                                      "secret": ["codex/.key"]})
+        self.assertEqual(err, "")
+        names = set(tarfile.open(fileobj=io.BytesIO(data)).getnames())
+        self.assertEqual(names, {"codex", "codex/a.txt", "link", "shellb.db"})
+        (self.dst / "stale.txt").write_text("from before")
+        (self.dst / "codex").mkdir()
+        (self.dst / "codex" / ".key").write_text("this machine's key")
+        self.run_tool("import", self.dst, {"keep": ["codex/.key"]}, stdin=data)
+        self.assertFalse((self.dst / "stale.txt").exists())
+        self.assertEqual((self.dst / "codex" / ".key").read_text(), "this machine's key")
+        self.assertEqual(os.readlink(self.dst / "link"), "codex/a.txt")
+        self.assertEqual(sqlite3.connect(self.dst / "shellb.db").execute("SELECT x FROM t").fetchall(), [(42,)])
 
 
 class Compaction(unittest.TestCase):

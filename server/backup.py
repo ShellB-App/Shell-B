@@ -19,6 +19,7 @@ import os
 import re
 import shutil
 import sqlite3
+import stat
 import sys
 import tarfile
 import tempfile
@@ -126,8 +127,15 @@ def _save_index(items: list[dict]):
         pass
 
 
+# Guest cells (cells.py): data/cells/<gid>/data belongs to the cell's uid, so the owner's process can't read it; it goes
+# into the archive as cells/<gid>/data.tar through cells.export_data instead. web/ and sock/ only hold the running
+# cell's sockets.
+CELL_SKIP = {"data", "web", "sock"}
+
+
 def _ignore_for(d_name: str):
-    """shutil.copytree ignore callback: EXCLUDE_PATTERNS everywhere, SECRET_FILES at their exact place."""
+    """shutil.copytree ignore callback: EXCLUDE_PATTERNS everywhere, SECRET_FILES at their exact place, sockets, pipes
+    and devices (which can't be copied, and mean nothing in an archive) and the guest cells' own folders."""
     patterns = shutil.ignore_patterns(*EXCLUDE_PATTERNS)
     secrets = {tuple(f.split("/")) for f in SECRET_FILES if f.split("/")[0] == d_name}
 
@@ -135,8 +143,48 @@ def _ignore_for(d_name: str):
         out = set(patterns(src, names))
         rel = Path(src).relative_to(db.DATA).parts
         out |= {n for n in names if (*rel, n) in secrets}
+        if len(rel) == 2 and rel[0] == "cells":
+            out |= CELL_SKIP & set(names)
+        for n in set(names) - out:
+            try:
+                mode = os.lstat(os.path.join(src, n)).st_mode
+            except OSError:
+                continue  # gone already; copytree reports it if it still matters
+            if not (stat.S_ISREG(mode) or stat.S_ISDIR(mode) or stat.S_ISLNK(mode)):
+                out.add(n)
         return out
     return ignore
+
+
+def _copy_tree(d_name: str, dst: Path, skipped: list[str]):
+    """Copy data/<d_name> into the staging folder. A path that can't be copied is noted in `skipped` and the rest
+    still goes in: one unreadable file must not cost the whole backup."""
+    try:
+        shutil.copytree(db.DATA / d_name, dst, ignore=_ignore_for(d_name), symlinks=True)
+    except shutil.Error as e:
+        for src, _dst, why in e.args[0]:
+            skipped.append(f"{Path(src).relative_to(db.DATA) if Path(src).is_relative_to(db.DATA) else src}: {why}")
+    except OSError as e:
+        skipped.append(f"{d_name}: {e}")
+
+
+def _export_cells(staging: Path, skipped: list[str]) -> list[str]:
+    """Each guest cell's data, as cells/<gid>/data.tar, written by the cell's own uid (cells.export_data)."""
+    import cells
+    done = []
+    root = db.DATA / "cells"
+    for d in sorted(root.iterdir()) if root.is_dir() else []:
+        if not cells.GID_RX.match(d.name) or not (d / "data").is_dir():
+            continue
+        (staging / "cells" / d.name).mkdir(parents=True, exist_ok=True)
+        try:
+            for path in cells.export_data(d.name, staging / "cells" / d.name / "data.tar", EXCLUDE_PATTERNS, SECRET_FILES):
+                skipped.append(f"cells/{d.name}/data/{path}")
+            done.append(d.name)
+        except Exception as e:
+            (staging / "cells" / d.name / "data.tar").unlink(missing_ok=True)
+            skipped.append(f"cells/{d.name}/data: {e}")
+    return done
 
 
 def _rebuild_index() -> list[dict]:
@@ -215,23 +263,23 @@ def create_backup(
         included_dirs = CORE_DIRS if scope == "core" else ALL_DATA_DIRS
         actual_dirs = []
 
+        skipped: list[str] = []
+
         for d_name in included_dirs:
             src_dir = db.DATA / d_name
             if src_dir.exists() and src_dir.is_dir():
-                dst_dir = staging / d_name
-                shutil.copytree(
-                    src_dir,
-                    dst_dir,
-                    ignore=_ignore_for(d_name),
-                    symlinks=True
-                )
+                _copy_tree(d_name, staging / d_name, skipped)
                 actual_dirs.append(d_name)
+        cell_ids = _export_cells(staging, skipped) if "cells" in actual_dirs else []
 
         # 3. Copy individual files
         for f_name in INDIVIDUAL_FILES:
             src_file = db.DATA / f_name
             if src_file.exists() and src_file.is_file():
-                shutil.copy2(src_file, staging / f_name)
+                try:
+                    shutil.copy2(src_file, staging / f_name)
+                except OSError as e:
+                    skipped.append(f"{f_name}: {e}")
 
         # 4. Write manifest
         manifest = {
@@ -244,8 +292,13 @@ def create_backup(
             "createdAtIso": _now_iso(),
             "dbStats": db_stats,
             "directories": actual_dirs,
+            "cells": cell_ids,
+            "skipped": skipped[:200],
+            "skippedCount": len(skipped),
             "version": "1.0",
         }
+        if skipped:
+            print(f"[Backup] {len(skipped)} path(s) left out of {archive_filename}: " + "; ".join(skipped[:5]))
         (staging / "manifest.json").write_text(json.dumps(manifest, indent=2))
 
         # 5. Build tar.gz
@@ -290,6 +343,18 @@ def find_archive(identifier: str, allow_path: bool = False) -> Path | None:
         if m.get("id") == identifier and (BACKUP_DIR / m.get("filename", "")).is_file():
             return BACKUP_DIR / m["filename"]
     return None
+
+
+def _restore_cells(staged: Path) -> list[str]:
+    import cells
+    errors = []
+    for d in sorted(staged.iterdir()):
+        if cells.GID_RX.match(d.name) and (d / "data.tar").is_file():
+            try:
+                cells.import_data(d.name, d / "data.tar", keep=SECRET_FILES)
+            except Exception as e:
+                errors.append(f"{d.name}: {e}")
+    return errors
 
 
 def restore_backup(archive_identifier: str, create_safety: bool = True, allow_path: bool = False) -> dict:
@@ -358,8 +423,14 @@ def restore_backup(archive_identifier: str, create_safety: bool = True, allow_pa
         for rel in SECRET_FILES:
             if (db.DATA / rel).is_file() and not (staging_dir / rel).exists():
                 kept[rel] = (db.DATA / rel).read_bytes()
+        cell_errors = []
         for item in staging_dir.iterdir():
             if item.name in ("shellb.db", "manifest.json"):
+                continue
+            if item.name == "cells":
+                # The cells' folders belong to their uids: each cell's data goes back through cells.import_data, and
+                # cells the archive doesn't carry are left as they are.
+                cell_errors = _restore_cells(item)
                 continue
             dst = db.DATA / item.name
             if item.is_dir():
@@ -378,6 +449,7 @@ def restore_backup(archive_identifier: str, create_safety: bool = True, allow_pa
             "message": f"Successfully restored from {archive_path.name}",
             "restoredManifest": manifest,
             "safetyBackup": safety_info,
+            "cellErrors": cell_errors,
         }
     finally:
         if staging_dir.exists():
@@ -605,6 +677,9 @@ def cli():
         print(f"  Size:     {m['sizeFormatted']}")
         print(f"  Scope:    {m['scope']}")
         print(f"  Tables:   {m['dbStats']}")
+        print(f"  Cells:    {', '.join(m['cells']) or 'none'}")
+        for line in m["skipped"]:
+            print(f"  Skipped:  {line}")
 
     elif args.cmd == "list":
         items = _load_index()
@@ -633,6 +708,8 @@ def cli():
         print(f"Restoring from {args.backup_id}...")
         res = restore_backup(args.backup_id, create_safety=not args.no_safety, allow_path=True)
         print(f"Restore complete: {res['message']}")
+        for line in res["cellErrors"]:
+            print(f"Guest cell not restored: {line}")
         if res.get("safetyBackup"):
             print(f"Safety snapshot created: {res['safetyBackup']['filename']}")
         if args.restart:
