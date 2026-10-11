@@ -4,8 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { goLive, setClock, useClockState, useClockTime } from './clock';
 import { TimeBar } from './TimeBar';
 import clsx from 'clsx';
-import { Crosshair, Map as MapIcon, PanelLeftOpen, RotateCcw, Ruler, Sparkles, X } from 'lucide-react';
+import { Crosshair, Map as MapIcon, PanelLeftOpen, RotateCcw, Ruler, Sparkles, X, Zap } from 'lucide-react';
 import { AU, SOL_BODIES, dist, isMajorMoon, moonOrbitPath, moonsOf, orbitPath, positions, type SolBody, type Vec3 } from './sol';
+import { AURORAE, AURORA_MIN_PX, drawAurorae, drawRings } from './aurorae';
 
 interface HistoricEvent {
   label: string;
@@ -242,12 +243,27 @@ export function SolView({ mapIds, onOpenMap, focus, onShowPanel }: {
       g.fillStyle = glow;
       g.beginPath(); g.arc(sun[0], sun[1], 40, 0, 2 * Math.PI); g.fill();
     }
+    const viewDir: Vec3 = [sy * sp, cy * sp, -cp];
+    let animated = false;
     for (const { b, s } of pts) {
-      const r = Math.max(dotPx(b), c.compressed ? 0 : ((b.radius_km ?? 0) / AU) * c.scale);
-      g.fillStyle = b.color;
+      const rTrue = c.compressed ? 0 : ((b.radius_km ?? 0) / AU) * c.scale;
+      const r = Math.max(dotPx(b), rTrue);
+      const aur = AURORAE[b.id];
+      const big = !!aur && rTrue >= AURORA_MIN_PX;
+      const dctx = big ? {
+        g, cx: s[0], cy: s[1], proj, viewDir, radiusAU: (b.radius_km ?? 0) / AU, radiusPx: rTrue, t: performance.now(),
+        moonDir: aur!.footprint && pos[aur!.footprint.moon] ? ([pos[aur!.footprint.moon][0] - pos[b.id][0], pos[aur!.footprint.moon][1] - pos[b.id][1], pos[aur!.footprint.moon][2] - pos[b.id][2]] as Vec3) : null,
+      } : null;
+      if (dctx) drawRings(aur!, dctx, 'far');
+      if (big) {  // a lit disc, darker at the limb, once the planet is more than a dot
+        const grad = g.createRadialGradient(s[0] - r * 0.25, s[1] - r * 0.25, r * 0.1, s[0], s[1], r);
+        grad.addColorStop(0, b.color); grad.addColorStop(0.75, b.color); grad.addColorStop(1, 'rgba(20,18,30,0.95)');
+        g.fillStyle = grad;
+      } else g.fillStyle = b.color;
       g.globalAlpha = b.parent && !isMajorMoon(b, siblings[b.parent]) && b.id !== selected && b.id !== hover ? 0.55 : 1;
       g.beginPath(); g.arc(s[0], s[1], r, 0, 2 * Math.PI); g.fill();
       g.globalAlpha = 1;
+      if (dctx) { drawRings(aur!, dctx, 'near'); drawAurorae(aur!, dctx); animated = true; }
       if (b.id === selected || b.id === hover) {
         g.strokeStyle = b.id === selected ? '#ff5a36' : 'rgba(255,255,255,0.7)';
         g.lineWidth = 1.5;
@@ -274,7 +290,10 @@ export function SolView({ mapIds, onOpenMap, focus, onShowPanel }: {
       g.fillStyle = id === selected ? '#ffffff' : 'rgba(225,230,240,0.78)';
       g.fillText(b.name, lx, ly);
     }
-  }, [frame, pos, orbits, selected, hover, follow, compressed, time]);
+    // aurorae flicker: redraw a few times a second while one is on screen
+    const timer = animated && !document.hidden ? setTimeout(redraw, 110) : undefined;
+    return () => { if (timer) clearTimeout(timer); };
+  }, [frame, pos, orbits, selected, hover, follow, compressed, time, redraw]);
 
   // ── interaction ─────────────────────────────────────────────────────────
   const pointers = useRef(new Map<number, { x: number; y: number }>());
@@ -376,6 +395,15 @@ export function SolView({ mapIds, onOpenMap, focus, onShowPanel }: {
     cam.current = { ...DEFAULT_CAM, compressed: cam.current.compressed };
     setFollow(null); save(); redraw();
   };
+  /** True scale, centred on the planet, zoomed until its disc fills a third of the view: the poles and their aurorae show. */
+  const showAurorae = (id: string) => {
+    const b = BY_ID[id], el = wrap.current, c = cam.current;
+    if (!b?.radius_km || !el) return;
+    c.compressed = false; c.panX = 0; c.panY = 0;
+    c.scale = Math.min(5e6, (0.3 * Math.min(el.clientWidth, el.clientHeight)) / (b.radius_km / AU));
+    if (c.pitch < 0.35) c.pitch = 0.55;
+    setCompressed(false); setSelected(id); setFollow(id); save(); redraw();
+  };
   const sel = selected ? BY_ID[selected] : null;
   const fromSun = sel && sel.id !== 'sol' ? dist(pos[sel.id], [0, 0, 0]) : null;
   const fromEarth = sel && sel.id !== 'earth' ? dist(pos[sel.id], pos.earth) : null;
@@ -439,6 +467,16 @@ export function SolView({ mapIds, onOpenMap, focus, onShowPanel }: {
                   )}
                 </dd>
               </dl>
+              {AURORAE[sel.id] && (
+                <div className="mt-2 pt-2 border-t border-[var(--border-subtle)]">
+                  <div className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--text-primary)]"><Zap className="w-3 h-3 text-violet-400" /> Aurorae{sel.id === 'saturn' ? ' and rings' : ''}</div>
+                  <p className="mt-0.5 text-[10.5px] leading-snug text-[var(--text-muted)]">{AURORAE[sel.id].note}</p>
+                  <button className="mt-1.5 h-7 px-2 flex items-center gap-1 rounded-md border border-violet-500/40 bg-violet-500/10 text-[11px] text-violet-200 hover:bg-violet-500/20 transition"
+                    onClick={() => showAurorae(sel.id)} title="True scale, centred, zoomed to the disc">
+                    <Zap className="w-3 h-3" /> Show the aurorae
+                  </button>
+                </div>
+              )}
               <div className="mt-2 flex gap-1.5">
                 <button className={clsx('h-7 px-2 flex items-center gap-1 rounded-md border text-[11px] transition',
                   follow === sel.id ? 'border-[var(--accent)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]')}

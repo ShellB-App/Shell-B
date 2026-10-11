@@ -52,8 +52,7 @@ bathymetry insets (GEBCO 2024 is 15 arc-seconds, ~450 m; multibeam surveys of fa
 
 ### Effects shipped alongside
 Per-world sky (`atmosphere.ts`), Enceladus/Io plumes and Mars dust (`effects.ts`, custom WebGL layer), live aurora
-(`aurora.ts`, NOAA OVATION). Ideas on the same base: Saturn's and Jupiter's aurorae (no maps for the giants, so in the
-orrery instead), Triton's geysers, Martian dust devils at rover sites, Titan's methane rain, Venus lightning, Earth's
+(`aurora.ts`, NOAA OVATION). Jupiter's and Saturn's aurorae are in the orrery (`aurorae.ts`, with Saturn's rings). Ideas on the same base: Triton's geysers, Martian dust devils at rover sites, Titan's methane rain, Venus lightning, Earth's
 lightning from a live feed (Blitzortung needs an account), city lights following the terminator (Black Marble is in).
 
 ### Procedural worlds (exoplanets)

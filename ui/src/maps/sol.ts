@@ -90,7 +90,7 @@ for (const r of MOON_ROWS as MoonRow[]) {
 }
 
 /** Plane-of-reference coordinates → J2000 ecliptic. The plane is given by its pole in ICRF; its node on the ICRF equator is x. */
-function fromPlane(v: Vec3, pole: [number, number] | null): Vec3 {
+export function fromPlane(v: Vec3, pole: [number, number] | null): Vec3 {
   if (!pole) return v;
   const ti = (90 - pole[1]) * DEG, tn = (pole[0] + 90) * DEG;
   const y1 = v[1] * Math.cos(ti) - v[2] * Math.sin(ti), z1 = v[1] * Math.sin(ti) + v[2] * Math.cos(ti);

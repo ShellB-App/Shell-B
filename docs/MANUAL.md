@@ -525,6 +525,11 @@ glyphs, sprites, terrain, 3D models), `server/planetary.py` (gazetteer, ephemeri
   vents; Mars gets drifting dust clouds over the basins where regional storms start (Hellas, Argyre, Chryse, Noachis,
   Isidis, Syria). The vents and basins are real, the motion is an impression, and the Layers menu says so. Plume heights
   are capped at a fifth of the radius so they stay on screen when zoomed in.
+- **Jupiter's and Saturn's aurorae** live in the orrery (`ui/src/maps/aurorae.ts`), since the giants have no surface
+  map: select the planet and press *Show the aurorae* (true scale, centred, zoomed to the disc), or zoom in yourself in
+  true scale. Ovals ring both poles at their real colatitudes (~15°), the poles point where the IAU rotation models put
+  them, the glow flickers, Jupiter shows Io's flux-tube footprint at Io's longitude, and Saturn gets its rings (C, B,
+  Cassini division, A) drawn behind and in front of the disc. False colour: these aurorae shine mostly in ultraviolet.
 - **Aurora** (Earth, Live): NOAA's OVATION 30-minute forecast, a probability per 1° cell, painted as green-to-violet
   ovals over the poles (`ui/src/maps/aurora.ts`; proxy `GET /api/earth/aurora`, cached 5 minutes), with the forecast
   peak shown in a chip. Pair it with *Day & night* to see where the lights would be visible.
