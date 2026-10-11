@@ -523,7 +523,8 @@ glyphs, sprites, terrain, 3D models), `server/planetary.py` (gazetteer, ephemeri
   wonder and Atlas-place cards, the mountain button on a dropped pin, or Atlas's `view3d` key open a three.js view of
   the terrain around a point, built from the same elevation tiles as the relief layers (`elevation.ts` samples a
   128 × 128 grid, bilinear). Under the sea on Earth it is a dive: the sea floor lit from above, the surface seen from
-  below, marine snow, a dashed line from the target up to the surface, depth-banded colours. On land and on Mars, the
+  below, marine snow (slow-drifting organic flecks, not weather: nothing falls from the sky down there), a dashed
+  line from the target up to the surface, depth-banded colours. On land and on Mars, the
   Moon and Mercury it is a fly-through with the world's own sky colour; on Mars a *Dust storm* toggle thickens the haze
   and sends dust past the camera (an impression, not a forecast). Area 20 to 320 km, vertical exaggeration 1 to 8
   (always shown), the cursor reads height and distance from the target. Cells are coarse (GEBCO ~300 m at 40 km,
@@ -536,11 +537,14 @@ glyphs, sprites, terrain, 3D models), `server/planetary.py` (gazetteer, ephemeri
   vents; Mars gets drifting dust clouds over the basins where regional storms start (Hellas, Argyre, Chryse, Noachis,
   Isidis, Syria). The vents and basins are real, the motion is an impression, and the Layers menu says so. Plume heights
   are capped at a fifth of the radius so they stay on screen when zoomed in.
-- **Jupiter's and Saturn's aurorae** live in the orrery (`ui/src/maps/aurorae.ts`), since the giants have no surface
-  map: select the planet and press *Show the aurorae* (true scale, centred, zoomed to the disc), or zoom in yourself in
-  true scale. Ovals ring both poles at their real colatitudes (~15°), the poles point where the IAU rotation models put
-  them, the glow flickers, Jupiter shows Io's flux-tube footprint at Io's longitude, and Saturn gets its rings (C, B,
-  Cassini division, A) drawn behind and in front of the disc. False colour: these aurorae shine mostly in ultraviolet.
+- **The giant planets' aurorae** live in the orrery (`ui/src/maps/aurorae.ts`), since the giants have no surface map:
+  select Jupiter, Saturn, Uranus or Neptune and press *Show the aurorae* (true scale, centred, zoomed to the disc), or
+  zoom in yourself in true scale. Ovals ring the magnetic poles: the spin poles come from the IAU rotation models, the
+  planet turns with the map clock (W = w0 + w1·d) and the dipole leans from the spin axis by its real tilt, 9.6° on
+  Jupiter, 0° on Saturn, 59° on Uranus and 47° on Neptune, so the ice giants' ovals wander far from the geographic poles
+  and swing round as the clock plays. The glow flickers, Jupiter shows Io's flux-tube footprint at Io's longitude, Saturn
+  gets its C, B and A rings and Uranus its ε ring, drawn behind and in front of the disc. False colour: these aurorae
+  shine mostly in ultraviolet. The dipole longitudes are approximate, so the phase of the swing is indicative.
 - **Aurora** (Earth, Live): NOAA's OVATION 30-minute forecast, a probability per 1° cell, painted as green-to-violet
   ovals over the poles (`ui/src/maps/aurora.ts`; proxy `GET /api/earth/aurora`, cached 5 minutes), with the forecast
   peak shown in a chip. Pair it with *Day & night* to see where the lights would be visible.

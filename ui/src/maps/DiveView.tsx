@@ -4,7 +4,7 @@
 // or wind-blown dust, and a marker at the target. Vertical exaggeration is adjustable and always shown.
 import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { Loader2, Mountain, Snowflake, Waves, Wind, X } from 'lucide-react';
+import { Droplets, Loader2, Mountain, Waves, Wind, X } from 'lucide-react';
 import type { MapBody } from './core';
 import { elevationGrid, type HeightGrid } from './elevation';
 import { loadThree } from './ModelViewer';
@@ -139,12 +139,15 @@ export function DiveView({ body, target, onClose }: { body: MapBody; target: Vie
       // particles: marine snow sinking, or dust blowing with the wind
       const kind = mode === 'dive' ? 'snow' : body.id === 'mars' || body.id === 'venus' || body.id === 'titan' ? 'dust' : null;
       let points: import('three').Points | null = null;
-      const N = 3000, boxSize = span * 0.7;
+      const N = kind === 'snow' ? 1400 : 3000, boxSize = span * 0.7;
       const pp = new Float32Array(N * 3), vv = new Float32Array(N * 3);
       if (kind) {
         for (let i = 0; i < N; i++) {
           pp[i * 3] = (Math.random() - 0.5) * boxSize; pp[i * 3 + 1] = (Math.random() - 0.5) * boxSize; pp[i * 3 + 2] = (Math.random() - 0.5) * boxSize;
-          vv[i * 3] = (Math.random() - 0.5) * 0.02; vv[i * 3 + 1] = kind === 'snow' ? -0.01 - Math.random() * 0.02 : (Math.random() - 0.5) * 0.01; vv[i * 3 + 2] = (Math.random() - 0.5) * 0.02;
+          // marine snow drifts with the current and barely sinks (a flake falls ~100 m a day); dust rides the wind
+          vv[i * 3] = (Math.random() - 0.5) * (kind === 'snow' ? 0.006 : 0.02);
+          vv[i * 3 + 1] = kind === 'snow' ? -0.0008 - Math.random() * 0.0012 : (Math.random() - 0.5) * 0.01;
+          vv[i * 3 + 2] = (Math.random() - 0.5) * (kind === 'snow' ? 0.006 : 0.02);
         }
         const pg = new THREE.BufferGeometry();
         pg.setAttribute('position', new THREE.BufferAttribute(pp, 3));
@@ -154,8 +157,8 @@ export function DiveView({ body, target, onClose }: { body: MapBody; target: Vie
         grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(0.4, 'rgba(255,255,255,0.6)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
         g2.fillStyle = grad; g2.fillRect(0, 0, 64, 64);
         const sprite = new THREE.CanvasTexture(cv);
-        points = new THREE.Points(pg, new THREE.PointsMaterial({ map: sprite, color: kind === 'snow' ? 0xd6ecff : 0xc9955c, size: span / 500, sizeAttenuation: true, transparent: true,
-          opacity: kind === 'snow' ? 0.8 : 0.35, depthWrite: false, blending: kind === 'snow' ? THREE.AdditiveBlending : THREE.NormalBlending }));
+        points = new THREE.Points(pg, new THREE.PointsMaterial({ map: sprite, color: kind === 'snow' ? 0xbfd9ea : 0xc9955c, size: span / (kind === 'snow' ? 800 : 500), sizeAttenuation: true, transparent: true,
+          opacity: kind === 'snow' ? 0.5 : 0.35, depthWrite: false, blending: THREE.NormalBlending }));
         scene.add(points);
       }
 
@@ -223,8 +226,8 @@ export function DiveView({ body, target, onClose }: { body: MapBody; target: Vie
               pp[i * 3] = x; pp[i * 3 + 1] = y; pp[i * 3 + 2] = z;
             }
             (points.geometry.attributes.position as import('three').BufferAttribute).needsUpdate = true;
-            (points.material as import('three').PointsMaterial).opacity = stormy ? 0.55 : kind === 'snow' ? 0.8 : 0.35;
-            (points.material as import('three').PointsMaterial).size = stormy ? span / 220 : span / 500;
+            (points.material as import('three').PointsMaterial).opacity = stormy ? 0.55 : kind === 'snow' ? 0.5 : 0.35;
+            (points.material as import('three').PointsMaterial).size = stormy ? span / 220 : kind === 'snow' ? span / 800 : span / 500;
           }
           if (kind === 'dust' && scene.fog instanceof THREE.Fog) {
             const f = scene.fog; const stormy = L.storm;
@@ -299,8 +302,9 @@ export function DiveView({ body, target, onClose }: { body: MapBody; target: Vie
           <input type="range" min={1} max={8} step={0.5} value={exag} onChange={e => setExag(+e.target.value)} className="w-24 accent-amber-400" aria-label="Vertical exaggeration" />
         </label>
         {(mode === 'dive' || dusty) && (
-          <button onClick={() => setParticles(p => !p)} className={clsx('pointer-events-auto flex items-center gap-1 rounded-lg bg-black/45 backdrop-blur px-2 py-1', particles ? 'text-white' : 'text-slate-500')} title={mode === 'dive' ? 'Marine snow' : 'Dust in the air'}>
-            {mode === 'dive' ? <Snowflake className="w-3.5 h-3.5" /> : <Wind className="w-3.5 h-3.5" />} {mode === 'dive' ? 'Marine snow' : 'Dust'}
+          <button onClick={() => setParticles(p => !p)} className={clsx('pointer-events-auto flex items-center gap-1 rounded-lg bg-black/45 backdrop-blur px-2 py-1', particles ? 'text-white' : 'text-slate-500')}
+            title={mode === 'dive' ? 'Marine snow: flecks of organic matter drifting through the water. Not weather; nothing falls from the sky down here.' : 'Dust in the air'}>
+            {mode === 'dive' ? <Droplets className="w-3.5 h-3.5" /> : <Wind className="w-3.5 h-3.5" />} {mode === 'dive' ? 'Marine snow' : 'Dust'}
           </button>
         )}
         {mode === 'fly' && dusty && body.id === 'mars' && (

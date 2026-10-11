@@ -7,6 +7,10 @@ import { fromPlane, type Vec3 } from './sol';
 export interface AuroraSpec {
   /** north pole, ICRF right ascension and declination (IAU 2015) */
   pole: [number, number];
+  /** prime meridian angle W = w0 + w1·d (degrees, d = days since J2000), IAU 2015 */
+  spin: [number, number];
+  /** dipole axis: tilt from the spin axis and the west longitude it leans toward; the ovals ring the magnetic poles */
+  dipole: { tilt: number; lon: number };
   ovals: { colat: number; width: number; color: [number, number, number]; alpha: number }[];
   /** footprint of a moon's flux tube: moon id and magnetic colatitude */
   footprint?: { moon: string; colat: number; color: string };
@@ -16,16 +20,27 @@ export interface AuroraSpec {
 
 export const AURORAE: Record<string, AuroraSpec> = {
   jupiter: {
-    pole: [268.057, 64.495],
+    pole: [268.057, 64.495], spin: [284.95, 870.536], dipole: { tilt: 9.6, lon: 200 },
     ovals: [{ colat: 15, width: 2.2, color: [205, 140, 255], alpha: 0.85 }, { colat: 11, width: 1.2, color: [255, 190, 240], alpha: 0.35 }],
     footprint: { moon: 'io', colat: 24, color: 'rgba(255,230,150,0.95)' },
     note: 'The brightest aurorae in the Solar System: a main oval around each pole, bright spots where Io, Europa and Ganymede’s flux tubes land, and polar flares. Ultraviolet mostly, shown in false colour.',
   },
   saturn: {
-    pole: [40.589, 83.537],
+    pole: [40.589, 83.537], spin: [38.90, 810.7939024], dipole: { tilt: 0, lon: 0 },
     ovals: [{ colat: 15, width: 2.5, color: [130, 180, 255], alpha: 0.8 }, { colat: 12, width: 1.0, color: [200, 220, 255], alpha: 0.3 }],
     rings: [{ inner: 1.24, outer: 1.53, alpha: 0.22, color: '#d9cdb0' }, { inner: 1.53, outer: 1.95, alpha: 0.72, color: '#e6dcc0' }, { inner: 2.03, outer: 2.27, alpha: 0.55, color: '#dccfae' }],
     note: 'Ovals around both poles, brightening with the solar wind and pulsing with Saturn’s 10.7-hour radio period; Cassini watched them from above. Ultraviolet mostly, shown in false colour.',
+  },
+  uranus: {
+    pole: [257.311, -15.175], spin: [203.81, -501.1600928], dipole: { tilt: 58.6, lon: 48 },
+    ovals: [{ colat: 22, width: 3, color: [170, 215, 255], alpha: 0.55 }],
+    rings: [{ inner: 1.95, outer: 2.01, alpha: 0.35, color: '#9fb0b8' }],
+    note: 'A magnetic field tilted 59° from the spin axis and offset from the centre: the aurorae ring magnetic poles that swing round the planet every 17 hours, far from the geographic poles. Seen by Voyager 2 and Hubble; faint, ultraviolet, false colour here.',
+  },
+  neptune: {
+    pole: [299.36, 43.46], spin: [249.978, 541.1397757], dipole: { tilt: 47, lon: 288 },
+    ovals: [{ colat: 25, width: 3.5, color: [140, 230, 230], alpha: 0.45 }],
+    note: 'Like Uranus, a dipole tilted 47° and offset, so the aurorae wander across mid-latitudes as Neptune spins in 16 hours. Detected by Voyager 2, mapped by Webb in 2025; faint, false colour here.',
   },
 };
 
@@ -34,12 +49,25 @@ const norm = (v: Vec3): Vec3 => { const l = Math.hypot(v[0], v[1], v[2]) || 1; r
 const cross = (a: Vec3, b: Vec3): Vec3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 
-/** Pole direction in J2000 ecliptic coordinates, and two perpendicular unit vectors in the equatorial plane. */
+/** Spin pole in J2000 ecliptic coordinates; u is the node of the planet's equator on the ICRF equator (where W is counted from). */
 export function poleFrame(spec: AuroraSpec): { p: Vec3; u: Vec3; v: Vec3 } {
   const p = norm(fromPlane([0, 0, 1], spec.pole));
-  const u = norm(cross(p, Math.abs(p[2]) < 0.9 ? [0, 0, 1] : [1, 0, 0]));
+  const u = norm(fromPlane([1, 0, 0], spec.pole));
   const v = cross(p, u);
   return { p, u, v };
+}
+
+/** The magnetic pole at time `ms`: the dipole axis leans `tilt` from the spin axis toward west longitude `lon`, and the
+ * planet has turned by W(d) since J2000 (IAU: W measured eastward from the node; west longitudes run the other way). */
+export function magneticFrame(spec: AuroraSpec, ms: number): { p: Vec3; u: Vec3; v: Vec3 } {
+  const f = poleFrame(spec);
+  if (!spec.dipole.tilt) return f;
+  const d = ms / 86_400_000 + 2440587.5 - 2451545.0;
+  const W = ((spec.spin[0] + spec.spin[1] * d) % 360) * DEG;
+  const az = W - spec.dipole.lon * DEG;
+  const m = point(f, spec.dipole.tilt * DEG, az);
+  const u = norm(cross(m, Math.abs(m[2]) < 0.9 ? [0, 0, 1] : [1, 0, 0]));
+  return { p: m, u, v: cross(m, u) };
 }
 
 export interface DrawCtx {
@@ -53,6 +81,8 @@ export interface DrawCtx {
   radiusPx: number;
   /** ms, for the flicker */
   t: number;
+  /** the map clock (ms since the epoch): turns the planet, and the magnetic poles with it */
+  ms: number;
   /** direction from the planet to the footprint moon (ecliptic), if known */
   moonDir?: Vec3 | null;
 }
@@ -100,7 +130,7 @@ export function drawRings(spec: AuroraSpec, d: DrawCtx, which: 'far' | 'near') {
 
 /** The auroral ovals at both poles (visible parts), with the moon footprint when its direction is known. */
 export function drawAurorae(spec: AuroraSpec, d: DrawCtx) {
-  const f = poleFrame(spec);
+  const f = magneticFrame(spec, d.ms);
   const { g } = d;
   const N = 120;
   for (const hemi of [1, -1] as const) {

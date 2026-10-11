@@ -251,7 +251,7 @@ export function SolView({ mapIds, onOpenMap, focus, onShowPanel }: {
       const aur = AURORAE[b.id];
       const big = !!aur && rTrue >= AURORA_MIN_PX;
       const dctx = big ? {
-        g, cx: s[0], cy: s[1], proj, viewDir, radiusAU: (b.radius_km ?? 0) / AU, radiusPx: rTrue, t: performance.now(),
+        g, cx: s[0], cy: s[1], proj, viewDir, radiusAU: (b.radius_km ?? 0) / AU, radiusPx: rTrue, t: performance.now(), ms: time,
         moonDir: aur!.footprint && pos[aur!.footprint.moon] ? ([pos[aur!.footprint.moon][0] - pos[b.id][0], pos[aur!.footprint.moon][1] - pos[b.id][1], pos[aur!.footprint.moon][2] - pos[b.id][2]] as Vec3) : null,
       } : null;
       if (dctx) drawRings(aur!, dctx, 'far');
@@ -469,7 +469,7 @@ export function SolView({ mapIds, onOpenMap, focus, onShowPanel }: {
               </dl>
               {AURORAE[sel.id] && (
                 <div className="mt-2 pt-2 border-t border-[var(--border-subtle)]">
-                  <div className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--text-primary)]"><Zap className="w-3 h-3 text-violet-400" /> Aurorae{sel.id === 'saturn' ? ' and rings' : ''}</div>
+                  <div className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--text-primary)]"><Zap className="w-3 h-3 text-violet-400" /> Aurorae{AURORAE[sel.id].rings ? ' and rings' : ''}</div>
                   <p className="mt-0.5 text-[10.5px] leading-snug text-[var(--text-muted)]">{AURORAE[sel.id].note}</p>
                   <button className="mt-1.5 h-7 px-2 flex items-center gap-1 rounded-md border border-violet-500/40 bg-violet-500/10 text-[11px] text-violet-200 hover:bg-violet-500/20 transition"
                     onClick={() => showAurorae(sel.id)} title="True scale, centred, zoomed to the disc">
