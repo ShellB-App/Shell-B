@@ -47,6 +47,8 @@ GH = re.compile(r"^(?:https?://github\.com/)?([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+?
 
 DEFAULT_SOURCES = [
     {"id": "mcp-registry", "kind": "registry", "name": "Official MCP Registry", "url": REGISTRY},
+    {"id": "shellb-skills", "kind": "github", "name": "Shell:B community skills", "repo": "EveAeternam/Shell-B-Skills", "ref": "HEAD",
+     "subdir": "skills"},
     {"id": "anthropic-skills", "kind": "github", "name": "Anthropic skills", "repo": "anthropics/skills", "ref": "HEAD",
      "subdir": "skills"},
     {"id": "claude-plugins", "kind": "marketplace", "name": "Claude plugins (official marketplace)",
@@ -113,6 +115,37 @@ def remove_source(sid: str):
 
 
 # ── fetching repositories ───────────────────────────────────────────────────
+
+# Shell:B's own repositories are looked up through git.shellb.app/<name>, a redirect (Cloudflare, not this machine) to
+# wherever each one lives now, so they can move without an app update. The GitHub name stays the fallback.
+SHELLB_VIA = {"EveAeternam/Shell-B-Themes": "themes", "EveAeternam/Shell-B-Screensavers": "screensavers",
+              "EveAeternam/Shell-B-Studio-Templates": "templates", "EveAeternam/Shell-B-Skills": "skills",
+              "EveAeternam/Shell-B-Agents": "agents", "EveAeternam/Shell-B-Translations": "translations"}
+VIA_HOST = "https://git.shellb.app"
+_via_cache: dict[str, tuple[float, str]] = {}
+
+
+async def resolve_repo(repo: str) -> str:
+    """The GitHub owner/name `repo` should be fetched from: where its git.shellb.app link points, if it has one."""
+    name = SHELLB_VIA.get(repo)
+    if not name:
+        return repo
+    hit = _via_cache.get(repo)
+    if hit and time.time() - hit[0] < 3600:
+        return hit[1]
+    to = repo
+    try:
+        async with httpx.AsyncClient(timeout=10, follow_redirects=False, headers={"User-Agent": UA},
+                                     event_hooks=GUARD_HOOKS) as c:
+            r = await c.head(f"{VIA_HOST}/{name}")
+        m = GH.match(r.headers.get("location", "")) if r.is_redirect else None
+        if m and f"{m.group(1)}/{m.group(2)}".lower() != repo.lower():
+            to = f"{m.group(1)}/{m.group(2)}"
+    except (httpx.HTTPError, ValueError):
+        pass
+    _via_cache[repo] = (time.time(), to)
+    return to
+
 
 async def _ls_remote(repo: str, ref: str) -> str:
     if re.fullmatch(r"[0-9a-f]{40}", ref or ""):
@@ -218,6 +251,7 @@ async def refresh(source_id: str) -> dict:
     src = _source(source_id)
     if src["kind"] == "registry":
         return {"items": 0, "note": "the registry is searched live"}
+    src = {**src, "repo": await resolve_repo(src["repo"])}
     sha = await _ls_remote(src["repo"], src.get("ref") or "HEAD")
     root = await fetch_repo(src["repo"], sha)
     rows = []

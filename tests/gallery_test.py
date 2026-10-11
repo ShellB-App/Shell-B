@@ -1,5 +1,5 @@
 """Community gallery: a fetched repository becomes a catalogue, themes install through the validator, screensavers
-become sandboxed Studio projects with only the folder's allowed files, installing needs the owner."""
+become sandboxed Studio projects with only the folder's allowed files, templates start new projects, installing needs the owner."""
 import asyncio
 import json
 import os
@@ -39,6 +39,17 @@ def fake_repo(root: Path):
     (s / ".secret").write_text("x")                          # dotfile
     (s / "preview.png").write_bytes(b"\x89PNG\r\n\x1a\n")
     os.symlink("/etc/hostname", s / "link.txt")              # symlink
+    t = root / "templates" / "launch"
+    (t / "assets").mkdir(parents=True)
+    (t / "template.json").write_text(json.dumps({"name": "Launch page", "kind": "website", "blurb": "A launch page", "brief": "Sell the thing.",
+                                                 "author": "Tester", "authorUrl": "https://example.org/t", "license": "MIT", "version": "1.2"}))
+    (t / "index.html").write_text("<!doctype html><title>Launch</title><h1>Launch</h1>")
+    (t / "assets" / "logo.svg").write_text("<svg xmlns='http://www.w3.org/2000/svg'/>")
+    (t / "notes.exe").write_bytes(b"MZ")
+    (t / "preview.jpg").write_bytes(b"\xff\xd8\xff")
+    (root / "templates" / "nokind").mkdir()
+    (root / "templates" / "nokind" / "template.json").write_text(json.dumps({"name": "x", "kind": "poster", "author": "a", "license": "MIT"}))
+    (root / "templates" / "nokind" / "index.html").write_text("x")
     (root / ".complete").write_text("1")
 
 
@@ -52,9 +63,11 @@ class Gallery(unittest.TestCase):
         root.mkdir(parents=True, exist_ok=True)
         fake_repo(root)
         db.kv_set("gallery_sources", [{"id": "test-themes", "kind": "theme", "repo": cls.repo, "ref": cls.sha},
-                                      {"id": "test-savers", "kind": "screensaver", "repo": cls.repo, "ref": cls.sha}])
+                                      {"id": "test-savers", "kind": "screensaver", "repo": cls.repo, "ref": cls.sha},
+                                      {"id": "test-templates", "kind": "template", "repo": cls.repo, "ref": cls.sha}])
         db.kv_set("gallery_theme", {})
         db.kv_set("gallery_screensaver", {})
+        db.kv_set("gallery_template", {})
         db.kv_set(gallery.INSTALLED_KEY, {})
 
     def test_listing_reads_the_pinned_repo(self):
@@ -120,6 +133,30 @@ class Gallery(unittest.TestCase):
         client.delete(f"/api/projects/{pid}")
         self.assertIsNone(asyncio.run(gallery.listing("screensaver"))["sources"][0]["items"][0]["installed"])
 
+    def test_template_starts_a_new_project_each_time(self):
+        res = asyncio.run(gallery.listing("template", refresh=True))
+        items = res["sources"][0]["items"]
+        self.assertEqual([i["id"] for i in items], ["launch"])            # unknown kind skipped
+        it = items[0]
+        self.assertEqual((it["kind"], it["entry"], it["authorUrl"]), ("website", "index.html", "https://example.org/t"))
+        self.assertEqual(it["files"], ["assets/logo.svg", "index.html"])   # exe left out
+        self.assertNotIn("installed", it)
+        a = gallery.install_template("test-templates", "launch", "My launch")
+        b = gallery.install_template("test-templates", "launch")
+        self.assertNotEqual(a["project"]["id"], b["project"]["id"])          # a template never updates in place
+        self.assertEqual((a["project"]["name"], a["project"]["kind"]), ("My launch", "website"))
+        base = projects.root(a["project"]["id"])
+        self.assertIn("<h1>Launch</h1>", (base / "index.html").read_text())
+        self.assertTrue((base / "assets" / "logo.svg").exists())
+        self.assertFalse((base / "notes.exe").exists())
+        design = (base / "DESIGN.md").read_text()
+        self.assertIn("Sell the thing.", design)
+        self.assertIn("Launch page", design)
+        self.assertEqual(client.get("/api/gallery/template/test-templates/launch/preview").status_code, 200)
+        self.assertNotIn("installed", asyncio.run(gallery.listing("template"))["sources"][0]["items"][0])
+        for r in (a, b):
+            client.delete(f"/api/projects/{r['project']['id']}")
+
     def test_sources(self):
         src = gallery.add_source("theme", "https://github.com/Some-One/Their-Themes.git")
         self.assertEqual(src["repo"], "Some-One/Their-Themes")
@@ -130,6 +167,34 @@ class Gallery(unittest.TestCase):
             gallery.add_source("theme", "not a repo")
         with self.assertRaises(ValueError):
             gallery.add_source("font", "a/b")
+
+
+class Via(unittest.TestCase):
+    """Shell:B's own repositories follow their git.shellb.app redirect; anything else, or a failed lookup, keeps its name."""
+    def resolve(self, repo, response=None, error=None):
+        from unittest import mock
+        import httpx
+        community._via_cache.clear()
+        async def head(_self, url, **kw):
+            if error:
+                raise error
+            return httpx.Response(response[0], headers=response[1], request=httpx.Request("HEAD", url))
+        with mock.patch.object(httpx.AsyncClient, "head", head):
+            return asyncio.run(community.resolve_repo(repo))
+
+    def test_resolve(self):
+        import httpx
+        moved = (302, {"location": "https://github.com/shellb-org/Themes"})
+        self.assertEqual(self.resolve("EveAeternam/Shell-B-Themes", moved), "shellb-org/Themes")
+        same = (302, {"location": "https://github.com/eveaeternam/shell-b-themes"})
+        self.assertEqual(self.resolve("EveAeternam/Shell-B-Themes", same), "EveAeternam/Shell-B-Themes")
+        self.assertEqual(self.resolve("EveAeternam/Shell-B-Themes", (404, {})), "EveAeternam/Shell-B-Themes")
+        self.assertEqual(self.resolve("EveAeternam/Shell-B-Themes", (302, {"location": "https://evil.example/x/y"})),
+                         "EveAeternam/Shell-B-Themes")
+        self.assertEqual(self.resolve("EveAeternam/Shell-B-Themes", error=httpx.ConnectError("down")),
+                         "EveAeternam/Shell-B-Themes")
+        self.assertEqual(self.resolve("someone/else", moved), "someone/else")
+        community._via_cache.clear()
 
 
 if __name__ == "__main__":

@@ -17,10 +17,11 @@ interface Item { id: string; name: string; blurb: string; author: string; author
   installed?: string | null; installedVersion?: string | null }
 export interface GalleryTheme extends Item { mode: Mode; theme: CustomTheme }
 export interface GallerySaver extends Item { clockSafe: boolean; preview: string | null; files: string[] }
+export interface GalleryTemplate extends Item { kind: string; entry: string; brief: string; preview: string | null; files: string[] }
 interface Source<T> { source: string; repo: string; sha: string; fetched: number; url: string; items: T[] }
 interface Listing<T> { kind: string; sources: Source<T>[]; errors: string[] }
 
-function useListing<T>(kind: 'theme' | 'screensaver', open = true) {
+function useListing<T>(kind: 'theme' | 'screensaver' | 'template', open = true) {
   const [data, setData] = useState<Listing<T> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -220,5 +221,54 @@ export function CommunitySavers({ open, onClose, onInstalled }: { open: boolean;
         ))}
       </div>
     </Modal>
+  );
+}
+
+/** Studio → New project → Start from a template: community templates as cards; picking one creates the project
+ *  (of the template's kind, with its files and brief) and hands the id back. Templates of the selected kind come first. */
+export function TemplatePicker({ kind, name, onCreated }: { kind: string; name: string; onCreated: (pid: string) => void }) {
+  const { data, loading, error, load } = useListing<GalleryTemplate>('template');
+  const [busy, setBusy] = useState('');
+  const all = (data?.sources ?? []).flatMap(s => s.items.map(it => ({ source: s.source, it })));
+  const sorted = [...all].sort((a, b) => Number(b.it.kind === kind) - Number(a.it.kind === kind));
+  const start = async (source: string, it: GalleryTemplate) => {
+    setBusy(`${source}:${it.id}`);
+    try {
+      const res = await req<{ project: { id: string } }>('/api/gallery/install', { method: 'POST', body: JSON.stringify({ kind: 'template', source, id: it.id, name }) });
+      onCreated(res.project.id);
+    } catch (e) { installError(e); setBusy(''); }
+  };
+  if (!data && !loading && !error) return null;
+  return (
+    <div>
+      <Header title={tx('Start from a template')} hint={tx('Shared on GitHub; a copy of its files becomes your project')} data={data} loading={loading} onRefresh={() => load(true)} />
+      <Notes data={data} error={error} loading={loading} empty={tx('No templates published yet.')} />
+      {sorted.length > 0 && (
+        <div className="mt-2.5 grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {sorted.map(({ source, it }) => {
+            const key = `${source}:${it.id}`, match = it.kind === kind;
+            return (
+              <button key={key} type="button" disabled={busy !== ''} onClick={() => start(source, it)} title={it.blurb}
+                className={clsx('text-left rounded-lg border overflow-hidden bg-[var(--bg-tertiary)] transition hover:border-[var(--border-strong)] disabled:opacity-60',
+                  match ? 'border-[var(--border-subtle)]' : 'border-[var(--border-subtle)] opacity-70 hover:opacity-100')}>
+                <div className="aspect-[16/10] bg-[var(--bg-primary)]">
+                  {it.preview
+                    ? <img src={`/api/gallery/template/${encodeURIComponent(source)}/${encodeURIComponent(it.id)}/preview`} alt="" loading="lazy" className="w-full h-full object-cover object-top" />
+                    : <div className="w-full h-full grid place-items-center text-[var(--text-muted)]"><Download className="w-5 h-5" /></div>}
+                </div>
+                <div className="p-2">
+                  <div className="flex items-center gap-1.5 text-[12px] font-medium">
+                    <span className="truncate">{it.name}</span>
+                    <span className="ml-auto shrink-0 text-[10px] font-normal text-[var(--text-muted)]">{it.kind}</span>
+                  </div>
+                  <div className="mt-0.5 text-[10.5px] leading-snug text-[var(--text-secondary)] line-clamp-2">{it.blurb}</div>
+                  <div className="mt-1 flex items-center gap-1"><Credit it={it} />{busy === key && <span className="ml-auto text-[10px] text-[var(--text-muted)]">{tx('Creating…')}</span>}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }

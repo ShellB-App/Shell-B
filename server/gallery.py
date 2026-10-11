@@ -1,8 +1,8 @@
 """Community gallery: themes and screensavers other people published on GitHub, browsed and installed from Settings.
 
 Sources (kv `gallery_sources`, the owner can add more): a GitHub repository per kind, laid out like
-EveAeternam/Shell-B-Themes (themes/<id>/theme.json) and EveAeternam/Shell-B-Screensavers (screensavers/<id>/index.html
-+ saver.json + preview image). Each is fetched the way the Community Hub fetches skill repositories: one tarball at a
+EveAeternam/Shell-B-Themes (themes/<id>/theme.json), EveAeternam/Shell-B-Screensavers (screensavers/<id>/index.html
++ saver.json + preview image) and EveAeternam/Shell-B-Studio-Templates (templates/<id>/template.json + project files). Each is fetched the way the Community Hub fetches skill repositories: one tarball at a
 pinned commit (community.fetch_repo, public-internet guard, tarfile "data" filter, size cap), kept under data/community/
 repos, so browsing works offline once a source has been fetched. The catalogue (index.json, or the folders when a fork
 has none) is cached in kv `gallery_<kind>` with the commit it came from.
@@ -12,6 +12,8 @@ Installing is owner-only and never silent (an admin key or owner session, audit-
     change colours, fonts and particles and nothing else; it joins the owner's custom themes with its provenance
   - a screensaver becomes a Screensaver project in the Studio (only the folder's files, allowed types, size caps, no
     dotfiles) and runs like any Studio screensaver: index.html in a sandboxed iframe, scripts only, no same-origin
+  - a template becomes a new Studio project of its kind (same file rules), its brief in DESIGN.md; every use is a new
+    project, so nothing is marked installed
 Nothing here is reachable by agents: there is no tool, so a chat can't install a look the owner didn't pick.
 """
 import asyncio
@@ -31,10 +33,11 @@ import db
 import themes
 
 router = APIRouter(prefix="/api/gallery")
-KINDS = ("theme", "screensaver")
+KINDS = ("theme", "screensaver", "template")
 DEFAULT_SOURCES = [
     {"id": "shellb-themes", "kind": "theme", "repo": "EveAeternam/Shell-B-Themes", "ref": "main"},
     {"id": "shellb-screensavers", "kind": "screensaver", "repo": "EveAeternam/Shell-B-Screensavers", "ref": "main"},
+    {"id": "shellb-templates", "kind": "template", "repo": "EveAeternam/Shell-B-Studio-Templates", "ref": "main"},
 ]
 INSTALLED_KEY = "gallery_installed"
 REFRESH_AFTER = 24 * 3600
@@ -42,6 +45,8 @@ ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,39}$")
 REPO_RE = re.compile(r"^[\w.-]+/[\w.-]+$")
 URL_RE = re.compile(r"^https?://[^\s\"'<>]{1,200}$")
 SAVER_FILES = {".html", ".css", ".js", ".json", ".svg", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".woff2", ".txt", ".md"}
+TEMPLATE_FILES = SAVER_FILES | {".mjs", ".ts", ".ico", ".woff", ".ttf", ".otf", ".py", ".toml", ".yaml", ".yml", ".csv", ".glb", ".gltf", ".mp3", ".ogg", ".wav"}
+TEMPLATE_MAX_FILE, TEMPLATE_MAX_FOLDER = 4 * 2**20, 16 * 2**20
 PREVIEWS = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".svg": "image/svg+xml"}
 MAX_FILE, MAX_FOLDER = 2 * 2**20, 8 * 2**20
 _locks: dict[str, asyncio.Lock] = {}
@@ -142,12 +147,51 @@ def _saver_items(root: Path) -> list[dict]:
     return items
 
 
+def _template_items(root: Path) -> list[dict]:
+    import projects
+    items = []
+    for d in sorted(p for p in root.glob("templates/*") if p.is_dir()):
+        tid = d.name
+        if not ID_RE.match(tid):
+            continue
+        try:
+            meta = json.loads((d / "template.json").read_text())
+        except (OSError, ValueError):
+            continue
+        kind = meta.get("kind") if isinstance(meta, dict) else None
+        if kind not in projects.KINDS:
+            continue
+        entry = "README.md" if kind == "code" else projects.KINDS[kind].get("entry", "index.html")
+        if not (d / entry).is_file():
+            continue
+        preview = next((p.name for p in (d / "preview.jpg", d / "preview.png", d / "preview.webp") if p.is_file()), None)
+        files, total = [], 0
+        for p in d.rglob("*"):
+            if p.is_symlink() or not p.is_file() or p.name == "template.json" or p.name == preview:
+                continue
+            rel = p.relative_to(d).as_posix()
+            if rel != ".gitignore" and (not _rel_ok(rel) or p.suffix.lower() not in TEMPLATE_FILES) or p.stat().st_size > TEMPLATE_MAX_FILE:
+                continue
+            files.append(rel)
+            total += p.stat().st_size
+        if total > TEMPLATE_MAX_FOLDER or not files:
+            continue
+        items.append({"id": tid, "name": str(meta.get("name") or tid.replace("-", " ").title())[:60], "kind": kind, "entry": entry,
+                      "blurb": str(meta.get("blurb") or "")[:200], "brief": str(meta.get("brief") or "")[:2000],
+                      "author": str(meta.get("author") or "")[:80], "authorUrl": _url(meta.get("authorUrl")),
+                      "license": str(meta.get("license") or "")[:40], "version": str(meta.get("version") or "1.0")[:20],
+                      "tags": [str(t)[:24] for t in (meta.get("tags") or [])[:8] if isinstance(t, str)],
+                      "path": f"templates/{tid}", "preview": f"templates/{tid}/{preview}" if preview else None, "files": sorted(files)})
+    return items
+
+
 async def refresh_source(src: dict) -> dict:
     """Fetch the source at its current commit and rebuild its part of the catalogue."""
-    sha = await community._ls_remote(src["repo"], src.get("ref") or "main")
-    root = await community.fetch_repo(src["repo"], sha)
-    items = _theme_items(root) if src["kind"] == "theme" else _saver_items(root)
-    entry = {"repo": src["repo"], "ref": src.get("ref") or "main", "sha": sha, "fetched": time.time(), "items": items}
+    repo = await community.resolve_repo(src["repo"])
+    sha = await community._ls_remote(repo, src.get("ref") or "main")
+    root = await community.fetch_repo(repo, sha)
+    items = {"theme": _theme_items, "screensaver": _saver_items, "template": _template_items}[src["kind"]](root)
+    entry = {"repo": repo, "ref": src.get("ref") or "main", "sha": sha, "fetched": time.time(), "items": items}
     cache = db.kv_get(f"gallery_{src['kind']}") or {}
     if not isinstance(cache, dict):
         cache = {}
@@ -203,6 +247,8 @@ async def listing(kind: str, refresh: bool = False) -> dict:
                     it["installed"] = None
                 if kind == "screensaver" and not db.get_project(rec["target"]):
                     it["installed"] = None
+                if kind == "template":  # a template is a starting point: every use makes a new project, nothing to mark
+                    it.pop("installed", None); it.pop("installedVersion", None)
     return {"kind": kind, "sources": out, "errors": errors}
 
 
@@ -270,6 +316,40 @@ def install_screensaver(source: str, item_id: str) -> dict:
     return {"kind": "screensaver", "project": projects.project_summary(db.get_project(pid))}
 
 
+def install_template(source: str, item_id: str, name: str = "") -> dict:
+    """A new Studio project from a community template: its kind, a copy of its files, its brief in DESIGN.md."""
+    import projects
+    entry, it = _find("template", source, item_id)
+    src_dir = community._repo_dir(entry["repo"], entry["sha"]) / it["path"]
+    if not (src_dir / it["entry"]).is_file():
+        raise KeyError("The template's files are missing from the fetched copy; refresh the gallery")
+    pname = (name.strip() or it["name"])[:80]
+    credit = f"{it['author'] or 'unknown author'}, {it['license'] or 'no license given'}"
+    desc = it["brief"] or it["blurb"]
+    proj = db.create_project(pname, it["kind"], it["entry"], desc)
+    pid = proj["id"]
+    projects.create_project_files(pid, pname, desc, it["kind"])
+    total = 0
+    for rel in it["files"]:
+        src = src_dir / rel
+        if src.is_symlink() or not src.is_file() or (rel != ".gitignore" and (not _rel_ok(rel) or src.suffix.lower() not in TEMPLATE_FILES)):
+            continue
+        total += src.stat().st_size
+        if src.stat().st_size > TEMPLATE_MAX_FILE or total > TEMPLATE_MAX_FOLDER:
+            raise ValueError("The template is larger than the gallery allows")
+        dest = projects.safe_path(pid, rel)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(src, dest)
+    base = projects.root(pid)
+    design = base / "DESIGN.md"
+    if design.is_file() and "DESIGN.md" not in it["files"]:
+        design.write_text(f"# {pname}\n\n## Brief\n{desc}\n\n## Decisions log\n- Started from the community template "
+                          f"\"{it['name']}\" ({entry['repo']}/{it['path']}, version {it['version']}, by {credit}).\n")
+    projects.commit(pid, f"Start from template {it['name']} ({entry['repo']} {entry['sha'][:12]})")
+    _remember("template", source, item_id, pid, entry["sha"], it["version"])
+    return {"kind": "template", "project": projects.project_summary(db.get_project(pid))}
+
+
 # ── routes ────────────────────────────────────────────────────────────────────
 
 @router.get("/sources")
@@ -304,12 +384,12 @@ async def api_list(kind: str, refresh: int = 0):
     try:
         return await listing(kind, refresh=bool(refresh))
     except KeyError:
-        raise HTTPException(404, "kind is theme or screensaver")
+        raise HTTPException(404, "kind is theme, screensaver or template")
 
 
 @router.get("/{kind}/{source}/{item_id}/preview")
 def api_preview(kind: str, source: str, item_id: str):
-    """The item's preview image out of the fetched repository (screensavers; themes draw their own from the palette)."""
+    """The item's preview image out of the fetched repository (screensavers, templates; themes draw their own from the palette)."""
     try:
         entry, it = _find(kind, source, item_id)
     except KeyError as e:
@@ -331,14 +411,17 @@ async def api_install(req: Request):
     if kind not in KINDS or not ID_RE.match(item_id) or not re.fullmatch(r"[a-z0-9-]{1,80}", source):
         raise HTTPException(400, "kind, source and id are required")
     try:
-        res = await asyncio.to_thread(install_theme if kind == "theme" else install_screensaver, source, item_id)
+        if kind == "template":
+            res = await asyncio.to_thread(install_template, source, item_id, str(b.get("name") or ""))
+        else:
+            res = await asyncio.to_thread(install_theme if kind == "theme" else install_screensaver, source, item_id)
     except KeyError as e:
         raise HTTPException(404, str(e))
     except ValueError as e:
         raise HTTPException(400, str(e))
     db.audit_log("gallery:install", {"kind": kind, "source": source, "id": item_id,
                                      "as": res.get("theme", {}).get("id") or res.get("project", {}).get("id")})
-    if kind == "screensaver":
+    if kind in ("screensaver", "template"):
         import projects
         projects.cover_later(res["project"]["id"])  # needs the event loop, so here and not in the worker thread
     return res

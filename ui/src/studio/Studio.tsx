@@ -12,6 +12,7 @@ import { FavoriteStar } from '../components/Favorites';
 import { isFavorite } from '../favorites';
 import { ProjectView } from './ProjectView';
 import { SearchButton } from '../components/SearchButton';
+import { TemplatePicker } from '../components/Gallery';
 import { openContextMenu, openMenuAt } from '../components/ContextMenu';
 import { workspaceMenu } from '../components/projectMenu';
 import { t } from '../i18n';
@@ -197,6 +198,7 @@ function NewProjectModal({ kinds, initialKind, onClose, onCreated }: {
         <label className="block text-[11px] text-[var(--text-muted)]">{t('Name')}
           <input className={btn.input} value={name} onChange={e => setName(e.target.value)} placeholder={t('e.g. Indie game launch page')} autoFocus />
         </label>
+        <TemplatePicker kind={kind} name={name.trim()} onCreated={onCreated} />
         <label className="block text-[11px] text-[var(--text-muted)]">{t('Brief')}
           <textarea className={clsx(btn.input, 'min-h-[110px] leading-relaxed')} value={brief} onChange={e => setBrief(e.target.value)}
             placeholder={t('What is it, who is it for, and what should it make them do? Mention tone, must-have content, and anything to avoid.')} />

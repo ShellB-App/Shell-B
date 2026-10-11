@@ -3955,5 +3955,9 @@
  "Export {label} as theme.json, ready to share in the community themes repository": "Exporter {label} en theme.json, prêt à partager dans le dépôt des thèmes de la communauté",
  "Screensavers other people shared on GitHub; install one with a click": "Écrans de veille partagés par d'autres sur GitHub ; installez-en un d'un clic",
  "Browse community": "Parcourir la communauté",
- "by": "par"
+ "by": "par",
+ "Start from a template": "Partir d'un modèle",
+ "Shared on GitHub; a copy of its files becomes your project": "Partagés sur GitHub ; une copie de ses fichiers devient votre projet",
+ "No templates published yet.": "Aucun modèle publié pour l'instant.",
+ "Creating…": "Création…"
 }

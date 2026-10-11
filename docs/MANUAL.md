@@ -365,6 +365,13 @@ address (`_ShortNameRedirect` in app.py). Check with `tailscale serve status`; r
   newer version; reinstalling updates in place. Installing needs the owner (or the admin key) and is audit-logged;
   there is no agent tool for it. Custom themes have an Export button (`GET /api/gallery/export/theme/<id>`) that
   saves a `theme.json` ready for a pull request. More sources: `POST /api/gallery/sources {kind, repo, ref}` (owner).
+  The same module serves Studio → New project → *Start from a template* (kind `template`, github.com/EveAeternam/
+  Shell-B-Studio-Templates): a template makes a new project of its kind with a copy of its files and its brief in
+  DESIGN.md, every time (nothing is marked installed). Skills for designing themes (`shellb-theme-design`) and building
+  screensavers (`shellb-screensaver`) live in github.com/EveAeternam/Shell-B-Skills, a default Community Hub source.
+  Shell:B's own repositories are looked up through `git.shellb.app/<name>` (themes, screensavers, templates, skills,
+  agents, translations; `community.resolve_repo`), a Cloudflare redirect to where each one lives now, so they can
+  move without an app update; if the link can't be followed, the GitHub name above is used.
 
 - **Scheduled** (`#/scheduled`, sidebar → Scheduled): prompts that run on their own, once at a set time or on a repeat
   (daily, chosen weekdays, monthly, every N minutes/hours, or any 5-field cron). Each run starts a new chat titled
