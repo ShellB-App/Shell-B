@@ -70,6 +70,7 @@ import sky
 import planetary
 import worldnotes
 import earthview
+import windfield
 import datasets
 import wiki
 import legal
@@ -307,6 +308,7 @@ app.include_router(sky.router)
 app.include_router(planetary.router)
 app.include_router(worldnotes.router)
 app.include_router(earthview.router)
+app.include_router(windfield.router)
 datasets.init()
 wiki.register()
 legal.register()

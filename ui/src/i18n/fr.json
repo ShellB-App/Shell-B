@@ -3925,5 +3925,7 @@
  "Message this chat; it answers right away": "Écrire à cette discussion ; elle répond tout de suite",
  "Wake on: the chat starts a turn on your note (click to just leave it)": "Réveil activé : la discussion démarre un tour sur votre note (cliquez pour simplement la laisser)",
  "Wake off: the note waits for the chat's next turn (click to wake it)": "Réveil désactivé : la note attend le prochain tour de la discussion (cliquez pour la réveiller)",
- "Send and wake the chat": "Envoyer et réveiller la discussion"
+ "Send and wake the chat": "Envoyer et réveiller la discussion",
+ "Wind": "Vent",
+ "Animated GFS winds with speed, temperature and pressure overlays": "Vents GFS animés, avec calques de vitesse, température et pression"
 }

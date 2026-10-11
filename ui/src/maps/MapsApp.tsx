@@ -69,6 +69,8 @@ import { DiveView, type View3DTarget } from './DiveView';
 import { attachEffects, effectFor } from './effects';
 import { attachAurora, fetchAurora, type AuroraData } from './aurora';
 import { applySky } from './atmosphere';
+import { attachScalar, attachWind, fetchField, fetchMeta, hourFor, type Field, type WindHandle } from './wind';
+import { WindPanel } from './WindPanel';
 import { EGGS, EGGS_CHANGED, eggByName, eggSubtitle, foundEggs, markFound, onKonami, searchEggs, type EasterEgg } from './eastereggs';
 import { EasterEggCard } from './EasterEggCard';
 import { toast } from '../components/toast';
@@ -252,6 +254,14 @@ export function MapsApp() {
   const [modelBox, setModelBox] = useState<ModelInfo | null>(null);
   const [view3d, setView3d] = useState<View3DTarget | null>(null);
   const [aurora, setAurora] = useState<AuroraData | null>(null);
+  const [windLevel, setWindLevelState] = useState<string>(() => store.get<string>('shellb.worlds.wind.level') ?? 'wind10');
+  const setWindLevel = (id: string) => { setWindLevelState(id); store.set('shellb.worlds.wind.level', id); if (windOverlay.startsWith('temp')) setWindOverlay(id === 'wind10' ? 'temp2m' : id.replace('wind', 'temp')); else if (id !== 'wind10' && ['pressure', 'clouds', 'humidity', 'gust'].includes(windOverlay)) setWindOverlay('speed'); };
+  const [windOverlay, setWindOverlayState] = useState<string>(() => store.get<string>('shellb.worlds.wind.overlay') ?? 'speed');
+  const setWindOverlay = (id: string) => { setWindOverlayState(id); store.set('shellb.worlds.wind.overlay', id); };
+  const [windRun, setWindRun] = useState<string | null>(null);
+  const [windField, setWindField] = useState<Field | null>(null);
+  const [scalarField, setScalarField] = useState<Field | null>(null);
+  const [windLoading, setWindLoading] = useState(false);
   const [places, setPlaces] = useState<Place[]>([]);
   const [imageryLayer, setImageryLayerState] = useState<string>(() => store.get<string>(IMAGERY_PREF) ?? 'modis');
   const setImageryLayer = (id: string) => { setImageryLayerState(id); store.set(IMAGERY_PREF, id); };
@@ -641,6 +651,46 @@ export function MapsApp() {
     if (!map || !auroraOn || !aurora || mapState?.body !== 'earth') return;
     return own(attachAurora(map, aurora));
   }, [map, auroraOn, aurora, mapState?.body, own]);
+
+  // ── Wind (GFS particles, the nullschool look) ────────────────────────────
+  const windOn = has('wind');
+  const windHour = windRun ? hourFor(windRun, clockT) : 0;
+  useEffect(() => {
+    if (!windOn) { setWindRun(null); setWindField(null); setScalarField(null); return; }
+    let gone = false;
+    const load = () => fetchMeta().then(m => { if (!gone && m) setWindRun(m.run); });
+    load();
+    const t = setInterval(load, 15 * 60_000);  // a new run every 6 h
+    return () => { gone = true; clearInterval(t); };
+  }, [windOn]);
+  useEffect(() => {
+    if (!windOn || !windRun) return;
+    let gone = false;
+    setWindLoading(true);
+    const scalarId = windOverlay === 'none' || windOverlay === 'speed' ? null : windOverlay;
+    Promise.all([fetchField(windLevel, windHour), scalarId ? fetchField(scalarId, windHour) : Promise.resolve(null)]).then(([w, s]) => {
+      if (gone) return;
+      if (w) setWindField(w);
+      setScalarField(s);
+      setWindLoading(false);
+    });
+    return () => { gone = true; };
+  }, [windOn, windRun, windLevel, windOverlay, windHour]);
+  const windRef = useRef<WindHandle | null>(null);
+  useEffect(() => {
+    if (!map || !windOn || !windField || mapState?.body !== 'earth') return;
+    if (windRef.current) { windRef.current.setField(windField); return; }
+    const h = attachWind(map, windField);
+    windRef.current = h;
+    return own(() => { if (windRef.current === h) windRef.current = null; h.detach(); });
+  }, [map, windOn, windField, mapState?.body, own]);
+  useEffect(() => () => { windRef.current = null; }, [map]);
+  useEffect(() => {
+    if (!map || !windOn || windOverlay === 'none' || mapState?.body !== 'earth') return;
+    const f = windOverlay === 'speed' ? windField : scalarField;
+    if (!f) return;
+    return own(attachScalar(map, f, windOverlay));
+  }, [map, windOn, windOverlay, windField, scalarField, mapState?.body, reliefOn, imageryOn, own]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Traverses (Moon, Mars) ──────────────────────────────────────────────
   const traversesOn = has('traverses');
@@ -1150,6 +1200,7 @@ export function MapsApp() {
     neolithic: PREHISTORY.filter(p => !isCaveSite(p) && yearsAgo(p) >= deepCut).length,
     places: places.length || undefined,
     aurora: auroraOn && aurora ? `peak ${aurora.peak}%` : undefined,
+    wind: windOn && windField ? (windHour ? `+${windHour} h` : 'now') : undefined,
     plumes: effectFor(bodyId)?.kind === 'plumes' ? effectFor(bodyId)!.sources.length : undefined,
     imagery: imageryOn ? imageryDay : undefined,
     radar: radarOn && radarFrame ? new Date(radarFrame).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : undefined,
@@ -1171,6 +1222,7 @@ export function MapsApp() {
     flightQ ? `Following flight ${flightQ}` : '',
     tour ? `A tour is playing (${tour.stops.length} stops)` : '',
     view3d ? `3D terrain view open at ${view3d.label}` : '',
+    windOn && windField ? `Wind layer: ${windLevel}, overlay ${windOverlay}, GFS run ${windRun}, forecast +${windHour} h` : '',
     `Annotated places on this world: ${places.length}`,
   ].filter(Boolean).join('; ');
   const status = (has('satellites') && (orbStatus?.error ? `Spacecraft: ${orbStatus.error}` : orbStatus?.note))
@@ -1391,8 +1443,9 @@ export function MapsApp() {
                 </div>
               )}
 
-              {hasMap && isEarth && (imageryOn || (radarOn && radarFrames) || seaOn || lifeOn) && (
+              {hasMap && isEarth && (imageryOn || (radarOn && radarFrames) || seaOn || lifeOn || windOn) && (
                 <div className={clsx('absolute left-3 z-20 flex flex-col gap-1.5 pointer-events-none', selection ? 'bottom-14' : 'top-16')}>
+                  {windOn && <WindPanel level={windLevel} overlay={windOverlay} onLevel={setWindLevel} onOverlay={setWindOverlay} run={windRun} field={windField} scalar={scalarField} clockMs={clockT} pin={pin} loading={windLoading} className="w-80 max-w-[calc(100vw-5rem)]" />}
                   {imageryOn && (
                     <div className="pointer-events-auto flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] sb-map-glass px-2.5 py-1.5 text-[11px]">
                       <ImageIcon className="w-3.5 h-3.5 text-emerald-400 shrink-0" />

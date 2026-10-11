@@ -20,7 +20,8 @@ Shell:B's Worlds has, and what is worth building next on a local-first machine w
 | Placemarks, paths, projects | Bookmarks + Atlas places (with full cards) | Drawing paths by hand is not done (import GPX/KML instead) |
 | KML/KMZ import and export | GeoJSON/KML/GPX import, KML/GeoJSON export | KMZ (zipped, with images) not yet |
 | Photos layer | No | Wikimedia Commons geosearch would do it (online) |
-| Weather: clouds, radar | Satellite precipitation (IMERG, hours behind) yes; clouds come with the daily imagery | True ground radar has no free global feed; RainViewer's tiles stopped answering |
+| Weather: clouds, radar | Satellite precipitation (IMERG, hours behind) yes; clouds come with the daily imagery and the GFS cloud overlay | True ground radar has no free global feed; RainViewer's tiles stopped answering |
+| Wind animation (nullschool) | Yes: GFS particles at four heights with speed/temperature/pressure/cloud/humidity/gust overlays, forecast follows the clock | GFS 0.25° via AWS Open Data; ocean currents and waves would need RTOFS/GFS-Wave (same path) |
 | Sun and shadows | Day & night terminator yes; building shadows no | MapLibre has no shadow casting yet |
 | Atmosphere / sky | Per-world sky and limb glow (Mars, Venus, Titan, Pluto, airless worlds) | Beyond Google Earth |
 | Live space weather | Aurora forecast ovals (NOAA OVATION), Kp in the copilot | |

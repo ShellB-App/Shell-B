@@ -2,6 +2,7 @@
 // canvas and shown as an image source over the whole map, so the auroral ovals glow where the forecast puts them.
 import type * as ML from 'maplibre-gl';
 import { mapAlive } from './pointLayer';
+import { WORLD_CORNERS, mercatorRowLats } from './wind';
 
 export interface AuroraData { observed?: string; forecast?: string; grid: number[][]; peak: number; fetched: number; stale?: boolean }
 const SRC = 'sb-aurora', LAYER = 'sb-aurora-raster';
@@ -15,8 +16,9 @@ export function auroraImage(d: AuroraData): string {
   cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d')!;
   const img = ctx.createImageData(W, H);
+  const rowLat = mercatorRowLats(H);  // the image is stretched between ±85° in Mercator, so rows follow Mercator too
   for (let y = 0; y < H; y++) {
-    const lat = 90 - (y / (H - 1)) * 180;                 // row 0 = north
+    const lat = rowLat[y];
     const li = Math.max(0, Math.min(180, Math.round(lat + 90)));
     for (let x = 0; x < W; x++) {
       const lon = -180 + (x / W) * 360;                     // image spans -180..180
@@ -44,7 +46,7 @@ export function auroraImage(d: AuroraData): string {
 export function attachAurora(map: ML.Map, d: AuroraData): () => void {
   if (!mapAlive(map)) return () => {};
   const url = auroraImage(d);
-  map.addSource(SRC, { type: 'image', url, coordinates: [[-180, 85.05], [180, 85.05], [180, -85.05], [-180, -85.05]] });
+  map.addSource(SRC, { type: 'image', url, coordinates: WORLD_CORNERS });
   map.addLayer({ id: LAYER, type: 'raster', source: SRC, paint: { 'raster-opacity': ['interpolate', ['linear'], ['zoom'], 2, 0.85, 6, 0.5, 9, 0.2] as unknown as number, 'raster-fade-duration': 300, 'raster-resampling': 'linear' } });
   return () => {
     if (!mapAlive(map)) return;

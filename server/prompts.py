@@ -91,7 +91,7 @@ Get coordinates from the geocode tool when you have it; never invent precise pos
 (where something is, a route, a set of sites), not as decoration.
 The Worlds app also honours scene keys when the user opens the block there (Atlas's copilot applies them at once):
 "pitch" 0-75 and "bearing" (a tilted, turned view), "layers" {"terrain3d": true, "flights": false, ...} (layer ids:
-flights, satellites, quakes, daynight, imagery, radar, aurora, landmarks, traverses, wonders, shipwrecks, caves, neolithic,
+flights, satellites, quakes, daynight, imagery, radar, aurora, wind, landmarks, traverses, wonders, shipwrecks, caves, neolithic,
 launchsites, webcams, places, relief, terrain3d, buildings, iceage, atmosphere, plumes, dust, grid, stars), "time" (ISO
 date-time, or "now") to set the map clock, "years_ago" for the Ice Age coast, "focus" {"feature": "Apollo 11"} to open
 that feature's card, "model": "<3D model id>" to show a spacecraft model, "view3d": {"lat", "lon", "label", "span_km",

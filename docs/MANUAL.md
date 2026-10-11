@@ -545,6 +545,17 @@ glyphs, sprites, terrain, 3D models), `server/planetary.py` (gazetteer, ephemeri
   and swing round as the clock plays. The glow flickers, Jupiter shows Io's flux-tube footprint at Io's longitude, Saturn
   gets its C, B and A rings and Uranus its ε ring, drawn behind and in front of the disc. False colour: these aurorae
   shine mostly in ultraviolet. The dipole longitudes are approximate, so the phase of the swing is indicative.
+- **Wind** (Earth, Live; `ui/src/maps/wind.ts`, `WindPanel.tsx`, `server/windfield.py`): the earth.nullschool.net
+  view. Thousands of particles ride the NOAA GFS wind and leave fading trails on a canvas over the map, on the globe
+  (hidden behind it) and the flat map alike; a colour overlay underneath shows wind speed, temperature (palette slid
+  per height), sea-level pressure, cloud cover, humidity or gusts. Heights: surface (10 m), 850, 500 and 250 hPa (the
+  jet stream). The forecast hour follows the map clock, 3-hourly to +240 h from the latest run, so playing the time bar
+  moves the weather; before the run's time the analysis shows. With a pin dropped the chip reads the wind there.
+  Data: GFS 0.25° GRIB2 from the NOAA archive on AWS Open Data (keyless, public domain), one message per field by byte
+  range from the `.idx`, decoded with ecCodes (`pip install eccodes`, in the venv), thinned to 0.5° and cached as
+  Int16 planes under `data/earth/wind/<run>/` (`GET /api/earth/wind/meta`, `/api/earth/wind/<product>/<hour>.bin`,
+  format `SBWF` + header JSON + planes). NOMADS' OpenDAP, which such sites used to read, was retired in 2025. A fresh
+  field is about 1 MB and takes a second to build the first time. Tests: `tests/windfield_test.py`.
 - **Aurora** (Earth, Live): NOAA's OVATION 30-minute forecast, a probability per 1° cell, painted as green-to-violet
   ovals over the poles (`ui/src/maps/aurora.ts`; proxy `GET /api/earth/aurora`, cached 5 minutes), with the forecast
   peak shown in a chip. Pair it with *Day & night* to see where the lights would be visible.

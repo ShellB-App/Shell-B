@@ -1,6 +1,6 @@
 // The Worlds app's toggleable overlays: one table drives the Layers menu, the saved prefs and which world offers what.
 import type { LucideIcon } from 'lucide-react';
-import { Anchor, Building2, CloudRain, Compass, Earth, Flame, Footprints, Grid3x3, Hand, Image as ImageIcon, Landmark as LandmarkIcon, Mountain, MountainSnow, Plane, Rocket, Satellite, Snowflake, Sparkles, Sun, SunMoon, Tornado, Video, Wheat, Activity, Zap, Waves, Fish } from 'lucide-react';
+import { Anchor, Building2, CloudRain, Compass, Earth, Flame, Footprints, Grid3x3, Hand, Image as ImageIcon, Landmark as LandmarkIcon, Mountain, MountainSnow, Plane, Rocket, Satellite, Snowflake, Sparkles, Sun, SunMoon, Tornado, Video, Wheat, Wind, Activity, Zap, Waves, Fish } from 'lucide-react';
 import { getLandmarksForBody } from './landmarks';
 import { getTraversesForBody } from './traverses';
 
@@ -8,7 +8,7 @@ export type OverlayId =
   | 'flights' | 'satellites' | 'quakes' | 'daynight' | 'grid' | 'stars'
   | 'landmarks' | 'traverses' | 'wonders' | 'shipwrecks' | 'launchsites' | 'webcams' | 'relief' | 'terrain3d'
   | 'caves' | 'neolithic' | 'iceage' | 'imagery' | 'radar' | 'buildings' | 'places' | 'aurora' | 'plumes' | 'dust' | 'atmosphere'
-  | 'sea' | 'marinelife';
+  | 'sea' | 'marinelife' | 'wind';
 
 /** What the current world offers beyond its id: whether elevation tiles are installed, whether it is the OSM vector map. */
 export interface WorldCtx { terrain: boolean; vector?: boolean }
@@ -34,6 +34,7 @@ export const OVERLAYS: OverlayDef[] = [
   { id: 'quakes', label: 'Earthquakes', hint: 'USGS, magnitude 2.5+, past day', icon: Activity, color: '#facc15', group: 'Live', on: earth, default: false },
   { id: 'daynight', label: 'Day & night', hint: 'Where the Sun is up right now', icon: SunMoon, color: '#f59e0b', group: 'Live', on: earth, default: false },
   { id: 'imagery', label: 'Satellite imagery', hint: 'NASA daily true colour; follows the clock’s date', icon: ImageIcon, color: '#34d399', group: 'Live', on: earth, default: false },
+  { id: 'wind', label: 'Wind', hint: 'Animated GFS winds with speed, temperature and pressure overlays', icon: Wind, color: '#7dd3fc', group: 'Live', on: earth, default: false },
   { id: 'aurora', label: 'Aurora', hint: 'Where the northern and southern lights are likely in the next half hour (NOAA)', icon: Zap, color: '#4ade80', group: 'Live', on: earth, default: false },
   { id: 'radar', label: 'Rain & snow', hint: 'NASA satellite precipitation, half-hourly, a few hours behind', icon: CloudRain, color: '#60a5fa', group: 'Live', on: earth, default: false },
   { id: 'sea', label: 'Sea surface', hint: 'Temperature, heatwave anomaly and chlorophyll from NASA satellites; follows the clock’s date', icon: Waves, color: '#22d3ee', group: 'Live', on: earth, default: false },
