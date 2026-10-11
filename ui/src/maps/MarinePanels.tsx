@@ -137,7 +137,7 @@ export function SeaCard({ lat, lon, onClose, onShowSpecies }: {
       {o && !o.land && c && (
         <>
           <dl className="mt-2.5 grid grid-cols-2 gap-2 p-2 rounded-lg bg-[var(--bg-primary)]/50 border border-[var(--border-subtle)]">
-            <Stat label={t('Surface temperature')} value={fmt(c.sea_surface_temperature, '°C')}
+            <Stat label={t('Temperature')} value={fmt(c.sea_surface_temperature, '°C')}
               sub={o.sst_range ? `${o.sst_range[0].toFixed(1)}–${o.sst_range[1].toFixed(1)} °C ${t('this week')}` : undefined} />
             <Stat label={t('Waves')} value={fmt(c.wave_height, 'm')} sub={`${t('from {dir}', { dir: compassOf(c.wave_direction) })} · ${fmt(c.wave_period, 's')}`} />
             <Stat label={t('Swell')} value={fmt(c.swell_wave_height, 'm')} />
