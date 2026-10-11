@@ -356,7 +356,7 @@ export const MessageView = memo(function MessageView({
           <AgentAvatar agent={agent} size={20} />
           <span className={clsx('text-xs font-semibold', !agent && 'text-[var(--brand-soft)]')}>{agent?.name ?? 'Shell:B'}</span>
           <span className="text-[10px] font-mono text-[var(--text-muted)]">{message.model}</span>
-          {/^(anthropic|gemini|openai|mammouth|claude-code|antigravity|codex)\//.test(message.model ?? '') && (
+          {/^(anthropic|gemini|openai|claude-code|antigravity|codex)\//.test(message.model ?? '') && (
             <span className="px-1.5 rounded text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/20" title={t('This reply came from a cloud model')}>cloud</span>
           )}
           {message.mode === 'plan' && (

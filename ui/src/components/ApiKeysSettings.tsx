@@ -522,7 +522,7 @@ export function ApiKeysSettings({ settings, onSaved }: Props) {
                 {t('Cloud AI Provider Keys')}
               </h3>
               <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
-                {t('API keys for external LLMs (Claude, Gemini, OpenAI, Mammouth). Handled opt-in via cloud models.')}
+                {t('API keys for external LLMs (Claude, Gemini, OpenAI). Handled opt-in via cloud models.')}
               </p>
             </div>
             {settings && (

@@ -27,9 +27,6 @@ PROVIDERS = {
     "openai": {"name": "OpenAI-compatible", "product": "OpenAI", "env": "OPENAI_API_KEY",
                "keyHint": "platform.openai.com → API keys (or any OpenAI-compatible endpoint)",
                "baseUrl": "https://api.openai.com/v1"},
-    # one subscription, many vendors' models (GPT, Claude, Gemini, Mistral, Grok…) behind an OpenAI-compatible API
-    "mammouth": {"name": "Mammouth AI", "product": "Mammouth", "env": "MAMMOUTH_API_KEY",
-                 "keyHint": "mammouth.ai → account settings → API key", "baseUrl": "https://api.mammouth.ai/v1"},
 }
 SECRET = "__secret__"
 CLOUD_CTX = 131072  # history budget for cloud agents unless the agent sets its own; keeps per-turn cost sane
@@ -167,7 +164,7 @@ def model_info(model: str) -> dict:
     pid, mid = split(model)
     caps = ["completion", "tools", "vision", "thinking"]
     native = 200_000 if "haiku" in mid else 1_000_000
-    if pid in ("openai", "mammouth") and not re.match(r"^(gpt-[5-9]|o\d)", mid):
+    if pid == "openai" and not re.match(r"^(gpt-[5-9]|o\d)", mid):
         caps.remove("thinking")
     return {"capabilities": caps, "numCtx": CLOUD_CTX, "nativeCtx": native, "family": pid,
             "parameterSize": "cloud", "quantization": PROVIDERS[pid]["name"], "cloud": True, "provider": pid}

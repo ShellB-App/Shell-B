@@ -345,7 +345,7 @@
  "API Keys & External Services": "Clés API et services externes",
  "API Keys & Secrets": "Clés API et secrets",
  "API Keys & Secrets ({v0})": "Clés API et secrets ({v0})",
- "API keys for external LLMs (Claude, Gemini, OpenAI, Mammouth). Handled opt-in via cloud models.": "Clés API des LLM externes (Claude, Gemini, OpenAI, Mammouth). Utilisées seulement si vous activez les modèles cloud.",
+ "API keys for external LLMs (Claude, Gemini, OpenAI). Handled opt-in via cloud models.": "Clés API des LLM externes (Claude, Gemini, OpenAI). Utilisées seulement si vous activez les modèles cloud.",
  "API providers": "Fournisseurs d’API",
  "api.github.com, *.example.com": "api.github.com, *.exemple.com",
  "App screens and flows at phone size": "Écrans et parcours d’appli au format téléphone",

@@ -28,7 +28,8 @@ do better, giving it a complete, self-contained brief, then review and present i
 - minerva: open-ended research across many sources, or data analysis that ends in a report.
 - mimir: a quick sourced fact, or claim-by-claim fact-checking of a draft.
 - heimdall: exact transcription or extraction from images, scans and PDFs where every character matters.
-- atlas: places, routes, maps, space and the sky. nyx: one-off images, music, sound or voice.
+- atlas: places, routes, maps, space, the sky and prehistoric sites. nyx: one-off images, music, sound or voice.
+- thalassa: marine species names, where they're recorded, survey data and sea conditions.
 - magpie: finding existing assets on the web. daedalus needs a Studio project to build in, so for a whole site,
   game or app suggest one to the user instead of delegating.
 Cloud agents send the brief off this machine: use them only for problems the local agents can't handle.""",
@@ -36,8 +37,8 @@ Cloud agents send the brief off this machine: use them only for problems the loc
         "temperature": 0.6,
         "effort": "medium",
         "tools": ["web_search", "web_fetch", "read_document", "view_document", "ocr", "run_code", "create_artifact", "generate_image",
-                  "generate_music", "memory_save", "memory_forget", "memory_search", "recall_conversations", "ask_agent", "schedule_task", "mega_plan", "shellb_self",
-                  "leave_message", "check_messages", "find_capability", "self_findings", "feeds", "translate", "transcribe", "deep_time", "marine"],
+                  "memory_save", "memory_forget", "memory_search", "recall_conversations", "ask_agent", "schedule_task", "mega_plan", "shellb_self",
+                  "leave_message", "check_messages", "find_capability", "self_findings", "feeds", "translate", "transcribe"],
         "builtin": True,
     },
     {
@@ -58,7 +59,7 @@ For runnable UIs, deliver an HTML artifact.""",
         "temperature": 0.5,
         "effort": "off",
         "tools": ["run_code", "create_artifact", "web_search", "web_fetch", "read_document", "view_document", "memory_search", "recall_conversations", "shellb_self",
-                  "leave_message", "check_messages", "find_capability", "self_findings"],
+                  "leave_message", "check_messages", "find_capability", "self_findings", "ask_agent"],
         "builtin": True,
     },
     {
@@ -79,7 +80,7 @@ research_board as you go, so the user can browse every source, finding and open 
         "model": "ShellB-Swift",
         "temperature": 0.5,
         "effort": "high",
-        "tools": ["web_search", "web_fetch", "read_document", "view_document", "ocr", "run_code", "create_artifact", "memory_save", "memory_forget", "memory_search", "recall_conversations", "research_board", "leave_message", "check_messages", "feeds", "transcribe", "marine"],
+        "tools": ["web_search", "web_fetch", "read_document", "view_document", "ocr", "run_code", "create_artifact", "memory_save", "memory_forget", "memory_search", "recall_conversations", "research_board", "leave_message", "check_messages", "feeds", "transcribe", "translate", "ask_agent"],
         "builtin": True,
     },
     {
@@ -137,7 +138,7 @@ leave open-ended research about what you found to the caller.""",
         "model": "ShellB-Swift",
         "temperature": 0.4,
         "effort": "medium",
-        "tools": ["read_document", "view_document", "ocr", "run_code", "create_artifact", "web_search", "transcribe"],
+        "tools": ["read_document", "view_document", "ocr", "run_code", "create_artifact", "transcribe"],
         "builtin": True,
     },
     {
@@ -161,7 +162,7 @@ Daedalus.""",
         "temperature": 0.8,
         "effort": "low",
         "tools": ["generate_image", "edit_image", "generate_sprite", "generate_texture", "generate_3d", "generate_music", "generate_sfx",
-                  "generate_voice", "create_artifact", "web_search", "view_document"],
+                  "generate_voice", "create_artifact", "web_search", "view_document", "run_code"],
         "builtin": True,
     },
     {
@@ -250,7 +251,7 @@ Crisp, observant, mathematically grounded with coordinates and scale. Ground eve
             "lookup_planetary_feature", "world_inspect", "solar_system_ephemeris", "planetary_telemetry",
             "local_sky_view", "plan_planetary_traverse", "directions", "geocode", "weather", "track_flight",
             "wiki", "run_code", "create_artifact", "web_search", "web_fetch", "memory_search", "annotate_map_feature", "read_map_card",
-            "find_capability", "deep_time", "marine"
+            "view_document", "deep_time", "marine"
         ],
         "builtin": True,
     },
@@ -295,7 +296,7 @@ taxonomist, a vet or the authorities rather than an assistant.""",
         "effort": "medium",
         "tools": ["marine", "web_search", "web_fetch", "read_document", "view_document", "ocr", "run_code", "create_artifact",
                   "wiki", "memory_save", "memory_search", "recall_conversations", "leave_message", "check_messages", "translate",
-                  "deep_time", "geocode", "weather"],
+                  "deep_time", "geocode", "weather", "research_board"],
         "builtin": True,
     },
 ]

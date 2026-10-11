@@ -7,7 +7,7 @@ import { AgentAvatar, Modal, btn, toolIcon } from './common';
 import { connectorIcon } from './Integrations';
 import { t as tx } from '../i18n';
 
-const isCloudModel = (m: string) => /^(anthropic|gemini|openai|mammouth|claude-code|antigravity|codex)\//.test(m);
+const isCloudModel = (m: string) => /^(anthropic|gemini|openai|claude-code|antigravity|codex)\//.test(m);
 
 /** Where an agent's model runs. Models on other machines are not a separate source: Models → Fleet routes local model
  * calls to them by name, so they appear under Local. */
