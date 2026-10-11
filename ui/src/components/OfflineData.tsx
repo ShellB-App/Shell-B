@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import { AlertTriangle, BookOpen, Check, ChevronDown, Download, Globe2, HardDrive, Loader2, RotateCw, ShieldCheck, Trash2, X } from 'lucide-react';
 import { fmtBytes, req } from '../api';
 import { btn, relTime } from './common';
+import { t as tx } from '../i18n';
 
 type Schedule = 'off' | 'weekly' | 'monthly';
 interface Job { phase: 'download' | 'verify' | 'install'; done: number; bytes: number; rate: number | null; version: string; note: string | null; started: number }
@@ -48,7 +49,7 @@ const APP_HEAD = {
 
 function ScheduleSwitch({ value, onChange, disabled }: { value: Schedule; onChange: (s: Schedule) => void; disabled?: boolean }) {
   return (
-    <div role="radiogroup" aria-label="Update schedule" className="inline-flex rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] p-0.5 text-[11px]">
+    <div role="radiogroup" aria-label={tx('Update schedule')} className="inline-flex rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] p-0.5 text-[11px]">
       {(['off', 'weekly', 'monthly'] as Schedule[]).map(s => (
         <button key={s} role="radio" aria-checked={value === s} disabled={disabled} onClick={() => value !== s && onChange(s)}
           className={clsx('px-2 py-0.5 rounded-md capitalize transition focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--accent)]',
@@ -70,20 +71,20 @@ function Row({ d, working, act }: { d: Dataset; working: string; act: (key: stri
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-medium">{d.name}</span>
             {d.category && <span className="text-[10px] uppercase tracking-wider px-1.5 py-px rounded bg-[var(--bg-tertiary)] text-[var(--text-muted)] border border-[var(--border-subtle)]">{d.category}</span>}
-            {d.installed && d.version && <span className="font-mono text-[10px] tracking-wider px-1.5 py-px rounded border border-[var(--border-subtle)] text-[var(--text-secondary)]" title={`Build ${d.version}`}>{fmtVersion(d.version)}</span>}
-            {d.verified && <span title="Checksum matched the publisher's"><ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /></span>}
+            {d.installed && d.version && <span className="font-mono text-[10px] tracking-wider px-1.5 py-px rounded border border-[var(--border-subtle)] text-[var(--text-secondary)]" title={tx('Build {version}', { version: d.version })}>{fmtVersion(d.version)}</span>}
+            {d.verified && <span title={tx('Checksum matched the publisher\'s')}><ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /></span>}
             {d.updateAvailable && !j && <span className="text-[10px] uppercase tracking-wider px-1.5 py-px rounded bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/25">{fmtVersion(d.latest?.version)} available</span>}
-            {d.queued && <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Queued</span>}
+            {d.queued && <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">{tx('Queued')}</span>}
           </div>
-          <p className="text-xs text-[var(--text-secondary)] mt-0.5 max-w-[65ch] leading-relaxed">{d.desc}</p>
+          <p className="text-xs text-[var(--text-secondary)] mt-0.5 max-w-[65ch] leading-relaxed">{tx(d.desc)}</p>
         </div>
         <dl className="grid grid-cols-2 gap-x-4 text-[11px] leading-5 min-w-[200px]">
-          <dt className="text-[var(--text-muted)]">Size</dt>
+          <dt className="text-[var(--text-muted)]">{tx('Size')}</dt>
           <dd className="font-mono text-right">{d.installed ? fmtBytes(d.bytes) : d.approxBytes ? `≈ ${fmtBytes(d.approxBytes)}` : '—'}</dd>
-          <dt className="text-[var(--text-muted)]">{d.updatable ? 'Downloaded' : 'Last built'}</dt>
+          <dt className="text-[var(--text-muted)]">{d.updatable ? tx('Downloaded') : tx('Last built')}</dt>
           <dd className="text-right" title={d.downloadedAt ? new Date(d.downloadedAt * 1000).toLocaleString() : undefined}>{d.downloadedAt ? day(d.downloadedAt) : '—'}</dd>
           {d.updatable && <>
-            <dt className="text-[var(--text-muted)]">Checked</dt>
+            <dt className="text-[var(--text-muted)]">{tx('Checked')}</dt>
             <dd className="text-right">{d.lastCheck ? relTime(d.lastCheck * 1000) : 'never'}</dd>
           </>}
         </dl>
@@ -94,13 +95,13 @@ function Row({ d, working, act }: { d: Dataset; working: string; act: (key: stri
                 <ScheduleSwitch value={d.schedule ?? 'monthly'} disabled={busy('s')} onChange={s => act(`s:${d.id}`, () => data.schedule(d.id, s))} />
                 <div className="flex items-center gap-1">
                   {!j && !d.queued && (d.updateAvailable
-                    ? <button className={btn.primary} disabled={busy('i')} onClick={() => act(`i:${d.id}`, () => data.install(d.id))}>{busy('i') ? spin : <Download className="w-3.5 h-3.5" />}Update · {fmtBytes(d.latest!.bytes)}</button>
-                    : <button className={btn.ghost} disabled={busy('c')} onClick={() => act(`c:${d.id}`, () => data.check(d.id))}>{busy('c') ? spin : <RotateCw className="w-3.5 h-3.5" />}Check now</button>)}
-                  <button className={btn.icon} onClick={() => setOpen(o => !o)} aria-expanded={open} aria-label="History and removal"><ChevronDown className={clsx('w-3.5 h-3.5 transition', !open && '-rotate-90')} /></button>
+                    ? <button className={btn.primary} disabled={busy('i')} onClick={() => act(`i:${d.id}`, () => data.install(d.id))}>{busy('i') ? spin : <Download className="w-3.5 h-3.5" />}{tx('Update ·')} {fmtBytes(d.latest!.bytes)}</button>
+                    : <button className={btn.ghost} disabled={busy('c')} onClick={() => act(`c:${d.id}`, () => data.check(d.id))}>{busy('c') ? spin : <RotateCw className="w-3.5 h-3.5" />}{tx('Check now')}</button>)}
+                  <button className={btn.icon} onClick={() => setOpen(o => !o)} aria-expanded={open} aria-label={tx('History and removal')}><ChevronDown className={clsx('w-3.5 h-3.5 transition', !open && '-rotate-90')} /></button>
                 </div>
               </>
             ) : !j && !d.queued && (
-              <button className={btn.subtle} disabled={busy('i')} onClick={() => act(`i:${d.id}`, () => data.install(d.id))}>{busy('i') ? spin : <Download className="w-3.5 h-3.5" />}Download</button>
+              <button className={btn.subtle} disabled={busy('i')} onClick={() => act(`i:${d.id}`, () => data.install(d.id))}>{busy('i') ? spin : <Download className="w-3.5 h-3.5" />}{tx('Download')}</button>
             )}
           </div>
         )}
@@ -111,20 +112,20 @@ function Row({ d, working, act }: { d: Dataset; working: string; act: (key: stri
           <div className="flex items-center gap-2 text-[11px] text-[var(--text-secondary)]">
             <Loader2 className="w-3 h-3 animate-spin shrink-0" />
             <span className="flex-1 truncate">
-              {j.phase === 'download' ? `Downloading ${fmtVersion(j.version)} · ${fmtBytes(j.done)} of ${fmtBytes(j.bytes)}${j.rate ? ` · ${fmtBytes(j.rate)}/s · ${eta(j)}` : ''}`
-                : j.phase === 'verify' ? `Checking the checksum · ${Math.round((j.done / j.bytes) * 100)}%` : 'Swapping in the new version'}
-              {j.note && <span className="text-amber-500"> · {j.note}</span>}
+              {j.phase === 'download' ? tx('Downloading {v0} · {v1} of {v2}{v3}', { v0: fmtVersion(j.version), v1: fmtBytes(j.done), v2: fmtBytes(j.bytes), v3: j.rate ? ` · ${fmtBytes(j.rate)}/s · ${eta(j)}` : '' })
+                : j.phase === 'verify' ? tx('Checking the checksum · {v0}%', { v0: Math.round((j.done / j.bytes) * 100) }) : tx('Swapping in the new version')}
+              {j.note && <span className="text-amber-500"> · {tx(j.note)}</span>}
             </span>
-            {j.phase === 'download' && <button className={btn.ghost} disabled={busy('x')} onClick={() => act(`x:${d.id}`, () => data.cancel(d.id))}><X className="w-3.5 h-3.5" />Cancel</button>}
+            {j.phase === 'download' && <button className={btn.ghost} disabled={busy('x')} onClick={() => act(`x:${d.id}`, () => data.cancel(d.id))}><X className="w-3.5 h-3.5" />{tx('Cancel')}</button>}
           </div>
           <div className="h-1.5 rounded-full bg-[var(--bg-tertiary)] overflow-hidden" role="progressbar" aria-valuenow={Math.round((j.done / j.bytes) * 100)} aria-valuemin={0} aria-valuemax={100}>
             <div className={clsx('h-full transition-all', j.phase === 'verify' ? 'bg-emerald-500' : 'bg-[var(--accent)]')} style={{ width: `${Math.max(1, (j.done / j.bytes) * 100)}%` }} />
           </div>
         </div>
       )}
-      {d.queued && <div className="px-4 pb-3 text-[11px] text-[var(--text-muted)]">Waits for the current download; one runs at a time. <button className="underline hover:text-[var(--text-primary)]" onClick={() => act(`x:${d.id}`, () => data.cancel(d.id))}>Remove from queue</button></div>}
+      {d.queued && <div className="px-4 pb-3 text-[11px] text-[var(--text-muted)]">{tx('Waits for the current download; one runs at a time.')} <button className="underline hover:text-[var(--text-primary)]" onClick={() => act(`x:${d.id}`, () => data.cancel(d.id))}>{tx('Remove from queue')}</button></div>}
       {(d.lastError || d.checkError) && !j && (
-        <div className="px-4 pb-3 flex items-start gap-1.5 text-[11px] text-red-400"><AlertTriangle className="w-3.5 h-3.5 mt-px shrink-0" />{d.lastError ? `Last download failed: ${d.lastError}` : `Couldn't check for updates: ${d.checkError}`}</div>
+        <div className="px-4 pb-3 flex items-start gap-1.5 text-[11px] text-red-400"><AlertTriangle className="w-3.5 h-3.5 mt-px shrink-0" />{d.lastError ? tx('Last download failed: {lastError}', { lastError: d.lastError ?? '' }) : tx('Couldn\'t check for updates: {checkError}', { checkError: d.checkError ?? '' })}</div>
       )}
 
       {open && d.installed && (
@@ -132,15 +133,15 @@ function Row({ d, working, act }: { d: Dataset; working: string; act: (key: stri
           <ol className="flex-1 min-w-[240px] text-[11px] space-y-0.5">
             {(d.history ?? []).map((h, i) => (
               <li key={i} className="flex gap-3"><span className="text-[var(--text-muted)] w-24 shrink-0">{day(h.at)}</span>
-                <span className="capitalize">{h.event === 'found' ? 'Found on disk' : h.event}</span>
+                <span className="capitalize">{h.event === 'found' ? tx('Found on disk') : h.event}</span>
                 <span className="font-mono text-[var(--text-secondary)]">{h.from ? `${fmtVersion(h.from)} → ` : ''}{fmtVersion(h.version)}</span>
                 <span className="font-mono text-[var(--text-muted)] ml-auto">{fmtBytes(h.bytes)}</span></li>
             ))}
-            {!d.history?.length && <li className="text-[var(--text-muted)]">No history yet.</li>}
+            {!d.history?.length && <li className="text-[var(--text-muted)]">{tx('No history yet.')}</li>}
           </ol>
           <button className={clsx(btn.ghost, 'text-red-400 hover:text-red-300')} disabled={busy('r') || !!j}
             onClick={() => window.confirm(`Delete ${d.name} (${fmtBytes(d.bytes)}) from disk? You can download it again later.`) && act(`r:${d.id}`, () => data.remove(d.id))}>
-            {busy('r') ? spin : <Trash2 className="w-3.5 h-3.5" />}Delete from disk</button>
+            {busy('r') ? spin : <Trash2 className="w-3.5 h-3.5" />}{tx('Delete from disk')}</button>
         </div>
       )}
     </div>
@@ -169,10 +170,10 @@ export function OfflineData() {
       <div className="max-w-5xl mx-auto px-4 py-8 animate-fade-in space-y-8">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-2xl font-semibold tracking-tight flex-1">Offline data</h1>
-            <button className={btn.icon} onClick={load} title="Refresh"><RotateCw className="w-4 h-4" /></button>
+            <h1 className="text-2xl font-semibold tracking-tight flex-1">{tx('Offline data')}</h1>
+            <button className={btn.icon} onClick={load} title={tx('Refresh')}><RotateCw className="w-4 h-4" /></button>
           </div>
-          <p className="text-sm text-[var(--text-secondary)] max-w-[70ch] leading-relaxed">Maps and encyclopedias that work with the internet down. Each one with an update schedule is checked once per period and replaced when a newer build is out. The old copy keeps serving until the new one is downloaded and its checksum matches.</p>
+          <p className="text-sm text-[var(--text-secondary)] max-w-[70ch] leading-relaxed">{tx('Maps and encyclopedias that work with the internet down. Each one with an update schedule is checked once per period and replaced when a newer build is out. The old copy keeps serving until the new one is downloaded and its checksum matches.')}</p>
           {error && <div className="mt-3 flex items-start gap-2 text-xs text-red-400"><AlertTriangle className="w-3.5 h-3.5 mt-px shrink-0" />{error}</div>}
         </div>
 
@@ -180,14 +181,14 @@ export function OfflineData() {
           <section className="p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] space-y-2">
             <div className="flex items-baseline gap-2 text-sm">
               <HardDrive className="w-4 h-4 self-center text-[var(--text-muted)]" />
-              <span className="font-medium">{fmtBytes(used)}</span><span className="text-[var(--text-secondary)]">of offline data</span>
-              <span className="ml-auto font-mono text-xs text-[var(--text-muted)]">{fmtBytes(o.disk.free)} free of {fmtBytes(o.disk.total)}</span>
+              <span className="font-medium">{fmtBytes(used)}</span><span className="text-[var(--text-secondary)]">{tx('of offline data')}</span>
+              <span className="ml-auto font-mono text-xs text-[var(--text-muted)]">{tx('{v0} free of {v1}', { v0: fmtBytes(o.disk.free), v1: fmtBytes(o.disk.total) })}</span>
             </div>
-            <div className="h-2 rounded-full bg-[var(--bg-tertiary)] overflow-hidden flex" role="img" aria-label={`${fmtBytes(used)} offline data, ${fmtBytes(o.disk.free)} free`}>
-              <div className="h-full bg-[var(--accent)]" style={{ width: `${(used / o.disk.total) * 100}%` }} title={`Offline data · ${fmtBytes(used)}`} />
-              <div className="h-full bg-[var(--text-muted)]/40" style={{ width: `${((o.disk.total - o.disk.free - used) / o.disk.total) * 100}%` }} title="Everything else" />
+            <div className="h-2 rounded-full bg-[var(--bg-tertiary)] overflow-hidden flex" role="img" aria-label={tx('{v0} offline data, {v1} free', { v0: fmtBytes(used), v1: fmtBytes(o.disk.free) })}>
+              <div className="h-full bg-[var(--accent)]" style={{ width: `${(used / o.disk.total) * 100}%` }} title={tx('Offline data · {v0}', { v0: fmtBytes(used) })} />
+              <div className="h-full bg-[var(--text-muted)]/40" style={{ width: `${((o.disk.total - o.disk.free - used) / o.disk.total) * 100}%` }} title={tx('Everything else')} />
             </div>
-            <p className="text-[11px] text-[var(--text-muted)]">An update needs room for the old and new copy at once, plus 10 GB to spare.</p>
+            <p className="text-[11px] text-[var(--text-muted)]">{tx('An update needs room for the old and new copy at once, plus 10 GB to spare.')}</p>
           </section>
 
           {(['wiki', 'worlds'] as const).map(app => {
@@ -200,11 +201,11 @@ export function OfflineData() {
               <section key={app} className="space-y-3">
                 <div>
                   <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                    <Icon className={clsx('w-3.5 h-3.5', head.color)} />{head.label}
+                    <Icon className={clsx('w-3.5 h-3.5', head.color)} />{tx(head.label)}
                     <span className="font-mono normal-case tracking-normal">· {fmtBytes(rows.reduce((a, d) => a + d.bytes, 0))}</span>
-                    <a href={app === 'wiki' ? '#/wiki' : '#/worlds'} className="ml-auto normal-case tracking-normal font-normal hover:text-[var(--text-primary)]">Open {head.label} →</a>
+                    <a href={app === 'wiki' ? '#/wiki' : '#/worlds'} className="ml-auto normal-case tracking-normal font-normal hover:text-[var(--text-primary)]">{tx('Open {label} →', { label: head.label })}</a>
                   </h2>
-                  <p className="text-[11px] text-[var(--text-muted)] mt-1 max-w-[75ch]">{head.note}</p>
+                  <p className="text-[11px] text-[var(--text-muted)] mt-1 max-w-[75ch]">{tx(head.note)}</p>
                 </div>
                 {app === 'wiki' && categories.length > 2 && (
                   <div className="flex flex-wrap items-center gap-1.5 pt-1">
@@ -224,7 +225,7 @@ export function OfflineData() {
                 <div className="rounded-xl border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] overflow-hidden">
                   {displayRows.map(d => <Row key={d.id} d={d} working={working} act={act} />)}
                 </div>
-                {app === 'worlds' && <p className="text-[11px] text-[var(--text-muted)] flex items-center gap-1.5"><Check className="w-3 h-3" />The mosaics and map fonts were built here and never go stale, so they have no update schedule.</p>}
+                {app === 'worlds' && <p className="text-[11px] text-[var(--text-muted)] flex items-center gap-1.5"><Check className="w-3 h-3" />{tx('The mosaics and map fonts were built here and never go stale, so they have no update schedule.')}</p>}
               </section>
             );
           })}

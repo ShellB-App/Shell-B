@@ -8,6 +8,7 @@ import { closeOverlay, useOverlayWindow } from '../overlay';
 import { screenSupported, snapshot, startLive, stopLive, useLiveShare } from '../screenShare';
 import { Markdown } from './Markdown';
 import { TOOL_LABELS } from './common';
+import { t as tx } from '../i18n';
 
 type ToolBlock = Extract<Block, { type: 'tool' }>;
 
@@ -110,17 +111,17 @@ function OverlayBody({ messages, agentName, busy, onSend, onStop, ensureConversa
   return (
     <div className={clsx('h-full flex flex-col text-sm transition-shadow duration-500', flash && 'shadow-[inset_0_0_0_2px_var(--accent)]')}>
       <header className="shrink-0 flex items-center gap-2 px-3 h-9 border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
-        <span className="text-xs font-semibold tracking-wider">Shell:B</span>
+        <span className="text-xs font-semibold tracking-wider">{tx('Shell:B')}</span>
         <span className="text-xs text-[var(--text-muted)] truncate flex-1">· {agentName}</span>
         <button onClick={toggleShare} disabled={!!working}
           className={clsx('flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] border max-w-[55%]',
             share ? 'border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10' : 'border-[var(--border-strong)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]')}
-          title={share ? `Sharing ${share.label}${looks ? `, looked ${looks}×` : ''}: click to stop` : 'Let Shell:B look at your screen when it helps'}>
+          title={share ? tx('Sharing {label}{v0}: click to stop', { label: share.label, v0: looks ? `, looked ${looks}×` : '' }) : tx('Let Shell:B look at your screen when it helps')}>
           {share ? <Eye className="w-3 h-3 shrink-0" /> : <ScreenShare className="w-3 h-3 shrink-0" />}
-          <span className="truncate">{share ? `${share.label}${looks ? ` · ${looks}` : ''}` : 'Share screen'}</span>
+          <span className="truncate">{share ? `${share.label}${looks ? ` · ${looks}` : ''}` : tx('Share screen')}</span>
           {share && <ScreenShareOff className="w-3 h-3 shrink-0 opacity-70" />}
         </button>
-        <button onClick={closeOverlay} className="p-1 rounded-md text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]" aria-label="Close overlay" title="Close overlay">
+        <button onClick={closeOverlay} className="p-1 rounded-md text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]" aria-label={tx('Close overlay')} title={tx('Close overlay')}>
           <X className="w-3.5 h-3.5" />
         </button>
       </header>
@@ -132,8 +133,8 @@ function OverlayBody({ messages, agentName, busy, onSend, onStop, ensureConversa
           </div>
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-center gap-1 text-xs text-[var(--text-muted)] px-4">
-            <p>Ask {agentName} anything while you work in another app.</p>
-            <p>Share your screen and it can look when it helps, or tick <Camera className="inline w-3 h-3" /> to send a screenshot with your message.</p>
+            <p>{tx('Ask {agentName} anything while you work in another app.', { agentName: agentName })}</p>
+            <p>{tx('Share your screen and it can look when it helps, or tick')} <Camera className="inline w-3 h-3" /> {tx('to send a screenshot with your message.')}</p>
           </div>
         )}
         {textOut && <Markdown text={textOut} streaming={busy} className="text-[13px]" />}
@@ -150,20 +151,20 @@ function OverlayBody({ messages, agentName, busy, onSend, onStop, ensureConversa
       <div className="shrink-0 p-2 border-t border-[var(--border-subtle)] flex items-end gap-1.5">
         <button onClick={() => setWithShot(v => !v)}
           className={clsx('p-1.5 rounded-lg border', withShot ? 'border-[var(--accent)] text-[var(--accent)] bg-[var(--bg-hover)]' : 'border-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]')}
-          aria-pressed={withShot} title={withShot ? 'A screenshot goes with this message' : 'Send a screenshot with this message'}>
+          aria-pressed={withShot} title={withShot ? tx('A screenshot goes with this message') : tx('Send a screenshot with this message')}>
           <Camera className="w-4 h-4" />
         </button>
         <textarea ref={input} value={text} onChange={e => setText(e.target.value)} onKeyDown={onKey} rows={1}
-          placeholder={share ? `Ask about your screen…` : `Message ${agentName}…`}
+          placeholder={share ? tx('Ask about your screen…') : tx('Message {agentName}…', { agentName: agentName })}
           className="flex-1 resize-none max-h-28 min-h-[2rem] px-2.5 py-1.5 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[13px] outline-none focus:border-[var(--border-strong)]"
           style={{ fieldSizing: 'content' } as CSSProperties} />
         {busy ? (
-          <button onClick={onStop} className="p-1.5 rounded-lg bg-[var(--bg-hover)] hover:opacity-80" aria-label="Stop" title="Stop">
+          <button onClick={onStop} className="p-1.5 rounded-lg bg-[var(--bg-hover)] hover:opacity-80" aria-label={tx('Stop')} title={tx('Stop')}>
             <Square className="w-4 h-4" />
           </button>
         ) : (
           <button onClick={() => void submit()} disabled={!text.trim() || !!working}
-            className="p-1.5 rounded-lg bg-[var(--accent)] text-white disabled:opacity-40" aria-label="Send" title="Send (Enter)">
+            className="p-1.5 rounded-lg bg-[var(--accent)] text-white disabled:opacity-40" aria-label={tx('Send')} title={tx('Send (Enter)')}>
             <ArrowUp className="w-4 h-4" />
           </button>
         )}
@@ -187,14 +188,14 @@ function Approval({ b }: { b: ToolBlock }) {
     <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 space-y-1.5">
       <div className="flex items-center gap-1.5 text-xs font-medium text-amber-400"><ShieldQuestion className="w-3.5 h-3.5" />{title}</div>
       {b.approval?.detail && <div className="text-[11px] text-[var(--text-secondary)] line-clamp-4 whitespace-pre-wrap font-mono">{b.approval.detail}</div>}
-      {error && <div className="text-[11px] text-red-400">{error.includes('admin-key-required') ? 'Only the signed-in owner can answer this.' : error}</div>}
+      {error && <div className="text-[11px] text-red-400">{error.includes('admin-key-required') ? tx('Only the signed-in owner can answer this.') : error}</div>}
       <div className="flex gap-1.5">
         {!question && b.approval && <>
-          <button disabled={busy} onClick={() => answer('allow')} className="px-2 py-0.5 rounded-md text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-500 disabled:opacity-50">Allow</button>
-          <button disabled={busy} onClick={() => answer('deny')} className="px-2 py-0.5 rounded-md text-xs text-red-400 border border-red-500/30 hover:bg-red-500/10 disabled:opacity-50">Deny</button>
+          <button disabled={busy} onClick={() => answer('allow')} className="px-2 py-0.5 rounded-md text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-500 disabled:opacity-50">{tx('Allow')}</button>
+          <button disabled={busy} onClick={() => answer('deny')} className="px-2 py-0.5 rounded-md text-xs text-red-400 border border-red-500/30 hover:bg-red-500/10 disabled:opacity-50">{tx('Deny')}</button>
         </>}
         <button onClick={showMain} className="px-2 py-0.5 rounded-md text-xs border border-[var(--border-strong)] hover:bg-[var(--bg-hover)]">
-          {question ? 'Answer in Shell:B' : 'Details'}
+          {question ? tx('Answer in Shell:B') : tx('Details')}
         </button>
       </div>
     </div>

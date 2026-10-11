@@ -7,6 +7,7 @@ import {
 import { req } from '../api';
 import { btn, relTime } from './common';
 import type { MemoryRow } from './MemoryManager';
+import { t as tx } from '../i18n';
 
 // Me (#/codex/me, server/me.py): everything Shell:B knows about the owner on one page. A view over Memory, Codex
 // contacts and calendar, follow-ups and past chats; edits go straight back to /api/memory.
@@ -94,7 +95,7 @@ export function Me() {
   }, [load]);
 
   const byId = useMemo(() => new Map((data?.memories ?? []).map(m => [m.id, m])), [data]);
-  if (!data) return <div className="h-full flex items-center justify-center text-xs text-[var(--text-muted)]">{err || 'Loading…'}</div>;
+  if (!data) return <div className="h-full flex items-center justify-center text-xs text-[var(--text-muted)]">{err || tx('Loading…')}</div>;
   const active = data.memories.filter(m => m.status === 'active');
   const name = data.owner ?? 'You';
 
@@ -139,11 +140,11 @@ function TokenCounter({ t }: { t: TokenStats }) {
     <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-[11px] tabular-nums">
       <span className="rounded-full border border-[var(--border-subtle)] px-2 py-0.5" title={tip(t.user, t.userToday)}>
         <span className="font-semibold text-[var(--text-primary)]">{compact.format(t.user.total)}</span>
-        <span className="text-[var(--text-muted)]"> tokens yours</span>
+        <span className="text-[var(--text-muted)]"> {tx('tokens yours')}</span>
       </span>
-      <span className="rounded-full border border-[var(--border-subtle)] px-2 py-0.5" title={`Everyone on Shell:B, guests and API keys included: ${tip(t.global, t.globalToday)}`}>
+      <span className="rounded-full border border-[var(--border-subtle)] px-2 py-0.5" title={tx('Everyone on Shell:B, guests and API keys included: {v0}', { v0: tip(t.global, t.globalToday) })}>
         <span className="font-semibold text-[var(--text-primary)]">{compact.format(t.global.total)}</span>
-        <span className="text-[var(--text-muted)]"> tokens in all</span>
+        <span className="text-[var(--text-muted)]"> {tx('tokens in all')}</span>
       </span>
     </div>
   );
@@ -171,33 +172,33 @@ function Hero({ data, name, onRewrite }: { data: MeData; name: string; onRewrite
         <div className="flex items-center gap-2 basis-full sm:basis-auto">
           {s.pending > 0 && (
             <a href="#/memory" className={clsx(btn.subtle, 'text-amber-400 border-amber-500/30')}>
-              <Sparkles className="w-3.5 h-3.5" />{s.pending} to review
+              <Sparkles className="w-3.5 h-3.5" />{s.pending} {tx('to review')}
             </a>
           )}
-          <a href="#/memory" className={btn.subtle}><Brain className="w-3.5 h-3.5" />Manage memory</a>
+          <a href="#/memory" className={btn.subtle}><Brain className="w-3.5 h-3.5" />{tx('Manage memory')}</a>
         </div>
       </div>
 
       <div className="mt-5">
         <div className="flex items-center gap-2 mb-1.5">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">How Shell:B sees you</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">{tx('How Shell:B sees you')}</span>
           <span className="flex-1" />
           <span className="text-[10px] text-[var(--text-muted)]">
-            {p.writing ? 'Rewriting…' : p.at ? `Written ${relTime(p.at)}` : ''}
+            {p.writing ? tx('Rewriting…') : p.at ? tx('Written {v0}', { v0: relTime(p.at) }) : ''}
           </span>
-          <button className={btn.icon} title="Rewrite from what Shell:B knows now" disabled={p.writing} onClick={onRewrite}>
+          <button className={btn.icon} title={tx('Rewrite from what Shell:B knows now')} disabled={p.writing} onClick={onRewrite}>
             {p.writing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
           </button>
         </div>
         {p.text ? (
-          <p className={clsx('text-[15px] leading-relaxed max-w-[75ch] text-[var(--text-primary)]', p.writing && 'opacity-60')}>{p.text}</p>
+          <p className={clsx('text-[15px] leading-relaxed max-w-[75ch] text-[var(--text-primary)]', p.writing && 'opacity-60')}>{tx(p.text)}</p>
         ) : (
           <p className="text-sm text-[var(--text-muted)]">
-            {p.writing ? 'Shell:B is writing a short portrait from what it knows about you…' : data.stats.memories ? 'No portrait yet.' : 'Tell Shell:B about yourself and a portrait will appear here.'}
+            {p.writing ? tx('Shell:B is writing a short portrait from what it knows about you…') : data.stats.memories ? tx('No portrait yet.') : tx('Tell Shell:B about yourself and a portrait will appear here.')}
           </p>
         )}
         {p.error && <div className="mt-1 text-[11px] text-red-400">{p.error}</div>}
-        <div className="mt-1.5 text-[10px] text-[var(--text-muted)]">Written by your local model from the facts below. Fix a fact and it rewrites itself.</div>
+        <div className="mt-1.5 text-[10px] text-[var(--text-muted)]">{tx('Written by your local model from the facts below. Fix a fact and it rewrites itself.')}</div>
       </div>
     </section>
   );
@@ -214,16 +215,16 @@ function FactCard({ section, items, core, onAct }: { section: typeof SECTIONS[nu
     <section className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-3.5 flex flex-col">
       <header className="flex items-center gap-2 mb-2">
         <Icon className="w-4 h-4 text-amber-400" />
-        <h2 className="text-sm font-medium">{section.title}</h2>
-        {core && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-tertiary)] text-[var(--text-muted)]" title="Shell:B has this in every conversation">always known</span>}
+        <h2 className="text-sm font-medium">{tx(section.title)}</h2>
+        {core && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-tertiary)] text-[var(--text-muted)]" title={tx('Shell:B has this in every conversation')}>{tx('always known')}</span>}
         <span className="flex-1" />
-        <button className={btn.icon} title={`Add to ${section.title}`} onClick={() => setAdding(true)}><Plus className="w-3.5 h-3.5" /></button>
+        <button className={btn.icon} title={tx('Add to {title}', { title: section.title })} onClick={() => setAdding(true)}><Plus className="w-3.5 h-3.5" /></button>
       </header>
       <ul className="space-y-0.5">
         {items.map(m => <Fact key={m.id} m={m} onAct={onAct} />)}
       </ul>
-      {!items.length && !adding && <div className="text-xs text-[var(--text-muted)] py-1">{section.empty}.</div>}
-      {adding && <AddFact category={section.id} placeholder={section.empty} onAct={onAct} onClose={() => setAdding(false)} />}
+      {!items.length && !adding && <div className="text-xs text-[var(--text-muted)] py-1">{tx(section.empty)}.</div>}
+      {adding && <AddFact category={section.id} placeholder={tx(section.empty)} onAct={onAct} onClose={() => setAdding(false)} />}
     </section>
   );
 }
@@ -247,23 +248,23 @@ function Fact({ m, onAct, compact }: { m: MemoryRow; onAct: Act; compact?: boole
           <textarea ref={ref} rows={2} className={clsx(btn.input, 'resize-none text-[13px]')} value={draft} onChange={e => setDraft(e.target.value)} onBlur={save}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); save(); } if (e.key === 'Escape') { setDraft(m.text); setEditing(false); } }} />
         ) : (
-          <div className={clsx('cursor-text leading-snug', compact ? 'text-xs text-[var(--text-secondary)]' : 'text-[13px]')} title="Click to correct" onClick={() => setEditing(true)}>
-            {m.text}
+          <div className={clsx('cursor-text leading-snug', compact ? 'text-xs text-[var(--text-secondary)]' : 'text-[13px]')} title={tx('Click to correct')} onClick={() => setEditing(true)}>
+            {tx(m.text)}
           </div>
         )}
       </div>
       <span className="shrink-0 hidden items-center group-hover:flex focus-within:flex">
-        {m.source && <a href={`#/c/${m.source}`} className={btn.icon} title="Open the chat it came from"><MessageSquare className="w-3 h-3" /></a>}
+        {m.source && <a href={`#/c/${m.source}`} className={btn.icon} title={tx('Open the chat it came from')}><MessageSquare className="w-3 h-3" /></a>}
         {!m.core || m.pinned ? (
-          <button className={btn.icon} title={m.pinned ? 'Recall only when relevant' : 'Always know this'} onClick={() => onAct(me.patch(m.id, { pinned: !m.pinned }))}>
+          <button className={btn.icon} title={m.pinned ? tx('Recall only when relevant') : tx('Always know this')} onClick={() => onAct(me.patch(m.id, { pinned: !m.pinned }))}>
             {m.pinned ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
           </button>
         ) : null}
-        <button className={btn.icon} title={m.localOnly ? 'Local only. Click to allow cloud agents' : 'Keep local: never send to cloud agents'}
+        <button className={btn.icon} title={m.localOnly ? tx('Local only. Click to allow cloud agents') : tx('Keep local: never send to cloud agents')}
           onClick={() => onAct(me.patch(m.id, { localOnly: !m.localOnly }))}>
           {m.localOnly ? <Lock className="w-3 h-3" /> : <LockOpen className="w-3 h-3" />}
         </button>
-        <button className={clsx(btn.icon, 'hover:text-red-400')} title="Forget (restore it in Manage memory)" onClick={() => onAct(me.forget(m.id))}>
+        <button className={clsx(btn.icon, 'hover:text-red-400')} title={tx('Forget (restore it in Manage memory)')} onClick={() => onAct(me.forget(m.id))}>
           <Trash2 className="w-3 h-3" />
         </button>
       </span>
@@ -283,7 +284,7 @@ function AddFact({ category, placeholder, onAct, onClose }: { category: string; 
     <div className="flex gap-1.5 mt-1.5">
       <input autoFocus className={clsx(btn.input, 'text-[13px] py-1')} value={text} placeholder={`${placeholder}…`} onChange={e => setText(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') onClose(); }} />
-      <button className={btn.icon} title="Cancel" onClick={onClose}><X className="w-3.5 h-3.5" /></button>
+      <button className={btn.icon} title={tx('Cancel')} onClick={onClose}><X className="w-3.5 h-3.5" /></button>
     </div>
   );
 }
@@ -297,7 +298,7 @@ function MissingRow({ active, onAct }: { active: MemoryRow[]; onAct: Act }) {
   return (
     <div className="rounded-xl border border-dashed border-[var(--border-subtle)] p-3">
       <div className="flex flex-wrap items-center gap-1.5 text-xs">
-        <span className="text-[var(--text-muted)] mr-1">Shell:B doesn’t know about your</span>
+        <span className="text-[var(--text-muted)] mr-1">{tx('Shell:B doesn’t know about your')}</span>
         {missing.map(s => (
           <button key={s.id} onClick={() => setOpen(o => (o === s.id ? null : s.id))}
             className={clsx('inline-flex items-center gap-1 px-2 py-0.5 rounded-full border transition',
@@ -306,7 +307,7 @@ function MissingRow({ active, onAct }: { active: MemoryRow[]; onAct: Act }) {
           </button>
         ))}
       </div>
-      {cur && <AddFact category={cur.id} placeholder={cur.empty} onAct={onAct} onClose={() => setOpen(null)} />}
+      {cur && <AddFact category={cur.id} placeholder={tx(cur.empty)} onAct={onAct} onClose={() => setOpen(null)} />}
     </div>
   );
 }
@@ -319,8 +320,8 @@ function ComingUp({ items, today }: { items: Upcoming[]; today: string }) {
   const href = (u: Upcoming) => (u.kind === 'followup' ? (u.convId ? `#/c/${u.convId}` : '#/activity') : u.id === 'me' ? undefined : `#/codex/e/${u.id}`);
   return (
     <section className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-3.5">
-      <h2 className="text-sm font-medium mb-2">Coming up</h2>
-      {!items.length && <div className="text-xs text-[var(--text-muted)]">Nothing in the next few weeks. Birthdays from Contacts, Calendar events and your follow-ups show up here.</div>}
+      <h2 className="text-sm font-medium mb-2">{tx('Coming up')}</h2>
+      {!items.length && <div className="text-xs text-[var(--text-muted)]">{tx('Nothing in the next few weeks. Birthdays from Contacts, Calendar events and your follow-ups show up here.')}</div>}
       <ul className="space-y-1">
         {items.slice(0, 10).map(u => {
           const h = href(u);
@@ -328,7 +329,7 @@ function ComingUp({ items, today }: { items: Upcoming[]; today: string }) {
             <>
               <span className="mt-0.5 shrink-0">{icon(u)}</span>
               <span className="flex-1 min-w-0">
-                <span className="block text-[13px] leading-snug">{u.title}</span>
+                <span className="block text-[13px] leading-snug">{tx(u.title)}</span>
                 <span className={clsx('block text-[11px]', u.overdue ? 'text-red-400' : 'text-[var(--text-muted)]')}>
                   {whenLabel(u.date, today)}{u.time && ` · ${u.time}`}{u.detail && ` · ${u.detail}`}
                 </span>
@@ -351,16 +352,16 @@ function Lately({ items }: { items: MeData['recent'] }) {
   if (!items.length) return null;
   return (
     <section className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-3.5">
-      <h2 className="text-sm font-medium mb-2">Lately we talked about</h2>
+      <h2 className="text-sm font-medium mb-2">{tx('Lately we talked about')}</h2>
       <ul className="space-y-2">
         {items.slice(0, 4).map(c => (
           <li key={c.id}>
             <a href={`#/c/${c.id}`} className="block rounded-md px-1.5 py-1 -mx-1.5 hover:bg-[var(--bg-hover)]/50">
               <span className="flex items-baseline gap-2">
-                <span className="flex-1 min-w-0 truncate text-[13px] font-medium">{c.title}</span>
+                <span className="flex-1 min-w-0 truncate text-[13px] font-medium">{tx(c.title)}</span>
                 <span className="text-[10px] text-[var(--text-muted)] shrink-0">{relTime(c.at)}</span>
               </span>
-              <span className="text-[11px] text-[var(--text-muted)] line-clamp-2">{c.summary}</span>
+              <span className="text-[11px] text-[var(--text-muted)] line-clamp-2">{tx(c.summary)}</span>
             </a>
           </li>
         ))}
@@ -389,22 +390,22 @@ function People({ data, byId, onAct }: { data: MeData; byId: Map<string, MemoryR
     <section className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <Heart className="w-4 h-4 text-rose-400" />
-        <h2 className="text-base font-semibold">People in your life</h2>
+        <h2 className="text-base font-semibold">{tx('People in your life')}</h2>
         <span className="flex-1" />
         <div className="relative w-48">
           <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-          <input className={clsx(btn.input, 'pl-8 py-1 text-xs')} value={q} onChange={e => setQ(e.target.value)} placeholder="Find someone" />
+          <input className={clsx(btn.input, 'pl-8 py-1 text-xs')} value={q} onChange={e => setQ(e.target.value)} placeholder={tx('Find someone')} />
         </div>
-        <a href="#/codex/contacts" className={btn.ghost}>All contacts</a>
+        <a href="#/codex/contacts" className={btn.ghost}>{tx('All contacts')}</a>
       </div>
       <div className="flex flex-wrap gap-1">
         {chip('all', 'Everyone', data.people.length)}
         {data.circles.filter(c => counts[c.id]).map(c => chip(c.id, c.label, counts[c.id]))}
       </div>
-      {!data.people.length && <div className="text-xs text-[var(--text-muted)]">No contacts yet. People you mention in chats are added to <a className="underline" href="#/codex/contacts">Contacts</a>.</div>}
+      {!data.people.length && <div className="text-xs text-[var(--text-muted)]">{tx('No contacts yet. People you mention in chats are added to')} <a className="underline" href="#/codex/contacts">{tx('Contacts')}</a>.</div>}
       {groups.map(({ c, people }) => (
         <div key={c.id} className="space-y-2">
-          {circle === 'all' && <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">{c.label}</div>}
+          {circle === 'all' && <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">{tx(c.label)}</div>}
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {people.map(p => <PersonCard key={p.id} p={p} today={data.today} facts={p.memories.map(id => byId.get(id)).filter((m): m is MemoryRow => !!m)} onAct={onAct} />)}
           </div>
@@ -412,7 +413,7 @@ function People({ data, byId, onAct }: { data: MeData; byId: Map<string, MemoryR
       ))}
       {loose.length > 0 && circle === 'all' && !q && (
         <div className="rounded-xl border border-dashed border-[var(--border-subtle)] p-3.5">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-1">Also mentioned</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-1">{tx('Also mentioned')}</div>
           <ul className="space-y-0.5">{loose.map(m => <Fact key={m.id} m={m} onAct={onAct} />)}</ul>
         </div>
       )}
@@ -434,17 +435,17 @@ function PersonCard({ p, facts, today, onAct }: { p: Person; facts: MemoryRow[];
           {initials(p.name) || '?'}
         </div>
         <div className="flex-1 min-w-0">
-          <a href={`#/codex/e/${p.id}`} className="block text-sm font-medium truncate hover:underline" title="Open in Contacts">{p.name}</a>
+          <a href={`#/codex/e/${p.id}`} className="block text-sm font-medium truncate hover:underline" title={tx('Open in Contacts')}>{p.name}</a>
           {p.aka.length > 0 && <div className="text-[11px] text-[var(--text-muted)] truncate">“{p.aka.join('”, “')}”</div>}
           {sub && <div className="text-[11px] text-[var(--text-secondary)] truncate">{sub}</div>}
         </div>
       </div>
       <div className="mt-2 space-y-0.5 text-[11px] text-[var(--text-muted)]">
         {p.inMemory ? (
-          <div className="flex items-center gap-1"><Heart className="w-3 h-3" />In memory{bday && ` · born ${bday}`}</div>
+          <div className="flex items-center gap-1"><Heart className="w-3 h-3" />{tx('In memory')}{bday && tx(' · born {bday}', { bday: bday })}</div>
         ) : bday && (
           <div className={clsx('flex items-center gap-1', n != null && n <= 14 && 'text-rose-400')}>
-            <Cake className="w-3 h-3" />{bday}{p.turns != null && n != null && ` · turns ${p.turns} ${n === 0 ? 'today' : n === 1 ? 'tomorrow' : `in ${n} days`}`}
+            <Cake className="w-3 h-3" />{bday}{p.turns != null && n != null && tx(' · turns {turns} {v0}', { turns: p.turns, v0: n === 0 ? 'today' : n === 1 ? 'tomorrow' : `in ${n} days` })}
           </div>
         )}
         {p.location && <div className="flex items-center gap-1 truncate"><MapPin className="w-3 h-3 shrink-0" /><span className="truncate">{p.location}</span></div>}
@@ -456,7 +457,7 @@ function PersonCard({ p, facts, today, onAct }: { p: Person; facts: MemoryRow[];
       )}
       {facts.length > 3 && (
         <button className="mt-1 self-start text-[11px] text-[var(--text-muted)] hover:text-[var(--text-primary)]" onClick={() => setMore(v => !v)}>
-          {more ? 'Show less' : `${facts.length - 3} more`}
+          {more ? tx('Show less') : tx('{v0} more', { v0: facts.length - 3 })}
         </button>
       )}
     </div>
@@ -470,7 +471,7 @@ function Timeline({ data, byId }: { data: MeData; byId: Map<string, MemoryRow> }
   if (!data.timeline.length) return null;
   return (
     <section className="space-y-2 pb-6">
-      <h2 className="text-base font-semibold">How Shell:B got to know you</h2>
+      <h2 className="text-base font-semibold">{tx('How Shell:B got to know you')}</h2>
       <ol className="relative border-l border-[var(--border-subtle)] ml-1.5 space-y-1">
         {data.timeline.map(t => {
           const learned = t.learned.map(id => byId.get(id)).filter((m): m is MemoryRow => !!m);
@@ -491,10 +492,10 @@ function Timeline({ data, byId }: { data: MeData; byId: Map<string, MemoryRow> }
                   {learned.map(m => (
                     <li key={m.id} className={clsx('text-xs flex gap-2', m.status === 'retired' ? 'text-[var(--text-muted)] line-through decoration-[var(--text-muted)]/50' : 'text-[var(--text-secondary)]')}>
                       <span className="shrink-0 w-12 text-[var(--text-muted)] no-underline">{new Date(m.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-                      <span>{m.text}</span>
+                      <span>{tx(m.text)}</span>
                     </li>
                   ))}
-                  {!learned.length && <li className="text-xs text-[var(--text-muted)]">Nothing new learned this month.</li>}
+                  {!learned.length && <li className="text-xs text-[var(--text-muted)]">{tx('Nothing new learned this month.')}</li>}
                 </ul>
               )}
             </li>

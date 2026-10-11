@@ -9,6 +9,7 @@ import {
   type Style, type Form, type Groove, type BassTone, type CustomSongParams, type SongInfo
 } from '../dj/engine';
 import { getCamelotCode } from './camelot';
+import { t } from '../i18n';
 
 interface GeneratorStudioProps {
   onPlaySong: (params: CustomSongParams, now?: boolean) => void;
@@ -153,10 +154,10 @@ export function GeneratorStudio({ onPlaySong, onSaveFav, onExportWav }: Generato
           </div>
           <div>
             <h2 className="text-sm sm:text-base font-bold text-[var(--text-primary)]">
-              The Procedural Forge
+              {t('The Procedural Forge')}
             </h2>
             <p className="text-[11px] text-[var(--text-secondary)]">
-              Craft bespoke algorithmic tracks: compose keys, modes, grooves, synth timbres, and seeds
+              {t('Craft bespoke algorithmic tracks: compose keys, modes, grooves, synth timbres, and seeds')}
             </p>
           </div>
         </div>
@@ -165,10 +166,10 @@ export function GeneratorStudio({ onPlaySong, onSaveFav, onExportWav }: Generato
         <button
           onClick={handleRollSeed}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover)] text-xs font-mono text-[var(--text-secondary)] hover:text-white transition shadow-sm"
-          title="Generate fresh random seed"
+          title={t('Generate fresh random seed')}
         >
           <Dices className="w-3.5 h-3.5 text-amber-400" />
-          <span>Reroll Seed</span>
+          <span>{t('Reroll Seed')}</span>
         </button>
       </div>
 
@@ -180,7 +181,7 @@ export function GeneratorStudio({ onPlaySong, onSaveFav, onExportWav }: Generato
               {STYLES[style].label}
             </span>
             <span className="text-[11px] font-mono text-[var(--text-muted)]">
-              Seed #{seed}
+              {t('Seed #{seed}', { seed: seed })}
             </span>
             <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-violet-500/10 border border-violet-500/30 text-[10px] font-mono text-violet-300">
               <span>{camelot.code}</span>
@@ -190,10 +191,10 @@ export function GeneratorStudio({ onPlaySong, onSaveFav, onExportWav }: Generato
           </div>
 
           <h3 className="text-lg font-bold text-[var(--text-primary)] truncate mt-1">
-            {previewSong.title}
+            {t(previewSong.title)}
           </h3>
           <p className="text-xs text-[var(--text-secondary)] font-mono mt-0.5">
-            {previewSong.bpm} BPM · {previewSong.bars} bars · {form} structure · {Math.round(previewSong.lofi * 100)}% tape lofi
+            {t('{bpm} BPM · {bars} bars · {form} structure · {v0}% tape lofi', { bpm: previewSong.bpm, bars: previewSong.bars, form: form, v0: Math.round(previewSong.lofi * 100) })}
           </p>
         </div>
 
@@ -204,21 +205,21 @@ export function GeneratorStudio({ onPlaySong, onSaveFav, onExportWav }: Generato
             className="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white text-xs font-semibold flex items-center gap-1.5 shadow-lg shadow-pink-500/20 transition active:scale-95"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
-            <span>Play on Deck A</span>
+            <span>{t('Play on Deck A')}</span>
           </button>
           <button
             onClick={handleQueueNext}
             className="px-3.5 py-2 rounded-xl border border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 text-xs font-medium flex items-center gap-1.5 transition active:scale-95"
-            title="Queue into Deck B for next mix"
+            title={t('Queue into Deck B for next mix')}
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Queue in Deck B</span>
+            <span>{t('Queue in Deck B')}</span>
           </button>
           {onSaveFav && (
             <button
               onClick={() => onSaveFav(previewSong)}
               className="p-2 rounded-xl border border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-rose-400 hover:bg-[var(--bg-hover)] transition"
-              title="Save to Favorites"
+              title={t('Save to Favorites')}
             >
               <Heart className="w-4 h-4" />
             </button>
@@ -233,7 +234,7 @@ export function GeneratorStudio({ onPlaySong, onSaveFav, onExportWav }: Generato
           {/* Style Selector */}
           <div>
             <label className="text-xs font-mono uppercase tracking-wider text-[var(--text-muted)] font-semibold mb-2 block">
-              Musical Style ({STYLE_IDS.length} Available)
+              {t('Musical Style ({length} Available)', { length: STYLE_IDS.length })}
             </label>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
               {STYLE_IDS.map(id => (
@@ -257,7 +258,7 @@ export function GeneratorStudio({ onPlaySong, onSaveFav, onExportWav }: Generato
           {/* Key Tonic (Root Note) */}
           <div>
             <label className="text-xs font-mono uppercase tracking-wider text-[var(--text-muted)] font-semibold mb-2 block">
-              Key Root Note (Tonic)
+              {t('Key Root Note (Tonic)')}
             </label>
             <div className="grid grid-cols-6 sm:grid-cols-12 gap-1 text-center">
               {TONIC_NAMES.map((name, i) => (
@@ -280,7 +281,7 @@ export function GeneratorStudio({ onPlaySong, onSaveFav, onExportWav }: Generato
           {/* Scale Mode */}
           <div>
             <label className="text-xs font-mono uppercase tracking-wider text-[var(--text-muted)] font-semibold mb-2 block">
-              Scale Mode / Harmony
+              {t('Scale Mode / Harmony')}
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
               {MODES.map(m => (
@@ -294,7 +295,7 @@ export function GeneratorStudio({ onPlaySong, onSaveFav, onExportWav }: Generato
                       : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
                   )}
                 >
-                  {m.label}
+                  {t(m.label)}
                 </button>
               ))}
             </div>
@@ -304,7 +305,7 @@ export function GeneratorStudio({ onPlaySong, onSaveFav, onExportWav }: Generato
           <div className="p-3 rounded-xl bg-[var(--bg-tertiary)] border border-[var(--border-subtle)]">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-mono uppercase tracking-wider text-[var(--text-muted)] font-semibold">
-                Tempo (BPM)
+                {t('Tempo (BPM)')}
               </span>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-mono font-bold text-[var(--text-primary)]">
@@ -314,7 +315,7 @@ export function GeneratorStudio({ onPlaySong, onSaveFav, onExportWav }: Generato
                   onClick={handleTapTempo}
                   className="px-2.5 py-0.5 rounded-md border border-amber-500/40 bg-amber-500/10 text-amber-300 text-[10px] font-mono font-semibold hover:bg-amber-500/20 active:scale-95 transition"
                 >
-                  Tap Tempo
+                  {t('Tap Tempo')}
                 </button>
               </div>
             </div>
@@ -335,7 +336,7 @@ export function GeneratorStudio({ onPlaySong, onSaveFav, onExportWav }: Generato
           {/* Drum Groove */}
           <div>
             <label className="text-xs font-mono uppercase tracking-wider text-[var(--text-muted)] font-semibold mb-2 block">
-              Drum Groove & Pattern
+              {t('Drum Groove & Pattern')}
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
               {GROOVES.map(g => (
@@ -349,7 +350,7 @@ export function GeneratorStudio({ onPlaySong, onSaveFav, onExportWav }: Generato
                       : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
                   )}
                 >
-                  {g.label}
+                  {t(g.label)}
                 </button>
               ))}
             </div>
@@ -358,7 +359,7 @@ export function GeneratorStudio({ onPlaySong, onSaveFav, onExportWav }: Generato
           {/* Bass Tone */}
           <div>
             <label className="text-xs font-mono uppercase tracking-wider text-[var(--text-muted)] font-semibold mb-2 block">
-              Bass Synth Timbre
+              {t('Bass Synth Timbre')}
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
               {BASS_TONES.map(b => (
@@ -372,7 +373,7 @@ export function GeneratorStudio({ onPlaySong, onSaveFav, onExportWav }: Generato
                       : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
                   )}
                 >
-                  {b.label}
+                  {t(b.label)}
                 </button>
               ))}
             </div>
@@ -381,7 +382,7 @@ export function GeneratorStudio({ onPlaySong, onSaveFav, onExportWav }: Generato
           {/* Song Form */}
           <div>
             <label className="text-xs font-mono uppercase tracking-wider text-[var(--text-muted)] font-semibold mb-2 block">
-              Song Structure Form
+              {t('Song Structure Form')}
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
               {FORMS.map(f => (
@@ -395,7 +396,7 @@ export function GeneratorStudio({ onPlaySong, onSaveFav, onExportWav }: Generato
                       : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
                   )}
                 >
-                  {f.label}
+                  {t(f.label)}
                 </button>
               ))}
             </div>
@@ -406,7 +407,7 @@ export function GeneratorStudio({ onPlaySong, onSaveFav, onExportWav }: Generato
             <div>
               <div className="flex items-center justify-between text-xs font-mono mb-1.5">
                 <span className="uppercase tracking-wider text-[var(--text-muted)] font-semibold">
-                  Tape Dust & Lo-Fi Crush
+                  {t('Tape Dust & Lo-Fi Crush')}
                 </span>
                 <span className="font-bold text-[var(--text-primary)]">
                   {Math.round(lofi * 100)}%
@@ -427,7 +428,7 @@ export function GeneratorStudio({ onPlaySong, onSaveFav, onExportWav }: Generato
             <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--border-subtle)]">
               <div>
                 <label className="text-[10px] font-mono uppercase text-[var(--text-muted)] block mb-1">
-                  Random Seed
+                  {t('Random Seed')}
                 </label>
                 <input
                   type="number"
@@ -438,11 +439,11 @@ export function GeneratorStudio({ onPlaySong, onSaveFav, onExportWav }: Generato
               </div>
               <div>
                 <label className="text-[10px] font-mono uppercase text-[var(--text-muted)] block mb-1">
-                  Custom Title (Optional)
+                  {t('Custom Title (Optional)')}
                 </label>
                 <input
                   type="text"
-                  placeholder="Auto-generated if blank"
+                  placeholder={t('Auto-generated if blank')}
                   value={customTitle}
                   onChange={e => setCustomTitle(e.target.value)}
                   className="w-full px-2.5 py-1 rounded bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]"

@@ -11,6 +11,7 @@ import { SECURE_URL, secureHere } from '../secureUrl';
 import type { Meeting, MeetingSpeaker, MeetingSummaryItem, MeetingUtterance } from '../types';
 import { Markdown } from './Markdown';
 import { toast } from './toast';
+import { t as tx } from '../i18n';
 
 type RecordingState = 'idle' | 'listening' | 'hearing' | 'paused' | 'summarizing';
 
@@ -180,7 +181,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
 
   const deleteMeeting = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this meeting?')) return;
+    if (!confirm(tx('Are you sure you want to delete this meeting?'))) return;
     await api.deleteSecretaryMeeting(id);
     const updated = await loadMeetings();
     if (meeting?.id === id) {
@@ -246,7 +247,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
     if (!navigator?.mediaDevices) {
       const sec = secureHere();
       if (sec) {
-        if (confirm("Browser audio recording requires a secure connection (HTTPS or localhost).\n\nWould you like to reopen Secretary Mode on the secure HTTPS address now?")) {
+        if (confirm(tx('Browser audio recording requires a secure connection (HTTPS or localhost).\n\nWould you like to reopen Secretary Mode on the secure HTTPS address now?'))) {
           location.href = sec;
         }
       } else {
@@ -275,7 +276,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
           const aTracks = displayStream.getAudioTracks();
           if (aTracks.length === 0) {
             displayStream.getTracks().forEach(t => t.stop());
-            toast("No computer audio was shared. In the browser prompt, please ensure 'Share audio' or 'Also share tab audio' is enabled.", { kind: 'error' });
+            toast(tx('No computer audio was shared. In the browser prompt, please ensure \'Share audio\' or \'Also share tab audio\' is enabled.'), { kind: 'error' });
             setRecState('idle');
             return;
           }
@@ -410,7 +411,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
         setLiveDuration(liveDurationRef.current);
       }, 500);
     } catch (err) {
-      toast(`Could not access microphone: ${err}`, { kind: 'error' });
+      toast(tx('Could not access microphone: {err}', { err: String(err) }), { kind: 'error' });
       setRecState('idle');
     }
   };
@@ -492,7 +493,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
       setActiveTab('summary');
       await loadMeetings();
     } catch (err) {
-      toast(`Summary generation failed: ${err}`, { kind: 'error' });
+      toast(tx('Summary generation failed: {err}', { err: String(err) }), { kind: 'error' });
     } finally {
       setRecState('idle');
     }
@@ -507,7 +508,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
       setMeeting(prev => prev ? { ...prev, codexEntryId: res.codexEntry.id } : null);
       await loadMeetings();
     } catch (err) {
-      toast(`Failed to save to Codex: ${err}`, { kind: 'info' });
+      toast(tx('Failed to save to Codex: {err}', { err: String(err) }), { kind: 'info' });
     } finally {
       setCodexSaving(false);
     }
@@ -520,7 +521,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
       const res = await api.secretarySuggestNames(meeting.id);
       const suggestions = res.suggestions || {};
       if (Object.keys(suggestions).length === 0) {
-        toast('No obvious names or introductions were detected in the transcript.', { kind: 'info' });
+        toast(tx('No obvious names or introductions were detected in the transcript.'), { kind: 'info' });
         return;
       }
       const updatedSpeakers = meeting.speakers.map(spk => {
@@ -541,7 +542,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
       });
       setMeeting(updated);
     } catch (err) {
-      toast(`Name suggestion failed: ${err}`, { kind: 'error' });
+      toast(tx('Name suggestion failed: {err}', { err: String(err) }), { kind: 'error' });
     } finally {
       setSuggestingNames(false);
     }
@@ -564,7 +565,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
       setRediarizeModalOpen(false);
       await loadMeetings();
     } catch (err) {
-      toast(`Could not re-cluster speakers: ${err}`, { kind: 'error' });
+      toast(tx('Could not re-cluster speakers: {err}', { err: String(err) }), { kind: 'error' });
     } finally {
       setRediarizing(false);
     }
@@ -581,7 +582,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
       setActiveTab('transcript');
       await loadMeetings();
     } catch (err) {
-      toast(`File upload failed: ${err}`, { kind: 'error' });
+      toast(tx('File upload failed: {err}', { err: String(err) }), { kind: 'error' });
     } finally {
       setUploadingAudio(false);
       e.target.value = '';
@@ -641,14 +642,14 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
               <AudioLines className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">Secretary</h2>
-              <p className="text-[11px] text-[var(--text-muted)]">Meeting Records</p>
+              <h2 className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">{tx('Secretary')}</h2>
+              <p className="text-[11px] text-[var(--text-muted)]">{tx('Meeting Records')}</p>
             </div>
           </div>
           <button
             onClick={createNewMeeting}
             className="p-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent)] transition"
-            title="Start New Meeting"
+            title={tx('Start New Meeting')}
           >
             <Plus className="w-4 h-4" />
           </button>
@@ -657,7 +658,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {meetings.length === 0 ? (
             <div className="p-4 text-center text-xs text-[var(--text-muted)]">
-              No recorded meetings yet.
+              {tx('No recorded meetings yet.')}
             </div>
           ) : (
             meetings.map(m => {
@@ -675,12 +676,12 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                 >
                   <div className="flex items-start justify-between gap-1">
                     <div className="text-xs font-medium text-[var(--text-primary)] line-clamp-1">
-                      {m.title}
+                      {tx(m.title)}
                     </div>
                     <button
                       onClick={e => deleteMeeting(m.id, e)}
                       className="opacity-0 group-hover:opacity-100 p-1 text-[var(--text-muted)] hover:text-red-400 transition"
-                      title="Delete meeting"
+                      title={tx('Delete meeting')}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -695,7 +696,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                     </span>
                     {m.hasSummary && (
                       <span className="ml-auto px-1.5 py-0.5 text-[9px] rounded-md bg-emerald-500/10 text-emerald-400 font-mono">
-                        Summary
+                        {tx('Summary')}
                       </span>
                     )}
                   </div>
@@ -713,7 +714,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
             <div className="flex items-center gap-2">
               <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
               <span>
-                <strong>Secure Context Required:</strong> Browsers restrict live microphone and computer audio capture to HTTPS or localhost. You are currently connected over unencrypted HTTP.
+                <strong>{tx('Secure Context Required:')}</strong> {tx('Browsers restrict live microphone and computer audio capture to HTTPS or localhost. You are currently connected over unencrypted HTTP.')}
               </span>
             </div>
             <button
@@ -724,7 +725,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
               }}
               className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500 text-zinc-950 font-semibold text-xs hover:bg-amber-400 transition shadow-sm"
             >
-              <span>Switch to Secure HTTPS</span>
+              <span>{tx('Switch to Secure HTTPS')}</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -737,7 +738,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
               <button
                 onClick={onBack}
                 className="p-1.5 rounded-lg border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
-                title="Back to Shell:B"
+                title={tx('Back to Shell:B')}
               >
                 <ChevronRight className="w-4 h-4 rotate-180" />
               </button>
@@ -782,7 +783,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
               ) : (
                 <div className="flex items-center gap-2">
                   <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)] truncate max-w-md">
-                    {meeting?.title || 'No Meeting Selected'}
+                    {meeting?.title || tx('No Meeting Selected')}
                   </h1>
                   {meeting && (
                     <button
@@ -791,7 +792,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                         setEditingTitle(true);
                       }}
                       className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-0.5"
-                      title="Edit meeting title"
+                      title={tx('Edit meeting title')}
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
@@ -806,10 +807,10 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                 <span>•</span>
                 <span className="flex items-center gap-1">
                   <Users className="w-3.5 h-3.5" />
-                  {meeting?.speakers.length || 0} Speakers
+                  {meeting?.speakers.length || 0} {tx('Speakers')}
                 </span>
                 <span>•</span>
-                <span>{meeting?.utterances.length || 0} Turns</span>
+                <span>{tx('{v0} Turns', { v0: meeting?.utterances.length || 0 })}</span>
               </div>
             </div>
           </div>
@@ -820,7 +821,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
             {(recState === 'listening' || recState === 'hearing') && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-red-500/30 bg-red-500/10 text-red-400 text-xs font-medium">
                 <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-                <span>{recState === 'hearing' ? 'Hearing speech…' : 'Listening…'}</span>
+                <span>{recState === 'hearing' ? tx('Hearing speech…') : tx('Listening…')}</span>
                 <span className="font-mono text-[11px] opacity-80">{formatDuration(liveDuration)}</span>
               </div>
             )}
@@ -828,7 +829,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
             {recState === 'paused' && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-400 text-xs font-medium">
                 <Pause className="w-3 h-3" />
-                <span>Paused</span>
+                <span>{tx('Paused')}</span>
               </div>
             )}
 
@@ -844,12 +845,12 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                       ? 'bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm'
                       : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                   )}
-                  title="Capture both computer/call audio (Google Meet, Zoom, Teams) and your microphone"
+                  title={tx('Capture both computer/call audio (Google Meet, Zoom, Teams) and your microphone')}
                 >
                   <Laptop className="w-3.5 h-3.5" />
                   <span className="text-[10px]">+</span>
                   <Mic className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline text-[11px]">Computer + Mic</span>
+                  <span className="hidden sm:inline text-[11px]">{tx('Computer + Mic')}</span>
                 </button>
                 <button
                   type="button"
@@ -860,10 +861,10 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                       ? 'bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm'
                       : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                   )}
-                  title="Capture computer / meeting audio only (tab audio or system audio)"
+                  title={tx('Capture computer / meeting audio only (tab audio or system audio)')}
                 >
                   <Monitor className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline text-[11px]">Computer Only</span>
+                  <span className="hidden sm:inline text-[11px]">{tx('Computer Only')}</span>
                 </button>
                 <button
                   type="button"
@@ -874,10 +875,10 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                       ? 'bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm'
                       : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                   )}
-                  title="Capture microphone only (in-person meeting)"
+                  title={tx('Capture microphone only (in-person meeting)')}
                 >
                   <Mic className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline text-[11px]">Mic Only</span>
+                  <span className="hidden sm:inline text-[11px]">{tx('Mic Only')}</span>
                 </button>
               </div>
             )}
@@ -886,16 +887,16 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
             {recState === 'idle' && (
               <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] text-xs">
                 <Sliders className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-                <span className="hidden xl:inline text-[11px] text-[var(--text-muted)]">Voice Diarization:</span>
+                <span className="hidden xl:inline text-[11px] text-[var(--text-muted)]">{tx('Voice Diarization:')}</span>
                 <select
                   value={voiceSensitivity}
                   onChange={e => setVoiceSensitivity(e.target.value as 'strict' | 'balanced' | 'relaxed')}
                   className="bg-transparent text-xs text-[var(--text-primary)] focus:outline-none cursor-pointer"
-                  title="Voice identification threshold. Strict splits close voices into different speakers, Relaxed is more forgiving of natural pitch variation."
+                  title={tx('Voice identification threshold. Strict splits close voices into different speakers, Relaxed is more forgiving of natural pitch variation.')}
                 >
-                  <option value="strict" className="bg-[var(--bg-secondary)]">Strict (Splits Close Voices)</option>
-                  <option value="balanced" className="bg-[var(--bg-secondary)]">Balanced (Recommended)</option>
-                  <option value="relaxed" className="bg-[var(--bg-secondary)]">Relaxed (Same Voice Variation)</option>
+                  <option value="strict" className="bg-[var(--bg-secondary)]">{tx('Strict (Splits Close Voices)')}</option>
+                  <option value="balanced" className="bg-[var(--bg-secondary)]">{tx('Balanced (Recommended)')}</option>
+                  <option value="relaxed" className="bg-[var(--bg-secondary)]">{tx('Relaxed (Same Voice Variation)')}</option>
                 </select>
               </div>
             )}
@@ -905,14 +906,14 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                 onClick={startRecording}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-sky-500 text-zinc-950 font-medium text-xs hover:bg-sky-400 shadow-sm transition active:scale-95"
                 title={
-                  audioSource === 'both' ? 'Start capturing computer call audio and your microphone' :
-                  audioSource === 'system' ? 'Start capturing computer tab/system audio' :
-                  'Start listening with microphone'
+                  audioSource === 'both' ? tx('Start capturing computer call audio and your microphone') :
+                  audioSource === 'system' ? tx('Start capturing computer tab/system audio') :
+                  tx('Start listening with microphone')
                 }
               >
                 {audioSource === 'system' ? <Monitor className="w-4 h-4" /> : audioSource === 'both' ? <Volume2 className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                 <span>
-                  {audioSource === 'both' ? 'Start Listening (Both)' : audioSource === 'system' ? 'Listen to Computer' : 'Start Listening'}
+                  {audioSource === 'both' ? tx('Start Listening (Both)') : audioSource === 'system' ? tx('Listen to Computer') : tx('Start Listening')}
                 </span>
               </button>
             ) : recState === 'paused' ? (
@@ -922,13 +923,13 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                   className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500 text-zinc-950 font-medium text-xs hover:bg-emerald-400 transition"
                 >
                   <Play className="w-4 h-4" />
-                  <span>Resume</span>
+                  <span>{tx('Resume')}</span>
                 </button>
                 <button
                   onClick={stopRecording}
                   className="px-3 py-2 rounded-xl border border-[var(--border-subtle)] text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition"
                 >
-                  Stop
+                  {tx('Stop')}
                 </button>
               </div>
             ) : (
@@ -936,17 +937,17 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                 <button
                   onClick={pauseRecording}
                   className="flex items-center gap-2 px-3 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] text-xs font-medium transition"
-                  title="Pause Listening"
+                  title={tx('Pause Listening')}
                 >
                   <Pause className="w-4 h-4" />
-                  <span>Pause</span>
+                  <span>{tx('Pause')}</span>
                 </button>
                 <button
                   onClick={stopRecording}
                   className="px-3 py-2 rounded-xl border border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/20 text-xs font-medium transition"
-                  title="Stop Listening"
+                  title={tx('Stop Listening')}
                 >
-                  Stop
+                  {tx('Stop')}
                 </button>
               </div>
             )}
@@ -960,12 +961,12 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
               {recState === 'summarizing' ? (
                 <>
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--accent)]" />
-                  <span>Compiling Summary…</span>
+                  <span>{tx('Compiling Summary…')}</span>
                 </>
               ) : (
                 <>
                   <Sparkles className="w-3.5 h-3.5 text-[var(--accent)]" />
-                  <span>{meeting?.summary ? 'Regenerate Summary' : 'Compile Summary'}</span>
+                  <span>{meeting?.summary ? tx('Regenerate Summary') : tx('Compile Summary')}</span>
                 </>
               )}
             </button>
@@ -976,14 +977,14 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                 'flex items-center gap-2 px-3 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] text-xs font-medium cursor-pointer transition',
                 uploadingAudio && 'opacity-50 pointer-events-none'
               )}
-              title="Upload recorded audio (WAV, MP3, M4A, WebM)"
+              title={tx('Upload recorded audio (WAV, MP3, M4A, WebM)')}
             >
               {uploadingAudio ? (
                 <Loader2 className="w-4 h-4 animate-spin text-[var(--accent)]" />
               ) : (
                 <Upload className="w-4 h-4" />
               )}
-              <span className="hidden sm:inline">Upload Audio</span>
+              <span className="hidden sm:inline">{tx('Upload Audio')}</span>
               <input
                 type="file"
                 accept="audio/*,video/*,.mkv,.mov,.m4v"
@@ -1010,12 +1011,12 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                 ) : audioSource === 'system' ? (
                   <>
                     <Monitor className="w-3 h-3 text-sky-400" />
-                    <span>Computer Audio</span>
+                    <span>{tx('Computer Audio')}</span>
                   </>
                 ) : (
                   <>
                     <Mic className="w-3 h-3 text-emerald-400" />
-                    <span>Microphone</span>
+                    <span>{tx('Microphone')}</span>
                   </>
                 )}
               </div>
@@ -1027,7 +1028,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
               </div>
             </div>
             <span className="text-[11px] text-[var(--text-muted)]">
-              {recState === 'hearing' ? 'Processing speech utterance…' : 'Listening for speakers…'}
+              {recState === 'hearing' ? tx('Processing speech utterance…') : tx('Listening for speakers…')}
             </span>
           </div>
         )}
@@ -1037,7 +1038,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
           <div className="px-6 py-2.5 border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)]/20 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs text-[var(--text-muted)] font-medium mr-1 flex items-center gap-1">
-                <Users className="w-3.5 h-3.5" /> Attendees:
+                <Users className="w-3.5 h-3.5" /> {tx('Attendees:')}
               </span>
               {meeting.speakers.map(spk => {
                 const isSelected = filterSpeaker === spk.id;
@@ -1057,7 +1058,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                     <span className="w-2 h-2 rounded-full" style={{ backgroundColor: spk.color }} />
                     <span>{spk.name}</span>
                     <span className="text-[10px] text-[var(--text-muted)] opacity-75">
-                      ({formatDuration(spk.totalDuration || 0)}{spk.pitch ? ` • ${Math.round(spk.pitch)}Hz` : ''})
+                      ({formatDuration(spk.totalDuration || 0)}{spk.pitch ? tx(' • {v0}Hz', { v0: Math.round(spk.pitch) }) : ''})
                     </span>
                     <button
                       onClick={e => {
@@ -1067,7 +1068,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                         setSpeakerColorInput(spk.color);
                       }}
                       className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-[var(--text-primary)]"
-                      title="Rename Speaker"
+                      title={tx('Rename Speaker')}
                     >
                       <Edit2 className="w-3 h-3" />
                     </button>
@@ -1081,26 +1082,26 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                 onClick={() => setRediarizeModalOpen(true)}
                 disabled={rediarizing || !meeting || meeting.utterances.length < 2}
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--border-subtle)] text-[11px] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition disabled:opacity-50"
-                title="Re-separate or group speakers based on voice pitch and timbre"
+                title={tx('Re-separate or group speakers based on voice pitch and timbre')}
               >
                 {rediarizing ? <Loader2 className="w-3 h-3 animate-spin text-[var(--accent)]" /> : <Split className="w-3 h-3 text-[var(--accent)]" />}
-                <span>Separate Voices</span>
+                <span>{tx('Separate Voices')}</span>
               </button>
               <span className="px-2 py-0.5 rounded-md border border-[var(--border-subtle)] text-[10px] text-[var(--text-muted)]"
                 title={meeting.diarizer === 'wespeaker-r34-lm'
-                  ? 'Voices told apart by neural voice prints (WeSpeaker, on this machine)'
-                  : 'Voices told apart by pitch and timbre only; meetings recorded from now on use neural voice prints'}>
-                Voice ID: {meeting.diarizer === 'wespeaker-r34-lm' ? 'neural' : 'basic'}
+                  ? tx('Voices told apart by neural voice prints (WeSpeaker, on this machine)')
+                  : tx('Voices told apart by pitch and timbre only; meetings recorded from now on use neural voice prints')}>
+                {tx('Voice ID:')} {meeting.diarizer === 'wespeaker-r34-lm' ? 'neural' : 'basic'}
               </span>
 
               <button
                 onClick={handleSuggestNames}
                 disabled={suggestingNames || meeting.utterances.length === 0}
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--border-subtle)] text-[11px] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition disabled:opacity-50"
-                title="Detect real names mentioned in introductions"
+                title={tx('Detect real names mentioned in introductions')}
               >
                 {suggestingNames ? <Loader2 className="w-3 h-3 animate-spin text-[var(--accent)]" /> : <Sparkles className="w-3 h-3 text-[var(--accent)]" />}
-                <span>Detect Names</span>
+                <span>{tx('Detect Names')}</span>
               </button>
             </div>
           </div>
@@ -1119,7 +1120,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
               )}
             >
               <FileText className="w-3.5 h-3.5" />
-              <span>Executive Summary</span>
+              <span>{tx('Executive Summary')}</span>
               {meeting?.summary && (
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
               )}
@@ -1135,7 +1136,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
               )}
             >
               <ListTodo className="w-3.5 h-3.5" />
-              <span>Action Items</span>
+              <span>{tx('Action Items')}</span>
               {meeting?.summaryData?.actionItems && (
                 <span className="px-1.5 py-0.2 text-[10px] rounded-full bg-[var(--bg-tertiary)] font-mono">
                   {meeting.summaryData.actionItems.length}
@@ -1153,7 +1154,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
               )}
             >
               <ListOrdered className="w-3.5 h-3.5" />
-              <span>Diarized Transcript</span>
+              <span>{tx('Diarized Transcript')}</span>
               <span className="px-1.5 py-0.2 text-[10px] rounded-full bg-[var(--bg-tertiary)] font-mono">
                 {meeting?.utterances.length || 0}
               </span>
@@ -1169,7 +1170,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
               )}
             >
               <HelpCircle className="w-3.5 h-3.5" />
-              <span>Ask Meeting</span>
+              <span>{tx('Ask Meeting')}</span>
             </button>
           </div>
 
@@ -1180,10 +1181,10 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                 <button
                   onClick={copySummaryMarkdown}
                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--border-subtle)] text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition"
-                  title="Copy full summary to clipboard"
+                  title={tx('Copy full summary to clipboard')}
                 >
                   {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copied ? 'Copied' : 'Copy'}</span>
+                  <span>{copied ? tx('Copied') : tx('Copy')}</span>
                 </button>
 
                 <button
@@ -1195,7 +1196,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                       ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
                       : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
                   )}
-                  title="Save meeting summary and transcript into Codex Notes"
+                  title={tx('Save meeting summary and transcript into Codex Notes')}
                 >
                   {codexSaving ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1204,13 +1205,13 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                   ) : (
                     <BookMarked className="w-3.5 h-3.5 text-amber-400" />
                   )}
-                  <span>{codexSavedId ? 'Saved to Codex' : 'Save to Codex'}</span>
+                  <span>{codexSavedId ? tx('Saved to Codex') : tx('Save to Codex')}</span>
                 </button>
 
                 <button
                   onClick={exportMarkdownFile}
                   className="p-1.5 rounded-lg border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition"
-                  title="Export Markdown file"
+                  title={tx('Export Markdown file')}
                 >
                   <Download className="w-3.5 h-3.5" />
                 </button>
@@ -1227,18 +1228,18 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
               {!meeting?.summary ? (
                 <div className="p-12 text-center border border-dashed border-[var(--border-subtle)] rounded-2xl bg-[var(--bg-secondary)]/30">
                   <AudioLines className="w-10 h-10 mx-auto text-[var(--text-muted)] mb-3 opacity-60" />
-                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">No Summary Compiled Yet</h3>
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">{tx('No Summary Compiled Yet')}</h3>
                   <p className="text-xs text-[var(--text-muted)] max-w-sm mx-auto mt-1 mb-4">
                     {meeting?.utterances.length
-                      ? 'Click "Compile Summary" above to generate a structured executive summary with key decisions and action items.'
-                      : 'Start listening to record meeting turns or upload an audio file to transcribe.'}
+                      ? tx('Click "Compile Summary" above to generate a structured executive summary with key decisions and action items.')
+                      : tx('Start listening to record meeting turns or upload an audio file to transcribe.')}
                   </p>
                   {meeting && meeting.utterances.length > 0 && (
                     <button
                       onClick={handleSummarize}
                       className="px-4 py-2 rounded-xl bg-sky-500 text-zinc-950 font-medium text-xs hover:bg-sky-400 transition"
                     >
-                      Compile Summary with AI
+                      {tx('Compile Summary with AI')}
                     </button>
                   )}
                 </div>
@@ -1247,10 +1248,10 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                   {/* Executive Header Card */}
                   <div className="p-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] shadow-sm">
                     <div className="flex items-center justify-between text-xs text-[var(--text-muted)] mb-3">
-                      <span className="font-mono uppercase tracking-wider text-[10px] text-sky-400 font-semibold">Executive Record</span>
+                      <span className="font-mono uppercase tracking-wider text-[10px] text-sky-400 font-semibold">{tx('Executive Record')}</span>
                       <span>{new Date(meeting.created * 1000).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
                     </div>
-                    <Markdown text={meeting.summary} />
+                    <Markdown text={tx(meeting.summary)} />
                   </div>
                 </div>
               )}
@@ -1262,13 +1263,13 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
             <div className="max-w-3xl mx-auto space-y-4">
               {!meeting?.summaryData?.actionItems || meeting.summaryData.actionItems.length === 0 ? (
                 <div className="p-12 text-center border border-dashed border-[var(--border-subtle)] rounded-2xl bg-[var(--bg-secondary)]/30 text-xs text-[var(--text-muted)]">
-                  No action items identified. Compile the meeting summary to extract tasks and commitments automatically.
+                  {tx('No action items identified. Compile the meeting summary to extract tasks and commitments automatically.')}
                 </div>
               ) : (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between pb-2 border-b border-[var(--border-subtle)]">
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                      Deliverables & Commitments ({meeting.summaryData.actionItems.length})
+                      {tx('Deliverables & Commitments ({length})', { length: meeting.summaryData.actionItems.length })}
                     </h3>
                   </div>
 
@@ -1293,7 +1294,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                             </p>
                             <div className="mt-2 flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
                               <span className="font-semibold text-[var(--text-secondary)]">
-                                Owner: {item.owner}
+                                {tx('Owner: {owner}', { owner: item.owner })}
                               </span>
                               <span>•</span>
                               <span className={clsx('px-1.5 py-0.2 rounded border text-[9px] font-mono uppercase', prioColor)}>
@@ -1327,7 +1328,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                   <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-[var(--text-muted)]" />
                   <input
                     type="text"
-                    placeholder="Search transcript..."
+                    placeholder={tx('Search transcript...')}
                     value={transcriptSearch}
                     onChange={e => setTranscriptSearch(e.target.value)}
                     className="w-full pl-9 pr-3 py-1.5 text-xs bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-xl text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]"
@@ -1347,7 +1348,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                     onClick={() => setFilterSpeaker(null)}
                     className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 text-xs text-[var(--text-primary)]"
                   >
-                    <span>Filtered</span>
+                    <span>{tx('Filtered')}</span>
                     <X className="w-3 h-3" />
                   </button>
                 )}
@@ -1357,8 +1358,8 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
               {visibleUtterances.length === 0 ? (
                 <div className="p-12 text-center text-xs text-[var(--text-muted)] border border-dashed border-[var(--border-subtle)] rounded-2xl">
                   {meeting?.utterances.length
-                    ? 'No utterances match your filter criteria.'
-                    : 'Transcript is empty. Click "Start Listening" to begin live meeting transcription.'}
+                    ? tx('No utterances match your filter criteria.')
+                    : tx('Transcript is empty. Click "Start Listening" to begin live meeting transcription.')}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -1387,7 +1388,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                                 }
                               }}
                               className="text-xs font-semibold text-[var(--text-primary)] bg-transparent hover:bg-[var(--bg-tertiary)] py-0.5 px-1 rounded cursor-pointer border-0 focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                              title="Click to reassign this speech turn to another speaker"
+                              title={tx('Click to reassign this speech turn to another speaker')}
                             >
                               {meeting?.speakers.map(s => (
                                 <option key={s.id} value={s.id} className="bg-[var(--bg-secondary)] text-[var(--text-primary)]">
@@ -1406,7 +1407,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                           </span>
                         </div>
                         <p className="text-xs text-[var(--text-secondary)] leading-relaxed pl-4 border-l-2" style={{ borderColor: `${spkColor}40` }}>
-                          {u.text}
+                          {tx(u.text)}
                         </p>
                       </div>
                     );
@@ -1422,10 +1423,10 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
             <div className="max-w-3xl mx-auto space-y-4">
               <div className="p-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
-                  Ask Secretary about this meeting
+                  {tx('Ask Secretary about this meeting')}
                 </h3>
                 <p className="text-xs text-[var(--text-muted)] mb-3">
-                  Query key decisions, who agreed to what, technical context, or unresolved blockers grounded directly in the transcript.
+                  {tx('Query key decisions, who agreed to what, technical context, or unresolved blockers grounded directly in the transcript.')}
                 </p>
                 <div className="flex gap-2">
                   <input
@@ -1433,7 +1434,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                     value={askQuestion}
                     onChange={e => setAskQuestion(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleAskMeeting()}
-                    placeholder="e.g. What did Speaker 1 say regarding deployment blockers?"
+                    placeholder={tx('e.g. What did Speaker 1 say regarding deployment blockers?')}
                     className="flex-1 px-3 py-2 text-xs bg-[var(--bg-primary)] border border-[var(--border-subtle)] rounded-xl text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]"
                   />
                   <button
@@ -1442,7 +1443,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--accent)] text-[var(--accent-fg)] font-medium text-xs hover:opacity-90 transition disabled:opacity-50"
                   >
                     {asking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                    <span>Ask</span>
+                    <span>{tx('Ask')}</span>
                   </button>
                 </div>
               </div>
@@ -1451,7 +1452,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                 <div className="p-5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
                   <div className="flex items-center gap-2 mb-2 text-xs font-semibold text-[var(--text-primary)]">
                     <Sparkles className="w-4 h-4 text-[var(--accent)]" />
-                    <span>Answer</span>
+                    <span>{tx('Answer')}</span>
                   </div>
                   <div className="text-xs text-[var(--text-secondary)] leading-relaxed">
                     <Markdown text={askAnswer} />
@@ -1468,7 +1469,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 grid place-items-center p-4">
           <div className="w-full max-w-sm rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-5 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">Rename Speaker</h3>
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">{tx('Rename Speaker')}</h3>
               <button
                 onClick={() => setEditingSpeaker(null)}
                 className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
@@ -1478,7 +1479,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
             </div>
 
             <div>
-              <label className="text-xs text-[var(--text-muted)] font-medium mb-1 block">Speaker Name</label>
+              <label className="text-xs text-[var(--text-muted)] font-medium mb-1 block">{tx('Speaker Name')}</label>
               <input
                 type="text"
                 value={speakerNameInput}
@@ -1489,7 +1490,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
             </div>
 
             <div>
-              <label className="text-xs text-[var(--text-muted)] font-medium mb-1.5 block">Color</label>
+              <label className="text-xs text-[var(--text-muted)] font-medium mb-1.5 block">{tx('Color')}</label>
               <div className="flex items-center gap-2 flex-wrap">
                 {['#38bdf8', '#fb7185', '#34d399', '#f59e0b', '#a78bfa', '#f472b6', '#2dd4bf', '#fbbf24', '#818cf8', '#4ade80'].map(c => (
                   <button
@@ -1510,7 +1511,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                 onClick={() => setEditingSpeaker(null)}
                 className="px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
               >
-                Cancel
+                {tx('Cancel')}
               </button>
               <button
                 onClick={async () => {
@@ -1534,7 +1535,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                 }}
                 className="px-4 py-1.5 rounded-xl bg-[var(--accent)] text-[var(--accent-fg)] font-medium text-xs hover:opacity-90 transition"
               >
-                Save
+                {tx('Save')}
               </button>
             </div>
           </div>
@@ -1548,7 +1549,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Split className="w-5 h-5 text-sky-400" />
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Separate Speakers by Voice</h3>
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">{tx('Separate Speakers by Voice')}</h3>
               </div>
               <button onClick={() => setRediarizeModalOpen(false)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
                 <X className="w-4 h-4" />
@@ -1556,13 +1557,13 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
             </div>
 
             <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-              Shell:B analyzes acoustic pitch (fundamental frequency F₀), spectral centroid, and 13-band vocal tract timbre (MFCCs) across every speech turn to separate distinct speakers.
+              {tx('Shell:B analyzes acoustic pitch (fundamental frequency F₀), spectral centroid, and 13-band vocal tract timbre (MFCCs) across every speech turn to separate distinct speakers.')}
             </p>
 
             <div className="space-y-3 pt-1">
               <div>
                 <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
-                  Target Speaker Count (Optional)
+                  {tx('Target Speaker Count (Optional)')}
                 </label>
                 <div className="flex items-center gap-2">
                   {[2, 3, 4].map(n => (
@@ -1577,14 +1578,14 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                           : 'border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
                       )}
                     >
-                      {n} Speakers
+                      {tx('{n} Speakers', { n: n })}
                     </button>
                   ))}
                   <input
                     type="number"
                     min={1}
                     max={12}
-                    placeholder="Auto"
+                    placeholder={tx('Auto')}
                     value={targetSpeakerCount}
                     onChange={e => setTargetSpeakerCount(e.target.value ? parseInt(e.target.value, 10) : '')}
                     className="w-16 px-2 py-1.5 text-xs text-center border border-[var(--border-subtle)] bg-[var(--bg-primary)] rounded-xl text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
@@ -1592,14 +1593,14 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                 </div>
                 <span className="text-[10px] text-[var(--text-muted)] mt-1 block">
                   {targetSpeakerCount
-                    ? `Will cluster into exactly ${targetSpeakerCount} distinct participants.`
-                    : 'Auto-detect will partition voices dynamically based on acoustic separation threshold.'}
+                    ? tx('Will cluster into exactly {targetSpeakerCount} distinct participants.', { targetSpeakerCount: targetSpeakerCount })
+                    : tx('Auto-detect will partition voices dynamically based on acoustic separation threshold.')}
                 </span>
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
-                  Voice Sensitivity
+                  {tx('Voice Sensitivity')}
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
@@ -1618,8 +1619,8 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                           : 'border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
                       )}
                     >
-                      <div className="text-xs font-medium">{t.label}</div>
-                      <div className="text-[10px] text-[var(--text-muted)]">{t.desc}</div>
+                      <div className="text-xs font-medium">{tx(t.label)}</div>
+                      <div className="text-[10px] text-[var(--text-muted)]">{tx(t.desc)}</div>
                     </button>
                   ))}
                 </div>
@@ -1631,7 +1632,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                 onClick={() => setRediarizeModalOpen(false)}
                 className="px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
               >
-                Cancel
+                {tx('Cancel')}
               </button>
               <button
                 onClick={() => handleRediarize(targetSpeakerCount ? Number(targetSpeakerCount) : undefined)}
@@ -1639,7 +1640,7 @@ export function Secretary({ onBack }: { onBack?: () => void }) {
                 className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-sky-500 text-zinc-950 font-medium text-xs hover:bg-sky-400 transition disabled:opacity-50"
               >
                 {rediarizing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Split className="w-3.5 h-3.5" />}
-                <span>Re-cluster Voices</span>
+                <span>{tx('Re-cluster Voices')}</span>
               </button>
             </div>
           </div>

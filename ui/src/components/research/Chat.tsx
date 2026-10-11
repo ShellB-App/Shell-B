@@ -5,6 +5,7 @@ import { api, streamNotebookChat } from '../../api';
 import type { NotebookCitation, NotebookMessage } from '../../types';
 import { btn } from '../common';
 import { NbMarkdown, useNotebook } from './shared';
+import { t } from '../../i18n';
 
 export interface ChatHandle { ask: (text: string) => void }
 
@@ -23,9 +24,9 @@ function Answer({ m, streaming, onSave }: { m: NotebookMessage; streaming: boole
         <div className="mt-2 flex items-center gap-1">
           <button className={clsx(btn.ghost, '!px-2 !py-1 border border-[var(--border-subtle)] rounded-full')} disabled={saved}
             onClick={async () => { await onSave(); setSaved(true); }}>
-            {saved ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <BookmarkPlus className="w-3.5 h-3.5" />}{saved ? 'Saved' : 'Save to note'}
+            {saved ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <BookmarkPlus className="w-3.5 h-3.5" />}{saved ? t('Saved') : t('Save to note')}
           </button>
-          <button className={btn.icon} title="Copy" onClick={() => { navigator.clipboard.writeText(m.content); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>
+          <button className={btn.icon} title={t('Copy')} onClick={() => { navigator.clipboard.writeText(m.content); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
         </div>
@@ -90,21 +91,21 @@ export function NotebookChat({ handle, onAddSources }: { handle: Ref<ChatHandle>
           {/* notebook overview, like the top of a NotebookLM chat */}
           <div className="mb-8">
             <div className="text-4xl mb-3" aria-hidden>{d.emoji || '📓'}</div>
-            <h1 className="text-[26px] font-semibold tracking-tight leading-tight">{d.title}</h1>
-            <p className="mt-1 text-[13px] text-[var(--text-muted)]">{srcs.length} source{srcs.length === 1 ? '' : 's'}{indexing ? ' · indexing…' : ''}</p>
+            <h1 className="text-[26px] font-semibold tracking-tight leading-tight">{t(d.title)}</h1>
+            <p className="mt-1 text-[13px] text-[var(--text-muted)]">{srcs.length} source{srcs.length === 1 ? '' : 's'}{indexing ? t(' · indexing…') : ''}</p>
             {srcs.length === 0 ? (
               <div className="mt-6 p-6 rounded-2xl border border-dashed border-[var(--border-subtle)] text-center">
-                <p className="text-sm font-medium">Add a source to get started</p>
+                <p className="text-sm font-medium">{t('Add a source to get started')}</p>
                 <p className="text-[12.5px] text-[var(--text-muted)] mt-1 max-w-md mx-auto">
-                  Upload PDFs and documents, add web pages, paste text, or ask Minerva to research the question and gather sources for you.
+                  {t('Upload PDFs and documents, add web pages, paste text, or ask Minerva to research the question and gather sources for you.')}
                 </p>
-                <button className={clsx(btn.primary, '!bg-teal-600 mt-4')} onClick={onAddSources}><Plus className="w-3.5 h-3.5" />Add sources</button>
+                <button className={clsx(btn.primary, '!bg-teal-600 mt-4')} onClick={onAddSources}><Plus className="w-3.5 h-3.5" />{t('Add sources')}</button>
               </div>
             ) : d.guide?.summary ? (
-              <NbMarkdown text={d.guide.summary} className="mt-4 !text-[15px] !leading-relaxed" />
+              <NbMarkdown text={t(d.guide.summary)} className="mt-4 !text-[15px] !leading-relaxed" />
             ) : (
               <p className="mt-4 text-[13px] text-[var(--text-muted)] flex items-center gap-2">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />{indexing ? 'Reading your sources…' : 'Writing the overview…'}
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />{indexing ? t('Reading your sources…') : t('Writing the overview…')}
                 {!indexing && <button className={clsx(btn.ghost, '!py-0.5')} onClick={() => api.refreshNotebookGuide(d.id).then(reload)}><RotateCw className="w-3 h-3" /></button>}
               </p>
             )}
@@ -125,7 +126,7 @@ export function NotebookChat({ handle, onAddSources }: { handle: Ref<ChatHandle>
           {error && <p className="mt-4 text-[13px] text-rose-500">{error}</p>}
           {msgs && msgs.length > 0 && !busy && (
             <div className="mt-6 flex justify-center">
-              <button className={btn.ghost} onClick={clear}><Eraser className="w-3.5 h-3.5" />Clear chat</button>
+              <button className={btn.ghost} onClick={clear}><Eraser className="w-3.5 h-3.5" />{t('Clear chat')}</button>
             </div>
           )}
         </div>
@@ -147,18 +148,18 @@ export function NotebookChat({ handle, onAddSources }: { handle: Ref<ChatHandle>
             className="flex items-end gap-2 p-2 pl-4 rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-secondary)] focus-within:border-teal-500/60 transition">
             <textarea value={input} onChange={e => setInput(e.target.value)} rows={1} disabled={srcs.length === 0}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input); } }}
-              placeholder={srcs.length === 0 ? 'Add a source to start chatting' : 'Start typing…'}
+              placeholder={srcs.length === 0 ? t('Add a source to start chatting') : t('Start typing…')}
               className="flex-1 min-w-0 resize-none bg-transparent text-[14px] py-1.5 placeholder-[var(--text-muted)] focus:outline-none max-h-40 [field-sizing:content]" />
             <span className="self-center shrink-0 text-[11px] text-[var(--text-muted)] whitespace-nowrap">{ready.length} source{ready.length === 1 ? '' : 's'}</span>
             {busy ? (
-              <button type="button" onClick={() => abort.current?.abort()} className="shrink-0 p-2 rounded-xl bg-[var(--bg-hover)]" aria-label="Stop"><Square className="w-4 h-4" /></button>
+              <button type="button" onClick={() => abort.current?.abort()} className="shrink-0 p-2 rounded-xl bg-[var(--bg-hover)]" aria-label={t('Stop')}><Square className="w-4 h-4" /></button>
             ) : (
-              <button type="submit" disabled={!input.trim() || srcs.length === 0} className="shrink-0 p-2 rounded-xl bg-teal-600 text-white disabled:opacity-30 hover:brightness-110 transition" aria-label="Send">
+              <button type="submit" disabled={!input.trim() || srcs.length === 0} className="shrink-0 p-2 rounded-xl bg-teal-600 text-white disabled:opacity-30 hover:brightness-110 transition" aria-label={t('Send')}>
                 <ArrowUp className="w-4 h-4" />
               </button>
             )}
           </form>
-          <p className="mt-1.5 text-center text-[10.5px] text-[var(--text-muted)]">Answers come only from your selected sources; check anything important against them.</p>
+          <p className="mt-1.5 text-center text-[10.5px] text-[var(--text-muted)]">{t('Answers come only from your selected sources; check anything important against them.')}</p>
         </div>
       </div>
     </div>

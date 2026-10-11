@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { useState, useEffect } from 'react';
 import clsx from 'clsx';
 import {
@@ -52,10 +53,10 @@ export function DesktopWidgets({ status, onOpenApp }: Props) {
       <div className="p-4 rounded-2xl bg-[var(--bg-secondary)]/85 backdrop-blur-md border border-[var(--border-subtle)] shadow-xl relative overflow-hidden group">
         <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 via-pink-500 to-amber-500 opacity-70" />
         <div className="flex items-center justify-between text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider">
-          <span>SHELL:B STATION</span>
+          <span>{t('SHELL:B STATION')}</span>
           <span className="flex items-center gap-1 text-emerald-400">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            ONLINE
+            {t('ONLINE')}
           </span>
         </div>
 
@@ -80,14 +81,14 @@ export function DesktopWidgets({ status, onOpenApp }: Props) {
             onClick={() => onOpenApp('models')}
             className="text-[10px] text-[var(--accent-soft)] hover:underline"
           >
-            Models →
+            {t('Models →')}
           </button>
         </div>
 
         {/* Memory Bar */}
         <div>
           <div className="flex justify-between text-[10px] text-[var(--text-secondary)] font-mono mb-1">
-            <span>Unified Memory</span>
+            <span>{t('Unified memory')}</span>
             <span>
               {fmtBytes(memUsed)} / {fmtBytes(memTotal)} ({memPct}%)
             </span>
@@ -107,7 +108,7 @@ export function DesktopWidgets({ status, onOpenApp }: Props) {
         {status?.loaded && status.loaded.length > 0 && (
           <div className="pt-2 border-t border-[var(--border-subtle)] space-y-1">
             <div className="text-[10px] text-[var(--text-muted)] font-mono uppercase tracking-wider">
-              VRAM Loaded:
+              {t('VRAM loaded:')}
             </div>
             <div className="flex flex-wrap gap-1">
               {status.loaded.map(m => (
@@ -124,12 +125,12 @@ export function DesktopWidgets({ status, onOpenApp }: Props) {
 
         {/* Service status health summary */}
         <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center justify-between text-[11px]">
-          <span className="text-[var(--text-secondary)]">Neural Services</span>
+          <span className="text-[var(--text-secondary)]">{t('Neural Services')}</span>
           <span className="flex items-center gap-1 font-mono text-[10px] text-[var(--text-muted)]">
             {allServicesOk ? (
               <>
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span>{svcOk}/{svcCount} Healthy</span>
+                <span>{t('{ok}/{count} Healthy', { ok: svcOk, count: svcCount })}</span>
               </>
             ) : (
               <>
@@ -158,7 +159,7 @@ export function DesktopWidgets({ status, onOpenApp }: Props) {
               <div className="text-[10px] text-[var(--text-muted)] truncate font-mono">
                 {djState.playing
                   ? `${djState.song?.style ?? 'Auto'} · ${djState.bpm} BPM`
-                  : 'Station Standby'}
+                  : t('Station Standby')}
               </div>
             </div>
           </div>

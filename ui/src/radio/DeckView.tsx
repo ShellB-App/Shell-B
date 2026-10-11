@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { STYLES, type SongInfo, type DeckEqState } from '../dj/engine';
 import { getCamelotCode, evaluateHarmonicMix, type HarmonicRelationship } from './camelot';
+import { t } from '../i18n';
 
 interface DeckViewProps {
   deckId: 'A' | 'B';
@@ -97,7 +98,7 @@ export function DeckView({
               )}
             />
             <span className="text-[11px] font-mono uppercase tracking-wider text-[var(--text-muted)]">
-              {isOnAir ? (isPlaying ? 'LIVE ON AIR' : 'PAUSED') : 'CUED / READY'}
+              {isOnAir ? (isPlaying ? t('LIVE ON AIR') : t('PAUSED')) : t('CUED / READY')}
             </span>
           </div>
         </div>
@@ -106,7 +107,7 @@ export function DeckView({
         {camelot && (
           <div
             className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] text-[11px] font-mono"
-            title={`Camelot Key: ${camelot.code} (${camelot.name})`}
+            title={t('Camelot Key: {code} ({name})', { code: camelot.code, name: camelot.name })}
           >
             <span className="text-violet-400 font-bold">{camelot.code}</span>
             <span className="text-[var(--text-muted)]">·</span>
@@ -180,10 +181,10 @@ export function DeckView({
                   backgroundColor: styleDef?.hues ? `hsl(${styleDef.hues[0]}, 75%, 45%)` : '#ec4899',
                 }}
               >
-                {styleDef?.label ?? 'Empty'}
+                {styleDef?.label ? t(styleDef.label) : t('Empty')}
               </span>
               <span className="text-[11px] font-mono text-[var(--text-muted)]">
-                {song ? `${song.form} form · ${totalBars} bars` : 'No track loaded'}
+                {song ? t('{form} form · {totalBars} bars', { form: song.form, totalBars: totalBars }) : t('No track loaded')}
               </span>
             </div>
 
@@ -191,7 +192,7 @@ export function DeckView({
               className="text-base sm:text-lg font-bold text-[var(--text-primary)] truncate mt-1"
               title={song?.title}
             >
-              {song?.title ?? 'Procedural Deck Idle'}
+              {song?.title ?? t('Procedural Deck Idle')}
             </h3>
 
             {/* Harmonic Relation Badge */}
@@ -216,10 +217,10 @@ export function DeckView({
           <div className="mt-3">
             <div className="flex items-center justify-between text-[11px] font-mono text-[var(--text-muted)] mb-1">
               <span className="text-[var(--text-primary)] font-medium">
-                {section ? `Section: ${section}` : 'Cue'}
+                {section ? t('Section: {section}', { section: section }) : t('Cue')}
               </span>
               <span>
-                Bar {bar + 1} / {totalBars} ({Math.round(progress * 100)}%)
+                {t('Bar {n} / {total} ({pct}%)', { n: bar + 1, total: totalBars, pct: Math.round(progress * 100) })}
               </span>
             </div>
             {/* Visual Section Progress Bar */}
@@ -250,12 +251,12 @@ export function DeckView({
               {isOnAir && isPlaying ? (
                 <>
                   <Pause className="w-3.5 h-3.5 fill-current" />
-                  <span>Pause</span>
+                  <span>{t('Pause')}</span>
                 </>
               ) : (
                 <>
                   <Play className="w-3.5 h-3.5 fill-current" />
-                  <span>{isOnAir ? 'Resume' : 'Cue & Play'}</span>
+                  <span>{isOnAir ? t('Resume') : t('Cue & Play')}</span>
                 </>
               )}
             </button>
@@ -264,10 +265,10 @@ export function DeckView({
               <button
                 onClick={onMixNow}
                 className="px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-medium border border-cyan-500/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 transition"
-                title="Transition into Deck B now"
+                title={t('Transition into Deck B now')}
               >
                 <Zap className="w-3.5 h-3.5" />
-                <span>Mix In</span>
+                <span>{t('Mix In')}</span>
               </button>
             )}
 
@@ -275,7 +276,7 @@ export function DeckView({
               <button
                 onClick={onReroll}
                 className="p-2 rounded-xl border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition"
-                title="Reroll new procedural track"
+                title={t('Reroll new procedural track')}
               >
                 <Shuffle className="w-4 h-4" />
               </button>
@@ -286,14 +287,14 @@ export function DeckView({
               <button
                 onClick={() => onJumpBeats(-4)}
                 className="px-2 py-1 rounded-lg border border-[var(--border-subtle)] text-[10px] font-mono text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
-                title="Jump -4 Beats"
+                title={t('Jump -4 Beats')}
               >
                 -4
               </button>
               <button
                 onClick={() => onJumpBeats(4)}
                 className="px-2 py-1 rounded-lg border border-[var(--border-subtle)] text-[10px] font-mono text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
-                title="Jump +4 Beats"
+                title={t('Jump +4 Beats')}
               >
                 +4
               </button>
@@ -307,7 +308,7 @@ export function DeckView({
         {/* 3-Band EQ */}
         <div className="flex flex-col gap-1.5">
           <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-muted)]">
-            Deck 3-Band EQ
+            {t('Deck 3-Band EQ')}
           </span>
           <div className="grid grid-cols-3 gap-2 text-center">
             {/* High */}
@@ -334,7 +335,7 @@ export function DeckView({
                     : 'bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-white'
                 )}
               >
-                Kill
+                {t('Kill')}
               </button>
             </div>
 
@@ -362,7 +363,7 @@ export function DeckView({
                     : 'bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-white'
                 )}
               >
-                Kill
+                {t('Kill')}
               </button>
             </div>
 
@@ -390,7 +391,7 @@ export function DeckView({
                     : 'bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-white'
                 )}
               >
-                Kill
+                {t('Kill')}
               </button>
             </div>
           </div>
@@ -400,7 +401,7 @@ export function DeckView({
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-muted)]">
-              Tempo & Pitch
+              {t('Tempo & Pitch')}
             </span>
             <span className="text-[11px] font-mono font-bold text-[var(--text-primary)]">
               {currentBpm} BPM
@@ -411,7 +412,7 @@ export function DeckView({
             <button
               onClick={() => onNudgeBpm(-1)}
               className="p-1 rounded bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-white"
-              title="Pitch -1 BPM"
+              title={t('Pitch -1 BPM')}
             >
               <ChevronLeft className="w-3.5 h-3.5" />
             </button>
@@ -427,14 +428,14 @@ export function DeckView({
             <button
               onClick={() => onNudgeBpm(1)}
               className="p-1 rounded bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-white"
-              title="Pitch +1 BPM"
+              title={t('Pitch +1 BPM')}
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => song && onSetBpm(song.bpm)}
               className="p-1 rounded bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-white"
-              title="Reset to Original Tempo"
+              title={t('Reset to Original Tempo')}
             >
               <RotateCcw className="w-3 h-3" />
             </button>

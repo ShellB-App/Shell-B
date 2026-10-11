@@ -6,6 +6,7 @@ import { req } from '../api';
 import { assetsApi, type AssetLib } from '../assetsApi';
 import { AudioCard } from './AudioCard';
 import { btn, relTime } from './common';
+import { t as tx } from '../i18n';
 
 /** The Generate playground (#/generate): images, music and sound effects straight from the generators, no chat turn.
  *  Jobs and history come from server/generate.py; keepers go to an asset library through Media's /to-assets. */
@@ -114,7 +115,7 @@ function Segmented<T extends string | number>({ value, options, onChange, label 
         <button key={String(o.id)} role="radio" aria-checked={value === o.id} onClick={() => onChange(o.id)}
           className={clsx('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md transition focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--accent)]',
             value === o.id ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]')}>
-          {o.icon && <o.icon className={clsx('w-3.5 h-3.5', value === o.id && o.tint)} />}{o.label}
+          {o.icon && <o.icon className={clsx('w-3.5 h-3.5', value === o.id && o.tint)} />}{tx(o.label)}
         </button>
       ))}
     </div>
@@ -143,53 +144,53 @@ function Num({ value, onChange, min, max, step = 1, width = 'w-20', ...rest }: {
 
 function ParamControls({ kind, p, set, fluxDev, stableOk }: { kind: Kind; p: Params; set: (patch: Params) => void; fluxDev: boolean; stableOk: boolean }) {
   const seed = kind !== 'music' && (
-    <Field label="Seed" hint="Leave blank for a random seed. Variations count up from it.">
+    <Field label={tx('Seed')} hint={tx('Leave blank for a random seed. Variations count up from it.')}>
       <div className="flex gap-1">
-        <Num value={p.seed} onChange={v => set({ seed: v == null ? null : Math.round(v) })} min={0} max={2147483647} width="w-32" placeholder="random" aria-label="Seed" />
-        <button className={btn.icon} title="Pick a random seed" aria-label="Pick a random seed" onClick={() => set({ seed: Math.floor(Math.random() * 2 ** 31) })}><Dices className="w-4 h-4" /></button>
-        {p.seed != null && <button className={btn.icon} title="Back to random" aria-label="Clear seed" onClick={() => set({ seed: null })}><X className="w-4 h-4" /></button>}
+        <Num value={p.seed} onChange={v => set({ seed: v == null ? null : Math.round(v) })} min={0} max={2147483647} width="w-32" placeholder="random" aria-label={tx('Seed')} />
+        <button className={btn.icon} title={tx('Pick a random seed')} aria-label={tx('Pick a random seed')} onClick={() => set({ seed: Math.floor(Math.random() * 2 ** 31) })}><Dices className="w-4 h-4" /></button>
+        {p.seed != null && <button className={btn.icon} title={tx('Back to random')} aria-label={tx('Clear seed')} onClick={() => set({ seed: null })}><X className="w-4 h-4" /></button>}
       </div>
     </Field>
   );
   if (kind === 'image') return (
     <>
-      <Field label="Size">
-        <select className={clsx(btn.input, 'text-xs w-44')} value={`${p.width}x${p.height}`} aria-label="Image size"
+      <Field label={tx('Size')}>
+        <select className={clsx(btn.input, 'text-xs w-44')} value={`${p.width}x${p.height}`} aria-label={tx('Image size')}
           onChange={e => { const [w, h] = e.target.value.split('x').map(Number); set({ width: w, height: h }); }}>
-          {SIZES.map(s => <option key={s.label} value={`${s.w}x${s.h}`}>{s.label} · {s.w}×{s.h}</option>)}
-          {!SIZES.some(s => s.w === p.width && s.h === p.height) && <option value={`${p.width}x${p.height}`}>Custom · {p.width}×{p.height}</option>}
+          {SIZES.map(s => <option key={s.label} value={`${s.w}x${s.h}`}>{tx(s.label)} · {s.w}×{s.h}</option>)}
+          {!SIZES.some(s => s.w === p.width && s.h === p.height) && <option value={`${p.width}x${p.height}`}>{tx('Custom · {width}×{height}', { width: p.width ?? 0, height: p.height ?? 0 })}</option>}
         </select>
       </Field>
       {fluxDev && (
-        <Field label="Model">
-          <Segmented label="Model" value={p.quality ?? 'draft'} onChange={q => set({ quality: q, steps: q === 'high' ? 24 : 4 })}
+        <Field label={tx('Model')}>
+          <Segmented label={tx('Model')} value={p.quality ?? 'draft'} onChange={q => set({ quality: q, steps: q === 'high' ? 24 : 4 })}
             options={[{ id: 'draft', label: 'Schnell' }, { id: 'high', label: 'Dev' }]} />
         </Field>
       )}
-      <Field label="Steps" hint={p.quality === 'high' ? 'FLUX.1-dev: 20–30 is the sweet spot' : 'FLUX.1-schnell is distilled for 4 steps; 1–8 allowed'}>
-        <Num value={p.steps} onChange={v => set({ steps: v ?? undefined })} min={1} max={p.quality === 'high' ? 50 : 8} width="w-16" aria-label="Steps" />
+      <Field label={tx('Steps')} hint={p.quality === 'high' ? tx('FLUX.1-dev: 20–30 is the sweet spot') : tx('FLUX.1-schnell is distilled for 4 steps; 1–8 allowed')}>
+        <Num value={p.steps} onChange={v => set({ steps: v ?? undefined })} min={1} max={p.quality === 'high' ? 50 : 8} width="w-16" aria-label={tx('Steps')} />
       </Field>
       {seed}
     </>
   );
   return (
     <>
-      <Field label="Length (s)">
-        <Num value={p.duration} onChange={v => set({ duration: v ?? undefined })} min={kind === 'music' ? 3 : 0.5} max={kind === 'music' ? 30 : stableOk ? 46 : 30} step={kind === 'music' ? 1 : 0.5} width="w-20" aria-label="Length in seconds" />
+      <Field label={tx('Length (s)')}>
+        <Num value={p.duration} onChange={v => set({ duration: v ?? undefined })} min={kind === 'music' ? 3 : 0.5} max={kind === 'music' ? 30 : stableOk ? 46 : 30} step={kind === 'music' ? 1 : 0.5} width="w-20" aria-label={tx('Length in seconds')} />
       </Field>
       {kind === 'music' ? (
-        <Field label="Guidance" hint="How closely MusicGen follows the prompt. 3 is its default; higher is more literal, less varied.">
-          <Num value={p.guidance} onChange={v => set({ guidance: v ?? undefined })} min={1} max={10} step={0.5} width="w-16" aria-label="Guidance" />
+        <Field label={tx('Guidance')} hint={tx('How closely MusicGen follows the prompt. 3 is its default; higher is more literal, less varied.')}>
+          <Num value={p.guidance} onChange={v => set({ guidance: v ?? undefined })} min={1} max={10} step={0.5} width="w-16" aria-label={tx('Guidance')} />
         </Field>
       ) : stableOk && (
-        <Field label="Steps" hint="Stable Audio diffusion steps: 100 is its default, 50 is quicker and usually fine for one-shots.">
-          <Num value={p.steps} onChange={v => set({ steps: v ?? undefined })} min={10} max={250} step={10} width="w-20" aria-label="Steps" />
+        <Field label={tx('Steps')} hint={tx('Stable Audio diffusion steps: 100 is its default, 50 is quicker and usually fine for one-shots.')}>
+          <Num value={p.steps} onChange={v => set({ steps: v ?? undefined })} min={10} max={250} step={10} width="w-20" aria-label={tx('Steps')} />
         </Field>
       )}
-      <Field label="Loop" hint={kind === 'music' ? 'Crossfades the ends so the track loops without a seam' : 'For ambience: crossfaded into a seamless loop instead of trimmed to the transient'}>
+      <Field label={tx('Loop')} hint={kind === 'music' ? tx('Crossfades the ends so the track loops without a seam') : tx('For ambience: crossfaded into a seamless loop instead of trimmed to the transient')}>
         <button role="switch" aria-checked={!!p.loop} onClick={() => set({ loop: !p.loop })}
           className={clsx('h-[30px] px-2.5 rounded-lg border text-xs transition', p.loop ? 'border-[var(--accent)]/60 bg-[var(--accent)]/15 text-[var(--text-primary)]' : 'border-[var(--border-subtle)] bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:text-[var(--text-primary)]')}>
-          {p.loop ? 'Seamless' : 'One-shot'}
+          {p.loop ? tx('Seamless') : tx('One-shot')}
         </button>
       </Field>
       {seed && stableOk ? seed : null}
@@ -206,17 +207,17 @@ function SaveToLibrary({ mediaId, libs, loadLibs }: { mediaId: string; libs: Ass
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   useEffect(() => { if (libs && !lib) setLib(libs[0]?.id ?? ''); }, [libs, lib]);
   if (!open) return (
-    <button className={btn.ghost} onClick={() => { setOpen(true); loadLibs(); }} title="Copy into an asset library">
-      <Shapes className="w-3.5 h-3.5 text-lime-400" />Save
+    <button className={btn.ghost} onClick={() => { setOpen(true); loadLibs(); }} title={tx('Copy into an asset library')}>
+      <Shapes className="w-3.5 h-3.5 text-lime-400" />{tx('Save')}
     </button>
   );
   return (
     <div className="basis-full flex flex-col gap-1.5 pt-2">
-      {libs === null ? <span className="text-[11px] text-[var(--text-muted)] flex items-center gap-1.5"><Loader2 className="w-3 h-3 animate-spin" />Loading libraries…</span>
-        : libs.length === 0 ? <span className="text-[11px] text-[var(--text-muted)]">No unlocked asset libraries yet. Make one on the <a className="underline" href="#/assets">Assets</a> page.</span>
+      {libs === null ? <span className="text-[11px] text-[var(--text-muted)] flex items-center gap-1.5"><Loader2 className="w-3 h-3 animate-spin" />{tx('Loading libraries…')}</span>
+        : libs.length === 0 ? <span className="text-[11px] text-[var(--text-muted)]">{tx('No unlocked asset libraries yet. Make one on the')} <a className="underline" href="#/assets">{tx('Assets')}</a> page.</span>
         : (
           <div className="flex gap-1.5">
-            <select className={clsx(btn.input, 'text-xs')} value={lib} onChange={e => setLib(e.target.value)} aria-label="Asset library">
+            <select className={clsx(btn.input, 'text-xs')} value={lib} onChange={e => setLib(e.target.value)} aria-label={tx('Asset library')}>
               {libs.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
             </select>
             <button className={btn.primary} disabled={!lib || busy} onClick={async () => {
@@ -224,18 +225,18 @@ function SaveToLibrary({ mediaId, libs, loadLibs }: { mediaId: string; libs: Ass
               try { const r = await gen.toAssets(mediaId, lib); setMsg({ ok: true, text: r.status === 'duplicate' ? `Already in ${r.lib.name}.` : `Added to ${r.lib.name}.` }); }
               catch (e) { setMsg({ ok: false, text: clean(e) }); }
               setBusy(false);
-            }}>{busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Add'}</button>
-            <button className={btn.icon} onClick={() => { setOpen(false); setMsg(null); }} aria-label="Close"><X className="w-3.5 h-3.5" /></button>
+            }}>{busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : tx('Add')}</button>
+            <button className={btn.icon} onClick={() => { setOpen(false); setMsg(null); }} aria-label={tx('Close')}><X className="w-3.5 h-3.5" /></button>
           </div>
         )}
-      {msg && <span className={clsx('text-[11px] flex items-center gap-1', msg.ok ? 'text-[var(--text-secondary)]' : 'text-red-400')}>{msg.ok && <Check className="w-3 h-3 text-lime-400" />}{msg.text}</span>}
+      {msg && <span className={clsx('text-[11px] flex items-center gap-1', msg.ok ? 'text-[var(--text-secondary)]' : 'text-red-400')}>{msg.ok && <Check className="w-3 h-3 text-lime-400" />}{tx(msg.text)}</span>}
     </div>
   );
 }
 
 function Preview({ it, big }: { it: Item; big?: boolean }) {
   if (it.kind === 'image') return (
-    <a href={it.url} target="_blank" rel="noreferrer" className="block bg-[var(--bg-tertiary)]" title="Open full size">
+    <a href={it.url} target="_blank" rel="noreferrer" className="block bg-[var(--bg-tertiary)]" title={tx('Open full size')}>
       <img src={it.url} alt={it.prompt.slice(0, 160)} loading="lazy" className={clsx('w-full object-contain', big ? 'max-h-[60vh]' : 'aspect-square object-cover')}
         style={!big && it.params.width && it.params.height ? { aspectRatio: `${it.params.width} / ${it.params.height}` } : undefined} />
     </a>
@@ -253,19 +254,19 @@ function ResultCard({ it, comparing, onCompare, onRetry, onReuse, libs, loadLibs
       <div className="px-3 pt-2 pb-1 space-y-1 border-t border-[var(--border-subtle)]">
         {showPrompt && <p className="text-xs leading-snug text-[var(--text-primary)] line-clamp-2" title={it.prompt}>{it.prompt}</p>}
         <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)] min-w-0">
-          <span className="font-mono text-[var(--text-secondary)] shrink-0" title={it.seed == null ? 'This engine takes no seed' : 'Seed'}>
-            {it.seed == null ? 'no seed' : `#${it.seed}`}</span>
+          <span className="font-mono text-[var(--text-secondary)] shrink-0" title={it.seed == null ? tx('This engine takes no seed') : tx('Seed')}>
+            {it.seed == null ? tx('no seed') : `#${it.seed}`}</span>
           <span className="truncate">{paramLine(it.kind, it.params, it.model)}</span>
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-0.5 px-1.5 pb-1.5 mt-auto">
         <button className={btn.ghost} onClick={onRetry} disabled={busy}
-          title={it.seed == null ? 'Same prompt and settings, a fresh take' : `Run again with seed ${it.seed}`}>
-          <RotateCcw className="w-3.5 h-3.5" />{it.seed == null ? 'Again' : 'Retry'}</button>
-        <button className={btn.ghost} onClick={onReuse} title="Put this prompt and its settings back in the prompt bar"><CornerUpLeft className="w-3.5 h-3.5" />Reuse</button>
-        <button className={clsx(btn.ghost, comparing && 'text-[var(--accent)]')} onClick={onCompare} aria-pressed={comparing} title="Pin to the comparison strip">
-          <Columns2 className="w-3.5 h-3.5" />{comparing ? 'Pinned' : 'Compare'}</button>
-        <a className={btn.icon} href={it.url} download aria-label="Download" title="Download"><Download className="w-3.5 h-3.5" /></a>
+          title={it.seed == null ? tx('Same prompt and settings, a fresh take') : tx('Run again with seed {seed}', { seed: it.seed })}>
+          <RotateCcw className="w-3.5 h-3.5" />{it.seed == null ? tx('Again') : tx('Retry')}</button>
+        <button className={btn.ghost} onClick={onReuse} title={tx('Put this prompt and its settings back in the prompt bar')}><CornerUpLeft className="w-3.5 h-3.5" />{tx('Reuse')}</button>
+        <button className={clsx(btn.ghost, comparing && 'text-[var(--accent)]')} onClick={onCompare} aria-pressed={comparing} title={tx('Pin to the comparison strip')}>
+          <Columns2 className="w-3.5 h-3.5" />{comparing ? tx('Pinned') : tx('Compare')}</button>
+        <a className={btn.icon} href={it.url} download aria-label={tx('Download')} title={tx('Download')}><Download className="w-3.5 h-3.5" /></a>
         {it.mediaId && <SaveToLibrary mediaId={it.mediaId} libs={libs} loadLibs={loadLibs} />}
       </div>
     </article>
@@ -391,15 +392,15 @@ export function Generate() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight leading-tight">Generate</h1>
+            <h1 className="text-xl font-semibold tracking-tight leading-tight">{tx('Generate')}</h1>
             <p className="text-sm text-[var(--text-secondary)] max-w-[65ch] leading-relaxed">
-              Prompt the image, music and sound models directly. Every result lands in Library → Media; keep the good ones in an asset library.</p>
+              {tx('Prompt the image, music and sound models directly. Every result lands in Library → Media; keep the good ones in an asset library.')}</p>
           </div>
-          <ul className="flex flex-wrap gap-1.5 text-[11px]" aria-label="Generator services">
+          <ul className="flex flex-wrap gap-1.5 text-[11px]" aria-label={tx('Generator services')}>
             {(Object.keys(SERVICE) as ServiceId[]).map(id => {
               const ok = ov?.services[id]?.ok;
               return (
-                <li key={id} title={`${SERVICE[id].what} on :${SERVICE[id].port}${ok === false ? ' — not responding' : ''}`}
+                <li key={id} title={tx('{what} on :{port}{v0}', { what: SERVICE[id].what, port: SERVICE[id].port, v0: ok === false ? ' — not responding' : '' })}
                   className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
                   <span className={clsx('w-1.5 h-1.5 rounded-full', ok === undefined ? 'bg-[var(--text-muted)]' : ok ? 'bg-emerald-400' : 'bg-red-400')} />
                   <span className="tracking-wider uppercase text-[var(--text-secondary)]">{SERVICE[id].name}</span>
@@ -411,18 +412,18 @@ export function Generate() {
         </header>
 
         {/* prompt bar */}
-        <section className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]" aria-label="New generation">
+        <section className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]" aria-label={tx('New generation')}>
           <div className="flex flex-wrap items-center justify-between gap-2 px-3 pt-3">
-            <Segmented label="What to make" value={kind} onChange={k => { setKind(k); setSubmitErr(null); }}
+            <Segmented label={tx('What to make')} value={kind} onChange={k => { setKind(k); setSubmitErr(null); }}
               options={KINDS.map(k => ({ id: k.id, label: k.label, icon: k.icon, tint: k.tint }))} />
             <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
-              <span className="uppercase tracking-wider">Variations</span>
-              <Segmented label="Variations" value={count} onChange={setCount}
+              <span className="uppercase tracking-wider">{tx('Variations')}</span>
+              <Segmented label={tx('Variations')} value={count} onChange={setCount}
                 options={Array.from({ length: maxCount }, (_, i) => ({ id: i + 1, label: String(i + 1) }))} />
             </div>
           </div>
           <div className="px-3 pt-3">
-            <textarea ref={promptRef} value={prompt} onChange={e => setPrompt(e.target.value)} rows={3} aria-label="Prompt"
+            <textarea ref={promptRef} value={prompt} onChange={e => setPrompt(e.target.value)} rows={3} aria-label={tx('Prompt')}
               placeholder={PLACEHOLDER[kind]}
               onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); submit(); } }}
               className="w-full resize-y min-h-[72px] px-3 py-2 text-sm leading-relaxed rounded-lg bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]/70" />
@@ -433,13 +434,13 @@ export function Generate() {
               <span className="hidden sm:inline text-[10px] text-[var(--text-muted)]"><kbd className="font-mono">Ctrl</kbd>+<kbd className="font-mono">Enter</kbd></span>
               <button className={clsx(btn.primary, 'h-[30px] px-4')} onClick={submit} disabled={submitting || !!blocked || !prompt.trim()}>
                 {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <kd.icon className="w-3.5 h-3.5" />}
-                Generate {count} {kd.noun[count === 1 ? 0 : 1]}
+                {tx('Generate')} {count} {kd.noun[count === 1 ? 0 : 1]}
               </button>
             </div>
           </div>
           {(blocked || note || submitErr || ovErr) && (
             <div className="px-3 pb-3 space-y-1.5">
-              {ovErr && <p className="flex items-start gap-1.5 text-xs text-red-400"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />Couldn't reach the Generate API: {ovErr}</p>}
+              {ovErr && <p className="flex items-start gap-1.5 text-xs text-red-400"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />{tx('Couldn\'t reach the Generate API:')} {ovErr}</p>}
               {blocked && <p className="flex items-start gap-1.5 text-xs text-red-400"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" /><span>{blocked}</span></p>}
               {note && <p className="flex items-start gap-1.5 text-xs text-amber-400"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" /><span>{note}</span></p>}
               {submitErr && <p className="flex items-start gap-1.5 text-xs text-red-400"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" /><span>{submitErr}</span></p>}
@@ -449,11 +450,11 @@ export function Generate() {
 
         {/* comparison strip */}
         {compare.length > 0 && (
-          <section aria-label="Comparison" className="space-y-2">
+          <section aria-label={tx('Comparison')} className="space-y-2">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-medium flex items-center gap-1.5"><Columns2 className="w-4 h-4 text-[var(--text-secondary)]" />Side by side
-                <span className="text-[11px] font-normal text-[var(--text-muted)]">{compare.length} of 4 pinned</span></h2>
-              <button className={btn.ghost} onClick={() => setCompare([])}>Clear</button>
+              <h2 className="text-sm font-medium flex items-center gap-1.5"><Columns2 className="w-4 h-4 text-[var(--text-secondary)]" />{tx('Side by side')}
+                <span className="text-[11px] font-normal text-[var(--text-muted)]">{tx('{length} of 4 pinned', { length: compare.length })}</span></h2>
+              <button className={btn.ghost} onClick={() => setCompare([])}>{tx('Clear')}</button>
             </div>
             <div className={clsx('grid gap-3', compare.length === 1 ? 'grid-cols-1 max-w-xl' : compare.length === 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4')}>
               {compare.map(it => (
@@ -462,9 +463,9 @@ export function Generate() {
                   <figcaption className="px-3 py-2 border-t border-[var(--border-subtle)] space-y-1">
                     <p className="text-xs leading-snug line-clamp-3" title={it.prompt}>{it.prompt}</p>
                     <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
-                      <span className="font-mono text-[var(--text-secondary)]">{it.seed == null ? 'no seed' : `#${it.seed}`}</span>
+                      <span className="font-mono text-[var(--text-secondary)]">{it.seed == null ? tx('no seed') : `#${it.seed}`}</span>
                       <span className="truncate flex-1">{paramLine(it.kind, it.params, it.model)}</span>
-                      <button className={btn.icon} onClick={() => toggleCompare(it)} aria-label="Unpin"><X className="w-3.5 h-3.5" /></button>
+                      <button className={btn.icon} onClick={() => toggleCompare(it)} aria-label={tx('Unpin')}><X className="w-3.5 h-3.5" /></button>
                     </div>
                   </figcaption>
                 </figure>
@@ -475,7 +476,7 @@ export function Generate() {
 
         {/* this session's jobs */}
         {jobs.length > 0 && (
-          <section aria-label="Recent jobs" className="space-y-5">
+          <section aria-label={tx('Recent jobs')} className="space-y-5">
             {jobs.map(j => {
               const items = jobItems(j);
               const pending = ['queued', 'running'].includes(j.status) ? j.count - items.length : 0;
@@ -493,17 +494,17 @@ export function Generate() {
                         <span>{relTime(j.created * 1000)}</span>
                       </p>
                       {j.error && <p className="mt-1 text-xs text-red-400 max-w-[75ch] break-words">{j.error}</p>}
-                      {j.note && <p className="mt-1 text-[11px] text-[var(--text-muted)]">{j.note}</p>}
+                      {j.note && <p className="mt-1 text-[11px] text-[var(--text-muted)]">{tx(j.note)}</p>}
                     </div>
                     {(j.status === 'queued' || j.status === 'running') ? (
                       <button className={btn.ghost} onClick={() => gen.stop(j.id).then(refresh).catch(e => setSubmitErr(clean(e)))}
                         disabled={j.status === 'running' && j.results.length + 1 >= j.count}
-                        title={j.status === 'queued' ? 'Drop it from the queue' : 'Finish the current variation, then stop'}>
-                        <CircleStop className="w-3.5 h-3.5" />{j.status === 'queued' ? 'Cancel' : 'Stop'}</button>
+                        title={j.status === 'queued' ? tx('Drop it from the queue') : tx('Finish the current variation, then stop')}>
+                        <CircleStop className="w-3.5 h-3.5" />{j.status === 'queued' ? tx('Cancel') : tx('Stop')}</button>
                     ) : (
                       <div className="flex">
-                        {j.status === 'failed' && <button className={btn.ghost} disabled={submitting} onClick={() => run(j.kind, j.prompt, j.params, j.count)}><RotateCcw className="w-3.5 h-3.5" />Try again</button>}
-                        <button className={btn.icon} title="Remove from this list (the files stay in Media)" aria-label="Dismiss"
+                        {j.status === 'failed' && <button className={btn.ghost} disabled={submitting} onClick={() => run(j.kind, j.prompt, j.params, j.count)}><RotateCcw className="w-3.5 h-3.5" />{tx('Try again')}</button>}
+                        <button className={btn.icon} title={tx('Remove from this list (the files stay in Media)')} aria-label={tx('Dismiss')}
                           onClick={() => gen.forget(j.id).then(refresh).catch(() => {})}><X className="w-3.5 h-3.5" /></button>
                       </div>
                     )}
@@ -521,22 +522,22 @@ export function Generate() {
         )}
 
         {/* history */}
-        <section aria-label="History" className="space-y-3 pt-2 border-t border-[var(--border-subtle)]">
+        <section aria-label={tx('History')} className="space-y-3 pt-2 border-t border-[var(--border-subtle)]">
           <div className="flex flex-wrap items-center justify-between gap-2 pt-4">
-            <h2 className="text-sm font-medium flex items-center gap-1.5"><History className="w-4 h-4 text-[var(--text-secondary)]" />Earlier generations</h2>
-            <Segmented label="Filter history" value={histKind} onChange={k => { setHistKind(k); setHistShown(24); }}
+            <h2 className="text-sm font-medium flex items-center gap-1.5"><History className="w-4 h-4 text-[var(--text-secondary)]" />{tx('Earlier generations')}</h2>
+            <Segmented label={tx('Filter history')} value={histKind} onChange={k => { setHistKind(k); setHistShown(24); }}
               options={[{ id: '' as const, label: 'All' }, ...KINDS.map(k => ({ id: k.id, label: k.label === 'Sound effect' ? 'Sounds' : k.label }))]} />
           </div>
           {histErr ? (
-            <p className="flex items-center gap-2 text-xs text-red-400"><AlertTriangle className="w-3.5 h-3.5" />Couldn't load history: {histErr}
-              <button className={btn.ghost} onClick={loadHist}>Retry</button></p>
+            <p className="flex items-center gap-2 text-xs text-red-400"><AlertTriangle className="w-3.5 h-3.5" />{tx('Couldn\'t load history:')} {histErr}
+              <button className={btn.ghost} onClick={loadHist}>{tx('Retry')}</button></p>
           ) : hist === null ? (
             <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} kind="image" p={{}} />)}</div>
           ) : histItems.length === 0 ? (
             <p className="text-sm text-[var(--text-muted)] max-w-[65ch] leading-relaxed">
-              {jobs.length ? 'Everything made so far is listed above.' : histKind
-                ? `No ${kindDef(histKind).noun[1]} made here yet.`
-                : 'Nothing made here yet. Describe a picture, a piece of music or a sound above and generate a few variations to compare.'}
+              {jobs.length ? tx('Everything made so far is listed above.') : histKind
+                ? tx('No {v0} made here yet.', { v0: kindDef(histKind).noun[1] })
+                : tx('Nothing made here yet. Describe a picture, a piece of music or a sound above and generate a few variations to compare.')}
             </p>
           ) : (
             <>
@@ -549,7 +550,7 @@ export function Generate() {
                 ))}
               </div>
               {histItems.length > histShown && (
-                <button className={btn.subtle} onClick={() => setHistShown(n => n + 24)}>Show {Math.min(24, histItems.length - histShown)} more</button>
+                <button className={btn.subtle} onClick={() => setHistShown(n => n + 24)}>{tx('Show {v0} more', { v0: Math.min(24, histItems.length - histShown) })}</button>
               )}
             </>
           )}

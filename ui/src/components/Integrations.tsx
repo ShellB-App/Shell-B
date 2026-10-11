@@ -79,13 +79,13 @@ export function IntegrationsModal({ open, onClose, tools, settings, onChanged, t
   ] as const).filter(t => !isCell() || CELL_TABS.has(t.id));
 
   return (
-    <Modal open={open} onClose={onClose} title="Tools & Connectors" icon={<Plug className="w-4 h-4 text-sky-400" />} wide>
+    <Modal open={open} onClose={onClose} title={tx('Tools & Connectors')} icon={<Plug className="w-4 h-4 text-sky-400" />} wide>
       <div className="flex-1 min-h-0 flex flex-col sm:flex-row">
         <div className="sm:w-48 shrink-0 p-2 flex sm:flex-col gap-1 border-b sm:border-b-0 sm:border-r border-[var(--border-subtle)] overflow-x-auto">
           {tabs.map(t => (
             <button key={t.id} onClick={() => { setTab(t.id); setEditing(null); }}
               className={clsx('flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[13px] transition whitespace-nowrap', tab === t.id ? 'bg-[var(--bg-hover)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]')}>
-              <t.icon className="w-4 h-4" />{t.label}
+              <t.icon className="w-4 h-4" />{tx(t.label)}
             </button>
           ))}
         </div>
@@ -157,8 +157,8 @@ export function AdminGate({ onUnlocked }: { onUnlocked: () => void }) {
 function Badge({ local }: { local: boolean | null }) {
   if (local === null) return null;
   return local
-    ? <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">on this machine</span>
-    : <span className="px-1.5 py-0.5 rounded text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/20 inline-flex items-center gap-1"><Cloud className="w-2.5 h-2.5" />external service</span>;
+    ? <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">{tx('on this machine')}</span>
+    : <span className="px-1.5 py-0.5 rounded text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/20 inline-flex items-center gap-1"><Cloud className="w-2.5 h-2.5" />{tx('external service')}</span>;
 }
 
 function ConnectorGallery({ connectors, servers, onPick }: { connectors: Connector[]; servers: McpServer[]; onPick: (c: Connector) => void }) {
@@ -166,15 +166,14 @@ function ConnectorGallery({ connectors, servers, onPick }: { connectors: Connect
   return (
     <div className="space-y-5">
       <p className="text-xs text-[var(--text-muted)]">
-        Connectors plug outside services and data into Shell:B agents through the Model Context Protocol. After adding one,
-        give it to agents in the Agent Lab (it appears in their tool list).
+        {tx('Connectors plug outside services and data into Shell:B agents through the Model Context Protocol. After adding one, give it to agents in the Agent Lab (it appears in their tool list).')}
       </p>
       {groups.map(g => {
         const list = connectors.filter(c => c.category === g);
         if (!list.length) return null;
         return (
           <div key={g}>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">{g === 'Cloud' ? 'Online services' : g}</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">{g === 'Cloud' ? tx('Online services') : g}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {list.map(c => {
                 const Icon = connectorIcon(c.icon);
@@ -192,7 +191,7 @@ function ConnectorGallery({ connectors, servers, onPick }: { connectors: Connect
                       </span>
                       {count > 0 && <span className="text-[10px] text-emerald-500 shrink-0">{count} added</span>}
                     </div>
-                    <p className="text-[11px] text-[var(--text-muted)] mt-2 leading-snug">{c.description}</p>
+                    <p className="text-[11px] text-[var(--text-muted)] mt-2 leading-snug">{tx(c.description)}</p>
                   </button>
                 );
               })}
@@ -234,47 +233,47 @@ function ConnectorForm({ connector, server, locked, onCancel, onSaved }: {
       <div className="flex items-center gap-3">
         <span className="w-10 h-10 rounded-xl bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] flex items-center justify-center"><Icon className="w-5 h-5 text-sky-400" /></span>
         <div>
-          <div className="text-sm font-semibold">{server ? `Edit ${server.name}` : `Add ${connector.name}`}</div>
-          <div className="text-xs text-[var(--text-muted)]">{connector.description}</div>
+          <div className="text-sm font-semibold">{server ? tx('Edit {name}', { name: server.name }) : tx('Add {name}', { name: connector.name })}</div>
+          <div className="text-xs text-[var(--text-muted)]">{tx(connector.description)}</div>
         </div>
       </div>
       {connector.local === false && (
         <div className="text-[11px] p-2 rounded-lg border border-sky-500/20 bg-sky-500/5 text-[var(--text-secondary)]">
-          This is an external service: whatever agents send to these tools leaves this machine.
+          {tx('This is an external service: whatever agents send to these tools leaves this machine.')}
         </div>
       )}
-      <label className="block text-[11px] text-[var(--text-muted)]">Name
+      <label className="block text-[11px] text-[var(--text-muted)]">{tx('Name')}
         <input className={btn.input} value={name} onChange={e => setName(e.target.value)} />
       </label>
       {connector.fields.map(f => (
         <div key={f.key}>
           {f.kind === 'bool' ? (
             <label className="flex items-center justify-between gap-3 text-sm">
-              <span>{f.label}{f.hint && <span className="block text-[11px] text-[var(--text-muted)]">{f.hint}</span>}</span>
-              <Toggle on={!!values[f.key]} label={f.label} onChange={v => setValues(s => ({ ...s, [f.key]: v }))} />
+              <span>{tx(f.label)}{f.hint && <span className="block text-[11px] text-[var(--text-muted)]">{tx(f.hint)}</span>}</span>
+              <Toggle on={!!values[f.key]} label={tx(f.label)} onChange={v => setValues(s => ({ ...s, [f.key]: v }))} />
             </label>
           ) : (
-            <label className="block text-[11px] text-[var(--text-muted)]">{f.label}{f.required && ' *'}
+            <label className="block text-[11px] text-[var(--text-muted)]">{tx(f.label)}{f.required && ' *'}
               {f.multiline ? (
-                <textarea className={clsx(btn.input, 'font-mono text-xs min-h-[72px]')} placeholder={values[f.key] === SECRET ? '•••• stored (type to replace)' : f.placeholder}
+                <textarea className={clsx(btn.input, 'font-mono text-xs min-h-[72px]')} placeholder={values[f.key] === SECRET ? tx('•••• stored (type to replace)') : f.placeholder}
                   value={values[f.key] === SECRET ? '' : String(values[f.key] ?? '')}
                   onChange={e => setValues(s => ({ ...s, [f.key]: e.target.value || (server?.values[f.key] === SECRET ? SECRET : '') }))} />
               ) : (
                 <input className={clsx(btn.input, f.kind !== 'text' && 'font-mono')} type={f.kind === 'secret' ? 'password' : 'text'}
-                  placeholder={values[f.key] === SECRET ? '•••• stored (type to replace)' : f.placeholder} autoComplete="off"
+                  placeholder={values[f.key] === SECRET ? tx('•••• stored (type to replace)') : f.placeholder} autoComplete="off"
                   value={values[f.key] === SECRET ? '' : String(values[f.key] ?? '')}
                   onChange={e => setValues(s => ({ ...s, [f.key]: e.target.value || (server?.values[f.key] === SECRET ? SECRET : '') }))} />
               )}
-              {f.hint && <span className="block mt-0.5">{f.hint}</span>}
+              {f.hint && <span className="block mt-0.5">{tx(f.hint)}</span>}
             </label>
           )}
         </div>
       ))}
       {error && <div className="text-xs text-red-400 whitespace-pre-wrap">{error}</div>}
       <div className="flex justify-end gap-2">
-        <button className={btn.subtle} onClick={onCancel}>Cancel</button>
+        <button className={btn.subtle} onClick={onCancel}>{tx('Cancel')}</button>
         <button className={btn.primary} disabled={saving || missing || locked || !name.trim()} onClick={save}>
-          {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}{server ? 'Save' : 'Add connector'}
+          {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}{server ? tx('Save') : tx('Add connector')}
         </button>
       </div>
     </div>
@@ -297,14 +296,14 @@ function ServerList({ servers, connectors, locked, onReload, onEdit, onAdd }: {
     return (
       <div className="text-center py-10">
         <Plug className="w-8 h-8 mx-auto text-[var(--text-muted)]" />
-        <p className="text-sm mt-2">No MCP servers yet.</p>
-        <button className={clsx(btn.primary, 'mt-3')} onClick={onAdd}><Plus className="w-3.5 h-3.5" />Add a connector</button>
+        <p className="text-sm mt-2">{tx('No MCP servers yet.')}</p>
+        <button className={clsx(btn.primary, 'mt-3')} onClick={onAdd}><Plus className="w-3.5 h-3.5" />{tx('Add a connector')}</button>
       </div>
     );
   }
   return (
     <div className="space-y-2">
-      <p className="text-xs text-[var(--text-muted)] mb-3">Each server's tools go to the agents you tick it for in the Agent Lab. Switch a server off to hide it from every agent.</p>
+      <p className="text-xs text-[var(--text-muted)] mb-3">{tx('Each server\'s tools go to the agents you tick it for in the Agent Lab. Switch a server off to hide it from every agent.')}</p>
       {servers.map(s => {
         const conn = connectors.find(c => c.id === s.connector);
         const Icon = connectorIcon(conn?.icon);
@@ -313,7 +312,7 @@ function ServerList({ servers, connectors, locked, onReload, onEdit, onAdd }: {
         return (
           <div key={s.id} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
             <div className="flex items-center gap-3 p-3">
-              <button onClick={() => setOpen(expanded ? null : s.id)} className="text-[var(--text-muted)]" aria-label="Details">
+              <button onClick={() => setOpen(expanded ? null : s.id)} className="text-[var(--text-muted)]" aria-label={tx('Details')}>
                 {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
               </button>
               <span className="w-9 h-9 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] flex items-center justify-center shrink-0">
@@ -327,7 +326,7 @@ function ServerList({ servers, connectors, locked, onReload, onEdit, onAdd }: {
                 </div>
                 <div className="text-[11px] text-[var(--text-muted)] truncate font-mono">
                   {s.transport === 'stdio' ? [s.command?.split('/').pop(), ...(s.args ?? []).map(a => a.split('/').pop())].join(' ') : s.url}
-                  {s.status === 'ready' && ` · ${s.tools.filter(t => t.enabled).length}/${s.tools.length} tools`}
+                  {s.status === 'ready' && tx(' · {length}/{v0} tools', { length: s.tools.filter(t => t.enabled).length, v0: s.tools.length })}
                 </div>
               </div>
               <Toggle on={s.enabled} label={s.name} onChange={async v => { await api.patchMcpServer(s.id, { enabled: v }); onReload(); }} />
@@ -346,7 +345,7 @@ function ServerList({ servers, connectors, locked, onReload, onEdit, onAdd }: {
                           }} />
                         <span className="min-w-0">
                           <span className="block text-xs font-mono">{t.name}{t.readOnly && <span className="ml-1 text-[10px] text-emerald-500 font-sans">read-only</span>}</span>
-                          <span className="block text-[11px] text-[var(--text-muted)] leading-snug line-clamp-2">{t.description}</span>
+                          <span className="block text-[11px] text-[var(--text-muted)] leading-snug line-clamp-2">{tx(t.description)}</span>
                         </span>
                       </label>
                     ))}
@@ -354,12 +353,12 @@ function ServerList({ servers, connectors, locked, onReload, onEdit, onAdd }: {
                 )}
                 <div className="flex justify-end gap-1">
                   <button className={btn.ghost} disabled={busy === s.id} onClick={async () => { setBusy(s.id); try { await api.restartMcpServer(s.id); } finally { setBusy(null); onReload(); } }}>
-                    <RefreshCw className={clsx('w-3.5 h-3.5', busy === s.id && 'animate-spin')} />Reconnect
+                    <RefreshCw className={clsx('w-3.5 h-3.5', busy === s.id && 'animate-spin')} />{tx('Reconnect')}
                   </button>
-                  <button className={btn.ghost} disabled={locked} onClick={() => onEdit(s)}><Pencil className="w-3.5 h-3.5" />Edit</button>
+                  <button className={btn.ghost} disabled={locked} onClick={() => onEdit(s)}><Pencil className="w-3.5 h-3.5" />{tx('Edit')}</button>
                   <button className={clsx(btn.ghost, 'hover:text-red-400')} disabled={locked}
-                    onClick={async () => { if (confirm(`Remove ${s.name}? Agents that use it lose its tools.`)) { await api.deleteMcpServer(s.id); onReload(); } }}>
-                    <Trash2 className="w-3.5 h-3.5" />Remove
+                    onClick={async () => { if (confirm(tx('Remove {name}? Agents that use it lose its tools.', { name: s.name }))) { await api.deleteMcpServer(s.id); onReload(); } }}>
+                    <Trash2 className="w-3.5 h-3.5" />{tx('Remove')}
                   </button>
                 </div>
               </div>
@@ -376,7 +375,7 @@ function ServerList({ servers, connectors, locked, onReload, onEdit, onAdd }: {
 function BuiltinTools({ tools, onChanged }: { tools: ToolInfo[]; onChanged: () => void }) {
   return (
     <div className="space-y-2">
-      <p className="text-xs text-[var(--text-muted)] mb-3">Switch a tool off here to disable it for every agent. Pick which agents get which tools in the Agent Lab.</p>
+      <p className="text-xs text-[var(--text-muted)] mb-3">{tx('Switch a tool off here to disable it for every agent. Pick which agents get which tools in the Agent Lab.')}</p>
       {tools.map(t => {
         const Icon = toolIcon(t.id);
         return (
@@ -388,11 +387,11 @@ function BuiltinTools({ tools, onChanged }: { tools: ToolInfo[]; onChanged: () =
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">{t.displayName}</span>
                 <span className="text-[10px] font-mono text-[var(--text-muted)]">{t.id}</span>
-                {t.scope === 'project' && <span className="px-1.5 py-0.5 rounded text-[10px] bg-rose-500/10 text-rose-400 border border-rose-500/20">Studio</span>}
-                {(t.scope === 'global' || t.scope === 'group') && <span className="px-1.5 py-0.5 rounded text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/20" title={t.auto ? `Added ${t.auto}` : 'Added by Shell:B, not per agent'}>Auto</span>}
+                {t.scope === 'project' && <span className="px-1.5 py-0.5 rounded text-[10px] bg-rose-500/10 text-rose-400 border border-rose-500/20">{tx('Studio')}</span>}
+                {(t.scope === 'global' || t.scope === 'group') && <span className="px-1.5 py-0.5 rounded text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/20" title={t.auto ? tx('Added {auto}', { auto: t.auto }) : tx('Added by Shell:B, not per agent')}>{tx('Auto')}</span>}
               </div>
-              <div className="text-xs text-[var(--text-muted)]">{t.description}</div>
-              {!t.available && <div className="text-[11px] text-amber-400 mt-0.5">Backing service is offline: {SERVICE_NAMES[t.service ?? ''] ?? t.service}</div>}
+              <div className="text-xs text-[var(--text-muted)]">{tx(t.description)}</div>
+              {!t.available && <div className="text-[11px] text-amber-400 mt-0.5">{tx('Backing service is offline: {v0}', { v0: SERVICE_NAMES[t.service ?? ''] ?? t.service })}</div>}
             </div>
             <Toggle on={t.enabled} label={t.displayName} onChange={async v => { await api.setTool(t.id, v); onChanged(); }} />
           </div>
@@ -425,29 +424,27 @@ function AphroditeTab({ settings, locked, onChanged }: { settings?: Settings; lo
         <div className="flex items-start gap-3">
           <Heart className={clsx('w-5 h-5 mt-0.5 shrink-0', on ? 'text-rose-400' : 'text-[var(--text-muted)]')} />
           <div className="flex-1">
-            <div className="text-sm font-semibold">{on ? 'Aphrodite is on' : 'Aphrodite is off'}</div>
+            <div className="text-sm font-semibold">{on ? tx('Aphrodite is on') : tx('Aphrodite is off')}</div>
             <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed max-w-[65ch]">
-              An adult (18+) agent for explicit fiction, roleplay and images of fictional adult characters. It appears only
-              in the owner's signed-in session, runs on local models only, never delegates or is delegated to, and every
-              chat is incognito. Original adult characters only; background checks run quietly on each request.
+              {tx('An adult (18+) agent for explicit fiction, roleplay and images of fictional adult characters. It appears only in the owner\'s signed-in session, runs on local models only, never delegates or is delegated to, and every chat is incognito. Original adult characters only; background checks run quietly on each request.')}
             </p>
           </div>
-          <Toggle on={on} disabled={locked} label="Aphrodite" onChange={v => save({ adultEnabled: v })} />
+          <Toggle on={on} disabled={locked} label={tx('Aphrodite')} onChange={v => save({ adultEnabled: v })} />
         </div>
       </div>
       <div className="p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] space-y-2">
-        <div className="text-sm font-semibold">Image model</div>
+        <div className="text-sm font-semibold">{tx('Image model')}</div>
         <p className="text-xs text-[var(--text-muted)] leading-relaxed max-w-[65ch]">
-          SDXL checkpoints in <code className="font-mono">~/comfyui/models/checkpoints</code>. FLUX.1-dev is the fallback,
+          {tx('SDXL checkpoints in')} <code className="font-mono">~/comfyui/models/checkpoints</code>. FLUX.1-dev is the fallback,
           but it rarely renders explicit images.
         </p>
         <select className="w-full max-w-md px-2.5 py-1.5 rounded-lg text-sm bg-[var(--bg-primary)] border border-[var(--border-subtle)]"
           value={current} disabled={locked || ckpts === null} onChange={e => save({ adultImageCheckpoint: e.target.value })}>
-          <option value="">{fluxDev ? 'FLUX.1-dev (fallback)' : 'None installed'}</option>
+          <option value="">{fluxDev ? tx('FLUX.1-dev (fallback)') : tx('None installed')}</option>
           {current && ckpts && !ckpts.some(c => c.name === current) && <option value={current}>{current} (missing)</option>}
           {(ckpts ?? []).map(c => <option key={c.name} value={c.name}>{c.name} · {(c.size / 1e9).toFixed(1)} GB</option>)}
         </select>
-        {ckpts && ckpts.length === 0 && <div className="text-[11px] text-amber-400">No SDXL checkpoints installed yet.</div>}
+        {ckpts && ckpts.length === 0 && <div className="text-[11px] text-amber-400">{tx('No SDXL checkpoints installed yet.')}</div>}
       </div>
       {error && <div className="text-xs text-red-400">{error}</div>}
     </div>
@@ -472,51 +469,50 @@ function CloudTab({ settings, locked, onChanged }: { settings?: Settings; locked
         <div className="flex items-start gap-3">
           {settings.cloudEnabled ? <Cloud className="w-5 h-5 text-sky-400 mt-0.5 shrink-0" /> : <ShieldCheck className="w-5 h-5 text-emerald-500 mt-0.5 shrink-0" />}
           <div className="flex-1">
-            <div className="text-sm font-semibold">{settings.cloudEnabled ? 'Cloud AI is on' : 'Fully local: cloud AI is off'}</div>
+            <div className="text-sm font-semibold">{settings.cloudEnabled ? tx('Cloud AI is on') : tx('Fully local: cloud AI is off')}</div>
             <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed">
-              With cloud AI on, the Claude and Gemini agents (and any agent you point at a cloud model) send their conversation to
-              that provider. Every other agent stays on this machine. While it is off, nothing is ever sent.
+              {tx('With cloud AI on, the Claude and Gemini agents (and any agent you point at a cloud model) send their conversation to that provider. Every other agent stays on this machine. While it is off, nothing is ever sent.')}
             </p>
           </div>
-          <Toggle on={settings.cloudEnabled} disabled={locked} label="Cloud AI" onChange={v => save({ cloudEnabled: v })} />
+          <Toggle on={settings.cloudEnabled} disabled={locked} label={tx('Cloud AI')} onChange={v => save({ cloudEnabled: v })} />
         </div>
         {settings.cloudEnabled && (
           <div className="mt-3 pt-3 border-t border-[var(--border-subtle)] space-y-3">
             <label className="flex items-center justify-between gap-3">
-              <span className="text-sm">Local agents may consult cloud agents
-                <span className="block text-[11px] text-[var(--text-muted)]">Shell:B can occasionally hand a task to Claude or Gemini via ask_agent. It is told not to include confidential data and to say when it did.</span>
+              <span className="text-sm">{tx('Local agents may consult cloud agents')}
+                <span className="block text-[11px] text-[var(--text-muted)]">{tx('Shell:B can occasionally hand a task to Claude or Gemini via ask_agent. It is told not to include confidential data and to say when it did.')}</span>
               </span>
-              <Toggle on={settings.cloudDelegation} disabled={locked} label="Delegation" onChange={v => save({ cloudDelegation: v })} />
+              <Toggle on={settings.cloudDelegation} disabled={locked} label={tx('Delegation')} onChange={v => save({ cloudDelegation: v })} />
             </label>
             <label className="flex items-center justify-between gap-3">
-              <span className="text-sm">Share long-term memory with cloud agents
-                <span className="block text-[11px] text-[var(--text-muted)]">Off: cloud agents get no recalled memories and no memory tools.</span>
+              <span className="text-sm">{tx('Share long-term memory with cloud agents')}
+                <span className="block text-[11px] text-[var(--text-muted)]">{tx('Off: cloud agents get no recalled memories and no memory tools.')}</span>
               </span>
-              <Toggle on={settings.cloudMemory} disabled={locked} label="Memory" onChange={v => save({ cloudMemory: v })} />
+              <Toggle on={settings.cloudMemory} disabled={locked} label={tx('Memory')} onChange={v => save({ cloudMemory: v })} />
             </label>
             <label className="flex items-center justify-between gap-3">
-              <span className="text-sm">Share the library with cloud agents
-                <span className="block text-[11px] text-[var(--text-muted)]">Off: cloud agents can't see other Studio designs, Code workspaces, research notebooks, Projects or artifacts, and run_code gets no /library.</span>
+              <span className="text-sm">{tx('Share the library with cloud agents')}
+                <span className="block text-[11px] text-[var(--text-muted)]">{tx('Off: cloud agents can\'t see other Studio designs, Code workspaces, research notebooks, Projects or artifacts, and run_code gets no /library.')}</span>
               </span>
-              <Toggle on={settings.cloudLibrary} disabled={locked} label="Library" onChange={v => save({ cloudLibrary: v })} />
+              <Toggle on={settings.cloudLibrary} disabled={locked} label={tx('Library')} onChange={v => save({ cloudLibrary: v })} />
             </label>
             <label className="flex items-center justify-between gap-3">
-              <span className="text-sm">Share the Codex with cloud agents
-                <span className="block text-[11px] text-[var(--text-muted)]">Off: cloud agents can't search or read your notes, saved links, snippets and files.</span>
+              <span className="text-sm">{tx('Share the Codex with cloud agents')}
+                <span className="block text-[11px] text-[var(--text-muted)]">{tx('Off: cloud agents can\'t search or read your notes, saved links, snippets and files.')}</span>
               </span>
-              <Toggle on={settings.cloudCodex} disabled={locked} label="Codex" onChange={v => save({ cloudCodex: v })} />
+              <Toggle on={settings.cloudCodex} disabled={locked} label={tx('Codex')} onChange={v => save({ cloudCodex: v })} />
             </label>
             <label className="flex items-center justify-between gap-3">
-              <span className="text-sm">Let cloud agents look at a shared screen
-                <span className="block text-[11px] text-[var(--text-muted)]">Off: only local vision models get look_at_screen, so screenshots stay on this machine.</span>
+              <span className="text-sm">{tx('Let cloud agents look at a shared screen')}
+                <span className="block text-[11px] text-[var(--text-muted)]">{tx('Off: only local vision models get look_at_screen, so screenshots stay on this machine.')}</span>
               </span>
-              <Toggle on={!!settings.cloudScreen} disabled={locked} label="Screen" onChange={v => save({ cloudScreen: v })} />
+              <Toggle on={!!settings.cloudScreen} disabled={locked} label={tx('Screen')} onChange={v => save({ cloudScreen: v })} />
             </label>
             <label className="flex items-center justify-between gap-3">
-              <span className="text-sm">Let cloud agents use the browser on your computer
-                <span className="block text-[11px] text-[var(--text-muted)]">Off: only local models get the browser tool, so the pages it reads stay on this machine.</span>
+              <span className="text-sm">{tx('Let cloud agents use the browser on your computer')}
+                <span className="block text-[11px] text-[var(--text-muted)]">{tx('Off: only local models get the browser tool, so the pages it reads stay on this machine.')}</span>
               </span>
-              <Toggle on={!!settings.cloudBrowser} disabled={locked} label="Browser" onChange={v => save({ cloudBrowser: v })} />
+              <Toggle on={!!settings.cloudBrowser} disabled={locked} label={tx('Browser')} onChange={v => save({ cloudBrowser: v })} />
             </label>
           </div>
         )}
@@ -524,12 +520,11 @@ function CloudTab({ settings, locked, onChanged }: { settings?: Settings; locked
       {error && <div className="text-xs text-red-400">{error}</div>}
       <CliAgents />
       <div className="space-y-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">API providers</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">{tx('API providers')}</h3>
         {Object.entries(providers).map(([id, p]) => <ProviderCard key={id} id={id} p={p} locked={locked} onSaved={() => { load(); onChanged(); }} />)}
       </div>
       <p className="text-[11px] text-[var(--text-muted)]">
-        Keys are stored on this server only and never sent to the browser. Pick a cloud model for any agent in the Agent Lab;
-        the Claude and Gemini agents come preconfigured.
+        {tx('Keys are stored on this server only and never sent to the browser. Pick a cloud model for any agent in the Agent Lab; the Claude and Gemini agents come preconfigured.')}
       </p>
     </div>
   );
@@ -549,16 +544,14 @@ function CliAgents() {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Logged-in CLIs</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">{tx('Logged-in CLIs')}</h3>
         <button className={clsx(btn.subtle, 'ml-auto')} onClick={() => load(true)} disabled={busy}>
-          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Recheck'}
+          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : tx('Recheck')}
         </button>
       </div>
       <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
-        No API key needed: these agents think through the CLI you're logged in to on this machine and use its subscription.
-        The CLI's own shell, file and browser tools are switched off; it only gets the Shell:B tools you give the agent, with
-        the usual approvals. Pick a <span className="font-mono">claude-code/</span>, <span className="font-mono">antigravity/</span> or
-        <span className="font-mono"> codex/</span> model in the Agent Lab.
+        {tx('No API key needed: these agents think through the CLI you\'re logged in to on this machine and use its subscription. The CLI\'s own shell, file and browser tools are switched off; it only gets the Shell:B tools you give the agent, with the usual approvals. Pick a')} <span className="font-mono">claude-code/</span>, <span className="font-mono">antigravity/</span> or
+        <span className="font-mono"> codex/</span> {tx('model in the Agent Lab.')}
       </p>
       {Object.entries(clis).map(([id, c]) => {
         const t = tests[id] ?? {};
@@ -568,14 +561,14 @@ function CliAgents() {
               <span className="text-sm font-medium">{c.name}</span>
               <span className="text-[11px] text-[var(--text-muted)] font-mono">{c.bin}</span>
               <span className={clsx('ml-auto text-[11px]', c.loggedIn ? 'text-emerald-500' : c.installed ? 'text-amber-400' : 'text-[var(--text-muted)]')}>
-                {c.loggedIn ? `logged in${c.account ? ` · ${c.account}` : ''}` : c.installed ? 'not logged in' : 'not installed'}
+                {c.loggedIn ? tx('logged in{v0}', { v0: c.account ? ` · ${c.account}` : '' }) : c.installed ? tx('not logged in') : tx('not installed')}
               </span>
-              {c.loggedIn && <button className={btn.subtle} onClick={() => runTest(id)} disabled={t.busy}>{t.busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Models'}</button>}
+              {c.loggedIn && <button className={btn.subtle} onClick={() => runTest(id)} disabled={t.busy}>{t.busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : tx('Models')}</button>}
             </div>
             {c.installed && !c.loggedIn && (
-              <div className="text-[11px] text-[var(--text-muted)]">Log in once from a terminal on this machine: <span className="font-mono">{c.login}</span>, then Recheck.</div>
+              <div className="text-[11px] text-[var(--text-muted)]">{tx('Log in once from a terminal on this machine:')} <span className="font-mono">{c.login}</span>{tx(', then Recheck.')}</div>
             )}
-            {t.text && <div className={clsx('text-[11px]', t.ok ? 'text-emerald-500' : 'text-red-400')}>{t.text}</div>}
+            {t.text && <div className={clsx('text-[11px]', t.ok ? 'text-emerald-500' : 'text-red-400')}>{tx(t.text)}</div>}
           </div>
         );
       })}
@@ -607,22 +600,22 @@ function ProviderCard({ id, p, locked, onSaved }: { id: string; p: Provider; loc
         <span className="text-sm font-medium">{p.product}</span>
         <span className="text-[11px] text-[var(--text-muted)]">{p.name}</span>
         <span className={clsx('ml-auto text-[11px]', p.configured ? 'text-emerald-500' : 'text-[var(--text-muted)]')}>
-          {p.configured ? `key …${p.keyTail}${p.fromEnv ? ` (from ${p.env})` : ''}` : 'no key'}
+          {p.configured ? tx('key …{keyTail}{v0}', { keyTail: p.keyTail, v0: p.fromEnv ? ` (from ${p.env})` : '' }) : tx('no key')}
         </span>
       </div>
       <div className="flex gap-2">
         <input type="password" autoComplete="off" className={clsx(btn.input, 'font-mono')} value={key} onChange={e => setKey(e.target.value)}
-          placeholder={p.configured ? 'Replace key…' : 'API key'} disabled={locked} />
-        <button className={btn.primary} disabled={locked || (!key.trim() && (id !== 'openai' || base === (p.baseUrl ?? '')))} onClick={save}>Save</button>
-        {p.configured && <button className={btn.subtle} onClick={runTest} disabled={test.busy}>{test.busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Test'}</button>}
+          placeholder={p.configured ? tx('Replace key…') : tx('API key')} disabled={locked} />
+        <button className={btn.primary} disabled={locked || (!key.trim() && (id !== 'openai' || base === (p.baseUrl ?? '')))} onClick={save}>{tx('Save')}</button>
+        {p.configured && <button className={btn.subtle} onClick={runTest} disabled={test.busy}>{test.busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : tx('Test')}</button>}
       </div>
       {id === 'openai' && (
-        <label className="block text-[11px] text-[var(--text-muted)]">Base URL (any OpenAI-compatible endpoint)
+        <label className="block text-[11px] text-[var(--text-muted)]">{tx('Base URL (any OpenAI-compatible endpoint)')}
           <input className={clsx(btn.input, 'font-mono')} value={base} onChange={e => setBase(e.target.value)} disabled={locked} />
         </label>
       )}
       <div className="text-[11px] text-[var(--text-muted)]">{p.keyHint}</div>
-      {test.text && <div className={clsx('text-[11px]', test.ok ? 'text-emerald-500' : 'text-red-400')}>{test.text}</div>}
+      {test.text && <div className={clsx('text-[11px]', test.ok ? 'text-emerald-500' : 'text-red-400')}>{tx(test.text)}</div>}
       {error && <div className="text-[11px] text-red-400">{error}</div>}
     </div>
   );

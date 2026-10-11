@@ -17,7 +17,7 @@ const natural = s => {
   if (/^[A-Z0-9 _\-./:]+$/.test(x) && x.length < 6) return false;
   return true;
 };
-const q = s => "'" + s.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'";
+const q = s => "'" + s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '') + "'";  // multi-line literals stay one line
 const varName = (expr, used) => {
   const seen = used.__by || (used.__by = new Map()); const src = expr.getText();
   if (seen.has(src)) return seen.get(src);

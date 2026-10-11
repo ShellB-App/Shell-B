@@ -7,6 +7,7 @@ import {
 import {
   type StemId, type StemState, type TransitionKind
 } from '../dj/engine';
+import { t } from '../i18n';
 
 interface MixerSectionProps {
   stems: Record<StemId, StemState>;
@@ -66,7 +67,7 @@ export function MixerSection({
         <div className="flex items-center gap-2">
           <Sliders className="w-4 h-4 text-[var(--accent)]" />
           <span className="text-xs font-mono font-bold tracking-wider uppercase text-[var(--text-primary)]">
-            Performance Mixer & Stems
+            {t('Performance Mixer & Stems')}
           </span>
         </div>
 
@@ -79,9 +80,9 @@ export function MixerSection({
               (['keys', 'pad', 'arp', 'lead'] as StemId[]).forEach(id => onStemSolo(id, false));
             }}
             className="px-2 py-0.5 rounded-md border border-[var(--border-subtle)] hover:bg-[var(--bg-hover)] text-[var(--text-secondary)]"
-            title="Isolate Groove: Solo Drums & Bass"
+            title={t('Isolate Groove: Solo Drums & Bass')}
           >
-            Groove Only
+            {t('Groove Only')}
           </button>
           <button
             onClick={() => {
@@ -93,16 +94,16 @@ export function MixerSection({
                 ? 'border-rose-500/50 bg-rose-500/20 text-rose-300'
                 : 'border-[var(--border-subtle)] hover:bg-[var(--bg-hover)] text-[var(--text-secondary)]'
             )}
-            title="Cut Drums for atmospheric breakdown"
+            title={t('Cut Drums for atmospheric breakdown')}
           >
-            {stems.drums.muted ? 'Drums Muted' : 'Drop Drums'}
+            {stems.drums.muted ? t('Drums Muted') : t('Drop Drums')}
           </button>
           <button
             onClick={onResetStems}
             className="px-2 py-0.5 rounded-md border border-[var(--border-subtle)] hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-white"
-            title="Reset All Stems"
+            title={t('Reset All Stems')}
           >
-            Reset
+            {t('Reset')}
           </button>
         </div>
       </div>
@@ -128,7 +129,7 @@ export function MixerSection({
               <div className="flex flex-col items-center">
                 <span className="text-sm">{cfg.icon}</span>
                 <span className="text-[10px] font-mono font-medium text-[var(--text-primary)] mt-0.5">
-                  {cfg.label}
+                  {t(cfg.label)}
                 </span>
               </div>
 
@@ -143,7 +144,7 @@ export function MixerSection({
                   onChange={e => onStemVolume(stemId, +e.target.value)}
                   className="h-20 -rotate-90 origin-center accent-[var(--accent)] cursor-pointer"
                   style={{ width: '80px' }}
-                  title={`${cfg.label} volume: ${Math.round(st.volume * 100)}%`}
+                  title={t('{label} volume: {v0}%', { label: cfg.label, v0: Math.round(st.volume * 100) })}
                 />
               </div>
 
@@ -162,7 +163,7 @@ export function MixerSection({
                       ? 'bg-amber-500 text-black shadow-[0_0_8px_#f59e0b]'
                       : 'bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-white'
                   )}
-                  title="Solo"
+                  title={t('Solo')}
                 >
                   S
                 </button>
@@ -174,7 +175,7 @@ export function MixerSection({
                       ? 'bg-rose-500 text-white shadow-[0_0_8px_#f43f5e]'
                       : 'bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-white'
                   )}
-                  title="Mute"
+                  title={t('Mute')}
                 >
                   M
                 </button>
@@ -190,7 +191,7 @@ export function MixerSection({
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between text-[11px] font-mono">
             <span className="text-[var(--text-muted)] uppercase tracking-wider">
-              DJ Master Filter
+              {t('DJ Master Filter')}
             </span>
             <span
               className={clsx(
@@ -203,10 +204,10 @@ export function MixerSection({
               )}
             >
               {filter < -0.05
-                ? `Low-Pass ${Math.round(-filter * 100)}%`
+                ? t('Low-Pass {v0}%', { v0: Math.round(-filter * 100) })
                 : filter > 0.05
-                ? `High-Pass ${Math.round(filter * 100)}%`
-                : 'Neutral (Open)'}
+                ? t('High-Pass {v0}%', { v0: Math.round(filter * 100) })
+                : t('Neutral (Open)')}
             </span>
           </div>
 
@@ -224,7 +225,7 @@ export function MixerSection({
               onChange={e => onFilterChange(+e.target.value)}
               onDoubleClick={() => onFilterChange(0)}
               className="flex-1 accent-[var(--accent)] cursor-pointer"
-              title="DJ filter: slide left for Low-Pass, right for High-Pass. Double-click to reset."
+              title={t('DJ filter: slide left for Low-Pass, right for High-Pass. Double-click to reset.')}
             />
             <span className={clsx('text-[10px] font-mono font-bold', filter > 0.05 && 'text-rose-400')}>
               HPF
@@ -236,7 +237,7 @@ export function MixerSection({
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between text-[11px] font-mono">
             <span className="text-[var(--text-muted)] uppercase tracking-wider">
-              Crossfader
+              {t('Crossfader')}
             </span>
             <div className="flex items-center gap-2 text-[10px]">
               <button
@@ -246,7 +247,7 @@ export function MixerSection({
                   crossfader === -1 ? 'bg-rose-500 text-white' : 'text-[var(--text-muted)] hover:text-white'
                 )}
               >
-                Deck A
+                {t('Deck A')}
               </button>
               <button
                 onClick={() => onCrossfaderChange(0)}
@@ -255,7 +256,7 @@ export function MixerSection({
                   crossfader === 0 ? 'bg-[var(--accent)] text-[var(--accent-fg)]' : 'text-[var(--text-muted)] hover:text-white'
                 )}
               >
-                Center
+                {t('Center')}
               </button>
               <button
                 onClick={() => onCrossfaderChange(1)}
@@ -264,7 +265,7 @@ export function MixerSection({
                   crossfader === 1 ? 'bg-cyan-500 text-white' : 'text-[var(--text-muted)] hover:text-white'
                 )}
               >
-                Deck B
+                {t('Deck B')}
               </button>
             </div>
           </div>
@@ -279,7 +280,7 @@ export function MixerSection({
               value={crossfader}
               onChange={e => onCrossfaderChange(+e.target.value)}
               className="flex-1 accent-[var(--accent)] cursor-pointer"
-              title="Crossfader: blend between Deck A (left) and Deck B (right)"
+              title={t('Crossfader: blend between Deck A (left) and Deck B (right)')}
             />
             <span className="text-[10px] font-mono font-bold text-cyan-400">B</span>
           </div>
@@ -295,10 +296,10 @@ export function MixerSection({
             padBtnClass,
             'border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
           )}
-          title="2-bar build-up: noise riser + snare rush + highpass sweep + drop"
+          title={t('2-bar build-up: noise riser + snare rush + highpass sweep + drop')}
         >
           <TrendingUp className="w-3.5 h-3.5" />
-          <span>Build-Up</span>
+          <span>{t('Build-Up')}</span>
         </button>
 
         <button
@@ -308,10 +309,10 @@ export function MixerSection({
             padBtnClass,
             'border-cyan-500/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20'
           )}
-          title="Throw mix into stereo delay for a beat"
+          title={t('Throw mix into stereo delay for a beat')}
         >
           <Waves className="w-3.5 h-3.5" />
-          <span>Echo Throw</span>
+          <span>{t('Echo Throw')}</span>
         </button>
 
         <button
@@ -323,10 +324,10 @@ export function MixerSection({
               ? 'border-rose-500 bg-rose-500 text-white shadow-[0_0_12px_#f43f5e]'
               : 'border-rose-500/40 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20'
           )}
-          title="Instantly kill sub bass (-40dB)"
+          title={t('Instantly kill sub bass (-40dB)')}
         >
           <VolumeX className="w-3.5 h-3.5" />
-          <span>{bassKill ? 'Sub Cut (ON)' : 'Bass Kill'}</span>
+          <span>{bassKill ? t('Sub Cut (ON)') : t('Bass Kill')}</span>
         </button>
 
         <button
@@ -336,10 +337,10 @@ export function MixerSection({
             padBtnClass,
             'border-violet-500/40 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20'
           )}
-          title="1/16 Beat Stutter Glitch Repeat"
+          title={t('1/16 Beat Stutter Glitch Repeat')}
         >
           <Repeat className="w-3.5 h-3.5" />
-          <span>Stutter Roll</span>
+          <span>{t('Stutter Roll')}</span>
         </button>
 
         <button
@@ -349,10 +350,10 @@ export function MixerSection({
             padBtnClass,
             'border-purple-500/40 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20'
           )}
-          title="Tape-stop deceleration drop into next track"
+          title={t('Tape-stop deceleration drop into next track')}
         >
           <OctagonPause className="w-3.5 h-3.5" />
-          <span>Tape Brake</span>
+          <span>{t('Tape Brake')}</span>
         </button>
       </div>
     </div>

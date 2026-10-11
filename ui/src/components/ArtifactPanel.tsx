@@ -11,6 +11,7 @@ import { btn } from './common';
 import { FavoriteStar } from './Favorites';
 import { downloadArtifact } from './artifactMenu';
 import { localizeCdn } from '../offline';
+import { t as tx } from '../i18n';
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -93,15 +94,15 @@ export function ArtifactPanel({ groups, activeId, version, dark, onSelect, onClo
     <section
       className={clsx('flex flex-col bg-[var(--bg-primary)] border-l border-[var(--border-subtle)] min-w-0',
         full ? 'fixed inset-0 z-50' : 'fixed inset-0 z-40 md:static md:z-auto md:w-[48%] lg:w-[50%] md:shrink-0 h-full')}
-      aria-label="Artifact"
+      aria-label={tx('Artifact')}
     >
       <header className="h-12 shrink-0 border-b border-[var(--border-subtle)] px-3 flex items-center gap-2 bg-[var(--bg-secondary)]">
         <div className="relative min-w-0 flex-1">
           <button onClick={() => groups.length > 1 && setPicker(!picker)} className="flex items-center gap-2 min-w-0 max-w-full text-left">
             <span className="w-6 h-6 rounded-lg bg-[var(--accent)]/15 text-[var(--accent)] flex items-center justify-center shrink-0"><Boxes className="w-3.5 h-3.5" /></span>
-            <span className="text-sm font-semibold truncate">{current.title}</span>
+            <span className="text-sm font-semibold truncate">{tx(current.title)}</span>
             {groups.length > 1 && <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" />}
-            {convId && !noFavorite && <FavoriteStar nested kind="artifact" id={convId} sub={current.id} title={current.title} />}
+            {convId && !noFavorite && <FavoriteStar nested kind="artifact" id={convId} sub={current.id} title={tx(current.title)} />}
           </button>
           {picker && (
             <>
@@ -110,7 +111,7 @@ export function ArtifactPanel({ groups, activeId, version, dark, onSelect, onClo
                 {groups.map(g => (
                   <button key={g.id} onClick={() => { onSelect(g.id); setPicker(false); }}
                     className={clsx('w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex justify-between gap-2', g.id === group.id ? 'bg-[var(--accent)]/15' : 'hover:bg-[var(--bg-hover)]')}>
-                    <span className="truncate font-medium">{g.title}</span>
+                    <span className="truncate font-medium">{tx(g.title)}</span>
                     <span className="text-[var(--text-muted)] font-mono shrink-0">{g.type} · v{g.versions.length}</span>
                   </button>
                 ))}
@@ -123,7 +124,7 @@ export function ArtifactPanel({ groups, activeId, version, dark, onSelect, onClo
           <select
             value={current.version} onChange={e => onSelect(group.id, Number(e.target.value))}
             className="text-[11px] font-mono bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-lg px-1.5 py-1 focus:outline-none"
-            aria-label="Version"
+            aria-label={tx('Version')}
           >
             {group.versions.map(v => <option key={v.version} value={v.version}>v{v.version}</option>)}
           </select>
@@ -143,23 +144,23 @@ export function ArtifactPanel({ groups, activeId, version, dark, onSelect, onClo
 
         <div className="flex items-center shrink-0">
           {tab === 'preview' && previewable && current.type !== 'markdown' && (
-            <button className={btn.icon} title="Reload" onClick={() => setReloadKey(k => k + 1)}><RotateCw className="w-3.5 h-3.5" /></button>
+            <button className={btn.icon} title={tx('Reload')} onClick={() => setReloadKey(k => k + 1)}><RotateCw className="w-3.5 h-3.5" /></button>
           )}
           {tab === 'preview' && current.type === 'html' && convId && (
-            <button className={btn.icon} title="Clear saved data" onClick={async () => {
-              if (!confirm(`Clear everything "${current.title}" has saved? This can't be undone.`)) return;
+            <button className={btn.icon} title={tx('Clear saved data')} onClick={async () => {
+              if (!confirm(tx('Clear everything "{title}" has saved? This can\'t be undone.', { title: current.title }))) return;
               await fetch(`/api/appstate?s=${encodeURIComponent(artifactScope(convId, current.id))}`, { method: 'DELETE' });
               setReloadKey(k => k + 1);
             }}><Eraser className="w-3.5 h-3.5" /></button>
           )}
-          <button className={btn.icon} title="Copy source" onClick={() => { navigator.clipboard.writeText(current.content); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>
+          <button className={btn.icon} title={tx('Copy source')} onClick={() => { navigator.clipboard.writeText(current.content); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
-          <button className={btn.icon} title="Download" onClick={download}><Download className="w-3.5 h-3.5" /></button>
-          <button className={clsx(btn.icon, 'hidden md:inline-flex')} title={full ? 'Exit full screen' : 'Full screen'} onClick={() => setFull(!full)}>
+          <button className={btn.icon} title={tx('Download')} onClick={download}><Download className="w-3.5 h-3.5" /></button>
+          <button className={clsx(btn.icon, 'hidden md:inline-flex')} title={full ? tx('Exit full screen') : tx('Full screen')} onClick={() => setFull(!full)}>
             {full ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
           </button>
-          <button className={btn.icon} title="Close" onClick={onClose}><X className="w-4 h-4" /></button>
+          <button className={btn.icon} title={tx('Close')} onClick={onClose}><X className="w-4 h-4" /></button>
         </div>
       </header>
 
@@ -171,7 +172,7 @@ export function ArtifactPanel({ groups, activeId, version, dark, onSelect, onClo
             <iframe
               key={`${current.id}-${current.version}-${reloadKey}-${dark}`}
               ref={frame}
-              title={current.title}
+              title={tx(current.title)}
               srcDoc={srcDoc(current.type, current.content, dark, convId && artifactScope(convId, current.id), false, convId)}
               sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads allow-pointer-lock"
               className="w-full h-full border-0 bg-white"
@@ -185,7 +186,7 @@ export function ArtifactPanel({ groups, activeId, version, dark, onSelect, onClo
       </div>
 
       <footer className="h-7 shrink-0 border-t border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 flex items-center justify-between text-[10px] text-[var(--text-muted)] font-mono">
-        <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />sandboxed · offline{current.type === 'html' && convId ? ' · saves its data' : ''}</span>
+        <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />{tx('sandboxed · offline')}{current.type === 'html' && convId ? tx(' · saves its data') : ''}</span>
         <span>{current.type}{current.type === 'code' ? ` · ${current.language}` : ''} · v{current.version} · {current.content.split('\n').length} lines</span>
       </footer>
     </section>

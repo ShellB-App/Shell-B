@@ -18,6 +18,7 @@ import {
 import { APPS, GROUP_LABEL, type AppDef, type AppGroup, type AppId } from '../components/apps';
 import type { Status } from '../types';
 import { nextTheme, setTheme as applyTheme, currentTheme } from '../themes';
+import { t } from '../i18n';
 
 interface Props {
   open: boolean;
@@ -116,10 +117,10 @@ export function StartMenu({
             </div>
             <div>
               <div className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">
-                Shell:B Kiosk OS
+                {t('Shell:B Kiosk OS')}
               </div>
               <div className="text-[10px] text-[var(--text-muted)] font-mono">
-                DGX Spark Platform · CUDA 13.0
+                {t('DGX Spark Platform · CUDA 13.0')}
               </div>
             </div>
           </div>
@@ -129,8 +130,8 @@ export function StartMenu({
               onClose();
             }}
             className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition"
-            title="Settings"
-            aria-label="Open settings"
+            title={t('Settings')}
+            aria-label={t('Open settings')}
           >
             <Settings className="w-4 h-4" />
           </button>
@@ -144,7 +145,7 @@ export function StartMenu({
               type="text"
               value={q}
               onChange={e => setQ(e.target.value)}
-              placeholder="Search apps and tools…"
+              placeholder={t('Search apps and tools…')}
               autoFocus
               className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]"
             />
@@ -156,7 +157,7 @@ export function StartMenu({
           {groups.map(g => (
             <div key={g.group} className="space-y-1">
               <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] px-2">
-                {g.label}
+                {t(g.label)}
               </div>
               <div className="grid grid-cols-1 gap-1">
                 {g.items.map(app => {
@@ -190,13 +191,13 @@ export function StartMenu({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
                           <span className="text-xs font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent-soft)] truncate transition">
-                            {app.label}
+                            {t(app.label)}
                           </span>
                           {live?.dot && <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />}
                           {live?.busy && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
                         </div>
                         <p className="text-[11px] text-[var(--text-muted)] truncate">
-                          {app.hint}
+                          {t(app.hint)}
                         </p>
                       </div>
                     </button>
@@ -216,16 +217,16 @@ export function StartMenu({
                 onClose();
               }}
               className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition"
-              title="Display Form Factor"
-              aria-label="Display Form Factor"
+              title={t('Display Form Factor')}
+              aria-label={t('Display Form Factor')}
             >
               <Monitor className="w-4 h-4 text-sky-400" />
             </button>
             <button
               onClick={() => applyTheme(nextTheme())}
               className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition"
-              title={`Skin: ${currentTheme()}`}
-              aria-label={`Skin: ${currentTheme()}`}
+              title={t('Skin: {v0}', { v0: currentTheme() })}
+              aria-label={t('Skin: {v0}', { v0: currentTheme() })}
             >
               <Palette className="w-4 h-4 text-pink-400" />
             </button>
@@ -235,24 +236,24 @@ export function StartMenu({
                 onClose();
               }}
               className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition"
-              title="Change Desktop Wallpaper"
-              aria-label="Change Desktop Wallpaper"
+              title={t('Change Desktop Wallpaper')}
+              aria-label={t('Change Desktop Wallpaper')}
             >
               <ImageIcon className="w-4 h-4 text-emerald-400" />
             </button>
             <button
               onClick={onToggleTheme}
               className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition"
-              title="Toggle Dark/Light"
-              aria-label="Toggle dark/light mode"
+              title={t('Toggle Dark/Light')}
+              aria-label={t('Toggle dark/light mode')}
             >
               {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
             </button>
             <button
               onClick={onToggleFullscreen}
               className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition"
-              title="Fullscreen Kiosk Mode"
-              aria-label="Fullscreen Kiosk Mode"
+              title={t('Fullscreen Kiosk Mode')}
+              aria-label={t('Fullscreen Kiosk Mode')}
             >
               <Maximize2 className="w-4 h-4" />
             </button>
@@ -264,10 +265,10 @@ export function StartMenu({
               onClose();
             }}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/30 transition"
-            title="Lock Kiosk"
+            title={t('Lock Kiosk')}
           >
             <Lock className="w-3.5 h-3.5" />
-            <span className="text-[11px] font-medium">Standby</span>
+            <span className="text-[11px] font-medium">{t('Standby')}</span>
           </button>
 
         </footer>
@@ -289,7 +290,7 @@ export function StartMenu({
             }}
           >
             <Play className="w-3.5 h-3.5" />
-            Open App
+            {t('Open App')}
           </button>
           <button
             className="w-full text-left px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-hover)] flex items-center gap-2"
@@ -305,9 +306,9 @@ export function StartMenu({
             }}
           >
             {pinned.includes(contextMenu.appId) ? (
-              <><PinOff className="w-3.5 h-3.5" /> Unpin from Desktop</>
+              <><PinOff className="w-3.5 h-3.5" /> {t('Unpin from Desktop')}</>
             ) : (
-              <><Pin className="w-3.5 h-3.5" /> Pin to Desktop</>
+              <><Pin className="w-3.5 h-3.5" /> {t('Pin to Desktop')}</>
             )}
           </button>
         </div>

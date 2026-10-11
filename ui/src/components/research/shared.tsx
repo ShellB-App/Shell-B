@@ -9,6 +9,7 @@ import {
   ListChecks, Network, Newspaper, Presentation, ScrollText, Type, Video, type LucideIcon,
 } from 'lucide-react';
 import type { Agent, Level, NotebookCitation, ResearchBoardDetail, ResearchItem, StudioType } from '../../types';
+import { t as tx } from '../../i18n';
 
 export const LEVEL_STYLE: Record<Level, { bar: string; text: string; label: string }> = {
   high: { bar: 'bg-emerald-500', text: 'text-emerald-500', label: 'High' },
@@ -113,8 +114,8 @@ export function SourceCite({ n }: { n: number }) {
         <span className="block text-[13px] font-medium leading-snug text-[var(--text-primary)]">{s.title || s.url}</span>
         {(s.meta.guide || s.body) && <span className="block mt-1 text-[12px] leading-snug text-[var(--text-secondary)] line-clamp-4">{(s.meta.guide || s.body).replace(/\*\*/g, '')}</span>}
       </>
-    ) : <span className="text-[12px] text-rose-500">S{n} isn’t in this notebook.</span>}>
-      <button onClick={() => s && nb?.openSource(s.id)} aria-label={s ? `Source: ${s.title}` : `Missing source ${n}`}
+    ) : <span className="text-[12px] text-rose-500">{tx('S{n} isn’t in this notebook.', { n: n })}</span>}>
+      <button onClick={() => s && nb?.openSource(s.id)} aria-label={s ? tx('Source: {title}', { title: s.title }) : tx('Missing source {n}', { n: n })}
         className={clsx(chip, s ? 'bg-teal-500/15 text-teal-700 dark:text-teal-300 hover:bg-teal-500/30' : 'bg-rose-500/15 text-rose-500')}>
         {n}
       </button>
@@ -130,11 +131,11 @@ export function PassageCite({ n, c }: { n: string; c?: NotebookCitation }) {
   return (
     <Hover card={
       <>
-        <span className="flex items-center gap-2 mb-1.5">{s && <SourceIcon s={s} size={14} />}<span className="text-[11px] font-medium text-[var(--text-secondary)] truncate">{c.title}</span></span>
+        <span className="flex items-center gap-2 mb-1.5">{s && <SourceIcon s={s} size={14} />}<span className="text-[11px] font-medium text-[var(--text-secondary)] truncate">{tx(c.title)}</span></span>
         <span className="block text-[12px] leading-relaxed text-[var(--text-primary)] line-clamp-[9] whitespace-pre-line">{c.text.slice(0, 700)}</span>
       </>
     }>
-      <button onClick={() => nb?.openSource(c.itemId, c.text)} aria-label={`Citation ${n}: ${c.title}`}
+      <button onClick={() => nb?.openSource(c.itemId, c.text)} aria-label={tx('Citation {n}: {title}', { n: n, title: c.title })}
         className={clsx(chip, 'bg-teal-500/15 text-teal-700 dark:text-teal-300 hover:bg-teal-500/30')}>{n}</button>
     </Hover>
   );

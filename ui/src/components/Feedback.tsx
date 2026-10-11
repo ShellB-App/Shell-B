@@ -4,6 +4,7 @@ import { Brain, Loader2, RotateCcw, ThumbsDown, ThumbsUp, Undo2, X } from 'lucid
 import { req } from '../api';
 import type { Message, MessageFeedback } from '../types';
 import { btn } from './common';
+import { t as tx } from '../i18n';
 
 // Thumbs on a reply, plus "what should be different?" (server/feedback.py). With "remember" ticked, the server
 // distills a lasting preference rule into memory; a one-off complaint can instead be sent back as a retry.
@@ -40,10 +41,10 @@ export function useFeedback(message: Message, onAsk: ((t: string) => void) | und
 
   const buttons = message.role === 'assistant' && message.status === 'complete' && (
     <>
-      <button className={clsx(btn.icon, fb?.rating === 'up' && 'text-emerald-400')} title="Good reply" onClick={() => rate('up')}>
+      <button className={clsx(btn.icon, fb?.rating === 'up' && 'text-emerald-400')} title={tx('Good reply')} onClick={() => rate('up')}>
         <ThumbsUp className="w-3.5 h-3.5" />
       </button>
-      <button className={clsx(btn.icon, fb?.rating === 'down' && 'text-red-400')} title="Bad reply: say what to change" onClick={() => rate('down')}>
+      <button className={clsx(btn.icon, fb?.rating === 'down' && 'text-red-400')} title={tx('Bad reply: say what to change')} onClick={() => rate('down')}>
         <ThumbsDown className="w-3.5 h-3.5" />
       </button>
     </>
@@ -92,8 +93,8 @@ function FeedbackBox({ rating, initial, busy, onClose, onSent, submit, onRetry }
       {state !== 'done' ? (
         <>
           <div className="flex items-center gap-2">
-            <span className="font-medium text-[var(--text-primary)] flex-1">{rating === 'down' ? 'What should be different?' : 'What did you like?'}</span>
-            <button className={btn.icon} onClick={onClose} title="Close"><X className="w-3.5 h-3.5" /></button>
+            <span className="font-medium text-[var(--text-primary)] flex-1">{rating === 'down' ? tx('What should be different?') : tx('What did you like?')}</span>
+            <button className={btn.icon} onClick={onClose} title={tx('Close')}><X className="w-3.5 h-3.5" /></button>
           </div>
           {rating === 'down' && (
             <div className="flex flex-wrap gap-1.5">
@@ -107,17 +108,17 @@ function FeedbackBox({ rating, initial, busy, onClose, onSent, submit, onRetry }
             </div>
           )}
           <textarea ref={ref} rows={2} className={clsx(btn.input, 'resize-none text-xs')} value={note} onChange={e => setNote(e.target.value)}
-            placeholder={rating === 'down' ? 'Optional: say it in your own words, e.g. “just give me the table”' : 'Optional: e.g. “keep explaining things conversationally like this”'}
+            placeholder={rating === 'down' ? tx('Optional: say it in your own words, e.g. “just give me the table”') : tx('Optional: e.g. “keep explaining things conversationally like this”')}
             onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) go(); }} />
           <div className="flex flex-wrap items-center gap-2">
             <label className={clsx('flex items-center gap-1.5 text-[var(--text-secondary)] select-none', !said && 'opacity-50')}
-              title="Shell:B turns this into a lasting preference if it is about how you like answers in general">
+              title={tx('Shell:B turns this into a lasting preference if it is about how you like answers in general')}>
               <input type="checkbox" checked={remember} disabled={!said} onChange={e => setRemember(e.target.checked)} className="accent-[var(--accent)]" />
-              Remember this for next time
+              {tx('Remember this for next time')}
             </label>
             <span className="flex-1" />
             <button className={btn.primary} disabled={state === 'sending'} onClick={go}>
-              {state === 'sending' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}{said ? 'Send' : 'Just rate it'}
+              {state === 'sending' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}{said ? tx('Send') : tx('Just rate it')}
             </button>
           </div>
         </>
@@ -126,25 +127,25 @@ function FeedbackBox({ rating, initial, busy, onClose, onSent, submit, onRetry }
           {learned && !undone ? (
             <div className="flex items-start gap-1.5 text-[var(--text-secondary)]">
               <Brain className="w-3.5 h-3.5 mt-px shrink-0 text-amber-400" />
-              <span className="flex-1"><b className="text-[var(--text-primary)]">{learned.existing ? 'Already known' : 'Learned'}:</b> {learned.text}</span>
+              <span className="flex-1"><b className="text-[var(--text-primary)]">{learned.existing ? tx('Already known') : tx('Learned')}:</b> {tx(learned.text)}</span>
               {!learned.existing && (
                 <button className="inline-flex items-center gap-0.5 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                   onClick={async () => { await req(`/api/memory/${learned.id}/undo`, { method: 'POST' }).catch(() => {}); setUndone(true); }}>
-                  <Undo2 className="w-3 h-3" />Undo
+                  <Undo2 className="w-3 h-3" />{tx('Undo')}
                 </button>
               )}
             </div>
           ) : (
             <div className="text-[var(--text-muted)]">
-              {undone ? 'Forgotten.' : result?.why === 'one-off' ? 'Thanks. That sounds specific to this answer, so nothing was added to memory.'
-                : result?.why === 'vague' ? 'Thanks. To remember it for next time, add a note saying what you’d like instead.'
-                : result?.why || 'Thanks for the feedback.'}
+              {undone ? 'Forgotten.' : result?.why === 'one-off' ? tx('Thanks. That sounds specific to this answer, so nothing was added to memory.')
+                : result?.why === 'vague' ? tx('Thanks. To remember it for next time, add a note saying what you’d like instead.')
+                : result?.why || tx('Thanks for the feedback.')}
             </div>
           )}
           <div className="flex items-center gap-2">
-            {onRetry && said && <button className={btn.subtle} disabled={busy} onClick={() => onRetry(retryText())}><RotateCcw className="w-3.5 h-3.5" />Try again with this feedback</button>}
+            {onRetry && said && <button className={btn.subtle} disabled={busy} onClick={() => onRetry(retryText())}><RotateCcw className="w-3.5 h-3.5" />{tx('Try again with this feedback')}</button>}
             <span className="flex-1" />
-            <button className={btn.ghost} onClick={onClose}>Done</button>
+            <button className={btn.ghost} onClick={onClose}>{tx('Done')}</button>
           </div>
         </div>
       )}

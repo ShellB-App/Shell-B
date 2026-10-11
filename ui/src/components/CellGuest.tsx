@@ -9,6 +9,7 @@ import { ChevronRight, Flag, Info, Laptop, LogOut, UserRound, type LucideIcon } 
 import { btn } from './common';
 import { cellGuest, type GuestPanel } from '../cell';
 import { guestApi, type GuestMe } from '../guest/guestApi';
+import { t } from '../i18n';
 
 const AccountPanel = lazy(() => import('../guest/panels').then(m => ({ default: m.AccountPanel })));
 const DevicesPanel = lazy(() => import('../guest/panels').then(m => ({ default: m.DevicesPanel })));
@@ -54,17 +55,16 @@ export function CellAccountTab({ onGuest, convId }: { onGuest?: (p: GuestPanel) 
       <div>
         <p className="text-sm">{g?.name}{g?.username && <span className="text-[var(--text-muted)] font-mono text-xs"> · @{g.username}</span>}</p>
         <p className="text-[11px] leading-relaxed text-[var(--text-muted)] max-w-[65ch] mt-1">
-          This is your own Shell:B, running in its own container on Evie's machine. Your account is kept by the gateway
-          you signed in to; the settings, memory, chats and projects here are yours alone.
+          {t('This is your own Shell:B, running in its own container on Evie\'s machine. Your account is kept by the gateway you signed in to; the settings, memory, chats and projects here are yours alone.')}
         </p>
       </div>
       <div className="rounded-xl border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)]">
         {GUEST_ENTRIES.map(e => (
-          <Entry key={e.id} icon={<e.icon className="w-4 h-4 text-[var(--accent)]" />} label={e.label} hint={e.hint}
+          <Entry key={e.id} icon={<e.icon className="w-4 h-4 text-[var(--accent)]" />} label={t(e.label)} hint={t(e.hint)}
             onClick={() => onGuest?.(toPanel(e.id, convId))} />
         ))}
       </div>
-      <button className={btn.subtle} onClick={signOutGuest}><LogOut className="w-3.5 h-3.5" />Sign out of this device</button>
+      <button className={btn.subtle} onClick={signOutGuest}><LogOut className="w-3.5 h-3.5" />{t('Sign out of this device')}</button>
     </div>
   );
 }

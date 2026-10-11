@@ -5,6 +5,7 @@ import {
   Flame, Gauge, RefreshCw, Music2, Cpu, UserCheck
 } from 'lucide-react';
 import { type SoundFxKind } from '../dj/engine';
+import { t } from '../i18n';
 
 interface SoundboardProps {
   onTriggerFx: (kind: SoundFxKind) => void;
@@ -119,14 +120,14 @@ export function Soundboard({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono font-bold tracking-wider uppercase text-[var(--text-primary)]">
-                DJ Performance Sampler & Drops
+                {t('DJ Performance Sampler & Drops')}
               </span>
               <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                LOUD & PUNCHY
+                {t('LOUD & PUNCHY')}
               </span>
             </div>
             <p className="text-[10px] font-mono text-[var(--text-muted)]">
-              Dedicated FX Compressor Bus · HERMES 24kHz Neural Announcer
+              {t('Dedicated FX Compressor Bus · HERMES 24kHz Neural Announcer')}
             </p>
           </div>
         </div>
@@ -137,7 +138,7 @@ export function Soundboard({
             <div className="flex items-center gap-1.5 text-amber-400">
               <Volume2 className="w-3.5 h-3.5" />
               <span className="text-[10px] font-mono font-semibold uppercase tracking-wider">
-                Sampler Vol
+                {t('Sampler Vol')}
               </span>
             </div>
             <input
@@ -148,7 +149,7 @@ export function Soundboard({
               value={samplerVolume}
               onChange={e => onSamplerVolumeChange(parseFloat(e.target.value))}
               className="w-24 sm:w-28 accent-amber-400 cursor-pointer h-1.5 bg-[var(--bg-secondary)] rounded-lg"
-              title={`Sampler Gain: ${Math.round(samplerVolume * 100)}%`}
+              title={t('Sampler Gain: {v0}%', { v0: Math.round(samplerVolume * 100) })}
             />
             <span className="text-[11px] font-mono font-bold text-amber-400 min-w-[36px] text-right">
               {Math.round(samplerVolume * 100)}%
@@ -161,7 +162,7 @@ export function Soundboard({
                   ? 'bg-amber-500 text-black border-amber-400'
                   : 'bg-[var(--bg-secondary)] hover:text-white border-[var(--border-subtle)] text-[var(--text-muted)]'
               )}
-              title="Toggle +4dB Boost"
+              title={t('Toggle +4dB Boost')}
             >
               BOOST
             </button>
@@ -174,9 +175,9 @@ export function Soundboard({
         <div className="flex items-center justify-between text-[11px] font-mono text-[var(--text-secondary)]">
           <span className="font-semibold uppercase tracking-wider flex items-center gap-1.5">
             <Zap className="w-3 h-3 text-amber-400" />
-            Performance One-Shots & Drops (Web Audio Bus)
+            {t('Performance One-Shots & Drops (Web Audio Bus)')}
           </span>
-          <span className="text-[10px] text-[var(--text-muted)]">Click or Trigger</span>
+          <span className="text-[10px] text-[var(--text-muted)]">{t('Click or Trigger')}</span>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
@@ -194,13 +195,13 @@ export function Soundboard({
                 borderColor: activePad === pad.id ? pad.color : undefined,
                 color: pad.color,
               }}
-              title={pad.hint}
+              title={t(pad.hint)}
             >
               <span className="text-2xl group-hover:scale-110 transition-transform">
                 {pad.icon}
               </span>
               <span className="text-[11px] font-mono font-bold text-[var(--text-primary)]">
-                {pad.label}
+                {t(pad.label)}
               </span>
               <span className="text-[9px] font-mono text-[var(--text-muted)] opacity-80 truncate max-w-full text-center">
                 {pad.id}
@@ -219,10 +220,10 @@ export function Soundboard({
             </div>
             <div>
               <span className="text-xs font-mono uppercase tracking-wider text-[var(--text-primary)] font-bold">
-                DJ Voice Announcer Drops (HERMES Neural TTS)
+                {t('DJ Voice Announcer Drops (HERMES Neural TTS)')}
               </span>
               <p className="text-[10px] font-mono text-[var(--text-muted)]">
-                Expressive human delivery · Auto-ducks the music with broadcast presence
+                {t('Expressive human delivery · Auto-ducks the music with broadcast presence')}
               </p>
             </div>
           </div>
@@ -230,7 +231,7 @@ export function Soundboard({
           {/* Delivery Speed Slider */}
           <div className="flex items-center gap-2 bg-[var(--bg-secondary)] px-2.5 py-1 rounded-lg border border-[var(--border-subtle)] self-start sm:self-auto">
             <Gauge className="w-3 h-3 text-cyan-400" />
-            <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Speed:</span>
+            <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase">{t('Speed:')}</span>
             <input
               type="range"
               min={0.85}
@@ -249,7 +250,7 @@ export function Soundboard({
         {/* DJ Voice Persona Selector */}
         <div className="flex flex-col gap-1.5">
           <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-            Select DJ Voice Persona:
+            {t('Select DJ Voice Persona:')}
           </span>
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1.5">
             {DJ_VOICES.map(v => (
@@ -262,11 +263,11 @@ export function Soundboard({
                     ? 'bg-rose-500/15 border-rose-500 text-rose-300 font-bold shadow-sm'
                     : 'bg-[var(--bg-secondary)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:text-white'
                 )}
-                title={v.desc}
+                title={t(v.desc)}
               >
                 <span className="text-base">{v.icon}</span>
                 <span className="text-[11px] font-mono font-medium truncate max-w-full">
-                  {v.label}
+                  {t(v.label)}
                 </span>
                 <span className="text-[8px] font-mono opacity-60 truncate max-w-full">
                   {v.id.replace('qwen:', '').replace('am_', '').replace('bm_', '').replace('af_', '').replace('bf_', '')}
@@ -316,7 +317,7 @@ export function Soundboard({
         <form onSubmit={handleCustomDrop} className="flex items-center gap-2 mt-2 pt-2 border-t border-[var(--border-subtle)]">
           <input
             type="text"
-            placeholder="Type custom live DJ shoutout or station ID..."
+            placeholder={t('Type custom live DJ shoutout or station ID...')}
             value={customText}
             onChange={e => setCustomText(e.target.value)}
             disabled={isDroppingVoice}
@@ -332,7 +333,7 @@ export function Soundboard({
             ) : (
               <Send className="w-3.5 h-3.5" />
             )}
-            <span>Drop Voice</span>
+            <span>{t('Drop Voice')}</span>
           </button>
         </form>
       </div>

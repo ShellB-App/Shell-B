@@ -14,6 +14,7 @@ import { Soundboard } from './Soundboard';
 import { GeneratorStudio } from './GeneratorStudio';
 import { WaveformVisualizer } from './WaveformVisualizer';
 import { downloadBlob } from './wavExport';
+import { t as tx } from '../i18n';
 
 const STATIONS: { id: Vibe; label: string; hint: string; icon: string; themeColor: string }[] = [
   { id: 'auto', label: 'Auto Dynamic', hint: 'The AI DJ curates across every style, walking an energy arc', icon: '🌐', themeColor: '#ec4899' },
@@ -163,14 +164,14 @@ export function RadioApp() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base sm:text-lg font-black tracking-wider uppercase text-[var(--text-primary)]">
-                SHELL:B FM
+                {tx('SHELL:B FM')}
               </h1>
               <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase tracking-wider bg-rose-500/20 text-rose-400 border border-rose-500/30">
-                {state.playing ? 'ON AIR' : 'STANDBY'}
+                {state.playing ? tx('ON AIR') : tx('STANDBY')}
               </span>
             </div>
             <p className="text-[11px] font-mono text-[var(--text-muted)]">
-              98.4 FM · Neural Procedural Radio & Live DJ Console
+              {tx('98.4 FM · Neural Procedural Radio & Live DJ Console')}
             </p>
           </div>
         </div>
@@ -182,7 +183,7 @@ export function RadioApp() {
             onClick={() => dj.toggle()}
             className="w-11 h-11 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-pink-500/30 transition hover:scale-105 active:scale-95"
             style={{ backgroundImage: 'linear-gradient(135deg, #f43f5e, #ff2e97, #fb923c)' }}
-            title={state.playing ? 'Pause Radio' : 'Start Broadcast'}
+            title={state.playing ? tx('Pause Radio') : tx('Start Broadcast')}
           >
             {state.playing ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current translate-x-0.5" />}
           </button>
@@ -191,7 +192,7 @@ export function RadioApp() {
           <button
             onClick={() => dj.skip()}
             className="p-2.5 rounded-xl border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-hover)] transition"
-            title="Next Track: Mix out with beatmatched transition"
+            title={tx('Next Track: Mix out with beatmatched transition')}
           >
             <SkipForward className="w-5 h-5" />
           </button>
@@ -207,7 +208,7 @@ export function RadioApp() {
               value={prefs.volume}
               onChange={e => updatePrefs({ volume: +e.target.value })}
               className="w-20 sm:w-28 accent-[var(--accent)] cursor-pointer"
-              title={`Master Volume: ${Math.round(prefs.volume * 100)}%`}
+              title={tx('Master Volume: {v0}%', { v0: Math.round(prefs.volume * 100) })}
             />
           </div>
 
@@ -220,10 +221,10 @@ export function RadioApp() {
                 ? 'border-[var(--accent)] bg-[var(--accent)]/15 text-[var(--accent-soft)] shadow-sm'
                 : 'border-[var(--border-subtle)] text-[var(--text-muted)] hover:bg-[var(--bg-hover)]'
             )}
-            title={prefs.talk ? 'DJ Voice Announcer: ON' : 'DJ Voice Announcer: OFF'}
+            title={prefs.talk ? tx('DJ Voice Announcer: ON') : tx('DJ Voice Announcer: OFF')}
           >
             {prefs.talk ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
-            <span className="hidden sm:inline">{prefs.talk ? 'Voice On' : 'Voice Off'}</span>
+            <span className="hidden sm:inline">{prefs.talk ? tx('Voice On') : tx('Voice Off')}</span>
           </button>
 
           {/* Live Recording Button */}
@@ -235,10 +236,10 @@ export function RadioApp() {
                 ? 'border-rose-500 bg-rose-500 text-white animate-pulse shadow-[0_0_15px_#f43f5e]'
                 : 'border-[var(--border-subtle)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-hover)]'
             )}
-            title={state.recording ? 'Stop Recording and Save WAV' : 'Record Live DJ Set'}
+            title={state.recording ? tx('Stop Recording and Save WAV') : tx('Record Live DJ Set')}
           >
             <CircleDot className="w-4 h-4" />
-            <span>{state.recording ? `REC ${formatSecs(state.recordingDuration)}` : 'Record Set'}</span>
+            <span>{state.recording ? tx('REC {v0}', { v0: formatSecs(state.recordingDuration) }) : tx('Record Set')}</span>
           </button>
         </div>
       </div>
@@ -247,10 +248,10 @@ export function RadioApp() {
       <div className="my-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-muted)] font-bold">
-            Radio Channels & Subgenres
+            {tx('Radio Channels & Subgenres')}
           </span>
           <span className="text-[10px] font-mono text-[var(--text-muted)]">
-            Active: {STATIONS.find(s => s.id === prefs.vibe)?.label ?? 'Auto'}
+            {tx('Active:')} {STATIONS.find(s => s.id === prefs.vibe)?.label ?? tx('Auto')}
           </span>
         </div>
 
@@ -265,10 +266,10 @@ export function RadioApp() {
                   ? 'border-[var(--accent)] bg-[var(--accent)]/15 text-[var(--accent-soft)] font-bold scale-[1.02]'
                   : 'border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-white'
               )}
-              title={st.hint}
+              title={tx(st.hint)}
             >
               <span className="text-base group-hover:scale-125 transition-transform">{st.icon}</span>
-              <span>{st.label}</span>
+              <span>{tx(st.label)}</span>
             </button>
           ))}
         </div>
@@ -286,7 +287,7 @@ export function RadioApp() {
           )}
         >
           <Sliders className="w-4 h-4" />
-          <span>Dual Decks & Mixer</span>
+          <span>{tx('Dual Decks & Mixer')}</span>
         </button>
 
         <button
@@ -299,7 +300,7 @@ export function RadioApp() {
           )}
         >
           <Sparkles className="w-4 h-4" />
-          <span>Sampler & Voice Drops</span>
+          <span>{tx('Sampler & Voice Drops')}</span>
         </button>
 
         <button
@@ -312,7 +313,7 @@ export function RadioApp() {
           )}
         >
           <Wand2 className="w-4 h-4" />
-          <span>Track Forge Studio</span>
+          <span>{tx('Track Forge Studio')}</span>
         </button>
 
         <button
@@ -325,7 +326,7 @@ export function RadioApp() {
           )}
         >
           <History className="w-4 h-4" />
-          <span>History & Saved ({prefs.favs.length})</span>
+          <span>{tx('History & Saved ({length})', { length: prefs.favs.length })}</span>
         </button>
       </div>
 
@@ -437,7 +438,7 @@ export function RadioApp() {
             <div className="flex flex-col gap-3 p-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/90 backdrop-blur-md">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono uppercase tracking-wider text-[var(--text-muted)] font-bold">
-                  Recently Broadcast Tracks
+                  {tx('Recently Broadcast Tracks')}
                 </span>
                 <span className="text-[10px] font-mono text-[var(--text-muted)]">
                   {state.history.length} songs
@@ -447,7 +448,7 @@ export function RadioApp() {
               <div className="flex flex-col gap-1.5 max-h-[500px] overflow-y-auto pr-1">
                 {state.history.length === 0 && (
                   <p className="text-xs text-[var(--text-muted)] p-4 text-center">
-                    Songs you hear live on air will be logged here.
+                    {tx('Songs you hear live on air will be logged here.')}
                   </p>
                 )}
                 {state.history.map((s, i) => (
@@ -457,10 +458,10 @@ export function RadioApp() {
                   >
                     <div className="min-w-0 flex-1">
                       <div className="text-xs font-bold text-[var(--text-primary)] truncate">
-                        {s.title}
+                        {tx(s.title)}
                       </div>
                       <div className="text-[10px] font-mono text-[var(--text-muted)] truncate">
-                        {STYLES[s.style]?.label ?? s.style} · {s.key} {s.mode} · {s.bpm} BPM · Seed #{s.seed}
+                        {tx('{v0} · {key} {mode} · {bpm} BPM · Seed #{seed}', { v0: STYLES[s.style]?.label ?? s.style, key: s.key, mode: s.mode, bpm: s.bpm, seed: s.seed })}
                       </div>
                     </div>
 
@@ -471,14 +472,14 @@ export function RadioApp() {
                           'p-1.5 rounded-lg transition',
                           isSaved(s) ? 'text-rose-500 fill-current' : 'text-[var(--text-muted)] hover:text-white'
                         )}
-                        title={isSaved(s) ? 'Saved' : 'Save to Favorites'}
+                        title={isSaved(s) ? tx('Saved') : tx('Save to Favorites')}
                       >
                         <Heart className={clsx('w-3.5 h-3.5', isSaved(s) && 'fill-current')} />
                       </button>
                       <button
                         onClick={() => dj.playSong(s, true)}
                         className="p-1.5 rounded-lg bg-[var(--bg-secondary)] hover:bg-[var(--accent)] hover:text-white text-[var(--text-secondary)] transition shadow-sm"
-                        title="Mix track now"
+                        title={tx('Mix track now')}
                       >
                         <Play className="w-3.5 h-3.5 fill-current" />
                       </button>
@@ -492,17 +493,17 @@ export function RadioApp() {
             <div className="flex flex-col gap-3 p-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/90 backdrop-blur-md">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono uppercase tracking-wider text-[var(--text-muted)] font-bold">
-                  Saved Favourites ({prefs.favs.length})
+                  {tx('Saved Favourites ({length})', { length: prefs.favs.length })}
                 </span>
                 <span className="text-[10px] font-mono text-[var(--text-muted)]">
-                  Deterministic Reproducible Seeds
+                  {tx('Deterministic Reproducible Seeds')}
                 </span>
               </div>
 
               <div className="flex flex-col gap-1.5 max-h-[500px] overflow-y-auto pr-1">
                 {prefs.favs.length === 0 && (
                   <p className="text-xs text-[var(--text-muted)] p-4 text-center">
-                    Heart any track while listening or creating in the Forge to save it here.
+                    {tx('Heart any track while listening or creating in the Forge to save it here.')}
                   </p>
                 )}
                 {prefs.favs.map(s => (
@@ -512,10 +513,10 @@ export function RadioApp() {
                   >
                     <div className="min-w-0 flex-1">
                       <div className="text-xs font-bold text-[var(--text-primary)] truncate">
-                        {s.title}
+                        {tx(s.title)}
                       </div>
                       <div className="text-[10px] font-mono text-[var(--text-muted)] truncate">
-                        {STYLES[s.style]?.label ?? s.style} · {s.key} {s.mode} · {s.bpm} BPM · Seed #{s.seed}
+                        {tx('{v0} · {key} {mode} · {bpm} BPM · Seed #{seed}', { v0: STYLES[s.style]?.label ?? s.style, key: s.key, mode: s.mode, bpm: s.bpm, seed: s.seed })}
                       </div>
                     </div>
 
@@ -523,14 +524,14 @@ export function RadioApp() {
                       <button
                         onClick={() => toggleSave(s)}
                         className="p-1.5 rounded-lg text-rose-500 hover:text-rose-400 transition"
-                        title="Remove from favorites"
+                        title={tx('Remove from favorites')}
                       >
                         <Heart className="w-3.5 h-3.5 fill-current" />
                       </button>
                       <button
                         onClick={() => dj.playSong(s, true)}
                         className="p-1.5 rounded-lg bg-[var(--accent)] text-[var(--accent-fg)] hover:opacity-90 transition shadow-sm"
-                        title="Mix track now"
+                        title={tx('Mix track now')}
                       >
                         <Play className="w-3.5 h-3.5 fill-current" />
                       </button>
@@ -547,7 +548,7 @@ export function RadioApp() {
       {state.note && state.playing && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2 rounded-full border border-pink-500/40 bg-neutral-900/90 text-pink-300 text-xs font-mono shadow-2xl backdrop-blur-md animate-fade-in pointer-events-none">
           <Sparkles className="w-3.5 h-3.5 text-pink-400 animate-spin" />
-          <span>{state.note}</span>
+          <span>{tx(state.note)}</span>
         </div>
       )}
     </div>

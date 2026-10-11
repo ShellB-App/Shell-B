@@ -6,6 +6,7 @@ import { toast } from './toast';
 import { circlesApi, errText, KIND_LABEL, type Circle, type CircleNote, type NoteKind, type ShareKind } from '../circlesApi';
 import type { Message } from '../types';
 import type { MenuAction } from './ContextMenu';
+import { t } from '../i18n';
 
 /** The small Circles pieces chats show (the page itself, Circles.tsx, loads lazily). */
 
@@ -33,39 +34,39 @@ export function CircleDraftCard({ note, circles, onDone }: { note: CircleNote; c
     p.then(x => { if (x) setN(x); else setGone(true); toast(done); onDone?.(x); })
       .catch(e => setWhy(errText(e))).finally(() => setBusy(false));
   };
-  if (gone) return <div className="my-2 rounded-xl border border-dashed border-[var(--border-subtle)] px-4 py-2.5 text-xs text-[var(--text-muted)]">Circle note draft discarded.</div>;
+  if (gone) return <div className="my-2 rounded-xl border border-dashed border-[var(--border-subtle)] px-4 py-2.5 text-xs text-[var(--text-muted)]">{t('Circle note draft discarded.')}</div>;
   const live = n.status !== 'draft';
   return (
     <div className="my-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-4 py-3 max-w-xl">
       <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-[var(--text-muted)]">
         {live ? <BadgeCheck className="w-3.5 h-3.5 text-emerald-400" /> : <Sparkles className="w-3.5 h-3.5" />}
-        {live ? <>Shared with {n.circleEmoji} {n.circleName}</> : 'Draft circle note · not shared yet'}
+        {live ? <>{t('Shared with')} {n.circleEmoji} {n.circleName}</> : t('Draft circle note · not shared yet')}
         <span aria-hidden>·</span>{KIND_LABEL[n.kind]}
       </div>
       {live ? (
         <p className="mt-1.5 text-sm leading-relaxed">
-          {n.text} <a href={`#/circles/${n.circle}/${n.id}`} className="text-[var(--accent)] hover:underline whitespace-nowrap">Open in Circles</a>
+          {t(n.text)} <a href={`#/circles/${n.circle}/${n.id}`} className="text-[var(--accent)] hover:underline whitespace-nowrap">{t('Open in Circles')}</a>
         </p>
       ) : (
         <>
           <textarea value={text} onChange={e => setText(e.target.value.slice(0, MAX))} rows={2} disabled={busy}
-            className={clsx(btn.input, 'mt-2 resize-none')} aria-label="Note text" />
+            className={clsx(btn.input, 'mt-2 resize-none')} aria-label={t('Note text')} />
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <label className="text-xs text-[var(--text-secondary)] flex items-center gap-1.5">
-              Circle
+              {t('Circle')}
               <select value={circle} onChange={e => setCircle(e.target.value)} className={clsx(btn.input, '!w-auto !py-1 text-xs')} disabled={busy}>
                 {(mine ?? [{ id: n.circle, name: n.circleName } as Circle]).map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
               </select>
             </label>
             <div className="flex-1" />
-            <button className={btn.ghost} disabled={busy} onClick={() => run(circlesApi.remove(n.id).then(() => null), 'Draft discarded')}>Discard</button>
+            <button className={btn.ghost} disabled={busy} onClick={() => run(circlesApi.remove(n.id).then(() => null), 'Draft discarded')}>{t('Discard')}</button>
             <button className={btn.primary} disabled={busy || !text.trim()}
               onClick={() => run(circlesApi.publish(n.id, { text, circle }), `Shared with ${chosen?.name ?? n.circleName}`)}>
-              {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UsersRound className="w-3.5 h-3.5" />} Publish to {chosen?.name ?? n.circleName}
+              {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UsersRound className="w-3.5 h-3.5" />} {t('Publish to')} {chosen?.name ?? n.circleName}
             </button>
           </div>
           <p className="mt-2 text-[11px] text-[var(--text-muted)]">
-            Everyone in {chosen?.name ?? n.circleName} ({chosen ? people(chosen.members) : 'its members'}) and their local agents will see it.
+            {t('Everyone in')} {chosen?.name ?? n.circleName} ({chosen ? people(chosen.members) : t('its members')}{t(') and their local agents will see it.')}
           </p>
         </>
       )}
@@ -85,7 +86,7 @@ export function CircleNotesUsed({ message }: { message: Message }) {
         onClick={() => setOpen(o => !o)} aria-expanded={open}>
         {open ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
         <UsersRound className="w-3 h-3 text-sky-400/80" />
-        Used {notes.length} circle {notes.length === 1 ? 'note' : 'notes'}
+        {t('Used')} {notes.length} circle {notes.length === 1 ? 'note' : 'notes'}
         <span className="opacity-70">· {[...new Set(notes.map(n => n.circleName))].join(', ')}</span>
       </button>
       {open && (
@@ -94,7 +95,7 @@ export function CircleNotesUsed({ message }: { message: Message }) {
             <li key={n.id} className="flex items-start gap-1.5">
               <span className="mt-[5px] w-1 h-1 rounded-full bg-current opacity-50 shrink-0" />
               <span className="min-w-0">
-                <a href={`#/circles/${n.circle}/${n.id}`} className="hover:text-[var(--text-primary)]">{n.author.name} in {n.circleName}</a>: {n.text}
+                <a href={`#/circles/${n.circle}/${n.id}`} className="hover:text-[var(--text-primary)]">{n.author.name} in {n.circleName}</a>: {t(n.text)}
               </span>
             </li>
           ))}
@@ -134,7 +135,7 @@ export function circlePinEntry(kind: 'c' | 'p' | 'g', ref: string, icon: MenuAct
 
 export function KindPicker({ value, onChange }: { value: NoteKind; onChange: (k: NoteKind) => void }) {
   return (
-    <div className="flex gap-0.5 rounded-lg border border-[var(--border-subtle)] p-0.5" role="radiogroup" aria-label="Kind of note">
+    <div className="flex gap-0.5 rounded-lg border border-[var(--border-subtle)] p-0.5" role="radiogroup" aria-label={t('Kind of note')}>
       {KINDS.map(k => (
         <button key={k} role="radio" aria-checked={value === k} onClick={() => onChange(k)}
           className={clsx('px-2 py-0.5 rounded-md text-[11px] font-medium transition',
@@ -159,29 +160,29 @@ export function ShareToCircle({ text, onClose }: { text: string; onClose: () => 
   const share = () => {
     setBusy(true); setWhy('');
     circlesApi.write({ circle, text: body, kind, fromMemory: true })
-      .then(() => { toast(`Shared with ${chosen?.name}`); onClose(); }).catch(e => setWhy(errText(e))).finally(() => setBusy(false));
+      .then(() => { toast(t('Shared with {name}', { name: chosen?.name ?? '' })); onClose(); }).catch(e => setWhy(errText(e))).finally(() => setBusy(false));
   };
   return (
     <div className="fixed inset-0 z-[70] grid place-items-center bg-black/50 p-4" onClick={onClose}>
-      <div role="dialog" aria-modal aria-label="Share to a circle" onClick={e => e.stopPropagation()}
+      <div role="dialog" aria-modal aria-label={t('Share to a circle')} onClick={e => e.stopPropagation()}
         className="w-full max-w-md rounded-xl border border-[var(--border-strong)] bg-[var(--bg-secondary)] shadow-2xl p-5 space-y-3">
-        <h2 className="text-base font-semibold tracking-tight">Share to a circle</h2>
-        <p className="text-xs text-[var(--text-secondary)]">Your memory stays private. This shares a copy of the text, as a note from you, with one circle.</p>
-        <div className="flex flex-wrap gap-1" role="radiogroup" aria-label="Circle">
+        <h2 className="text-base font-semibold tracking-tight">{t('Share to a circle')}</h2>
+        <p className="text-xs text-[var(--text-secondary)]">{t('Your memory stays private. This shares a copy of the text, as a note from you, with one circle.')}</p>
+        <div className="flex flex-wrap gap-1" role="radiogroup" aria-label={t('Circle')}>
           {(circles ?? []).map(c => (
             <button key={c.id} role="radio" aria-checked={circle === c.id} onClick={() => setCircle(c.id)}
               className={clsx(btn.subtle, circle === c.id && '!border-[color:var(--accent)] !text-[var(--text-primary)]')}>{c.emoji} {c.name}</button>
           ))}
-          {circles?.length === 0 && <p className="text-sm text-[var(--text-muted)]">You aren't in any circles.</p>}
+          {circles?.length === 0 && <p className="text-sm text-[var(--text-muted)]">{t('You aren\'t in any circles.')}</p>}
         </div>
-        <textarea value={body} onChange={e => setBody(e.target.value.slice(0, MAX))} rows={3} className={clsx(btn.input, 'resize-none')} aria-label="Note text" />
+        <textarea value={body} onChange={e => setBody(e.target.value.slice(0, MAX))} rows={3} className={clsx(btn.input, 'resize-none')} aria-label={t('Note text')} />
         <KindPicker value={kind} onChange={setKind} />
-        {chosen && <p className="text-[11px] text-[var(--text-muted)]">{people(chosen.members)} in {chosen.name} and their local agents will see it.</p>}
+        {chosen && <p className="text-[11px] text-[var(--text-muted)]">{t('{v0} in {name} and their local agents will see it.', { v0: people(chosen.members), name: chosen.name })}</p>}
         {why && <p className="text-xs text-amber-400 flex items-start gap-1.5"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />{why}</p>}
         <div className="flex justify-end gap-2">
-          <button className={btn.ghost} onClick={onClose}>Cancel</button>
+          <button className={btn.ghost} onClick={onClose}>{t('Cancel')}</button>
           <button className={btn.primary} disabled={!circle || !body.trim() || busy} onClick={share}>
-            {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UsersRound className="w-3.5 h-3.5" />} {chosen ? `Share with ${chosen.name}` : 'Pick a circle'}
+            {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UsersRound className="w-3.5 h-3.5" />} {chosen ? t('Share with {name}', { name: chosen.name }) : t('Pick a circle')}
           </button>
         </div>
       </div>
@@ -225,29 +226,29 @@ function ShareContentToCircle({ payload, onClose }: { payload: SharePayload; onC
   const share = () => {
     setBusy(true); setWhy('');
     circlesApi.shareContent({ ...payload, circle, title, note })
-      .then(s => { toast(`Shared “${s.title}” with ${chosen?.name}`); onClose(); }).catch(e => setWhy(errText(e))).finally(() => setBusy(false));
+      .then(s => { toast(t('Shared “{title}” with {name}', { title: s.title ?? '', name: chosen?.name ?? '' })); onClose(); }).catch(e => setWhy(errText(e))).finally(() => setBusy(false));
   };
   return (
     <div className="fixed inset-0 z-[70] grid place-items-center bg-black/50 p-4" onClick={onClose}>
-      <div role="dialog" aria-modal aria-label="Share to a circle" onClick={e => e.stopPropagation()}
+      <div role="dialog" aria-modal aria-label={t('Share to a circle')} onClick={e => e.stopPropagation()}
         className="w-full max-w-md rounded-xl border border-[var(--border-strong)] bg-[var(--bg-secondary)] shadow-2xl p-5 space-y-3">
-        <h2 className="text-base font-semibold tracking-tight">Share to a circle</h2>
-        <p className="text-xs text-[var(--text-secondary)] max-w-[50ch]">A copy of {WHAT[payload.kind]} as it is now goes to one circle; later edits stay yours. Members (and their local agents, labelled as your words) can read it, and keep their own copy. You can retract it any time.</p>
-        <div className="flex flex-wrap gap-1" role="radiogroup" aria-label="Circle">
+        <h2 className="text-base font-semibold tracking-tight">{t('Share to a circle')}</h2>
+        <p className="text-xs text-[var(--text-secondary)] max-w-[50ch]">{t('A copy of {v0} as it is now goes to one circle; later edits stay yours. Members (and their local agents, labelled as your words) can read it, and keep their own copy. You can retract it any time.', { v0: WHAT[payload.kind] })}</p>
+        <div className="flex flex-wrap gap-1" role="radiogroup" aria-label={t('Circle')}>
           {(circles ?? []).map(c => (
             <button key={c.id} role="radio" aria-checked={circle === c.id} onClick={() => setCircle(c.id)}
               className={clsx(btn.subtle, circle === c.id && '!border-[color:var(--accent)] !text-[var(--text-primary)]')}>{c.emoji} {c.name}</button>
           ))}
-          {circles?.length === 0 && <p className="text-sm text-[var(--text-muted)]">You aren't in any circles.</p>}
+          {circles?.length === 0 && <p className="text-sm text-[var(--text-muted)]">{t('You aren\'t in any circles.')}</p>}
         </div>
-        <input value={title} onChange={e => setTitle(e.target.value.slice(0, 200))} className={btn.input} aria-label="Title" placeholder="Title" />
-        <textarea value={note} onChange={e => setNote(e.target.value.slice(0, 300))} rows={2} className={clsx(btn.input, 'resize-none')} aria-label="A note for the circle" placeholder="A line about it, for the circle (optional)" />
-        {chosen && <p className="text-[11px] text-[var(--text-muted)]">{chosen.members} people in {chosen.name} will see it.</p>}
+        <input value={title} onChange={e => setTitle(e.target.value.slice(0, 200))} className={btn.input} aria-label={t('Title')} placeholder={t('Title')} />
+        <textarea value={note} onChange={e => setNote(e.target.value.slice(0, 300))} rows={2} className={clsx(btn.input, 'resize-none')} aria-label={t('A note for the circle')} placeholder={t('A line about it, for the circle (optional)')} />
+        {chosen && <p className="text-[11px] text-[var(--text-muted)]">{t('{members} people in {name} will see it.', { members: chosen.members, name: chosen.name })}</p>}
         {why && <p className="text-xs text-amber-400 flex items-start gap-1.5"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />{why}</p>}
         <div className="flex justify-end gap-2">
-          <button className={btn.ghost} onClick={onClose}>Cancel</button>
+          <button className={btn.ghost} onClick={onClose}>{t('Cancel')}</button>
           <button className={btn.primary} disabled={!circle || !title.trim() || busy} onClick={share}>
-            {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UsersRound className="w-3.5 h-3.5" />} {chosen ? `Share with ${chosen.name}` : 'Pick a circle'}
+            {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UsersRound className="w-3.5 h-3.5" />} {chosen ? t('Share with {name}', { name: chosen.name }) : t('Pick a circle')}
           </button>
         </div>
       </div>

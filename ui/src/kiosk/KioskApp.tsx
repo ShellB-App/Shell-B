@@ -68,6 +68,7 @@ import {
 import { WallpaperModal } from './WallpaperModal';
 import { loadAmbience } from '../ambience';
 import { foldSummarized } from '../summarized';
+import { t as tx } from '../i18n';
 
 const Studio = lazy(() => import('../studio/Studio'));
 const Code = lazy(() => import('../code/Code'));
@@ -687,7 +688,7 @@ export function KioskApp() {
   if (!agent) {
     return (
       <div className="h-full flex items-center justify-center text-sm text-[var(--text-muted)] bg-[var(--bg-primary)]">
-        {loadError ? `Can't reach the Shell:B server: ${loadError}` : 'Booting Shell:B Kiosk OS…'}
+        {loadError ? tx('Can\'t reach the Shell:B server: {loadError}', { loadError: loadError }) : tx('Booting Shell:B Kiosk OS…')}
       </div>
     );
   }
@@ -787,7 +788,7 @@ export function KioskApp() {
                             </h2>
                             <p className="text-xs text-[var(--text-secondary)] mt-1 max-w-sm">
                               <span className="font-semibold text-[var(--text-primary)]">{agent.name}</span> ·{' '}
-                              {agent.description}
+                              {tx(agent.description)}
                             </p>
 
                             <div className="mt-6 grid grid-cols-2 gap-2.5 w-full text-left">
@@ -798,7 +799,7 @@ export function KioskApp() {
                                   className="p-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-hover)] text-left transition group"
                                 >
                                   <div className="text-xs font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent-soft)] transition">
-                                    {q.title}
+                                    {tx(q.title)}
                                   </div>
                                   <div className="text-[11px] text-[var(--text-secondary)] mt-0.5 line-clamp-2 leading-relaxed">
                                     {q.prompt}
@@ -808,7 +809,7 @@ export function KioskApp() {
                             </div>
 
                             <p className="mt-6 text-[10px] text-[var(--text-muted)] font-mono">
-                              Overthink. Overcomplicate. Overengineer. Strictly local.
+                              {tx('Overthink. Overcomplicate. Overengineer. Strictly local.')}
                             </p>
                           </div>
                         ) : (
@@ -855,7 +856,7 @@ export function KioskApp() {
                             scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: 'smooth' });
                           }}
                           className="absolute bottom-24 right-6 p-2 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-strong)] shadow-xl text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition z-20"
-                          aria-label="Scroll to bottom"
+                          aria-label={tx('Scroll to bottom')}
                         >
                           <ArrowDown className="w-4 h-4" />
                         </button>
@@ -1006,7 +1007,7 @@ export function KioskApp() {
                     </div>
                   ) : win.appId === 'studio' ? (
                     <div className="h-full overflow-hidden">
-                      <Suspense fallback={<div className="h-full flex items-center justify-center text-sm text-[var(--text-muted)]">Loading Studio…</div>}>
+                      <Suspense fallback={<div className="h-full flex items-center justify-center text-sm text-[var(--text-muted)]">{tx('Loading Studio…')}</div>}>
                         <Studio
                           agents={agents}
                           models={models}
@@ -1024,7 +1025,7 @@ export function KioskApp() {
                     </div>
                   ) : win.appId === 'code' ? (
                     <div className="h-full overflow-hidden">
-                      <Suspense fallback={<div className="h-full flex items-center justify-center text-sm text-[var(--text-muted)]">Loading Code…</div>}>
+                      <Suspense fallback={<div className="h-full flex items-center justify-center text-sm text-[var(--text-muted)]">{tx('Loading Code…')}</div>}>
                         <Code
                           agents={agents}
                           models={models}

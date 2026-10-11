@@ -6,6 +6,7 @@ import clsx from 'clsx';
 import { AlertTriangle, CheckCircle2, Cpu, HardDrive, MemoryStick, Microchip, XCircle } from 'lucide-react';
 import { CardFrame } from './CardFrame';
 import type { CardProps } from './registry';
+import { t as tx } from '../i18n';
 
 interface Live {
   cpu: { usage: number; temp: number | null; load: number[]; cores: number };
@@ -60,11 +61,11 @@ export function SystemCard(_props: CardProps) {
   const down = services ? Object.entries(services).filter(([, v]) => !v.ok) : [];
 
   return (
-    <CardFrame icon={Microchip} title={live?.host ?? 'System'} meta={live?.gpu ? `· ${live.gpu.name} · ${live.cpu.cores} cores` : undefined}
-      actions={error ? <span className="text-amber-300">Couldn’t refresh</span> : live ? <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Live</span> : null}>
+    <CardFrame icon={Microchip} title={live?.host ?? tx('System')} meta={live?.gpu ? `· ${live.gpu.name} · ${live.cpu.cores} cores` : undefined}
+      actions={error ? <span className="text-amber-300">{tx('Couldn’t refresh')}</span> : live ? <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />{tx('Live')}</span> : null}>
       <section ref={root}>
         {!live ? (
-          <div className="px-4 py-8 text-[12px] text-[var(--text-muted)]">{error ?? <span className="animate-pulse">Reading the Spark’s vitals…</span>}</div>
+          <div className="px-4 py-8 text-[12px] text-[var(--text-muted)]">{error ?? <span className="animate-pulse">{tx('Reading the Spark’s vitals…')}</span>}</div>
         ) : (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-[var(--border-subtle)]">
@@ -73,16 +74,16 @@ export function SystemCard(_props: CardProps) {
               <Meter icon={Microchip} label="GPU" pct={live.gpu?.util ?? 0} value={live.gpu?.util != null ? `${Math.round(live.gpu.util)}%` : '—'}
                 sub={[live.gpu?.temp != null && `${Math.round(live.gpu.temp)}°C`, live.gpu?.power != null && `${live.gpu.power.toFixed(0)} W`].filter(Boolean).join(' · ') || '—'}
                 history={hist.current.gpu} />
-              <Meter icon={MemoryStick} label="Unified memory" pct={memPct} value={`${((live.memory.total - live.memory.available) / GB).toFixed(0)} GB`}
+              <Meter icon={MemoryStick} label={tx('Unified memory')} pct={memPct} value={`${((live.memory.total - live.memory.available) / GB).toFixed(0)} GB`}
                 sub={`of ${(live.memory.total / GB).toFixed(0)} GB · ${Math.round(memPct)}%`} history={hist.current.mem} warn={85} bad={95} />
-              <Meter icon={HardDrive} label="Disk" pct={diskPct} value={`${(live.disk.used / 1e12).toFixed(2)} TB`}
+              <Meter icon={HardDrive} label={tx('Disk')} pct={diskPct} value={`${(live.disk.used / 1e12).toFixed(2)} TB`}
                 sub={`of ${(live.disk.total / 1e12).toFixed(1)} TB · ${((live.disk.total - live.disk.used) / 1e12).toFixed(2)} TB free`} warn={85} bad={95} />
             </div>
 
             <div className="grid sm:grid-cols-2 gap-4 px-4 py-3 border-t border-[var(--border-subtle)] text-[12px]">
               <div>
                 <h4 className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1.5">
-                  Services {services && <span className="normal-case tracking-normal">· {down.length ? `${down.length} down` : 'all up'}</span>}
+                  {tx('Services')} {services && <span className="normal-case tracking-normal">· {down.length ? tx('{length} down', { length: down.length }) : tx('all up')}</span>}
                 </h4>
                 <ul className="flex flex-wrap gap-1.5">
                   {services ? Object.entries(services).map(([k, v]) => (
@@ -95,17 +96,17 @@ export function SystemCard(_props: CardProps) {
                 </ul>
               </div>
               <div>
-                <h4 className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1.5">Models in memory</h4>
+                <h4 className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1.5">{tx('Models in memory')}</h4>
                 {live.models.length ? (
                   <ul className="space-y-1">
                     {live.models.map(m => (
                       <li key={m.name} className="flex items-baseline gap-2">
                         <span className="font-mono text-[11.5px] truncate">{m.name}</span>
-                        <span className="ml-auto tabular-nums text-[11px] text-[var(--text-muted)]">{m.size ? `${(m.size / GB).toFixed(1)} GB` : ''}</span>
+                        <span className="ml-auto tabular-nums text-[11px] text-[var(--text-muted)]">{m.size ? tx('{v0} GB', { v0: (m.size / GB).toFixed(1) }) : ''}</span>
                       </li>
                     ))}
                   </ul>
-                ) : <p className="text-[var(--text-muted)]">None loaded right now.</p>}
+                ) : <p className="text-[var(--text-muted)]">{tx('None loaded right now.')}</p>}
               </div>
             </div>
           </>

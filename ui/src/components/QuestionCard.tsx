@@ -4,6 +4,7 @@ import { Check, MessageCircleQuestion } from 'lucide-react';
 import type { AskAnswer, Block } from '../types';
 import { api } from '../api';
 import { btn } from './common';
+import { t } from '../i18n';
 
 type ToolBlock = Extract<Block, { type: 'tool' }>;
 
@@ -71,9 +72,9 @@ export function QuestionCard({ b, live, isLast, busy, onAsk }: {
       <div className="flex items-center gap-2 px-3 py-2 text-xs border-b border-[var(--border-subtle)]">
         <MessageCircleQuestion className={clsx('w-3.5 h-3.5 shrink-0', open ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]')} />
         <span className={clsx('font-medium', open ? 'text-[var(--accent-soft)]' : 'text-[var(--text-secondary)]')}>
-          {waiting ? (qs.length > 1 ? `${qs.length} questions for you` : 'A question for you')
-            : late ? 'Unanswered: your answer will be sent as a new message'
-              : b.answers ? 'You answered' : b.decision === 'deny' ? 'Skipped' : 'Not answered'}
+          {waiting ? (qs.length > 1 ? t('{length} questions for you', { length: qs.length }) : t('A question for you'))
+            : late ? t('Unanswered: your answer will be sent as a new message')
+              : b.answers ? t('You answered') : b.decision === 'deny' ? t('Skipped') : t('Not answered')}
         </span>
       </div>
 
@@ -82,7 +83,7 @@ export function QuestionCard({ b, live, isLast, busy, onAsk }: {
           <fieldset key={qi} className="space-y-1.5" disabled={!open || sending}>
             <legend className="flex items-start gap-2 text-sm font-medium mb-1.5">
               {q.header && <span className="mt-px px-1.5 py-px rounded-md text-[10px] font-semibold uppercase tracking-wide bg-[var(--accent)]/10 text-[var(--accent-soft)] border border-[var(--accent)]/25 shrink-0">{q.header}</span>}
-              <span>{q.question}{q.multiSelect && <span className="ml-1.5 text-[11px] font-normal text-[var(--text-muted)]">(pick any)</span>}</span>
+              <span>{q.question}{q.multiSelect && <span className="ml-1.5 text-[11px] font-normal text-[var(--text-muted)]">{t('(pick any)')}</span>}</span>
             </legend>
             {q.options.map(o => {
               const on = shown[qi].selected.includes(o.label);
@@ -96,8 +97,8 @@ export function QuestionCard({ b, live, isLast, busy, onAsk }: {
                     {on && <Check className="w-3 h-3" />}
                   </span>
                   <span className="min-w-0">
-                    <span className="block text-[13px] text-[var(--text-primary)]">{o.label}</span>
-                    {o.description && <span className="block text-[11px] text-[var(--text-secondary)] mt-0.5">{o.description}</span>}
+                    <span className="block text-[13px] text-[var(--text-primary)]">{t(o.label)}</span>
+                    {o.description && <span className="block text-[11px] text-[var(--text-secondary)] mt-0.5">{t(o.description)}</span>}
                   </span>
                 </button>
               );
@@ -106,15 +107,15 @@ export function QuestionCard({ b, live, isLast, busy, onAsk }: {
               <div className={clsx('flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg border transition',
                 useOther[qi] ? 'border-[var(--accent)]/60 bg-[var(--accent)]/10' : 'border-[var(--border-subtle)] border-dashed')}>
                 <input type={q.multiSelect ? 'checkbox' : 'radio'} name={`other-${b.approval?.id ?? b.startedAt}-${qi}`} checked={useOther[qi]}
-                  onChange={e => toggleOther(qi, e.target.checked)} className="accent-[var(--accent)] shrink-0" aria-label="Answer in my own words" />
-                <input value={other[qi]} placeholder="Other: type your own answer"
+                  onChange={e => toggleOther(qi, e.target.checked)} className="accent-[var(--accent)] shrink-0" aria-label={t('Answer in my own words')} />
+                <input value={other[qi]} placeholder={t('Other: type your own answer')}
                   onChange={e => { const v = e.target.value; setOther(o => o.map((x, i) => i === qi ? v : x)); toggleOther(qi, !!v.trim()); }}
                   onKeyDown={e => { if (e.key === 'Enter' && complete && !sending) { e.preventDefault(); void submit(shown); } }}
                   className="flex-1 min-w-0 bg-transparent text-[13px] placeholder-[var(--text-muted)] focus:outline-none py-0.5" />
               </div>
             ) : shown[qi].other ? (
               <div className="px-2.5 py-2 rounded-lg border border-[var(--accent)]/60 bg-[var(--accent)]/10 text-[13px] whitespace-pre-wrap break-words">
-                <span className="text-[11px] text-[var(--text-muted)] mr-1.5">Own answer:</span>{shown[qi].other}
+                <span className="text-[11px] text-[var(--text-muted)] mr-1.5">{t('Own answer:')}</span>{shown[qi].other}
               </div>
             ) : null}
           </fieldset>
@@ -124,14 +125,14 @@ export function QuestionCard({ b, live, isLast, busy, onAsk }: {
         {open && (qs.length > 1 || qs[0].multiSelect || useOther[0]) && (
           <div className="flex items-center gap-1.5">
             <button className={btn.primary} disabled={!complete || sending || (late && busy)} onClick={() => submit(shown)}>
-              {late ? 'Send answers' : 'Submit'}
+              {late ? t('Send answers') : t('Submit')}
             </button>
-            {waiting && <button className={btn.ghost} disabled={sending} onClick={skip} title="Let the agent go ahead with its best judgment">Skip</button>}
-            {!complete && <span className="text-[11px] text-[var(--text-muted)]">Answer every question to submit</span>}
+            {waiting && <button className={btn.ghost} disabled={sending} onClick={skip} title={t('Let the agent go ahead with its best judgment')}>{t('Skip')}</button>}
+            {!complete && <span className="text-[11px] text-[var(--text-muted)]">{t('Answer every question to submit')}</span>}
           </div>
         )}
         {open && qs.length === 1 && !qs[0].multiSelect && !useOther[0] && waiting && (
-          <button className={btn.ghost} disabled={sending} onClick={skip} title="Let the agent go ahead with its best judgment">Skip</button>
+          <button className={btn.ghost} disabled={sending} onClick={skip} title={t('Let the agent go ahead with its best judgment')}>{t('Skip')}</button>
         )}
       </div>
     </div>

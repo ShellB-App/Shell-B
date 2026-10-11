@@ -682,15 +682,15 @@ export function App() {
               </span>
             ) : secretaryRoute ? <span className="text-sm font-medium">{t('Secretary')}</span> : gibberlinkRoute ? <span className="text-sm font-medium">{t('Gibberlink')}</span> : mapsRoute ? <span className="text-sm font-medium">{t('Worlds')}</span> : wikiRoute !== null ? <span className="text-sm font-medium">{t('Wiki')}</span> : dataRoute ? <span className="text-sm font-medium">{t('Offline data')}</span> : generateRoute ? <span className="text-sm font-medium">{t('Generate')}</span> : shopRoute ? <span className="text-sm font-medium">{t('Shopping')}</span> : circlesRoute ? <span className="text-sm font-medium">{t('Circles')}</span> : feedsRoute ? <span className="text-sm font-medium">{t('Feeds')}</span> : assetRoute ? (
               <button className="text-sm font-medium hover:text-[var(--accent)] flex items-center gap-1.5" onClick={() => openAssets()}>
-                <Shapes className="w-4 h-4 text-lime-500" />Assets
+                <Shapes className="w-4 h-4 text-lime-500" />{t('Assets')}
               </button>
             ) : plans ? (
               <button className="text-sm font-medium hover:text-[var(--accent)] flex items-center gap-1.5" onClick={() => openPlans()}>
-                <Workflow className="w-4 h-4 text-violet-500" />Mega Plans
+                <Workflow className="w-4 h-4 text-violet-500" />{t('Mega Plans')}
               </button>
             ) : research ? (
               <button className="text-sm font-medium hover:text-[var(--accent)] flex items-center gap-1.5" onClick={() => openResearch()}>
-                <Telescope className="w-4 h-4 text-teal-500" />Research
+                <Telescope className="w-4 h-4 text-teal-500" />{t('Research')}
               </button>
             ) : library || scheduled || activity || codexRoute !== null || modelsRoute ? (
               <span className="text-sm font-medium">{library === 'favorites' ? t('Favorites') : library ? t('Library') : scheduled ? t('Scheduled') : activity ? t('Activity') : codexRoute !== null ? (/^me\b/.test(codexRoute) ? t('Me') : /^notes\b/.test(codexRoute) ? t('Notes') : /^contacts\b/.test(codexRoute) ? t('Contacts') : /^(events|calendar)\b/.test(codexRoute) ? t('Calendar') : t('Codex')) : t('Models')}</span>

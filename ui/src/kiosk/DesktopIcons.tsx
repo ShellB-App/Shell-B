@@ -4,6 +4,7 @@ import { APPS, type AppId } from '../components/apps';
 import { Play, PinOff, Info } from 'lucide-react';
 import { useEffect } from 'react';
 import type { Status } from '../types';
+import { t } from '../i18n';
 
 interface Props {
   onOpenApp: (appId: AppId) => void;
@@ -130,7 +131,7 @@ export function DesktopIcons({ onOpenApp, status }: Props) {
                   : 'text-[var(--text-primary)] group-hover:text-white'
               )}
             >
-              {app.label}
+              {t(app.label)}
             </span>
           </div>
         );
@@ -151,7 +152,7 @@ export function DesktopIcons({ onOpenApp, status }: Props) {
             }}
           >
             <Play className="w-3.5 h-3.5" />
-            Open Application
+            {t('Open Application')}
           </button>
           <button
             className="w-full text-left px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-hover)] flex items-center gap-2"
@@ -167,7 +168,7 @@ export function DesktopIcons({ onOpenApp, status }: Props) {
             }}
           >
             <PinOff className="w-3.5 h-3.5" />
-            Unpin from Desktop
+            {t('Unpin from Desktop')}
           </button>
           <div className="h-px bg-[var(--border-subtle)] my-1" />
           <button
@@ -175,7 +176,7 @@ export function DesktopIcons({ onOpenApp, status }: Props) {
             onClick={() => setContextMenu(null)}
           >
             <Info className="w-3.5 h-3.5" />
-            Properties
+            {t('Properties')}
           </button>
         </div>
       )}

@@ -4,6 +4,7 @@ import { ArrowDownToLine, ArrowUpFromLine, Check, Copy, Loader2, Plus, RefreshCw
 import { req } from '../api';
 import { btn, relTime } from './common';
 import { toast, toastError } from './toast';
+import { t } from '../i18n';
 
 /** Tools & Connectors → API → Webhooks (server/hooks.py): inbound hooks that start a turn, outbound hooks that post
  * Activity events (and approvals) to a URL. Owner/admin only, like API keys. */
@@ -28,53 +29,53 @@ export function WebhooksPanel({ agents }: { agents: AgentLite[] }) {
   const load = useCallback(() => req<Data>('/api/webhooks').then(setData).catch(() => setData({ inbound: [], outbound: [], kinds: [], log: [] })), []);
   useEffect(() => { load(); }, [load]);
   const copy = (text: string, what: string) => { void navigator.clipboard?.writeText(text); setCopied(what); setTimeout(() => setCopied(''), 1500); };
-  const act = async (what: string, f: () => Promise<unknown>) => { setBusy(what); try { await f(); load(); } catch (e) { toastError('Webhooks')(e); } finally { setBusy(''); } };
+  const act = async (what: string, f: () => Promise<unknown>) => { setBusy(what); try { await f(); load(); } catch (e) { toastError(t('Webhooks'))(e); } finally { setBusy(''); } };
   if (!data) return null;
   const base = `${location.origin}/api/v1/hooks`;
   const nameOf = (id: string) => agents.find(a => a.id === id)?.name ?? id;
   return (
     <section className="space-y-4">
       <div>
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-2"><Webhook className="w-3.5 h-3.5" />Webhooks</h3>
-        <p className="text-xs text-[var(--text-muted)] mt-1 max-w-[65ch]">Inbound hooks let n8n, GitHub, Home Assistant or a cron job start an agent turn with a payload. Outbound hooks post what happened (a plan finished, a reminder is due, an approval is waiting) to a URL you run. Both are described in docs/API.md.</p>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-2"><Webhook className="w-3.5 h-3.5" />{t('Webhooks')}</h3>
+        <p className="text-xs text-[var(--text-muted)] mt-1 max-w-[65ch]">{t('Inbound hooks let n8n, GitHub, Home Assistant or a cron job start an agent turn with a payload. Outbound hooks post what happened (a plan finished, a reminder is due, an approval is waiting) to a URL you run. Both are described in docs/API.md.')}</p>
       </div>
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h4 className="text-xs font-medium flex items-center gap-1.5"><ArrowDownToLine className="w-3.5 h-3.5 text-emerald-400" />Inbound: start a turn</h4>
-          {!newIn && <button className={btn.subtle} onClick={() => setNewIn({ name: '', agent: agents[0]?.id ?? 'shellb', template: '', reuse: false })}><Plus className="w-3.5 h-3.5" />New inbound hook</button>}
+          <h4 className="text-xs font-medium flex items-center gap-1.5"><ArrowDownToLine className="w-3.5 h-3.5 text-emerald-400" />{t('Inbound: start a turn')}</h4>
+          {!newIn && <button className={btn.subtle} onClick={() => setNewIn({ name: '', agent: agents[0]?.id ?? 'shellb', template: '', reuse: false })}><Plus className="w-3.5 h-3.5" />{t('New inbound hook')}</button>}
         </div>
         {newIn && (
           <form className="p-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] space-y-2 text-xs" onSubmit={e => { e.preventDefault(); act('in', () => req('/api/webhooks/in', { method: 'POST', body: JSON.stringify(newIn) })).then(() => setNewIn(null)); }}>
             <div className="grid sm:grid-cols-2 gap-2">
-              <input className={btn.input} placeholder="Name (e.g. GitHub pushes)" value={newIn.name} onChange={e => setNewIn({ ...newIn, name: e.target.value })} required />
+              <input className={btn.input} placeholder={t('Name (e.g. GitHub pushes)')} value={newIn.name} onChange={e => setNewIn({ ...newIn, name: e.target.value })} required />
               <select className={btn.input} value={newIn.agent} onChange={e => setNewIn({ ...newIn, agent: e.target.value })}>
                 {agents.filter(a => !a.adult).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
             </div>
-            <textarea className={clsx(btn.input, 'font-mono min-h-[72px]')} placeholder={'Message template. Empty = the payload itself. Fields: {{json}} {{text}} {{payload.repository.name}} {{header.x-github-event}} {{query.q}}\ne.g. A push landed on {{payload.ref}}: summarize {{payload.head_commit.message}}'} value={newIn.template} onChange={e => setNewIn({ ...newIn, template: e.target.value })} />
-            <label className="flex items-center gap-2"><input type="checkbox" checked={newIn.reuse} onChange={e => setNewIn({ ...newIn, reuse: e.target.checked })} />Continue one chat across deliveries (otherwise each delivery starts a new chat)</label>
-            <div className="flex gap-2"><button className={btn.primary} type="submit" disabled={busy === 'in'}>Create</button><button className={btn.ghost} type="button" onClick={() => setNewIn(null)}>Cancel</button></div>
+            <textarea className={clsx(btn.input, 'font-mono min-h-[72px]')} placeholder={t('Message template. Empty = the payload itself. Fields: {{json}} {{text}} {{payload.repository.name}} {{header.x-github-event}} {{query.q}}\ne.g. A push landed on {{payload.ref}}: summarize {{payload.head_commit.message}}')} value={newIn.template} onChange={e => setNewIn({ ...newIn, template: e.target.value })} />
+            <label className="flex items-center gap-2"><input type="checkbox" checked={newIn.reuse} onChange={e => setNewIn({ ...newIn, reuse: e.target.checked })} />{t('Continue one chat across deliveries (otherwise each delivery starts a new chat)')}</label>
+            <div className="flex gap-2"><button className={btn.primary} type="submit" disabled={busy === 'in'}>{t('Create')}</button><button className={btn.ghost} type="button" onClick={() => setNewIn(null)}>{t('Cancel')}</button></div>
           </form>
         )}
-        {data.inbound.length === 0 && !newIn && <p className="text-[11px] text-[var(--text-muted)]">No inbound hooks yet.</p>}
+        {data.inbound.length === 0 && !newIn && <p className="text-[11px] text-[var(--text-muted)]">{t('No inbound hooks yet.')}</p>}
         {data.inbound.map(h => (
           <div key={h.id} className="p-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-xs space-y-1.5">
             <div className="flex items-center gap-2">
               <span className={clsx('w-2 h-2 rounded-full', h.enabled ? 'bg-emerald-400' : 'bg-[var(--text-muted)]')} />
               <span className="font-medium">{h.name}</span>
-              <span className="text-[var(--text-muted)]">→ {nameOf(h.agent)}{h.reuse ? ' · one chat' : ''}{h.uses ? ` · ${h.uses} deliveries` : ''}{h.lastUsed ? ` · last ${relTime(h.lastUsed * 1000)}` : ''}</span>
+              <span className="text-[var(--text-muted)]">→ {nameOf(h.agent)}{h.reuse ? t(' · one chat') : ''}{h.uses ? t(' · {uses} deliveries', { uses: h.uses }) : ''}{h.lastUsed ? t(' · last {v0}', { v0: relTime(h.lastUsed * 1000) }) : ''}</span>
               <span className="flex-1" />
-              <button className={btn.icon} title={h.enabled ? 'Switch off' : 'Switch on'} onClick={() => act(h.id, () => req(`/api/webhooks/in/${h.id}`, { method: 'PATCH', body: JSON.stringify({ enabled: !h.enabled }) }))}>{h.enabled ? 'On' : 'Off'}</button>
-              <button className={btn.icon} title="New secret (the old one stops working)" onClick={() => act(h.id, () => req(`/api/webhooks/in/${h.id}`, { method: 'PATCH', body: JSON.stringify({ rotate: true }) }))}><RefreshCw className="w-3.5 h-3.5" /></button>
-              <button className={btn.icon} title="Delete" onClick={() => { if (confirm(`Delete “${h.name}”?`)) act(h.id, () => req(`/api/webhooks/in/${h.id}`, { method: 'DELETE' })); }}><Trash2 className="w-3.5 h-3.5" /></button>
+              <button className={btn.icon} title={h.enabled ? t('Switch off') : t('Switch on')} onClick={() => act(h.id, () => req(`/api/webhooks/in/${h.id}`, { method: 'PATCH', body: JSON.stringify({ enabled: !h.enabled }) }))}>{h.enabled ? t('On') : t('Off')}</button>
+              <button className={btn.icon} title={t('New secret (the old one stops working)')} onClick={() => act(h.id, () => req(`/api/webhooks/in/${h.id}`, { method: 'PATCH', body: JSON.stringify({ rotate: true }) }))}><RefreshCw className="w-3.5 h-3.5" /></button>
+              <button className={btn.icon} title={t('Delete')} onClick={() => { if (confirm(t('Delete “{name}”?', { name: h.name }))) act(h.id, () => req(`/api/webhooks/in/${h.id}`, { method: 'DELETE' })); }}><Trash2 className="w-3.5 h-3.5" /></button>
             </div>
             <div className="flex flex-wrap gap-2 items-center">
               <code className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-[var(--bg-tertiary)] break-all">POST {base}/{h.id}</code>
               <button className={btn.ghost} onClick={() => copy(`${base}/${h.id}`, `url-${h.id}`)}>{copied === `url-${h.id}` ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />} URL</button>
-              <button className={btn.ghost} onClick={() => copy(h.secret, `sec-${h.id}`)}>{copied === `sec-${h.id}` ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />} Secret</button>
-              <button className={btn.ghost} onClick={() => copy(`curl -X POST ${base}/${h.id} -H "X-Hook-Secret: ${h.secret}" -H "Content-Type: application/json" -d '{"hello": "world"}'`, `curl-${h.id}`)}>{copied === `curl-${h.id}` ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />} Test command</button>
-              {h.convId && <a className="text-[var(--accent)] hover:underline" href={`#/c/${h.convId}`}>Last chat</a>}
+              <button className={btn.ghost} onClick={() => copy(h.secret, `sec-${h.id}`)}>{copied === `sec-${h.id}` ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />} {t('Secret')}</button>
+              <button className={btn.ghost} onClick={() => copy(`curl -X POST ${base}/${h.id} -H "X-Hook-Secret: ${h.secret}" -H "Content-Type: application/json" -d '{"hello": "world"}'`, `curl-${h.id}`)}>{copied === `curl-${h.id}` ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />} {t('Test command')}</button>
+              {h.convId && <a className="text-[var(--accent)] hover:underline" href={`#/c/${h.convId}`}>{t('Last chat')}</a>}
             </div>
             {h.template && <pre className="text-[11px] text-[var(--text-muted)] whitespace-pre-wrap font-mono">{h.template}</pre>}
           </div>
@@ -83,26 +84,26 @@ export function WebhooksPanel({ agents }: { agents: AgentLite[] }) {
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h4 className="text-xs font-medium flex items-center gap-1.5"><ArrowUpFromLine className="w-3.5 h-3.5 text-sky-400" />Outbound: tell a URL what happened</h4>
-          {!newOut && <button className={btn.subtle} onClick={() => setNewOut({ name: '', url: '', secret: '', kinds: ['approval', 'plan', 'schedule'] })}><Plus className="w-3.5 h-3.5" />New outbound hook</button>}
+          <h4 className="text-xs font-medium flex items-center gap-1.5"><ArrowUpFromLine className="w-3.5 h-3.5 text-sky-400" />{t('Outbound: tell a URL what happened')}</h4>
+          {!newOut && <button className={btn.subtle} onClick={() => setNewOut({ name: '', url: '', secret: '', kinds: ['approval', 'plan', 'schedule'] })}><Plus className="w-3.5 h-3.5" />{t('New outbound hook')}</button>}
         </div>
         {newOut && (
           <form className="p-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] space-y-2 text-xs" onSubmit={e => { e.preventDefault(); act('out', () => req('/api/webhooks/out', { method: 'POST', body: JSON.stringify(newOut) })).then(() => setNewOut(null)); }}>
             <div className="grid sm:grid-cols-2 gap-2">
-              <input className={btn.input} placeholder="Name (e.g. n8n alerts)" value={newOut.name} onChange={e => setNewOut({ ...newOut, name: e.target.value })} required />
+              <input className={btn.input} placeholder={t('Name (e.g. n8n alerts)')} value={newOut.name} onChange={e => setNewOut({ ...newOut, name: e.target.value })} required />
               <input className={btn.input} placeholder="https://… (public internet; not this machine or the tailnet)" value={newOut.url} onChange={e => setNewOut({ ...newOut, url: e.target.value })} required />
             </div>
-            <input className={btn.input} placeholder="Shared secret for X-Shellb-Signature (optional)" value={newOut.secret} onChange={e => setNewOut({ ...newOut, secret: e.target.value })} />
+            <input className={btn.input} placeholder={t('Shared secret for X-Shellb-Signature (optional)')} value={newOut.secret} onChange={e => setNewOut({ ...newOut, secret: e.target.value })} />
             <div className="flex flex-wrap gap-1.5">
               {data.kinds.map(k => (
                 <button key={k} type="button" onClick={() => setNewOut({ ...newOut, kinds: newOut.kinds.includes(k) ? newOut.kinds.filter(x => x !== k) : [...newOut.kinds, k] })}
                   className={clsx('px-2 py-0.5 rounded-lg border text-[11px]', newOut.kinds.includes(k) ? 'border-[var(--accent)]/60 bg-[var(--accent)]/10 text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]')}>{KIND_LABEL[k] ?? k}</button>
               ))}
             </div>
-            <div className="flex gap-2"><button className={btn.primary} type="submit" disabled={busy === 'out' || !newOut.kinds.length}>Create</button><button className={btn.ghost} type="button" onClick={() => setNewOut(null)}>Cancel</button></div>
+            <div className="flex gap-2"><button className={btn.primary} type="submit" disabled={busy === 'out' || !newOut.kinds.length}>{t('Create')}</button><button className={btn.ghost} type="button" onClick={() => setNewOut(null)}>{t('Cancel')}</button></div>
           </form>
         )}
-        {data.outbound.length === 0 && !newOut && <p className="text-[11px] text-[var(--text-muted)]">No outbound hooks yet.</p>}
+        {data.outbound.length === 0 && !newOut && <p className="text-[11px] text-[var(--text-muted)]">{t('No outbound hooks yet.')}</p>}
         {data.outbound.map(h => (
           <div key={h.id} className="p-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-xs space-y-1">
             <div className="flex items-center gap-2">
@@ -110,18 +111,18 @@ export function WebhooksPanel({ agents }: { agents: AgentLite[] }) {
               <span className="font-medium">{h.name}</span>
               <span className="text-[var(--text-muted)] truncate">{h.url}</span>
               <span className="flex-1" />
-              <button className={btn.icon} title="Send a test event" disabled={busy === `t-${h.id}`} onClick={() => act(`t-${h.id}`, async () => { const r = await req<LogRow>(`/api/webhooks/out/${h.id}/test`, { method: 'POST' }); toast(r.status && r.status < 300 ? `Delivered (HTTP ${r.status})` : `Failed: ${r.detail}`, { kind: r.status && r.status < 300 ? 'info' : 'error' }); })}>{busy === `t-${h.id}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Test'}</button>
-              <button className={btn.icon} title={h.enabled ? 'Switch off' : 'Switch on'} onClick={() => act(h.id, () => req(`/api/webhooks/out/${h.id}`, { method: 'PATCH', body: JSON.stringify({ enabled: !h.enabled }) }))}>{h.enabled ? 'On' : 'Off'}</button>
-              <button className={btn.icon} title="Delete" onClick={() => { if (confirm(`Delete “${h.name}”?`)) act(h.id, () => req(`/api/webhooks/out/${h.id}`, { method: 'DELETE' })); }}><Trash2 className="w-3.5 h-3.5" /></button>
+              <button className={btn.icon} title={t('Send a test event')} disabled={busy === `t-${h.id}`} onClick={() => act(`t-${h.id}`, async () => { const r = await req<LogRow>(`/api/webhooks/out/${h.id}/test`, { method: 'POST' }); toast(r.status && r.status < 300 ? `Delivered (HTTP ${r.status})` : `Failed: ${r.detail}`, { kind: r.status && r.status < 300 ? 'info' : 'error' }); })}>{busy === `t-${h.id}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t('Test')}</button>
+              <button className={btn.icon} title={h.enabled ? t('Switch off') : t('Switch on')} onClick={() => act(h.id, () => req(`/api/webhooks/out/${h.id}`, { method: 'PATCH', body: JSON.stringify({ enabled: !h.enabled }) }))}>{h.enabled ? t('On') : t('Off')}</button>
+              <button className={btn.icon} title={t('Delete')} onClick={() => { if (confirm(t('Delete “{name}”?', { name: h.name }))) act(h.id, () => req(`/api/webhooks/out/${h.id}`, { method: 'DELETE' })); }}><Trash2 className="w-3.5 h-3.5" /></button>
             </div>
-            <div className="text-[11px] text-[var(--text-muted)]">{h.kinds.map(k => KIND_LABEL[k] ?? k).join(', ')}{h.hasSecret ? ' · signed' : ''}{h.failures ? ` · ${h.failures} failed in a row` : ''}{h.lastUsed ? ` · last ${relTime(h.lastUsed * 1000)}` : ''}</div>
+            <div className="text-[11px] text-[var(--text-muted)]">{h.kinds.map(k => KIND_LABEL[k] ?? k).join(', ')}{h.hasSecret ? t(' · signed') : ''}{h.failures ? t(' · {failures} failed in a row', { failures: h.failures }) : ''}{h.lastUsed ? t(' · last {v0}', { v0: relTime(h.lastUsed * 1000) }) : ''}</div>
           </div>
         ))}
       </div>
 
       {data.log.length > 0 && (
         <details className="text-[11px] text-[var(--text-muted)]">
-          <summary className="cursor-pointer">Recent deliveries ({data.log.length})</summary>
+          <summary className="cursor-pointer">{t('Recent deliveries ({length})', { length: data.log.length })}</summary>
           <ul className="mt-1 divide-y divide-[var(--border-subtle)] border border-[var(--border-subtle)] rounded-lg max-h-48 overflow-y-auto">
             {data.log.map(r => (
               <li key={r.id} className="px-2.5 py-1 flex items-center gap-2">

@@ -11,6 +11,7 @@ import { AgentAvatar, Modal, Toggle, btn, relTime } from './common';
 import { FavoriteStar } from './Favorites';
 import { isFavorite } from '../favorites';
 import { Markdown } from './Markdown';
+import { t as tx } from '../i18n';
 
 // ── shared bits ────────────────────────────────────────────────────────────
 
@@ -57,14 +58,14 @@ const COLUMNS: { key: string; label: string; statuses: StepStatus[]; accent: str
 function PlanPill({ status }: { status: PlanStatus }) {
   const m = PLAN_META[status];
   return <span className={clsx('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium', m.cls)}>
-    {(status === 'running' || status === 'planning') && <Loader2 className="w-3 h-3 animate-spin" />}{m.label}
+    {(status === 'running' || status === 'planning') && <Loader2 className="w-3 h-3 animate-spin" />}{tx(m.label)}
   </span>;
 }
 
 function StepIcon({ status, className }: { status: StepStatus; className?: string }) {
   const m = STEP_META[status];
   const Icon = m.icon;
-  return <Icon className={clsx('w-4 h-4 shrink-0', m.text, status === 'running' && 'animate-spin', className)} aria-label={m.label} />;
+  return <Icon className={clsx('w-4 h-4 shrink-0', m.text, status === 'running' && 'animate-spin', className)} aria-label={tx(m.label)} />;
 }
 
 /** One segment per step, coloured by status: progress at a glance. */
@@ -93,7 +94,7 @@ function Label({ children, htmlFor }: { children: ReactNode; htmlFor?: string })
 function AgentSelect({ agents, value, onChange, id }: { agents: Agent[]; value: string; onChange: (v: string) => void; id?: string }) {
   return (
     <select id={id} value={value} onChange={e => onChange(e.target.value)} className={btn.input}>
-      {agents.map(a => <option key={a.id} value={a.id} disabled={!!a.unavailable}>{a.name} · {a.title}{a.unavailable ? ' (unavailable)' : ''}</option>)}
+      {agents.map(a => <option key={a.id} value={a.id} disabled={!!a.unavailable}>{a.name} · {tx(a.title)}{a.unavailable ? ' (unavailable)' : ''}</option>)}
     </select>
   );
 }
@@ -136,72 +137,71 @@ export function MegaPlansIndex({ agents, live, onOpen }: { agents: Agent[]; live
           <div className="inline-flex items-center justify-center w-11 h-11 rounded-2xl mb-3" style={{ background: GRADIENT }}>
             <Workflow className="w-5 h-5 text-white" />
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Mega Plans</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{tx('Mega Plans')}</h1>
           <p className="text-[13.5px] text-[var(--text-muted)] mt-1 max-w-xl mx-auto">
-            For jobs too big for one chat. An orchestrator breaks the goal into steps, specialist agents carry them out one after
-            another in a shared workspace, and the orchestrator checks every step against its acceptance criteria before the next one starts.
+            {tx('For jobs too big for one chat. An orchestrator breaks the goal into steps, specialist agents carry them out one after another in a shared workspace, and the orchestrator checks every step against its acceptance criteria before the next one starts.')}
           </p>
         </div>
 
         <form className="max-w-2xl mx-auto rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-secondary)] shadow-sm focus-within:border-violet-500/60"
           onSubmit={e => { e.preventDefault(); create(true); }}>
-          <textarea value={goal} onChange={e => setGoal(e.target.value)} rows={3} aria-label="Goal"
+          <textarea value={goal} onChange={e => setGoal(e.target.value)} rows={3} aria-label={tx('Goal')}
             onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); create(true); } }}
-            placeholder="Describe the whole job: what to build or produce, for whom, and what done looks like. e.g. Build a web app that tracks RMA returns: intake form, status board, CSV export, tests."
+            placeholder={tx('Describe the whole job: what to build or produce, for whom, and what done looks like. e.g. Build a web app that tracks RMA returns: intake form, status board, CSV export, tests.')}
             className="w-full resize-y min-h-[84px] bg-transparent text-[14px] px-3.5 pt-3 pb-1 placeholder-[var(--text-muted)] focus:outline-none" />
           {more && (
             <div className="px-3.5 pb-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="sm:col-span-2"><Label htmlFor="mp-title">Title (optional)</Label>
-                <input id="mp-title" className={btn.input} value={title} onChange={e => setTitle(e.target.value)} placeholder="Named from the goal if empty" /></div>
-              <div><Label htmlFor="mp-orch">Orchestrator</Label><AgentSelect id="mp-orch" agents={orchestrators} value={orchestrator} onChange={setOrchestrator} /></div>
-              <div><Label htmlFor="mp-ws">Workspace</Label>
+              <div className="sm:col-span-2"><Label htmlFor="mp-title">{tx('Title (optional)')}</Label>
+                <input id="mp-title" className={btn.input} value={title} onChange={e => setTitle(e.target.value)} placeholder={tx('Named from the goal if empty')} /></div>
+              <div><Label htmlFor="mp-orch">{tx('Orchestrator')}</Label><AgentSelect id="mp-orch" agents={orchestrators} value={orchestrator} onChange={setOrchestrator} /></div>
+              <div><Label htmlFor="mp-ws">{tx('Workspace')}</Label>
                 <select id="mp-ws" value={workspace} onChange={e => setWorkspace(e.target.value)} className={btn.input}>
-                  <option value="new">New Code workspace (git-versioned)</option>
-                  <option value="none">No shared workspace</option>
-                  {workspaces.length > 0 && <optgroup label="Existing Code / Studio projects">
+                  <option value="new">{tx('New Code workspace (git-versioned)')}</option>
+                  <option value="none">{tx('No shared workspace')}</option>
+                  {workspaces.length > 0 && <optgroup label={tx('Existing Code / Studio projects')}>
                     {workspaces.map(w => <option key={w.id} value={w.id}>{w.name} ({w.kind})</option>)}
                   </optgroup>}
                 </select></div>
-              <div><Label htmlFor="mp-q">Quality</Label>
+              <div><Label htmlFor="mp-q">{tx('Quality')}</Label>
                 <select id="mp-q" value={quality} onChange={e => setQuality(e.target.value as PlanQuality)} className={btn.input}>
                   {(Object.keys(QUALITY_LABEL) as PlanQuality[]).map(q => <option key={q} value={q}>{QUALITY_LABEL[q].label}</option>)}
                 </select>
                 <p className="mt-1 text-[11px] text-[var(--text-muted)]">{QUALITY_LABEL[quality].hint}</p></div>
-              <div><Label htmlFor="mp-check">Regression check (optional)</Label>
-                <input id="mp-check" className={clsx(btn.input, 'font-mono !text-[12.5px]')} value={check} onChange={e => setCheck(e.target.value)} placeholder="pytest -q" />
-                <p className="mt-1 text-[11px] text-[var(--text-muted)]">Runs in the workspace after every step and must pass. The planner can set one too.</p></div>
-              <div><Label htmlFor="mp-att">Attempts per step before asking you</Label>
+              <div><Label htmlFor="mp-check">{tx('Regression check (optional)')}</Label>
+                <input id="mp-check" className={clsx(btn.input, 'font-mono !text-[12.5px]')} value={check} onChange={e => setCheck(e.target.value)} placeholder={tx('pytest -q')} />
+                <p className="mt-1 text-[11px] text-[var(--text-muted)]">{tx('Runs in the workspace after every step and must pass. The planner can set one too.')}</p></div>
+              <div><Label htmlFor="mp-att">{tx('Attempts per step before asking you')}</Label>
                 <select id="mp-att" value={maxAttempts} onChange={e => setMaxAttempts(Number(e.target.value))} className={btn.input}>
                   {[1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n}</option>)}
                 </select></div>
               <div className="flex items-center justify-between gap-3 sm:pt-5">
-                <span className="text-[12.5px] text-[var(--text-secondary)]">Start as soon as it's planned</span>
-                <Toggle on={autoRun} onChange={setAutoRun} label="Start as soon as it's planned" />
+                <span className="text-[12.5px] text-[var(--text-secondary)]">{tx('Start as soon as it\'s planned')}</span>
+                <Toggle on={autoRun} onChange={setAutoRun} label={tx('Start as soon as it\'s planned')} />
               </div>
             </div>
           )}
           <div className="flex items-center gap-2 px-2.5 py-2 border-t border-[var(--border-subtle)]">
             <button type="button" className={btn.ghost} onClick={() => setMore(m => !m)} aria-expanded={more}>
-              {more ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}Options
-              {!more && <span className="text-[var(--text-muted)] hidden sm:inline">· {QUALITY_LABEL[quality].label} · {agentOf(agents, orchestrator)?.name ?? orchestrator} orchestrates · {workspace === 'new' ? 'new workspace' : workspace === 'none' ? 'no workspace' : workspaces.find(w => w.id === workspace)?.name}</span>}
+              {more ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}{tx('Options')}
+              {!more && <span className="text-[var(--text-muted)] hidden sm:inline">· {QUALITY_LABEL[quality].label} · {agentOf(agents, orchestrator)?.name ?? orchestrator} {tx('orchestrates ·')} {workspace === 'new' ? tx('new workspace') : workspace === 'none' ? tx('no workspace') : workspaces.find(w => w.id === workspace)?.name}</span>}
             </button>
             <span className="flex-1" />
-            <button type="button" className={btn.ghost} disabled={!goal.trim() || busy} onClick={() => create(false)} title="Create an empty plan and write the steps yourself">Write steps myself</button>
+            <button type="button" className={btn.ghost} disabled={!goal.trim() || busy} onClick={() => create(false)} title={tx('Create an empty plan and write the steps yourself')}>{tx('Write steps myself')}</button>
             <button type="submit" disabled={!goal.trim() || busy} className={clsx(btn.primary, '!bg-violet-600')}>
-              {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}Plan it
+              {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}{tx('Plan it')}
             </button>
           </div>
           {error && <p className="px-3.5 pb-2 text-[12px] text-rose-500">{error}</p>}
         </form>
 
         <div className="mt-10 flex items-center gap-2 mb-3">
-          <h2 className="text-[13px] font-semibold uppercase tracking-wide text-[var(--text-secondary)]">Plans</h2>
+          <h2 className="text-[13px] font-semibold uppercase tracking-wide text-[var(--text-secondary)]">{tx('Plans')}</h2>
           {plans && <span className="text-[11px] font-mono text-[var(--text-muted)]">{plans.length}</span>}
         </div>
         {plans === null ? (
           <div className="py-12 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-[var(--text-muted)]" /></div>
         ) : plans.length === 0 ? (
-          <p className="py-12 text-center text-[13px] text-[var(--text-muted)]">No mega plans yet. Describe a big job above to start one.</p>
+          <p className="py-12 text-center text-[13px] text-[var(--text-muted)]">{tx('No mega plans yet. Describe a big job above to start one.')}</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {plans.map(p => {
@@ -212,14 +212,14 @@ export function MegaPlansIndex({ agents, live, onOpen }: { agents: Agent[]; live
                   <div className="flex items-center gap-1.5 mb-2 text-[10.5px]">
                     <PlanPill status={p.status} />
                     <span className="ml-auto text-[var(--text-muted)]">{relTime(p.updatedAt)}</span>
-                    <FavoriteStar nested kind="plan" id={p.id} title={p.title} size={13} className={clsx('-my-1 -mr-1', !isFavorite('plan', p.id) && 'opacity-0 group-hover:opacity-100 focus:opacity-100')} />
+                    <FavoriteStar nested kind="plan" id={p.id} title={tx(p.title)} size={13} className={clsx('-my-1 -mr-1', !isFavorite('plan', p.id) && 'opacity-0 group-hover:opacity-100 focus:opacity-100')} />
                   </div>
-                  <div className="text-[15px] font-semibold leading-snug group-hover:text-violet-600 dark:group-hover:text-violet-300 line-clamp-2">{p.title}</div>
+                  <div className="text-[15px] font-semibold leading-snug group-hover:text-violet-600 dark:group-hover:text-violet-300 line-clamp-2">{tx(p.title)}</div>
                   <div className="mt-1 text-[12.5px] text-[var(--text-muted)] line-clamp-2">{p.goal}</div>
                   <div className="mt-auto pt-3 space-y-2">
                     {p.current && (p.status === 'running' || p.status === 'paused') && (
                       <div className="flex items-center gap-1.5 text-[11.5px] text-[var(--text-secondary)] truncate">
-                        <StepIcon status={p.current.status} className="!w-3.5 !h-3.5" /><span className="truncate">{p.current.title}</span>
+                        <StepIcon status={p.current.status} className="!w-3.5 !h-3.5" /><span className="truncate">{tx(p.current.title)}</span>
                       </div>
                     )}
                     <ProgressStrip counts={p.counts} />
@@ -263,7 +263,7 @@ export function MegaPlanBoard({ planId, agents, live, onBack, onOpenChat, onOpen
     try { setPlan(await fn()); } catch (e) { setError(String(e).replace(/^Error: \d+: /, '')); }
   };
 
-  if (missing) return <div className="p-8 text-center text-sm text-[var(--text-muted)]">This plan doesn't exist any more. <button className="underline" onClick={onBack}>All plans</button></div>;
+  if (missing) return <div className="p-8 text-center text-sm text-[var(--text-muted)]">{tx('This plan doesn\'t exist any more.')} <button className="underline" onClick={onBack}>{tx('All plans')}</button></div>;
   if (!plan) return <div className="h-full flex items-center justify-center"><Loader2 className="w-5 h-5 animate-spin text-[var(--text-muted)]" /></div>;
 
   const orch = agentOf(agents, plan.orchestrator);
@@ -278,27 +278,27 @@ export function MegaPlanBoard({ planId, agents, live, onBack, onOpenChat, onOpen
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-5">
         {/* header */}
         <div className="flex items-start gap-3 mb-4">
-          <button className={clsx(btn.icon, 'mt-0.5')} onClick={onBack} aria-label="All plans"><ArrowLeft className="w-4 h-4" /></button>
+          <button className={clsx(btn.icon, 'mt-0.5')} onClick={onBack} aria-label={tx('All plans')}><ArrowLeft className="w-4 h-4" /></button>
           <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: GRADIENT }}><Workflow className="w-4 h-4 text-white" /></div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-lg sm:text-xl font-semibold tracking-tight leading-tight">{plan.title}</h1>
+              <h1 className="text-lg sm:text-xl font-semibold tracking-tight leading-tight">{tx(plan.title)}</h1>
               <PlanPill status={plan.status} />
-              <FavoriteStar kind="plan" id={plan.id} title={plan.title} />
-              <button className={btn.icon} onClick={() => setEditing(true)} aria-label="Edit plan"><Edit2 className="w-3.5 h-3.5" /></button>
+              <FavoriteStar kind="plan" id={plan.id} title={tx(plan.title)} />
+              <button className={btn.icon} onClick={() => setEditing(true)} aria-label={tx('Edit plan')}><Edit2 className="w-3.5 h-3.5" /></button>
             </div>
             <p className="text-[13px] text-[var(--text-muted)] mt-0.5 line-clamp-2" title={plan.goal}>{plan.goal}</p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
             {plan.status === 'running' || plan.status === 'planning' ? (
-              <button className={btn.subtle} onClick={() => act(() => api.planAction(plan.id, 'pause'))}><Pause className="w-3.5 h-3.5" />Pause</button>
+              <button className={btn.subtle} onClick={() => act(() => api.planAction(plan.id, 'pause'))}><Pause className="w-3.5 h-3.5" />{tx('Pause')}</button>
             ) : plan.steps.length > 0 && plan.status !== 'complete' ? (
               <button className={clsx(btn.primary, '!bg-violet-600')} onClick={() => act(() => api.planAction(plan.id, 'run'))}>
-                <Play className="w-3.5 h-3.5" />{plan.status === 'draft' ? 'Start plan' : checkpoint ? 'Approve & continue' : 'Resume'}
+                <Play className="w-3.5 h-3.5" />{plan.status === 'draft' ? tx('Start plan') : checkpoint ? tx('Approve & continue') : tx('Resume')}
               </button>
             ) : null}
             {plan.steps.length === 0 && plan.status === 'draft' && (
-              <button className={clsx(btn.primary, '!bg-violet-600')} onClick={() => act(() => api.planAction(plan.id, 'plan'))}><Sparkles className="w-3.5 h-3.5" />Plan with {orch?.name ?? 'AI'}</button>
+              <button className={clsx(btn.primary, '!bg-violet-600')} onClick={() => act(() => api.planAction(plan.id, 'plan'))}><Sparkles className="w-3.5 h-3.5" />{tx('Plan with')} {orch?.name ?? 'AI'}</button>
             )}
           </div>
         </div>
@@ -311,9 +311,9 @@ export function MegaPlanBoard({ planId, agents, live, onBack, onOpenChat, onOpen
             {checkpoint ? <Flag className="w-4 h-4 text-violet-500 mt-0.5 shrink-0" /> : <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />}
             <div className="flex-1">{error || plan.note}</div>
             {!error && reviewWaiting && plan.status === 'paused' && (
-              <button className={btn.subtle} onClick={() => setOpen(reviewWaiting)}>Review step {reviewWaiting.n}</button>
+              <button className={btn.subtle} onClick={() => setOpen(reviewWaiting)}>{tx('Review step {n}', { n: reviewWaiting.n })}</button>
             )}
-            {error && <button className={btn.icon} onClick={() => setError('')} aria-label="Dismiss"><X className="w-3.5 h-3.5" /></button>}
+            {error && <button className={btn.icon} onClick={() => setError('')} aria-label={tx('Dismiss')}><X className="w-3.5 h-3.5" /></button>}
           </div>
         )}
 
@@ -321,7 +321,7 @@ export function MegaPlanBoard({ planId, agents, live, onBack, onOpenChat, onOpen
           {/* steps */}
           <section className="min-w-0">
             <div className="flex items-center gap-2 mb-3">
-              <h2 className="text-[13px] font-semibold uppercase tracking-wide text-[var(--text-secondary)]">Steps</h2>
+              <h2 className="text-[13px] font-semibold uppercase tracking-wide text-[var(--text-secondary)]">{tx('Steps')}</h2>
               <span className="text-[11px] font-mono text-[var(--text-muted)]">{plan.steps.length}</span>
               <span className="flex-1" />
               <div className="flex p-0.5 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-subtle)]" role="tablist">
@@ -333,18 +333,18 @@ export function MegaPlanBoard({ planId, agents, live, onBack, onOpenChat, onOpen
                   </button>
                 ))}
               </div>
-              <button className={btn.subtle} onClick={() => setOpen('new')}><Plus className="w-3.5 h-3.5" /><span className="hidden sm:inline">Add step</span></button>
+              <button className={btn.subtle} onClick={() => setOpen('new')}><Plus className="w-3.5 h-3.5" /><span className="hidden sm:inline">{tx('Add step')}</span></button>
             </div>
 
             {plan.status === 'planning' && plan.steps.length === 0 ? (
               <div className="py-16 rounded-xl border border-dashed border-[var(--border-strong)] text-center text-[13px] text-[var(--text-muted)]">
                 <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2 text-violet-500" />
-                {orch?.name ?? 'The orchestrator'} is breaking the goal into steps…
-                {plan.orchConv && <div className="mt-2"><button className="underline hover:text-[var(--text-primary)]" onClick={() => onOpenChat(plan.orchConv!)}>Watch it think</button></div>}
+                {orch?.name ?? tx('The orchestrator')} {tx('is breaking the goal into steps…')}
+                {plan.orchConv && <div className="mt-2"><button className="underline hover:text-[var(--text-primary)]" onClick={() => onOpenChat(plan.orchConv!)}>{tx('Watch it think')}</button></div>}
               </div>
             ) : plan.steps.length === 0 ? (
               <div className="py-16 rounded-xl border border-dashed border-[var(--border-strong)] text-center text-[13px] text-[var(--text-muted)]">
-                No steps yet. Have {orch?.name ?? 'the orchestrator'} plan them, or add them yourself.
+                {tx('No steps yet. Have')} {orch?.name ?? tx('the orchestrator')} {tx('plan them, or add them yourself.')}
               </div>
             ) : view === 'board' ? (
               <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x">
@@ -355,7 +355,7 @@ export function MegaPlanBoard({ planId, agents, live, onBack, onOpenChat, onOpen
                       items.length ? 'w-[250px] sm:w-auto sm:flex-1 sm:min-w-[210px]' : 'hidden sm:flex w-[110px]')}>
                       <div className="px-3 py-2 flex items-center gap-2 border-b border-[var(--border-subtle)]">
                         <span className={clsx('w-2 h-2 rounded-full', col.accent)} />
-                        <span className="text-[12px] font-semibold">{col.label}</span>
+                        <span className="text-[12px] font-semibold">{tx(col.label)}</span>
                         <span className="text-[11px] font-mono text-[var(--text-muted)]">{items.length}</span>
                       </div>
                       <div className="p-2 space-y-2 overflow-y-auto">
@@ -379,41 +379,41 @@ export function MegaPlanBoard({ planId, agents, live, onBack, onOpenChat, onOpen
                 <AgentAvatar agent={orch} size={22} />
                 <div className="flex-1 min-w-0">
                   <div className="text-[13px] font-semibold">{orch?.name ?? plan.orchestrator}</div>
-                  <div className="text-[11px] text-[var(--text-muted)]">Orchestrator</div>
+                  <div className="text-[11px] text-[var(--text-muted)]">{tx('Orchestrator')}</div>
                 </div>
-                {plan.orchConv && <button className={btn.ghost} onClick={() => onOpenChat(plan.orchConv!)} title="Open the orchestrator's chat: plan reviews and decisions"><MessageSquare className="w-3.5 h-3.5" />Chat</button>}
+                {plan.orchConv && <button className={btn.ghost} onClick={() => onOpenChat(plan.orchConv!)} title={tx('Open the orchestrator\'s chat: plan reviews and decisions')}><MessageSquare className="w-3.5 h-3.5" />{tx('Chat')}</button>}
               </div>
               {liveHere ? (
                 <button onClick={() => liveHere.conv && onOpenChat(liveHere.conv)}
                   className="w-full mt-1 px-2.5 py-2 rounded-lg bg-sky-500/[0.08] border border-sky-500/30 text-left text-[12.5px] flex items-center gap-2 hover:bg-sky-500/[0.14] transition">
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-sky-500 shrink-0" />
                   <span className="flex-1 min-w-0">
-                    <span className="font-medium">{liveHere.phase === 'work' ? agentOf(agents, liveStep?.agentId ?? '')?.name ?? 'A worker' : liveHere.phase === 'check' ? 'The plan' : orch?.name ?? 'The orchestrator'}</span>{' '}
-                    {PHASE_LABEL[liveHere.phase]}{liveStep ? <> step {liveStep.n}: <span className="text-[var(--text-secondary)]">{liveStep.title}</span></> : ''}
-                    <span className="block text-[10.5px] text-[var(--text-muted)]">since {relTime(liveHere.since)} · click to watch</span>
+                    <span className="font-medium">{liveHere.phase === 'work' ? agentOf(agents, liveStep?.agentId ?? '')?.name ?? tx('A worker') : liveHere.phase === 'check' ? tx('The plan') : orch?.name ?? tx('The orchestrator')}</span>{' '}
+                    {PHASE_LABEL[liveHere.phase]}{liveStep ? <> step {liveStep.n}: <span className="text-[var(--text-secondary)]">{tx(liveStep.title)}</span></> : ''}
+                    <span className="block text-[10.5px] text-[var(--text-muted)]">{tx('since {v0} · click to watch', { v0: relTime(liveHere.since) })}</span>
                   </span>
                 </button>
               ) : (
                 <p className="text-[12px] text-[var(--text-muted)]">
-                  {plan.status === 'running' ? 'Waiting for the next turn…' : plan.status === 'draft' ? 'Review the steps, then start the plan.' : plan.status === 'complete' ? 'All done.' : 'Idle.'}
+                  {plan.status === 'running' ? tx('Waiting for the next turn…') : plan.status === 'draft' ? tx('Review the steps, then start the plan.') : plan.status === 'complete' ? tx('All done.') : 'Idle.'}
                 </p>
               )}
               {plan.project && (
                 <button onClick={() => onOpenWorkspace(plan.project!.id)} className="mt-2.5 w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-[var(--border-subtle)] text-[12px] hover:bg-[var(--bg-hover)] transition">
-                  <Code2 className="w-3.5 h-3.5 text-[var(--text-muted)]" /><span className="flex-1 text-left truncate">Workspace: {plan.project.name}</span><ExternalLink className="w-3 h-3 text-[var(--text-muted)]" />
+                  <Code2 className="w-3.5 h-3.5 text-[var(--text-muted)]" /><span className="flex-1 text-left truncate">{tx('Workspace: {name}', { name: plan.project.name })}</span><ExternalLink className="w-3 h-3 text-[var(--text-muted)]" />
                 </button>
               )}
             </div>
 
             {plan.summary && (
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.05] p-3.5">
-                <div className="flex items-center gap-1.5 text-[12px] font-semibold text-emerald-600 dark:text-emerald-400 mb-1.5"><CheckCircle2 className="w-3.5 h-3.5" />Final report</div>
-                <div className="text-[13px] max-h-[420px] overflow-y-auto"><Markdown text={plan.summary} /></div>
+                <div className="flex items-center gap-1.5 text-[12px] font-semibold text-emerald-600 dark:text-emerald-400 mb-1.5"><CheckCircle2 className="w-3.5 h-3.5" />{tx('Final report')}</div>
+                <div className="text-[13px] max-h-[420px] overflow-y-auto"><Markdown text={tx(plan.summary)} /></div>
               </div>
             )}
 
             <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
-              <div className="px-3.5 py-2 border-b border-[var(--border-subtle)] text-[12px] font-semibold">Activity</div>
+              <div className="px-3.5 py-2 border-b border-[var(--border-subtle)] text-[12px] font-semibold">{tx('Activity')}</div>
               <ol className="max-h-[480px] overflow-y-auto px-3.5 py-2 space-y-2">
                 {plan.events.map(e => <EventRow key={e.id} e={e} steps={plan.steps} onOpen={s => setOpen(s)} />)}
               </ol>
@@ -428,11 +428,11 @@ export function MegaPlanBoard({ planId, agents, live, onBack, onOpenChat, onOpen
       )}
       <PlanSettings open={editing} plan={plan} agents={agents} onClose={() => setEditing(false)} onSaved={p => { setPlan(p); setEditing(false); }}
         onDelete={() => setConfirmDelete(true)} />
-      <Modal open={confirmDelete} onClose={() => setConfirmDelete(false)} title="Delete this plan?" icon={<Trash2 className="w-4 h-4 text-rose-500" />}>
-        <div className="p-4 text-[13px] text-[var(--text-secondary)]">The board, its steps and its activity log go away. The chats and the workspace stay.</div>
+      <Modal open={confirmDelete} onClose={() => setConfirmDelete(false)} title={tx('Delete this plan?')} icon={<Trash2 className="w-4 h-4 text-rose-500" />}>
+        <div className="p-4 text-[13px] text-[var(--text-secondary)]">{tx('The board, its steps and its activity log go away. The chats and the workspace stay.')}</div>
         <footer className="px-4 py-3 border-t border-[var(--border-subtle)] flex justify-end gap-2">
-          <button className={btn.ghost} onClick={() => setConfirmDelete(false)}>Cancel</button>
-          <button className={clsx(btn.primary, '!bg-rose-600')} onClick={async () => { await api.deletePlan(plan.id); onBack(); }}>Delete plan</button>
+          <button className={btn.ghost} onClick={() => setConfirmDelete(false)}>{tx('Cancel')}</button>
+          <button className={clsx(btn.primary, '!bg-rose-600')} onClick={async () => { await api.deletePlan(plan.id); onBack(); }}>{tx('Delete plan')}</button>
         </footer>
       </Modal>
     </div>
@@ -447,14 +447,14 @@ function StepCard({ step: s, agents, live, onOpen }: { step: MegaStep; agents: A
         live ? 'border-sky-500/60 shadow-[0_0_0_3px_rgba(14,165,233,0.12)]' : 'border-[var(--border-subtle)]')}>
       <div className="flex items-start gap-1.5">
         <span className="text-[11px] font-mono text-[var(--text-muted)] mt-px">{s.n}</span>
-        <span className={clsx('flex-1 text-[13px] font-medium leading-snug', s.status === 'skipped' && 'line-through text-[var(--text-muted)]')}>{s.title}</span>
-        {s.checkpoint && <Flag className="w-3 h-3 text-violet-500 shrink-0 mt-0.5" aria-label="Checkpoint" />}
+        <span className={clsx('flex-1 text-[13px] font-medium leading-snug', s.status === 'skipped' && 'line-through text-[var(--text-muted)]')}>{tx(s.title)}</span>
+        {s.checkpoint && <Flag className="w-3 h-3 text-violet-500 shrink-0 mt-0.5" aria-label={tx('Checkpoint')} />}
       </div>
       <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
         <AgentAvatar agent={a} size={14} /><span className="truncate">{a?.name ?? s.agentId}</span>
         {s.phase && <span className="px-1.5 rounded bg-[var(--bg-tertiary)] truncate max-w-[90px]">{s.phase}</span>}
         <span className="flex-1" />
-        {s.attempts > 1 && <span className="font-mono" title="Attempts">×{s.attempts}</span>}
+        {s.attempts > 1 && <span className="font-mono" title={tx('Attempts')}>×{s.attempts}</span>}
         <CheckBadge step={s} />
         {live && <Loader2 className="w-3 h-3 animate-spin text-sky-500" />}
       </div>
@@ -487,10 +487,10 @@ function Timeline({ plan, agents, live, onOpen, onMove }: {
                   <span className="text-[11px] font-mono text-[var(--text-muted)] mt-0.5">{s.n}</span>
                   <div className="flex-1 min-w-0">
                     <div className={clsx('text-[13.5px] font-medium', s.status === 'skipped' && 'line-through text-[var(--text-muted)]')}>
-                      {s.title}{s.checkpoint && <Flag className="w-3 h-3 inline ml-1.5 -mt-0.5 text-violet-500" aria-label="Checkpoint" />}
+                      {tx(s.title)}{s.checkpoint && <Flag className="w-3 h-3 inline ml-1.5 -mt-0.5 text-violet-500" aria-label={tx('Checkpoint')} />}
                     </div>
                     <div className="text-[12px] text-[var(--text-muted)] line-clamp-2 mt-0.5">
-                      {s.status === 'done' && s.handoff ? s.handoff : (s.status === 'revising' || s.status === 'failed') && s.feedback ? `Review: ${s.feedback}` : s.brief}
+                      {s.status === 'done' && s.handoff ? s.handoff : (s.status === 'revising' || s.status === 'failed') && s.feedback ? tx('Review: {feedback}', { feedback: s.feedback }) : s.brief}
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0 text-[11px] text-[var(--text-muted)]">
@@ -501,8 +501,8 @@ function Timeline({ plan, agents, live, onOpen, onMove }: {
                   </div>
                   {movable && (
                     <div className="flex flex-col -my-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition" onClick={e => e.stopPropagation()}>
-                      <button className="p-0.5 rounded hover:bg-[var(--bg-hover)] disabled:opacity-30" disabled={i === 0} onClick={() => onMove(s, -1)} aria-label="Move up"><ArrowUp className="w-3 h-3" /></button>
-                      <button className="p-0.5 rounded hover:bg-[var(--bg-hover)] disabled:opacity-30" disabled={i === plan.steps.length - 1} onClick={() => onMove(s, 1)} aria-label="Move down"><ArrowDown className="w-3 h-3" /></button>
+                      <button className="p-0.5 rounded hover:bg-[var(--bg-hover)] disabled:opacity-30" disabled={i === 0} onClick={() => onMove(s, -1)} aria-label={tx('Move up')}><ArrowUp className="w-3 h-3" /></button>
+                      <button className="p-0.5 rounded hover:bg-[var(--bg-hover)] disabled:opacity-30" disabled={i === plan.steps.length - 1} onClick={() => onMove(s, 1)} aria-label={tx('Move down')}><ArrowDown className="w-3 h-3" /></button>
                     </div>
                   )}
                 </div>
@@ -532,7 +532,7 @@ function EventRow({ e, steps, onOpen }: { e: MegaEvent; steps: MegaStep[]; onOpe
     <li className="flex gap-2 text-[12px] leading-snug">
       <Icon className={clsx('w-3.5 h-3.5 mt-0.5 shrink-0', m.cls)} />
       <div className="flex-1 min-w-0">
-        <span className="text-[var(--text-secondary)] line-clamp-3">{e.text}</span>
+        <span className="text-[var(--text-secondary)] line-clamp-3">{tx(e.text)}</span>
         <span className="text-[10.5px] text-[var(--text-muted)]">{relTime(e.at)}{s && <> · <button className="underline hover:text-[var(--text-primary)]" onClick={() => onOpen(s)}>step {s.n}</button></>}</span>
       </div>
     </li>
@@ -586,32 +586,32 @@ function StepModal({ plan, step, agents, onClose, onChanged, onOpenChat }: {
   const running = step?.status === 'running';
 
   return (
-    <Modal open onClose={onClose} wide title={isNew ? 'New step' : `Step ${step!.n}: ${step!.title}`} icon={step ? <StepIcon status={step.status} /> : <Plus className="w-4 h-4 text-violet-500" />}>
+    <Modal open onClose={onClose} wide title={isNew ? tx('New step') : tx('Step {n}: {title}', { n: step!.n, title: step!.title })} icon={step ? <StepIcon status={step.status} /> : <Plus className="w-4 h-4 text-violet-500" />}>
       <div className="flex-1 overflow-y-auto p-4 space-y-3.5">
         {edit ? (
           <div className="grid grid-cols-1 sm:grid-cols-[1fr_220px] gap-3">
             <div className="space-y-3">
-              <div><Label htmlFor="st-title">Title</Label><input ref={titleRef} id="st-title" className={btn.input} value={title} onChange={e => setTitle(e.target.value)} placeholder="Build the intake form" /></div>
-              <div><Label htmlFor="st-brief">Brief: complete instructions for the worker</Label>
+              <div><Label htmlFor="st-title">{tx('Title')}</Label><input ref={titleRef} id="st-title" className={btn.input} value={title} onChange={e => setTitle(e.target.value)} placeholder={tx('Build the intake form')} /></div>
+              <div><Label htmlFor="st-brief">{tx('Brief: complete instructions for the worker')}</Label>
                 <textarea id="st-brief" className={clsx(btn.input, 'min-h-[150px] resize-y font-[inherit]')} value={brief} onChange={e => setBrief(e.target.value)}
-                  placeholder="The worker sees the plan's goal and outline, but nothing else. Say exactly what to make, where, and any constraints." /></div>
-              <div><Label htmlFor="st-crit">Done when (acceptance criteria, one per line)</Label>
+                  placeholder={tx('The worker sees the plan\'s goal and outline, but nothing else. Say exactly what to make, where, and any constraints.')} /></div>
+              <div><Label htmlFor="st-crit">{tx('Done when (acceptance criteria, one per line)')}</Label>
                 <textarea id="st-crit" className={clsx(btn.input, 'min-h-[90px] resize-y')} value={criteria} onChange={e => setCriteria(e.target.value)}
-                  placeholder={'- form validates required fields\n- pytest passes'} /></div>
-              <div><Label htmlFor="st-check">Check command (optional): run after each attempt, must exit 0</Label>
+                  placeholder={tx('- form validates required fields\n- pytest passes')} /></div>
+              <div><Label htmlFor="st-check">{tx('Check command (optional): run after each attempt, must exit 0')}</Label>
                 <input id="st-check" className={clsx(btn.input, 'font-mono !text-[12.5px]')} value={check} onChange={e => setCheck(e.target.value)}
-                  placeholder="pytest -q tests/test_intake.py" />
-                {!plan.projectId && check && <p className="mt-1 text-[11px] text-amber-500">This plan has no workspace, so checks can't run.</p>}</div>
+                  placeholder={tx('pytest -q tests/test_intake.py')} />
+                {!plan.projectId && check && <p className="mt-1 text-[11px] text-amber-500">{tx('This plan has no workspace, so checks can\'t run.')}</p>}</div>
             </div>
             <div className="space-y-3">
-              <div><Label htmlFor="st-agent">Agent</Label><AgentSelect id="st-agent" agents={workers} value={agentId} onChange={setAgentId} />
-                {a && <p className="mt-1 text-[11px] text-[var(--text-muted)] line-clamp-3">{a.description}</p>}</div>
-              <div><Label htmlFor="st-phase">Phase (optional)</Label>
-                <input id="st-phase" list="mp-phases" className={btn.input} value={phase} onChange={e => setPhase(e.target.value)} placeholder="Foundation" />
+              <div><Label htmlFor="st-agent">{tx('Agent')}</Label><AgentSelect id="st-agent" agents={workers} value={agentId} onChange={setAgentId} />
+                {a && <p className="mt-1 text-[11px] text-[var(--text-muted)] line-clamp-3">{tx(a.description)}</p>}</div>
+              <div><Label htmlFor="st-phase">{tx('Phase (optional)')}</Label>
+                <input id="st-phase" list="mp-phases" className={btn.input} value={phase} onChange={e => setPhase(e.target.value)} placeholder={tx('Foundation')} />
                 <datalist id="mp-phases">{phases.map(p => <option key={p} value={p} />)}</datalist></div>
               <div className="flex items-start justify-between gap-3">
-                <span className="text-[12px] text-[var(--text-secondary)]">Checkpoint<span className="block text-[11px] text-[var(--text-muted)]">Pause for your approval after this step</span></span>
-                <Toggle on={checkpoint} onChange={setCheckpoint} label="Checkpoint" />
+                <span className="text-[12px] text-[var(--text-secondary)]">{tx('Checkpoint')}<span className="block text-[11px] text-[var(--text-muted)]">{tx('Pause for your approval after this step')}</span></span>
+                <Toggle on={checkpoint} onChange={setCheckpoint} label={tx('Checkpoint')} />
               </div>
             </div>
           </div>
@@ -620,30 +620,30 @@ function StepModal({ plan, step, agents, onClose, onChanged, onOpenChat }: {
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] text-[var(--text-secondary)]">
               <span className="inline-flex items-center gap-1.5"><AgentAvatar agent={agentOf(agents, step.agentId)} size={16} />{agentOf(agents, step.agentId)?.name ?? step.agentId}</span>
               <span className={clsx('inline-flex items-center gap-1', STEP_META[step.status].text)}><StepIcon status={step.status} className="!w-3.5 !h-3.5" />{STEP_META[step.status].label}</span>
-              {step.attempts > 0 && <span>Attempt {step.attempts} of {plan.options.maxAttempts ?? 3}</span>}
-              {step.phase && <span>Phase: {step.phase}</span>}
-              {step.checkpoint && <span className="inline-flex items-center gap-1 text-violet-500"><Flag className="w-3 h-3" />Checkpoint</span>}
+              {step.attempts > 0 && <span>{tx('Attempt {attempts} of {v0}', { attempts: step.attempts, v0: plan.options.maxAttempts ?? 3 })}</span>}
+              {step.phase && <span>{tx('Phase: {phase}', { phase: step.phase })}</span>}
+              {step.checkpoint && <span className="inline-flex items-center gap-1 text-violet-500"><Flag className="w-3 h-3" />{tx('Checkpoint')}</span>}
               {step.finishedAt && <span className="text-[var(--text-muted)]">finished {relTime(step.finishedAt)}</span>}
             </div>
-            {step.handoff && <Section title="Handoff (what later steps are told)" tone="ok"><Markdown text={step.handoff} /></Section>}
-            {step.feedback && step.status !== 'done' && <Section title="Latest review" tone="warn"><Markdown text={step.feedback} /></Section>}
-            <Section title="Brief"><div className="text-[var(--text-secondary)]"><Markdown text={step.brief || '_No brief: the worker goes by the title and the plan._'} /></div></Section>
-            {step.criteria && <Section title="Done when"><div className="text-[var(--text-secondary)]"><Markdown text={step.criteria} /></div></Section>}
+            {step.handoff && <Section title={tx('Handoff (what later steps are told)')} tone="ok"><Markdown text={step.handoff} /></Section>}
+            {step.feedback && step.status !== 'done' && <Section title={tx('Latest review')} tone="warn"><Markdown text={step.feedback} /></Section>}
+            <Section title={tx('Brief')}><div className="text-[var(--text-secondary)]"><Markdown text={step.brief || tx('_No brief: the worker goes by the title and the plan._')} /></div></Section>
+            {step.criteria && <Section title={tx('Done when')}><div className="text-[var(--text-secondary)]"><Markdown text={step.criteria} /></div></Section>}
             {(step.check || step.checkResult) && (
-              <Section title={step.checkResult ? `Automated checks: ${step.checkResult.ok ? 'passed' : 'failed'}` : 'Automated check'}
+              <Section title={step.checkResult ? tx('Automated checks: {v0}', { v0: step.checkResult.ok ? 'passed' : 'failed' }) : tx('Automated check')}
                 tone={step.checkResult ? (step.checkResult.ok ? 'ok' : 'warn') : undefined} defaultOpen={!!step.checkResult && !step.checkResult.ok}>
                 {step.checkResult ? <CheckRuns res={step.checkResult} /> : <code className="text-[12px]">{step.check}</code>}
               </Section>
             )}
-            {step.report && <Section title="Worker's report" defaultOpen={step.status === 'review'}><div className="max-h-[360px] overflow-y-auto"><Markdown text={step.report} /></div></Section>}
+            {step.report && <Section title={tx('Worker\'s report')} defaultOpen={step.status === 'review'}><div className="max-h-[360px] overflow-y-auto"><Markdown text={step.report} /></div></Section>}
             {step.status === 'review' && plan.status !== 'running' && (
               <div className="rounded-xl border border-violet-500/40 bg-violet-500/[0.05] p-3 space-y-2">
-                <div className="text-[12px] font-semibold flex items-center gap-1.5"><Hand className="w-3.5 h-3.5 text-violet-500" />Your review</div>
+                <div className="text-[12px] font-semibold flex items-center gap-1.5"><Hand className="w-3.5 h-3.5 text-violet-500" />{tx('Your review')}</div>
                 <textarea className={clsx(btn.input, 'min-h-[70px] resize-y')} value={feedback} onChange={e => setFeedback(e.target.value)}
-                  placeholder="Feedback for the worker (needed to send it back), or a handoff note when accepting" aria-label="Review feedback" />
+                  placeholder={tx('Feedback for the worker (needed to send it back), or a handoff note when accepting')} aria-label={tx('Review feedback')} />
                 <div className="flex gap-2 justify-end">
-                  <button className={btn.subtle} disabled={!feedback.trim()} onClick={() => run(() => api.patchStep(plan.id, step.id, { verdict: 'revise', feedback }))}><RotateCcw className="w-3.5 h-3.5" />Send back</button>
-                  <button className={clsx(btn.primary, '!bg-emerald-600')} onClick={() => run(() => api.patchStep(plan.id, step.id, { verdict: 'accept', summary: feedback }))}><Check className="w-3.5 h-3.5" />Accept</button>
+                  <button className={btn.subtle} disabled={!feedback.trim()} onClick={() => run(() => api.patchStep(plan.id, step.id, { verdict: 'revise', feedback }))}><RotateCcw className="w-3.5 h-3.5" />{tx('Send back')}</button>
+                  <button className={clsx(btn.primary, '!bg-emerald-600')} onClick={() => run(() => api.patchStep(plan.id, step.id, { verdict: 'accept', summary: feedback }))}><Check className="w-3.5 h-3.5" />{tx('Accept')}</button>
                 </div>
               </div>
             )}
@@ -655,26 +655,26 @@ function StepModal({ plan, step, agents, onClose, onChanged, onOpenChat }: {
         {edit ? (
           <>
             <span className="flex-1" />
-            <button className={btn.ghost} onClick={() => (isNew ? onClose() : setEdit(false))}>Cancel</button>
-            <button className={clsx(btn.primary, '!bg-violet-600')} onClick={save}>{isNew ? 'Add step' : 'Save'}</button>
+            <button className={btn.ghost} onClick={() => (isNew ? onClose() : setEdit(false))}>{tx('Cancel')}</button>
+            <button className={clsx(btn.primary, '!bg-violet-600')} onClick={save}>{isNew ? tx('Add step') : tx('Save')}</button>
           </>
         ) : step && (
           <>
-            {step.convId && <button className={btn.subtle} onClick={() => onOpenChat(step.convId!)}><MessageSquare className="w-3.5 h-3.5" />Open chat</button>}
-            {!running && <button className={btn.ghost} onClick={() => setEdit(true)}><Edit2 className="w-3.5 h-3.5" />Edit</button>}
+            {step.convId && <button className={btn.subtle} onClick={() => onOpenChat(step.convId!)}><MessageSquare className="w-3.5 h-3.5" />{tx('Open chat')}</button>}
+            {!running && <button className={btn.ghost} onClick={() => setEdit(true)}><Edit2 className="w-3.5 h-3.5" />{tx('Edit')}</button>}
             <span className="flex-1" />
             {!running && step.status !== 'pending' && (
-              <button className={btn.ghost} onClick={() => run(() => api.patchStep(plan.id, step.id, { status: 'pending' }))} title="Run this step again from the start"><RotateCcw className="w-3.5 h-3.5" />Redo</button>
+              <button className={btn.ghost} onClick={() => run(() => api.patchStep(plan.id, step.id, { status: 'pending' }))} title={tx('Run this step again from the start')}><RotateCcw className="w-3.5 h-3.5" />{tx('Redo')}</button>
             )}
             {!running && !['done', 'skipped'].includes(step.status) && (
               <>
-                <button className={btn.ghost} onClick={() => run(() => api.patchStep(plan.id, step.id, { status: 'skipped' }))}><SkipForward className="w-3.5 h-3.5" />Skip</button>
-                <button className={btn.ghost} onClick={() => run(() => api.patchStep(plan.id, step.id, { status: 'done' }))}><Check className="w-3.5 h-3.5" />Mark done</button>
+                <button className={btn.ghost} onClick={() => run(() => api.patchStep(plan.id, step.id, { status: 'skipped' }))}><SkipForward className="w-3.5 h-3.5" />{tx('Skip')}</button>
+                <button className={btn.ghost} onClick={() => run(() => api.patchStep(plan.id, step.id, { status: 'done' }))}><Check className="w-3.5 h-3.5" />{tx('Mark done')}</button>
               </>
             )}
             {!running && (
               <button className={clsx(btn.ghost, armed && '!text-rose-500')} onClick={() => (armed ? run(() => api.deleteStep(plan.id, step.id)) : setArmed(true))}>
-                <Trash2 className="w-3.5 h-3.5" />{armed ? 'Really delete' : 'Delete'}
+                <Trash2 className="w-3.5 h-3.5" />{armed ? tx('Really delete') : tx('Delete')}
               </button>
             )}
           </>
@@ -704,45 +704,45 @@ function PlanSettings({ open, plan, agents, onClose, onSaved, onDelete }: {
     try { onSaved(await api.patchPlan(plan.id, { title, goal, orchestrator, options: { maxAttempts, quality, check: check.trim(), phaseReviews } })); } catch (e) { setError(String(e)); }
   };
   return (
-    <Modal open={open} onClose={onClose} title="Plan settings" icon={<Workflow className="w-4 h-4 text-violet-500" />}>
+    <Modal open={open} onClose={onClose} title={tx('Plan settings')} icon={<Workflow className="w-4 h-4 text-violet-500" />}>
       <div className="flex-1 overflow-y-auto p-4 space-y-3.5">
-        <div><Label htmlFor="ps-title">Title</Label><input id="ps-title" className={btn.input} value={title} onChange={e => setTitle(e.target.value)} /></div>
-        <div><Label htmlFor="ps-goal">Goal</Label><textarea id="ps-goal" className={clsx(btn.input, 'min-h-[120px] resize-y')} value={goal} onChange={e => setGoal(e.target.value)} /></div>
+        <div><Label htmlFor="ps-title">{tx('Title')}</Label><input id="ps-title" className={btn.input} value={title} onChange={e => setTitle(e.target.value)} /></div>
+        <div><Label htmlFor="ps-goal">{tx('Goal')}</Label><textarea id="ps-goal" className={clsx(btn.input, 'min-h-[120px] resize-y')} value={goal} onChange={e => setGoal(e.target.value)} /></div>
         <div className="grid grid-cols-2 gap-3">
-          <div><Label htmlFor="ps-orch">Orchestrator</Label><AgentSelect id="ps-orch" agents={agents.filter(a => !a.studio)} value={orchestrator} onChange={setOrchestrator} /></div>
-          <div><Label htmlFor="ps-att">Attempts per step</Label>
+          <div><Label htmlFor="ps-orch">{tx('Orchestrator')}</Label><AgentSelect id="ps-orch" agents={agents.filter(a => !a.studio)} value={orchestrator} onChange={setOrchestrator} /></div>
+          <div><Label htmlFor="ps-att">{tx('Attempts per step')}</Label>
             <select id="ps-att" value={maxAttempts} onChange={e => setMaxAttempts(Number(e.target.value))} className={btn.input}>
               {[1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n}</option>)}
             </select></div>
-          <div><Label htmlFor="ps-q">Quality</Label>
+          <div><Label htmlFor="ps-q">{tx('Quality')}</Label>
             <select id="ps-q" value={quality} onChange={e => setQuality(e.target.value as PlanQuality)} className={btn.input}>
               {(Object.keys(QUALITY_LABEL) as PlanQuality[]).map(q => <option key={q} value={q}>{QUALITY_LABEL[q].label}</option>)}
             </select></div>
           <div className="flex items-start justify-between gap-3 pt-4">
-            <span className="text-[12px] text-[var(--text-secondary)]">Phase reviews<span className="block text-[11px] text-[var(--text-muted)]">Orchestrator checks each finished phase</span></span>
-            <Toggle on={phaseReviews} onChange={setPhaseReviews} label="Phase reviews" />
+            <span className="text-[12px] text-[var(--text-secondary)]">{tx('Phase reviews')}<span className="block text-[11px] text-[var(--text-muted)]">{tx('Orchestrator checks each finished phase')}</span></span>
+            <Toggle on={phaseReviews} onChange={setPhaseReviews} label={tx('Phase reviews')} />
           </div>
         </div>
         <p className="-mt-1 text-[11px] text-[var(--text-muted)]">{QUALITY_LABEL[quality].hint}</p>
-        <div><Label htmlFor="ps-check">Regression check: runs after every step, must exit 0</Label>
-          <input id="ps-check" className={clsx(btn.input, 'font-mono !text-[12.5px]')} value={check} onChange={e => setCheck(e.target.value)} placeholder="pytest -q" /></div>
+        <div><Label htmlFor="ps-check">{tx('Regression check: runs after every step, must exit 0')}</Label>
+          <input id="ps-check" className={clsx(btn.input, 'font-mono !text-[12.5px]')} value={check} onChange={e => setCheck(e.target.value)} placeholder={tx('pytest -q')} /></div>
         {error && <p className="text-[12px] text-rose-500">{error}</p>}
       </div>
       <footer className="shrink-0 px-4 py-3 border-t border-[var(--border-subtle)] flex items-center gap-2">
-        <button className={clsx(btn.ghost, '!text-rose-500')} onClick={onDelete}><Trash2 className="w-3.5 h-3.5" />Delete plan</button>
+        <button className={clsx(btn.ghost, '!text-rose-500')} onClick={onDelete}><Trash2 className="w-3.5 h-3.5" />{tx('Delete plan')}</button>
         <span className="flex-1" />
-        <button className={btn.ghost} onClick={onClose}>Cancel</button>
-        <button className={clsx(btn.primary, '!bg-violet-600')} onClick={save}>Save</button>
+        <button className={btn.ghost} onClick={onClose}>{tx('Cancel')}</button>
+        <button className={clsx(btn.primary, '!bg-violet-600')} onClick={save}>{tx('Save')}</button>
       </footer>
     </Modal>
   );
 }
 
 function CheckBadge({ step }: { step: MegaStep }) {
-  if (!step.checkResult) return step.check ? <FlaskConical className="w-3 h-3 text-[var(--text-muted)]" aria-label={`Check: ${step.check}`} /> : null;
+  if (!step.checkResult) return step.check ? <FlaskConical className="w-3 h-3 text-[var(--text-muted)]" aria-label={tx('Check: {check}', { check: step.check })} /> : null;
   return step.checkResult.ok
-    ? <FlaskConical className="w-3 h-3 text-emerald-500" aria-label="Checks passed" />
-    : <FlaskConical className="w-3 h-3 text-rose-500" aria-label="Checks failed" />;
+    ? <FlaskConical className="w-3 h-3 text-emerald-500" aria-label={tx('Checks passed')} />
+    : <FlaskConical className="w-3 h-3 text-rose-500" aria-label={tx('Checks failed')} />;
 }
 
 function CheckRuns({ res }: { res: CheckResult }) {
@@ -758,7 +758,7 @@ function CheckRuns({ res }: { res: CheckResult }) {
           <pre className="mt-1 max-h-[220px] overflow-auto text-[11px] leading-snug p-2 rounded-lg bg-[var(--bg-tertiary)] whitespace-pre-wrap">{r.output || '(no output)'}</pre>
         </div>
       ))}
-      <div className="text-[10.5px] text-[var(--text-muted)]">Run by the plan {relTime(res.at)}</div>
+      <div className="text-[10.5px] text-[var(--text-muted)]">{tx('Run by the plan {v0}', { v0: relTime(res.at) })}</div>
     </div>
   );
 }
@@ -770,10 +770,10 @@ export function PlanCard({ plan }: { plan: { id: string; title: string; status: 
       className="w-full max-w-md my-2 p-3 rounded-xl border border-violet-500/30 bg-violet-500/[0.06] hover:bg-violet-500/[0.12] flex items-center gap-3 transition group no-underline">
       <span className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: GRADIENT }}><Workflow className="w-4 h-4 text-white" /></span>
       <span className="flex-1 min-w-0">
-        <span className="block text-sm font-semibold truncate text-[var(--text-primary)]">{plan.title}</span>
+        <span className="block text-sm font-semibold truncate text-[var(--text-primary)]">{tx(plan.title)}</span>
         <span className="block text-[11px] text-[var(--text-muted)]">
-          Mega plan · {PLAN_META[plan.status]?.label ?? plan.status} · {plan.counts.done + plan.counts.skipped}/{plan.counts.total} steps done
-          {plan.finished ? ' · final report written' : ''}
+          {tx('Mega plan ·')} {PLAN_META[plan.status]?.label ?? plan.status} · {plan.counts.done + plan.counts.skipped}/{plan.counts.total} {tx('steps done')}
+          {plan.finished ? tx(' · final report written') : ''}
         </span>
       </span>
       <ExternalLink className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--text-primary)] shrink-0" />

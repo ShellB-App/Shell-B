@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import { ArrowRight, Check, FileArchive, History, Loader2, Search, Upload, X } from 'lucide-react';
 import { AUTH_LOST, adminKey, req } from '../api';
 import { btn } from './common';
+import { t as tx } from '../i18n';
 
 // Import history (server/importer.py): ChatGPT / Claude data exports become ordinary chats in an
 // "Imported from …" project, searchable and readable by "Learn from past chats". Lives at the bottom of Settings → Memory.
@@ -140,11 +141,9 @@ export function HistoryImport({ onLearn, learning }: { onLearn: () => void; lear
   return (
     <section className="border-t border-[var(--border-subtle)] pt-4 space-y-3" aria-labelledby="history-import-title">
       <div>
-        <h3 id="history-import-title" className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Import history</h3>
+        <h3 id="history-import-title" className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">{tx('Import history')}</h3>
         <p className="text-[11px] leading-relaxed text-[var(--text-muted)] max-w-[65ch]">
-          Bring your ChatGPT, Claude or Gemini conversations into Shell:B as searchable chats. Choose the export zip as downloaded,
-          or the <code className="font-mono">conversations.json</code> inside it. The file is read on this machine and deleted
-          once parsed; nothing leaves it.
+          {tx('Bring your ChatGPT, Claude or Gemini conversations into Shell:B as searchable chats. Choose the export zip as downloaded, or the')} <code className="font-mono">conversations.json</code> {tx('inside it. The file is read on this machine and deleted once parsed; nothing leaves it.')}
         </p>
       </div>
 
@@ -155,15 +154,15 @@ export function HistoryImport({ onLearn, learning }: { onLearn: () => void; lear
             onDrop={e => { e.preventDefault(); setDrag(false); choose(e.dataTransfer.files[0]); }}
             className={clsx('flex flex-wrap items-center gap-3 px-3 py-3 rounded-lg border border-dashed transition',
               drag ? 'border-[var(--accent)] bg-[var(--accent)]/[0.06]' : 'border-[var(--border-subtle)]')}>
-            <button className={btn.subtle} onClick={() => input.current?.click()}><Upload className="w-3.5 h-3.5" />Choose export file</button>
-            <span className="text-[11px] text-[var(--text-muted)]">or drop a .zip or .json here</span>
+            <button className={btn.subtle} onClick={() => input.current?.click()}><Upload className="w-3.5 h-3.5" />{tx('Choose export file')}</button>
+            <span className="text-[11px] text-[var(--text-muted)]">{tx('or drop a .zip or .json here')}</span>
             <input ref={input} type="file" accept=".zip,.json,application/zip,application/json" className="hidden"
               onChange={e => choose(e.target.files?.[0])} />
           </div>
           <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[11px] text-[var(--text-muted)] max-w-[65ch]">
-            <dt className="font-medium text-[var(--text-secondary)]">ChatGPT</dt><dd>Settings → Data controls → Export data. The link arrives by email.</dd>
-            <dt className="font-medium text-[var(--text-secondary)]">Claude</dt><dd>Settings → Privacy → Export data. The link arrives by email.</dd>
-            <dt className="font-medium text-[var(--text-secondary)]">Gemini</dt><dd>takeout.google.com → My Activity → Gemini Apps, format JSON. Takeout keeps your prompts (and some replies), one chat per day.</dd>
+            <dt className="font-medium text-[var(--text-secondary)]">{tx('ChatGPT')}</dt><dd>{tx('Settings → Data controls → Export data. The link arrives by email.')}</dd>
+            <dt className="font-medium text-[var(--text-secondary)]">{tx('Claude')}</dt><dd>{tx('Settings → Privacy → Export data. The link arrives by email.')}</dd>
+            <dt className="font-medium text-[var(--text-secondary)]">{tx('Gemini')}</dt><dd>{tx('takeout.google.com → My Activity → Gemini Apps, format JSON. Takeout keeps your prompts (and some replies), one chat per day.')}</dd>
           </dl>
         </>
       )}
@@ -172,7 +171,7 @@ export function HistoryImport({ onLearn, learning }: { onLearn: () => void; lear
         <div className="space-y-1.5 max-w-md">
           <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            <span className="truncate">{progress < 1 ? `Loading ${file}… ${Math.round(progress * 100)}%` : `Reading conversations in ${file}…`}</span>
+            <span className="truncate">{progress < 1 ? tx('Loading {file}… {v0}%', { file: file, v0: Math.round(progress * 100) }) : tx('Reading conversations in {file}…', { file: file })}</span>
           </div>
           <Bar value={progress < 1 ? progress : null} />
         </div>
@@ -191,13 +190,13 @@ export function HistoryImport({ onLearn, learning }: { onLearn: () => void; lear
             <Stat label="conversations" value={n(preview.count)} />
             <Stat label="messages" value={n(preview.messages)} />
             <Stat label="span" value={`${month(preview.from)} – ${month(preview.to)}`} />
-            {preview.already > 0 && <Stat label="already here" value={n(preview.already)} />}
+            {preview.already > 0 && <Stat label={tx('already here')} value={n(preview.already)} />}
           </div>
 
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-              <input className={clsx(btn.input, 'pl-8')} value={q} onChange={e => setQ(e.target.value)} placeholder={`Filter ${n(preview.count)} titles`} />
+              <input className={clsx(btn.input, 'pl-8')} value={q} onChange={e => setQ(e.target.value)} placeholder={tx('Filter {v0} titles', { v0: n(preview.count) })} />
             </div>
             <span className="text-[11px] text-[var(--text-muted)] whitespace-nowrap tabular-nums">{n(picked.size)} selected</span>
           </div>
@@ -208,11 +207,11 @@ export function HistoryImport({ onLearn, learning }: { onLearn: () => void; lear
                 <thead className="sticky top-0 bg-[var(--bg-secondary)] text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
                   <tr className="border-b border-[var(--border-subtle)]">
                     <th className="w-8 px-2 py-1.5 text-left">
-                      <input type="checkbox" className="accent-[var(--accent)]" aria-label="Select all shown" checked={allPicked} disabled={!selectable.length} onChange={toggleAll} />
+                      <input type="checkbox" className="accent-[var(--accent)]" aria-label={tx('Select all shown')} checked={allPicked} disabled={!selectable.length} onChange={toggleAll} />
                     </th>
-                    <th className="px-2 py-1.5 text-left font-medium">Title</th>
-                    <th className="px-2 py-1.5 text-right font-medium whitespace-nowrap">Messages</th>
-                    <th className="px-2 py-1.5 text-right font-medium whitespace-nowrap">Last active</th>
+                    <th className="px-2 py-1.5 text-left font-medium">{tx('Title')}</th>
+                    <th className="px-2 py-1.5 text-right font-medium whitespace-nowrap">{tx('Messages')}</th>
+                    <th className="px-2 py-1.5 text-right font-medium whitespace-nowrap">{tx('Last active')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -221,13 +220,13 @@ export function HistoryImport({ onLearn, learning }: { onLearn: () => void; lear
                       className={clsx('border-b border-[var(--border-subtle)] last:border-0', c.imported ? 'text-[var(--text-muted)]' : 'cursor-pointer hover:bg-[var(--bg-hover)]')}>
                       <td className="px-2 py-1.5">
                         {c.imported
-                          ? <Check className="w-3.5 h-3.5 text-[var(--text-muted)]" aria-label="Already imported" />
-                          : <input type="checkbox" className="accent-[var(--accent)]" aria-label={`Import ${c.title}`} checked={picked.has(c.id)}
+                          ? <Check className="w-3.5 h-3.5 text-[var(--text-muted)]" aria-label={tx('Already imported')} />
+                          : <input type="checkbox" className="accent-[var(--accent)]" aria-label={tx('Import {title}', { title: c.title })} checked={picked.has(c.id)}
                               onClick={e => e.stopPropagation()} onChange={() => toggle(c.id)} />}
                       </td>
                       <td className="px-2 py-1.5 max-w-0 w-full">
-                        <div className="truncate" title={c.title}>
-                          {c.imported && c.convId ? <a href={`#/c/${c.convId}`} className="hover:underline" onClick={e => e.stopPropagation()}>{c.title}</a> : c.title}
+                        <div className="truncate" title={tx(c.title)}>
+                          {c.imported && c.convId ? <a href={`#/c/${c.convId}`} className="hover:underline" onClick={e => e.stopPropagation()}>{tx(c.title)}</a> : tx(c.title)}
                         </div>
                       </td>
                       <td className="px-2 py-1.5 text-right tabular-nums text-[var(--text-secondary)]">{c.messages}</td>
@@ -235,24 +234,24 @@ export function HistoryImport({ onLearn, learning }: { onLearn: () => void; lear
                     </tr>
                   ))}
                   {!rows.length && (
-                    <tr><td colSpan={4} className="px-3 py-6 text-center text-[11px] text-[var(--text-muted)]">No titles match “{q}”.</td></tr>
+                    <tr><td colSpan={4} className="px-3 py-6 text-center text-[11px] text-[var(--text-muted)]">{tx('No titles match “{q}”.', { q: q })}</td></tr>
                   )}
                 </tbody>
               </table>
             </div>
             {rows.length > ROWS && (
               <div className="px-3 py-1.5 text-[10px] text-[var(--text-muted)] border-t border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
-                Showing {n(ROWS)} of {n(rows.length)}. Filter to find the rest; the header checkbox still selects all {n(rows.length)}.
+                {tx('Showing {v0} of {v1}. Filter to find the rest; the header checkbox still selects all {v1}.', { v0: n(ROWS), v1: n(rows.length) })}
               </div>
             )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <button className={btn.primary} disabled={!picked.size} onClick={start}>
-              <History className="w-3.5 h-3.5" />Import {n(picked.size)} chat{picked.size === 1 ? '' : 's'}
+              <History className="w-3.5 h-3.5" />{tx('Import')} {n(picked.size)} chat{picked.size === 1 ? '' : 's'}
             </button>
-            <button className={btn.ghost} onClick={reset}>Cancel</button>
-            <span className="text-[11px] text-[var(--text-muted)]">Into the project “Imported from {preview.sourceLabel}”, with their original dates.</span>
+            <button className={btn.ghost} onClick={reset}>{tx('Cancel')}</button>
+            <span className="text-[11px] text-[var(--text-muted)]">{tx('Into the project “Imported from {sourceLabel}”, with their original dates.', { sourceLabel: preview.sourceLabel })}</span>
           </div>
         </div>
       )}
@@ -261,7 +260,7 @@ export function HistoryImport({ onLearn, learning }: { onLearn: () => void; lear
         <div className="space-y-1.5 max-w-md" aria-live="polite">
           <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            Importing… <span className="tabular-nums">{n(job?.done ?? 0)} / {n(job?.total ?? 0)}</span>
+            {tx('Importing…')} <span className="tabular-nums">{n(job?.done ?? 0)} / {n(job?.total ?? 0)}</span>
           </div>
           <Bar value={job?.total ? job.done / job.total : null} />
         </div>
@@ -271,16 +270,16 @@ export function HistoryImport({ onLearn, learning }: { onLearn: () => void; lear
         <div className="space-y-3">
           <div className={clsx('rounded-lg border px-3 py-2.5 text-xs space-y-1', job.error ? 'border-red-500/30 bg-red-500/[0.06]' : 'border-[var(--border-subtle)] bg-[var(--bg-tertiary)]')}>
             {job.error
-              ? <div className="text-red-400">The import stopped: {job.error}. {job.imported ? `${n(job.imported)} chats were saved before it did; run it again to add the rest.` : ''}</div>
+              ? <div className="text-red-400">{tx('The import stopped:')} {job.error}. {job.imported ? tx('{v0} chats were saved before it did; run it again to add the rest.', { v0: n(job.imported) }) : ''}</div>
               : <div className="text-[var(--text-primary)]">
                   {job.imported
-                    ? <>Imported <b>{n(job.imported)}</b> chat{job.imported === 1 ? '' : 's'} ({n(job.messages)} messages).</>
-                    : 'Nothing new to import.'}
-                  {job.skipped > 0 && <span className="text-[var(--text-muted)]"> {n(job.skipped)} already here, skipped.</span>}
+                    ? <>{tx('Imported')} <b>{n(job.imported)}</b> chat{job.imported === 1 ? '' : 's'} ({n(job.messages)} messages).</>
+                    : tx('Nothing new to import.')}
+                  {job.skipped > 0 && <span className="text-[var(--text-muted)]"> {tx('{v0} already here, skipped.', { v0: n(job.skipped) })}</span>}
                 </div>}
             {job.groupId && (
               <a href={`#/p/${job.groupId}`} className="inline-flex items-center gap-1 text-[var(--accent-soft)] hover:underline">
-                Open {job.groupName}<ArrowRight className="w-3 h-3" />
+                {tx('Open')} {job.groupName}<ArrowRight className="w-3 h-3" />
               </a>
             )}
           </div>
@@ -288,17 +287,17 @@ export function HistoryImport({ onLearn, learning }: { onLearn: () => void; lear
           {learnable && learnable.unread > 0 && (
             <div className="flex flex-wrap items-center gap-2">
               <button className={btn.subtle} disabled={learning || learnAsked} onClick={() => { setLearnAsked(true); onLearn(); }}>
-                {learning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <History className="w-3.5 h-3.5" />}Learn from imported chats
+                {learning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <History className="w-3.5 h-3.5" />}{tx('Learn from imported chats')}
               </button>
               <span className="text-[11px] text-[var(--text-muted)] max-w-[60ch]">
                 {learnAsked
-                  ? 'Started. Progress shows beside “Learn from past chats” above; new memories wait there for your OK.'
-                  : `The local model reads your side of ${n(learnable.unread)} imported chat${learnable.unread === 1 ? '' : 's'} (and any other chat not read yet) and proposes memories for you to review. Large histories take a while.`}
+                  ? tx('Started. Progress shows beside “Learn from past chats” above; new memories wait there for your OK.')
+                  : tx('The local model reads your side of {v0} imported chat{v1} (and any other chat not read yet) and proposes memories for you to review. Large histories take a while.', { v0: n(learnable.unread), v1: learnable.unread === 1 ? '' : 's' })}
               </span>
             </div>
           )}
 
-          <button className={btn.ghost} onClick={reset}><Upload className="w-3.5 h-3.5" />Import another file</button>
+          <button className={btn.ghost} onClick={reset}><Upload className="w-3.5 h-3.5" />{tx('Import another file')}</button>
         </div>
       )}
     </section>

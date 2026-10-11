@@ -7,6 +7,7 @@ import { Markdown } from './Markdown';
 import { TagInput } from './Codex';
 import { btn, relTime } from './common';
 import { toast, toastError } from './toast';
+import { t as tx } from '../i18n';
 
 /**
  * Notes: a writing-first view of the Codex's notes, at #/codex/notes(/<entry id>). Same entries as the Codex page, so
@@ -212,7 +213,7 @@ function NoteEditor({ id, index, titles, view, onView, onSaved, onDeleted, onBac
     if (from.trim().toLowerCase() === to.trim().toLowerCase()) return;   // links match titles ignoring case
     req<RelinkResult>(`/api/codex/entries/${eid}/relink`, { method: 'POST', body: JSON.stringify({ from, to }), keepalive: opts?.keepalive })
       .then(r => { if (r.updated.length || r.skipped) onRelinked({ ...r, from, to }); })
-      .catch(() => { linked.current = from; toast(`Couldn't update the links to “${to}” in other notes`, { kind: 'error' }); });
+      .catch(() => { linked.current = from; toast(tx('Couldn\'t update the links to “{to}” in other notes', { to: to }), { kind: 'error' }); });
   }, [onRelinked]);
 
   // flush on switching notes, leaving the page, or closing the tab
@@ -291,8 +292,8 @@ function NoteEditor({ id, index, titles, view, onView, onSaved, onDeleted, onBac
     clearTimeout(timer.current); timer.current = undefined;
     if (!eid) { onBack(); return; }
     clearTimeout(relinkTimer.current);
-    if (!confirm(`Delete "${cur.current.title}"? This can't be undone.`)) return;
-    try { await api.deleteCodexEntry(eid); } catch (e) { toastError("Couldn't delete the note")(e); return; }
+    if (!confirm(tx('Delete "{title}"? This can\'t be undone.', { title: cur.current.title }))) return;
+    try { await api.deleteCodexEntry(eid); } catch (e) { toastError(tx('Couldn\'t delete the note'))(e); return; }
     onDeleted(eid);
   };
 
@@ -329,15 +330,15 @@ function NoteEditor({ id, index, titles, view, onView, onSaved, onDeleted, onBac
   return (
     <div className="flex-1 min-w-0 flex flex-col">
       <div className="flex items-center gap-1 px-3 py-2 border-b border-[var(--border-subtle)]">
-        <button className={clsx(btn.icon, 'md:hidden')} onClick={onBack} aria-label="All notes"><ArrowLeft className="w-4 h-4" /></button>
+        <button className={clsx(btn.icon, 'md:hidden')} onClick={onBack} aria-label={tx('All notes')}><ArrowLeft className="w-4 h-4" /></button>
         <input className={clsx('flex-1 min-w-0 bg-transparent text-base font-semibold focus:outline-none',
           autoTitle && body.trim() ? 'placeholder-[var(--text-primary)]' : 'placeholder-[var(--text-muted)]')}
-          value={shownTitle} placeholder={autoTitle ? deriveTitle(body) : 'Untitled'}
+          value={shownTitle} placeholder={autoTitle ? deriveTitle(body) : tx('Untitled')}
           onChange={ev => { const v = ev.target.value; setTitle(v); setAutoTitle(!v.trim()); change({ title: v, auto: !v.trim() }); }}
           onKeyDown={ev => { if (ev.key === 'Enter' || ev.key === 'ArrowDown') { ev.preventDefault(); area.current?.focus(); } }}
           onBlur={() => relink()} />
         <span className={clsx('text-[11px] whitespace-nowrap px-1', state === 'error' ? 'text-red-400' : 'text-[var(--text-muted)]')} title={error || undefined}>
-          {state === 'saving' ? 'Saving…' : state === 'pending' ? 'Edited' : state === 'error' ? 'Not saved' : entry ? `Saved ${relTime(entry.updatedAt)}` : 'New note'}
+          {state === 'saving' ? tx('Saving…') : state === 'pending' ? tx('Edited') : state === 'error' ? tx('Not saved') : entry ? tx('Saved {v0}', { v0: relTime(entry.updatedAt) }) : tx('New note')}
         </span>
         <div className="hidden sm:flex items-center rounded-lg border border-[var(--border-subtle)] p-0.5 ml-1">
           {([['write', PenLine, 'Write'], ['split', Columns2, 'Write and preview side by side'], ['preview', Eye, 'Preview']] as const).map(([v, Icon, label]) => (
@@ -347,19 +348,19 @@ function NoteEditor({ id, index, titles, view, onView, onSaved, onDeleted, onBac
             </button>
           ))}
         </div>
-        <button className={clsx(btn.icon, 'sm:hidden')} onClick={() => onView(view === 'preview' ? 'write' : 'preview')} aria-label="Toggle preview">
+        <button className={clsx(btn.icon, 'sm:hidden')} onClick={() => onView(view === 'preview' ? 'write' : 'preview')} aria-label={tx('Toggle preview')}>
           {view === 'preview' ? <PenLine className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
         </button>
-        {entry && <button className={clsx(btn.icon, entry.pinned && 'text-[var(--accent)]')} onClick={togglePin} title={entry.pinned ? 'Unpin' : 'Pin to the top'}><Pin className="w-4 h-4" /></button>}
-        {onDiscuss && <button className={btn.icon} onClick={() => setDiscuss(d => (d === null ? '' : null))} title="Brainstorm this note in a new chat"><MessageSquarePlus className="w-4 h-4" /></button>}
-        {entry && <a className={btn.icon} href={`#/codex/e/${entry.id}`} title="Open in Codex"><BookMarked className="w-4 h-4" /></a>}
-        <button className={clsx(btn.icon, 'hover:text-red-400')} onClick={remove} title="Delete note"><Trash2 className="w-4 h-4" /></button>
+        {entry && <button className={clsx(btn.icon, entry.pinned && 'text-[var(--accent)]')} onClick={togglePin} title={entry.pinned ? tx('Unpin') : tx('Pin to the top')}><Pin className="w-4 h-4" /></button>}
+        {onDiscuss && <button className={btn.icon} onClick={() => setDiscuss(d => (d === null ? '' : null))} title={tx('Brainstorm this note in a new chat')}><MessageSquarePlus className="w-4 h-4" /></button>}
+        {entry && <a className={btn.icon} href={`#/codex/e/${entry.id}`} title={tx('Open in Codex')}><BookMarked className="w-4 h-4" /></a>}
+        <button className={clsx(btn.icon, 'hover:text-red-400')} onClick={remove} title={tx('Delete note')}><Trash2 className="w-4 h-4" /></button>
       </div>
 
       {entry?.draft && (
         <div className="flex items-center gap-2 px-4 py-1.5 text-xs bg-amber-500/10 border-b border-amber-500/30 text-amber-700 dark:text-amber-300">
-          <span className="flex-1">An agent wrote this draft. Accept it to make it part of your Codex.</span>
-          <button className={btn.subtle} onClick={accept}><Check className="w-3.5 h-3.5" />Accept</button>
+          <span className="flex-1">{tx('An agent wrote this draft. Accept it to make it part of your Codex.')}</span>
+          <button className={btn.subtle} onClick={accept}><Check className="w-3.5 h-3.5" />{tx('Accept')}</button>
         </div>
       )}
 
@@ -369,10 +370,10 @@ function NoteEditor({ id, index, titles, view, onView, onSaved, onDeleted, onBac
             onChange={ev => setDiscuss(ev.target.value)}
             onKeyDown={ev => { if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); sendDiscuss(); } else if (ev.key === 'Escape') setDiscuss(null); }} />
           <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
-            <span className="flex-1">Starts a new chat with this note attached. Write @Agent to pick who answers.</span>
-            <button className={btn.ghost} onClick={() => setDiscuss(null)}>Cancel</button>
+            <span className="flex-1">{tx('Starts a new chat with this note attached. Write @Agent to pick who answers.')}</span>
+            <button className={btn.ghost} onClick={() => setDiscuss(null)}>{tx('Cancel')}</button>
             <button className={btn.primary} disabled={sending} onClick={sendDiscuss}>
-              {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageSquarePlus className="w-3.5 h-3.5" />}Start chat
+              {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageSquarePlus className="w-3.5 h-3.5" />}{tx('Start chat')}
             </button>
           </div>
         </div>
@@ -383,7 +384,7 @@ function NoteEditor({ id, index, titles, view, onView, onSaved, onDeleted, onBac
           <div className={clsx('relative flex-1 min-w-0 flex', view === 'split' && 'md:border-r border-[var(--border-subtle)]')}>
             <textarea ref={area} spellCheck
               className="flex-1 min-w-0 h-full resize-none bg-transparent px-5 py-4 font-mono text-[13.5px] leading-relaxed focus:outline-none placeholder-[var(--text-muted)]"
-              value={body} placeholder={'Start typing. Markdown works:\n\n# A heading\n- an idea\n  - a thought under it\n- [ ] something to try\n\nLink another note with [[its title]].'}
+              value={body} placeholder={tx('Start typing. Markdown works:\n\n# A heading\n- an idea\n  - a thought under it\n- [ ] something to try\n\nLink another note with [[its title]].')}
               onChange={ev => { setBody(ev.target.value); change({ body: ev.target.value }); updateAc(ev.target); }}
               onKeyDown={onKey} onClick={ev => updateAc(ev.currentTarget)}
               onKeyUp={ev => { if (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight' || ev.key === 'Home' || ev.key === 'End') updateAc(ev.currentTarget); }}
@@ -395,10 +396,10 @@ function NoteEditor({ id, index, titles, view, onView, onSaved, onDeleted, onBac
                   <button key={`${m.isNew}-${m.title}`} onMouseDown={ev => { ev.preventDefault(); pickTitle(m.title); }}
                     className={clsx('w-full flex items-center gap-2 px-2.5 py-1.5 text-left', i === ac.sel ? 'bg-[var(--bg-hover)]' : 'hover:bg-[var(--bg-hover)]/60')}>
                     {m.isNew ? <FilePlus2 className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)]" /> : <StickyNote className="w-3.5 h-3.5 shrink-0 text-amber-400" />}
-                    <span className="truncate">{m.isNew ? <>New note “{m.title}”</> : m.title}</span>
+                    <span className="truncate">{m.isNew ? <>{tx('New note “')}{tx(m.title)}”</> : tx(m.title)}</span>
                   </button>
                 ))}
-                <div className="px-2.5 pt-1 text-[10px] text-[var(--text-muted)]">↑↓ to choose · Enter to link · Esc to close</div>
+                <div className="px-2.5 pt-1 text-[10px] text-[var(--text-muted)]">{tx('↑↓ to choose · Enter to link · Esc to close')}</div>
               </div>
             )}
           </div>
@@ -406,7 +407,7 @@ function NoteEditor({ id, index, titles, view, onView, onSaved, onDeleted, onBac
         {view !== 'write' && (
           <div className={clsx('notes-preview flex-1 min-w-0 overflow-y-auto px-6 py-4', view === 'split' && 'hidden md:block')} onClick={onPreviewClick}
             onDoubleClick={() => { if (view === 'preview') { onView('write'); requestAnimationFrame(() => area.current?.focus()); } }}>
-            {body.trim() ? <Markdown text={linkify(body, known)} /> : <p className="text-sm text-[var(--text-muted)]">Nothing written yet.</p>}
+            {body.trim() ? <Markdown text={linkify(body, known)} /> : <p className="text-sm text-[var(--text-muted)]">{tx('Nothing written yet.')}</p>}
           </div>
         )}
       </div>
@@ -414,14 +415,14 @@ function NoteEditor({ id, index, titles, view, onView, onSaved, onDeleted, onBac
       {backlinks && backlinks.length > 0 && (
         <div className="border-t border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40">
           <button className="w-full flex items-center gap-1.5 px-4 py-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]" onClick={() => setShowBacklinks(v => !v)}>
-            <Link2 className="w-3.5 h-3.5" />Linked from {backlinks.length} note{backlinks.length === 1 ? '' : 's'}
+            <Link2 className="w-3.5 h-3.5" />{tx('Linked from')} {backlinks.length} note{backlinks.length === 1 ? '' : 's'}
             <ChevronDown className={clsx('w-3.5 h-3.5 ml-auto transition', !showBacklinks && '-rotate-90')} />
           </button>
           {showBacklinks && (
             <div className="max-h-40 overflow-y-auto px-2 pb-2 grid gap-1 sm:grid-cols-2">
               {backlinks.map(b => (
                 <button key={b.id} onClick={() => onOpen(b.id)} className="text-left px-2.5 py-1.5 rounded-lg hover:bg-[var(--bg-hover)] min-w-0">
-                  <span className="block truncate text-sm font-medium">{b.title}</span>
+                  <span className="block truncate text-sm font-medium">{tx(b.title)}</span>
                   {b.line && <span className="block truncate text-xs text-[var(--text-muted)]">{unwiki(b.line)}</span>}
                 </button>
               ))}
@@ -474,7 +475,7 @@ export function Notes({ sub, onDiscuss, guest }: { sub: string; onDiscuss?: (pro
         setItems(prev => [{ ...e, preview: '' }, ...prev]);
       }
       setOpen(hit.id); setSession(n => n + 1); setNoteHash(hit.id);
-    } catch (e) { toastError(`Couldn't open “${title}”`)(e); }
+    } catch (e) { toastError(tx('Couldn\'t open “{title}”', { title: title }))(e); }
   }, [loadTitles]);
 
   // #/codex/notes/<id>, or …/t/<title> and …/new/<title> from a link opened in a new tab
@@ -486,7 +487,7 @@ export function Notes({ sub, onDiscuss, guest }: { sub: string; onDiscuss?: (pro
   useEffect(() => { const t = setTimeout(() => setQuery(q.trim()), 250); return () => clearTimeout(t); }, [q]);
 
   const load = useCallback(async () => {
-    try { setItems(await api.codexEntries({ kind: 'note', q: query, tag })); } catch (e) { if (query || tag) toastError('Search failed')(e); }
+    try { setItems(await api.codexEntries({ kind: 'note', q: query, tag })); } catch (e) { if (query || tag) toastError(tx('Search failed'))(e); }
     setLoaded(true);
   }, [query, tag]);
   useEffect(() => { load(); }, [load]);
@@ -533,8 +534,8 @@ export function Notes({ sub, onDiscuss, guest }: { sub: string; onDiscuss?: (pro
       {notice && (
         <div role="status" className={clsx('fixed bottom-4 right-4 z-40 max-w-sm flex items-start gap-2 px-3 py-2 rounded-lg border shadow-xl text-xs animate-fade-in',
           notice.warn ? 'bg-amber-500/15 border-amber-500/40 text-amber-700 dark:text-amber-200' : 'bg-[var(--bg-secondary)] border-[var(--border-subtle)] text-[var(--text-secondary)]')}>
-          <Link2 className="w-3.5 h-3.5 mt-px shrink-0" /><span className="flex-1">{notice.text}</span>
-          <button className="p-0.5 hover:text-[var(--text-primary)]" onClick={() => setNotice(null)} aria-label="Dismiss"><X className="w-3 h-3" /></button>
+          <Link2 className="w-3.5 h-3.5 mt-px shrink-0" /><span className="flex-1">{tx(notice.text)}</span>
+          <button className="p-0.5 hover:text-[var(--text-primary)]" onClick={() => setNotice(null)} aria-label={tx('Dismiss')}><X className="w-3 h-3" /></button>
         </div>
       )}
       <aside className={clsx('w-full md:w-72 shrink-0 flex flex-col border-r border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40', open && 'hidden md:flex')}>
@@ -542,11 +543,11 @@ export function Notes({ sub, onDiscuss, guest }: { sub: string; onDiscuss?: (pro
           <div className="flex items-center gap-1.5">
             <div className="relative flex-1">
               <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-              <input ref={searchBox} className={clsx(btn.input, 'pl-8 pr-7')} placeholder="Search notes" value={q} onChange={ev => setQ(ev.target.value)}
+              <input ref={searchBox} className={clsx(btn.input, 'pl-8 pr-7')} placeholder={tx('Search notes')} value={q} onChange={ev => setQ(ev.target.value)}
                 onKeyDown={ev => { if (ev.key === 'Escape') { setQ(''); (ev.target as HTMLInputElement).blur(); } else if (ev.key === 'Enter' && items[0]) pick(items[0].id); }} />
-              {q && <button className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-muted)] hover:text-[var(--text-primary)]" onClick={() => setQ('')} aria-label="Clear search"><X className="w-3.5 h-3.5" /></button>}
+              {q && <button className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-muted)] hover:text-[var(--text-primary)]" onClick={() => setQ('')} aria-label={tx('Clear search')}><X className="w-3.5 h-3.5" /></button>}
             </div>
-            <button className={btn.primary} onClick={() => pick('new')} title="New note (Alt+N)"><Plus className="w-3.5 h-3.5" />New</button>
+            <button className={btn.primary} onClick={() => pick('new')} title={tx('New note (Alt+N)')}><Plus className="w-3.5 h-3.5" />{tx('New')}</button>
           </div>
           {topTags.length > 0 && (
             <div className="flex flex-wrap gap-1">
@@ -562,7 +563,7 @@ export function Notes({ sub, onDiscuss, guest }: { sub: string; onDiscuss?: (pro
             <div className="p-6 flex justify-center text-[var(--text-muted)]"><Loader2 className="w-4 h-4 animate-spin" /></div>
           ) : items.length === 0 ? (
             <div className="p-6 text-center text-sm text-[var(--text-muted)]">
-              {query || tag ? 'No notes match.' : <>No notes yet.<br /><button className="mt-2 text-[var(--accent)] hover:underline" onClick={() => pick('new')}>Write the first one</button></>}
+              {query || tag ? tx('No notes match.') : <>{tx('No notes yet.')}<br /><button className="mt-2 text-[var(--accent)] hover:underline" onClick={() => pick('new')}>{tx('Write the first one')}</button></>}
             </div>
           ) : items.map(n => (
             <button key={n.id} onClick={() => pick(n.id)}
@@ -570,11 +571,11 @@ export function Notes({ sub, onDiscuss, guest }: { sub: string; onDiscuss?: (pro
                 open === n.id ? 'bg-[var(--bg-hover)]' : 'hover:bg-[var(--bg-hover)]/60')}>
               <div className="flex items-center gap-1.5">
                 {n.pinned && <Pin className="w-3 h-3 shrink-0 text-[var(--accent)]" />}
-                <span className="flex-1 min-w-0 truncate text-sm font-medium">{n.title || 'Untitled'}</span>
+                <span className="flex-1 min-w-0 truncate text-sm font-medium">{n.title || tx('Untitled')}</span>
                 {n.draft && <span className="text-[10px] px-1 rounded bg-amber-500/15 text-amber-600 dark:text-amber-300">draft</span>}
                 <span className="text-[10px] text-[var(--text-muted)] whitespace-nowrap">{relTime(n.updatedAt)}</span>
               </div>
-              <p className="mt-0.5 text-xs text-[var(--text-secondary)] line-clamp-2">{n.passage ? n.passage.slice(0, 200) : n.preview || <span className="italic text-[var(--text-muted)]">Empty</span>}</p>
+              <p className="mt-0.5 text-xs text-[var(--text-secondary)] line-clamp-2">{n.passage ? n.passage.slice(0, 200) : n.preview || <span className="italic text-[var(--text-muted)]">{tx('Empty')}</span>}</p>
             </button>
           ))}
         </div>
@@ -587,10 +588,10 @@ export function Notes({ sub, onDiscuss, guest }: { sub: string; onDiscuss?: (pro
       ) : (
         <div className="hidden md:flex flex-1 flex-col items-center justify-center gap-3 text-center text-[var(--text-muted)]">
           <StickyNote className="w-10 h-10 opacity-40" />
-          <p className="text-sm">Pick a note, or start a new one.</p>
-          <button className={btn.subtle} onClick={() => pick('new')}><Plus className="w-3.5 h-3.5" />New note<kbd className="ml-1 text-[10px] font-mono opacity-70">Alt+N</kbd></button>
-          <p className="text-[11px] max-w-xs">{guest ? 'Your notes are yours alone, saved on this machine. Press / to search.'
-            : 'Notes live in your Codex, so agents can search them too. Press / to search.'}</p>
+          <p className="text-sm">{tx('Pick a note, or start a new one.')}</p>
+          <button className={btn.subtle} onClick={() => pick('new')}><Plus className="w-3.5 h-3.5" />{tx('New note')}<kbd className="ml-1 text-[10px] font-mono opacity-70">Alt+N</kbd></button>
+          <p className="text-[11px] max-w-xs">{guest ? tx('Your notes are yours alone, saved on this machine. Press / to search.')
+            : tx('Notes live in your Codex, so agents can search them too. Press / to search.')}</p>
         </div>
       )}
     </div>

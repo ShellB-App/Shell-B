@@ -18,7 +18,7 @@ PLACEHOLDER = re.compile(r"\{(\w+)\}")
 
 
 def _unescape(s: str) -> str:
-    return re.sub(r"\\(.)", r"\1", s)
+    return re.sub(r"\\(.)", lambda m: "\n" if m.group(1) == "n" else m.group(1), s)
 
 
 def used_keys() -> dict[str, set[str]]:
@@ -62,9 +62,13 @@ class French(unittest.TestCase):
                 self.assertIn("other", val, key)
 
     def test_no_untranslated_copies(self):
-        """A value equal to its key is fine for names (Wiki, Radio…) but a long one means a forgotten translation."""
-        same_in_french = {"Conversations", "Notifications", "Cloudflare Email Sending", "Contacts ({v0})", "{gateway} via {interface}", "Active · …{keyTail}{v0}", "MusicGen · :8002", "git log --oneline"}
-        same = [k for k, v in self.cat.items() if isinstance(v, str) and v == k and len(k) > 12 and k not in same_in_french]
+        """A value equal to its key is fine for names (Wiki, Radio…), placeholder-only strings and proper nouns, but a
+        long English sentence left as is means a forgotten translation."""
+        same_in_french = {"Conversations", "Notifications", "Cloudflare Email Sending", "Contacts ({v0})", "{gateway} via {interface}",
+                          "Active · …{keyTail}{v0}", "MusicGen · :8002", "git log --oneline", "Lofi Study Café", "Midnight Velvet", "Tokyo City Pop",
+                          "Liquid Velocity", "Event Horizon", "Coldwave Night", "Future Funk Disco", "Windows PowerShell", "Subground 8200", "pytest -q tests/test_intake.py", "Shell:B Kiosk OS", "Architecture"}
+        letters = lambda k: len(re.sub(r"\{\w+\}|[^A-Za-z]", "", k))  # letters outside placeholders
+        same = [k for k, v in self.cat.items() if isinstance(v, str) and v == k and letters(k) >= 12 and k not in same_in_french]
         self.assertEqual(same, [], same)
 
 

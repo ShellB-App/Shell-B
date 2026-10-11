@@ -473,15 +473,14 @@ French, every agent gets a note to answer in French unless you write to it in an
 - **A guest's**: Tools & Connectors → Guests → their limits panel → Language. On the guest page it sets their
   interface and their agents' replies outright; in their own Shell:B it is the starting choice, and they can change
   it in their Settings. Invite and password-reset emails go out in that language.
-- **What is translated**: the login and guest sign-in screens, the guest page, the chat (sidebar, rail, composer,
-  message menus, greeting), the mobile bar, every Settings page, the whole Codex (calendar, contacts, secrets and
-  their editors, the sync dialog), Studio and Code workspaces (start page, template cards, files, history, remote,
-  canvas, terminal), Activity (feed, follow-ups, night shift, self-review), the Library with Media and Favorites, and
-  Feeds, with dates and relative times in the language. Research, Agent Lab, Tools & Connectors, Models, Wiki,
-  Worlds, Radio, Shopping, Circles, Secretary and the kiosk are still English. Translations live in `ui/src/i18n/fr.json`, keyed by the English text, and
+- **What is translated**: the whole interface. Login and guest sign-in, the guest page, the chat, the mobile shell, the
+  kiosk, Settings, Codex, Studio and Code, Activity, Library and Media, Feeds, Research, Agent Lab, Tools & Connectors
+  with its tabs, Models, Wiki, Worlds, Radio and the DJ, Shopping, Circles, Secretary, Scheduled, Mega plans, Assets,
+  Generate, Notes, Me and Offline data, with dates and relative times in the language. Names stay as they are (agents,
+  radio styles, products). Translations live in `ui/src/i18n/fr.json`, keyed by the English text, and
   `tests/i18n_test.py` keeps them complete for every string the code wraps in `t()`. Adding a language is a catalog
-  file plus one line in `ui/src/i18n/index.ts`. To wrap a new panel, run the AST helper in
-  `scripts/i18n_wrap.js` (JSX text, label attributes, toasts) and add the French it lists.
+  file plus one line in `ui/src/i18n/index.ts`. To wrap a new panel, run the AST helper in `scripts/i18n_wrap.js`
+  (JSX text, label attributes, toasts; a second pass with `PASS2=1` for label properties) and add the French it lists.
 
 ## Translation
 

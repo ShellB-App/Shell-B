@@ -5,6 +5,7 @@ import type { Agent, Effort, ModelInfo, Skill, ToolInfo } from '../types';
 import { api, fmtBytes } from '../api';
 import { AgentAvatar, Modal, btn, toolIcon } from './common';
 import { connectorIcon } from './Integrations';
+import { t as tx } from '../i18n';
 
 const isCloudModel = (m: string) => /^(anthropic|gemini|openai|mammouth|claude-code|antigravity|codex)\//.test(m);
 
@@ -89,7 +90,7 @@ export function AgentLab({ open, onClose, agents, tools, models, initialId, onCh
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Agent Lab" icon={<BrainCircuit className="w-4 h-4 text-[var(--accent)]" />} wide>
+    <Modal open={open} onClose={onClose} title={tx('Agent Lab')} icon={<BrainCircuit className="w-4 h-4 text-[var(--accent)]" />} wide>
       <div className="flex-1 min-h-0 flex flex-col sm:flex-row">
         <div className="sm:w-56 shrink-0 border-b sm:border-b-0 sm:border-r border-[var(--border-subtle)] p-2 overflow-y-auto flex sm:flex-col gap-1">
           {agents.map(a => (
@@ -106,7 +107,7 @@ export function AgentLab({ open, onClose, agents, tools, models, initialId, onCh
             </button>
           ))}
           <button onClick={() => startNew()} className={clsx(btn.ghost, 'sm:w-full justify-center sm:mt-1 border border-dashed border-[var(--border-strong)] shrink-0')}>
-            <Plus className="w-3.5 h-3.5" /><span className="hidden sm:inline">New agent</span>
+            <Plus className="w-3.5 h-3.5" /><span className="hidden sm:inline">{tx('New agent')}</span>
           </button>
         </div>
 
@@ -114,45 +115,45 @@ export function AgentLab({ open, onClose, agents, tools, models, initialId, onCh
           <div className="flex items-start gap-3">
             <AgentAvatar agent={draft} size={48} className="rounded-xl" />
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-[1fr_1fr_72px] gap-2">
-              <label className="text-[11px] text-[var(--text-muted)]">Name
+              <label className="text-[11px] text-[var(--text-muted)]">{tx('Name')}
                 <input className={btn.input} value={draft.name} onChange={e => set('name', e.target.value)} />
               </label>
-              <label className="text-[11px] text-[var(--text-muted)]">Role
+              <label className="text-[11px] text-[var(--text-muted)]">{tx('Role')}
                 <input className={btn.input} value={draft.title} onChange={e => set('title', e.target.value)} />
               </label>
-              <label className="text-[11px] text-[var(--text-muted)]">Glyph
+              <label className="text-[11px] text-[var(--text-muted)]">{tx('Glyph')}
                 <input className={clsx(btn.input, 'text-center')} maxLength={2} value={draft.avatar} onChange={e => set('avatar', e.target.value)} />
               </label>
             </div>
           </div>
           {!isNew && ratings[draft.id] && (ratings[draft.id].up || ratings[draft.id].down) ? (
-            <div className="text-[11px] text-[var(--text-muted)]" title="Thumbs under this agent's replies in the last 30 days (Activity → Memory digest has the repeated complaints)">
-              Last 30 days: 👍 {ratings[draft.id].up} · 👎 {ratings[draft.id].down}
+            <div className="text-[11px] text-[var(--text-muted)]" title={tx('Thumbs under this agent\'s replies in the last 30 days (Activity → Memory digest has the repeated complaints)')}>
+              {tx('Last 30 days: 👍 {up} · 👎 {down}', { up: ratings[draft.id].up, down: ratings[draft.id].down })}
             </div>
           ) : null}
 
           <div className="flex flex-wrap gap-1.5">
             {PALETTE.map(c => (
-              <button key={c.join()} onClick={() => set('color', c)} aria-label="Color"
+              <button key={c.join()} onClick={() => set('color', c)} aria-label={tx('Color')}
                 className={clsx('w-6 h-6 rounded-md ring-offset-2 ring-offset-[var(--bg-primary)]', draft.color.join() === c.join() && 'ring-2 ring-[var(--text-primary)]')}
                 style={{ background: `linear-gradient(135deg, ${c[0]}, ${c[1]})` }} />
             ))}
           </div>
 
-          <label className="block text-[11px] text-[var(--text-muted)]">Description
+          <label className="block text-[11px] text-[var(--text-muted)]">{tx('Description')}
             <input className={btn.input} value={draft.description} onChange={e => set('description', e.target.value)} />
           </label>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <label className="block text-[11px] text-[var(--text-muted)]">Model
+            <label className="block text-[11px] text-[var(--text-muted)]">{tx('Model')}
               <div className="flex gap-2">
-                <select className={clsx(btn.input, 'w-28 shrink-0')} value={source} onChange={e => pickSource(e.target.value as ModelSource)} aria-label="Model source">
-                  {SOURCES.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                <select className={clsx(btn.input, 'w-28 shrink-0')} value={source} onChange={e => pickSource(e.target.value as ModelSource)} aria-label={tx('Model source')}>
+                  {SOURCES.map(o => <option key={o.id} value={o.id}>{tx(o.label)}</option>)}
                 </select>
                   <select className={btn.input} value={model?.name ?? draft.model} onChange={e => set('model', e.target.value)}>
-                    {!model && sourceOf(draft.model) === source && <option value={draft.model}>{draft.model} ({source === 'cloud' ? 'cloud AI off or no key' : 'not installed'})</option>}
-                    {sourceOf(draft.model) !== source && <option value={draft.model} disabled>Pick a {source} model</option>}
-                    {!sourceModels.length && source === 'cloud' && <option disabled>Turn on Cloud AI and add a key or log in a CLI in Integrations</option>}
+                    {!model && sourceOf(draft.model) === source && <option value={draft.model}>{draft.model} ({source === 'cloud' ? tx('cloud AI off or no key') : tx('not installed')})</option>}
+                    {sourceOf(draft.model) !== source && <option value={draft.model} disabled>{tx('Pick a {source} model', { source: source })}</option>}
+                    {!sourceModels.length && source === 'cloud' && <option disabled>{tx('Turn on Cloud AI and add a key or log in a CLI in Integrations')}</option>}
                     {sourceModels.map(m => (
                       <option key={m.name} value={m.name}>
                         {m.cloud ? `${m.label && m.label !== m.name.split('/')[1] ? `${m.label} · ` : ''}${m.name}` : `${m.name} · ${m.parameterSize} · ${fmtBytes(m.size)}`}
@@ -163,13 +164,13 @@ export function AgentLab({ open, onClose, agents, tools, models, initialId, onCh
               {source === 'local' && (
                 <span className="mt-1 flex items-start gap-1 text-[10px] text-[var(--text-muted)]">
                   <Network className="w-3 h-3 shrink-0 mt-px" />
-                  Other machines run these same models through <a className="underline hover:text-[var(--text-primary)]" href="#/models/fleet">Models → Fleet</a>.
+                  {tx('Other machines run these same models through')} <a className="underline hover:text-[var(--text-primary)]" href="#/models/fleet">{tx('Models → Fleet')}</a>.
                 </span>
               )}
               {isCloudModel(draft.model) && (
                 <span className="mt-1 flex items-start gap-1 text-[10px] text-sky-400">
                   <Cloud className="w-3 h-3 shrink-0 mt-px" />
-                  {draft.unavailable || 'Cloud model: this agent\'s conversations go to the provider. Its tools still run here.'}
+                  {draft.unavailable || tx('Cloud model: this agent\'s conversations go to the provider. Its tools still run here.')}
                 </span>
               )}
               {model && (
@@ -182,13 +183,13 @@ export function AgentLab({ open, onClose, agents, tools, models, initialId, onCh
               )}
             </label>
             <div className="grid grid-cols-2 gap-3">
-              <label className="block text-[11px] text-[var(--text-muted)]">Reasoning
+              <label className="block text-[11px] text-[var(--text-muted)]">{tx('Reasoning')}
                 <select className={btn.input} value={draft.effort} onChange={e => set('effort', e.target.value as Effort)}
                   disabled={!!model && !model.capabilities.includes('thinking')}>
-                  <option value="off">Instant</option><option value="low">Low</option><option value="medium">Think</option><option value="high">Deep</option>
+                  <option value="off">{tx('Instant')}</option><option value="low">Low</option><option value="medium">{tx('Think')}</option><option value="high">{tx('Deep')}</option>
                 </select>
               </label>
-              <label className="block text-[11px] text-[var(--text-muted)]">Context tokens
+              <label className="block text-[11px] text-[var(--text-muted)]">{tx('Context tokens')}
                 <input className={btn.input} type="number" step={4096} min={2048} placeholder={String(model?.numCtx || 'model default')}
                   value={draft.numCtx ?? ''} onChange={e => set('numCtx', e.target.value ? Number(e.target.value) : undefined)} />
               </label>
@@ -196,13 +197,13 @@ export function AgentLab({ open, onClose, agents, tools, models, initialId, onCh
           </div>
 
           <label className="block text-[11px] text-[var(--text-muted)]">
-            <span className="flex justify-between">Temperature <span className="font-mono">{draft.temperature.toFixed(2)}</span></span>
+            <span className="flex justify-between">{tx('Temperature')} <span className="font-mono">{draft.temperature.toFixed(2)}</span></span>
             <input type="range" min={0} max={1.5} step={0.05} value={draft.temperature} onChange={e => set('temperature', Number(e.target.value))}
               className="w-full accent-[var(--accent)]" />
           </label>
 
           <div>
-            <div className="text-[11px] text-[var(--text-muted)] mb-1.5">Tools <span className="opacity-75">(file and screenshot tools are added automatically in Studio projects)</span> {model && !model.capabilities.includes('tools') && <span className="text-amber-400">— this model can't call tools</span>}</div>
+            <div className="text-[11px] text-[var(--text-muted)] mb-1.5">{tx('Tools')} <span className="opacity-75">{tx('(file and screenshot tools are added automatically in Studio projects)')}</span> {model && !model.capabilities.includes('tools') && <span className="text-amber-400">{tx('— this model can\'t call tools')}</span>}</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
               {tools.filter(t => t.scope === 'agent' || t.category === 'mcp').map(t => {
                 const Icon = t.category === 'mcp' ? connectorIcon(t.icon) : toolIcon(t.id);
@@ -218,9 +219,9 @@ export function AgentLab({ open, onClose, agents, tools, models, initialId, onCh
                         {t.displayName}
                         {t.category === 'mcp' && <span className="ml-1 px-1 rounded text-[9px] font-normal bg-[var(--bg-tertiary)] text-[var(--text-muted)] border border-[var(--border-subtle)]">connector</span>}
                         {t.cloud && <Cloud className="inline w-3 h-3 ml-1 text-sky-400" />}
-                        {!t.enabled && <span className="text-[var(--text-muted)] font-normal"> (disabled globally)</span>}
+                        {!t.enabled && <span className="text-[var(--text-muted)] font-normal"> {tx('(disabled globally)')}</span>}
                       </span>
-                      <span className="block text-[11px] text-[var(--text-muted)] leading-snug">{t.description}</span>
+                      <span className="block text-[11px] text-[var(--text-muted)] leading-snug">{tx(t.description)}</span>
                     </span>
                   </label>
                 );
@@ -228,14 +229,14 @@ export function AgentLab({ open, onClose, agents, tools, models, initialId, onCh
             </div>
             {tools.some(t => t.scope === 'global' || t.scope === 'group') && (
               <details className="mt-2 text-[11px] text-[var(--text-muted)]">
-                <summary className="cursor-pointer select-none hover:text-[var(--text-primary)]">Added automatically ({tools.filter(t => t.scope === 'global' || t.scope === 'group').length} tools)</summary>
+                <summary className="cursor-pointer select-none hover:text-[var(--text-primary)]">{tx('Added automatically (')}{tools.filter(t => t.scope === 'global' || t.scope === 'group').length} tools)</summary>
                 <ul className="mt-1.5 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
                   {tools.filter(t => t.scope === 'global' || t.scope === 'group').map(t => {
                     const Icon = toolIcon(t.id);
                     return (
                       <li key={t.id} className="flex items-start gap-1.5 leading-snug">
                         <Icon className="w-3 h-3 mt-0.5 shrink-0 text-[var(--text-muted)]" />
-                        <span><span className="text-[var(--text-secondary)]">{t.displayName}</span>{t.auto ? ` · ${t.auto}` : ''}{!t.enabled && ' (disabled globally)'}</span>
+                        <span><span className="text-[var(--text-secondary)]">{t.displayName}</span>{t.auto ? ` · ${t.auto}` : ''}{!t.enabled && tx(' (disabled globally)')}</span>
                       </li>
                     );
                   })}
@@ -246,11 +247,11 @@ export function AgentLab({ open, onClose, agents, tools, models, initialId, onCh
 
           <div>
             <div className="text-[11px] text-[var(--text-muted)] mb-1.5 flex items-center gap-2">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />Skills
-              <select className={clsx(btn.input, 'w-auto py-0.5 text-xs')} aria-label="Skill access"
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />{tx('Skills')}
+              <select className={clsx(btn.input, 'w-auto py-0.5 text-xs')} aria-label={tx('Skill access')}
                 value={draft.skills === undefined || draft.skills === 'all' ? 'all' : draft.skills.length ? 'some' : 'none'}
                 onChange={e => set('skills', e.target.value === 'all' ? 'all' : e.target.value === 'none' ? [] : skills.filter(s => s.enabled).map(s => s.name))}>
-                <option value="all">All enabled skills</option><option value="some">Only these…</option><option value="none">None</option>
+                <option value="all">{tx('All enabled skills')}</option><option value="some">{tx('Only these…')}</option><option value="none">{tx('None')}</option>
               </select>
               <span className="opacity-75">{skills.filter(s => s.enabled).length} enabled in Tools &amp; Connectors → Skills</span>
             </div>
@@ -259,7 +260,7 @@ export function AgentLab({ open, onClose, agents, tools, models, initialId, onCh
                 {skills.filter(s => s.enabled).map(s => {
                   const on = (draft.skills as string[]).includes(s.name);
                   return (
-                    <button key={s.name} title={s.description}
+                    <button key={s.name} title={tx(s.description)}
                       onClick={() => set('skills', on ? (draft.skills as string[]).filter(x => x !== s.name) : [...(draft.skills as string[]), s.name])}
                       className={clsx('px-2 py-0.5 rounded-md text-[11px] font-mono border transition',
                         on ? 'border-amber-400/60 bg-amber-400/10 text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-muted)] hover:bg-[var(--bg-hover)]')}>
@@ -271,7 +272,7 @@ export function AgentLab({ open, onClose, agents, tools, models, initialId, onCh
             )}
           </div>
 
-          <label className="block text-[11px] text-[var(--text-muted)]">System prompt
+          <label className="block text-[11px] text-[var(--text-muted)]">{tx('System prompt')}
             <textarea className={clsx(btn.input, 'font-mono text-xs leading-relaxed min-h-[220px]')} value={draft.systemPrompt}
               onChange={e => set('systemPrompt', e.target.value)} />
           </label>
@@ -282,20 +283,20 @@ export function AgentLab({ open, onClose, agents, tools, models, initialId, onCh
 
       <footer className="shrink-0 px-4 py-3 border-t border-[var(--border-subtle)] flex items-center justify-between gap-2 bg-[var(--bg-secondary)]">
         <div className="flex items-center gap-1">
-          {!isNew && <button className={btn.ghost} onClick={() => startNew(draft)}><Copy className="w-3.5 h-3.5" />Duplicate</button>}
+          {!isNew && <button className={btn.ghost} onClick={() => startNew(draft)}><Copy className="w-3.5 h-3.5" />{tx('Duplicate')}</button>}
           {!isNew && draft.builtin && (
-            <button className={btn.ghost} onClick={async () => { await api.resetAgent(draft.id); onChanged(draft.id); }}><RotateCcw className="w-3.5 h-3.5" />Reset</button>
+            <button className={btn.ghost} onClick={async () => { await api.resetAgent(draft.id); onChanged(draft.id); }}><RotateCcw className="w-3.5 h-3.5" />{tx('Reset')}</button>
           )}
           {!isNew && agents.length > 1 && (
-            <button className={clsx(btn.ghost, 'hover:text-red-400')} onClick={async () => { if (confirm(`Delete ${draft.name}?`)) { await api.deleteAgent(draft.id); setSelId(agents.find(a => a.id !== draft.id)?.id); onChanged(); } }}>
-              <Trash2 className="w-3.5 h-3.5" />Delete
+            <button className={clsx(btn.ghost, 'hover:text-red-400')} onClick={async () => { if (confirm(tx('Delete {name}?', { name: draft.name }))) { await api.deleteAgent(draft.id); setSelId(agents.find(a => a.id !== draft.id)?.id); onChanged(); } }}>
+              <Trash2 className="w-3.5 h-3.5" />{tx('Delete')}
             </button>
           )}
         </div>
         <div className="flex items-center gap-2">
-          {dirty && !isNew && <button className={btn.subtle} onClick={() => setDraft(structuredClone(original!))}>Discard</button>}
-          {isNew && <button className={btn.subtle} onClick={() => setIsNew(false)}>Cancel</button>}
-          <button className={btn.primary} disabled={!dirty || saving || !draft.name.trim()} onClick={save}><Save className="w-3.5 h-3.5" />{isNew ? 'Create' : 'Save'}</button>
+          {dirty && !isNew && <button className={btn.subtle} onClick={() => setDraft(structuredClone(original!))}>{tx('Discard')}</button>}
+          {isNew && <button className={btn.subtle} onClick={() => setIsNew(false)}>{tx('Cancel')}</button>}
+          <button className={btn.primary} disabled={!dirty || saving || !draft.name.trim()} onClick={save}><Save className="w-3.5 h-3.5" />{isNew ? tx('Create') : tx('Save')}</button>
         </div>
       </footer>
     </Modal>

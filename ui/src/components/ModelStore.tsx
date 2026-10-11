@@ -7,6 +7,7 @@ import {
 import { fmtBytes, req } from '../api';
 import { Markdown } from './Markdown';
 import { btn, relTime } from './common';
+import { t as tx } from '../i18n';
 
 // Model Store: server/modelstore.py. Ollama pulls run through modelhub, so they also show under Installed.
 
@@ -81,7 +82,7 @@ export function StoreJobs({ nonce }: { nonce: number }) {
   if (!jobs.length) return null;
   return (
     <section className="space-y-2">
-      <H2>Downloads</H2>
+      <H2>{tx('Downloads')}</H2>
       <div className={clsx(card, 'p-3 space-y-2.5')}>
         {jobs.map(j => (
           <div key={j.id} className="space-y-1">
@@ -90,12 +91,12 @@ export function StoreJobs({ nonce }: { nonce: number }) {
               {j.dest && <span className={chip}>{j.dest}</span>}
               <span className={clsx('flex-1 truncate', j.state === 'error' ? 'text-red-400' : j.state === 'done' ? 'text-emerald-500' : 'text-[var(--text-muted)]')}>
                 {j.state === 'error' ? j.error : j.status}
-                {j.state === 'running' && j.total ? ` · ${fmtBytes(j.completed)} of ${fmtBytes(j.total)}` : ''}
+                {j.state === 'running' && j.total ? tx(' · {v0} of {v1}', { v0: fmtBytes(j.completed), v1: fmtBytes(j.total) }) : ''}
                 {j.state === 'running' && j.rate ? ` · ${fmtBytes(j.rate)}/s` : ''}
               </span>
               {j.state === 'running'
-                ? <button className={btn.ghost} onClick={() => act(`c:${j.id}`, () => store.cancel(j.id))}>{j.kind === 'file' ? 'Pause' : 'Cancel'}</button>
-                : <button className={btn.icon} onClick={() => act(`d:${j.id}`, () => store.dismiss(j.id))} aria-label="Dismiss"><X className="w-3.5 h-3.5" /></button>}
+                ? <button className={btn.ghost} onClick={() => act(`c:${j.id}`, () => store.cancel(j.id))}>{j.kind === 'file' ? tx('Pause') : tx('Cancel')}</button>
+                : <button className={btn.icon} onClick={() => act(`d:${j.id}`, () => store.dismiss(j.id))} aria-label={tx('Dismiss')}><X className="w-3.5 h-3.5" /></button>}
             </div>
             {j.state === 'running' && <div className="h-1.5 rounded-full bg-[var(--bg-tertiary)] overflow-hidden">
               <div className="h-full bg-[var(--accent)] transition-all" style={{ width: `${j.total ? (j.completed / j.total) * 100 : 2}%` }} /></div>}
@@ -151,21 +152,21 @@ export function ModelStore() {
                 className={clsx('px-3 py-1 rounded-md text-xs font-medium transition', source === id ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)] shadow-sm' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]')}>{label}</button>
             ))}
           </div>
-          <select className={select} value={kind} onChange={e => setKind(e.target.value)} aria-label="Kind">
+          <select className={select} value={kind} onChange={e => setKind(e.target.value)} aria-label={tx('Kind')}>
             {KINDS[source].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
-          <select className={select} value={sort} onChange={e => setSort(e.target.value)} aria-label="Sort">
+          <select className={select} value={sort} onChange={e => setSort(e.target.value)} aria-label={tx('Sort')}>
             {SORTS[source].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
           <div className="relative flex-1 min-w-[200px]">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
             <input className={clsx(btn.input, 'pl-8')} value={q} onChange={e => setQ(e.target.value)}
-              placeholder={source === 'hf' ? 'Search Hugging Face, or paste owner/repo' : 'Search the Ollama library'} />
+              placeholder={source === 'hf' ? tx('Search Hugging Face, or paste owner/repo') : tx('Search the Ollama library')} />
           </div>
         </div>
         <Err text={error} />
         {items === null ? <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-[var(--text-muted)]" /></div>
-          : items.length === 0 ? <div className="text-xs text-[var(--text-muted)] py-8 text-center">Nothing found.</div>
+          : items.length === 0 ? <div className="text-xs text-[var(--text-muted)] py-8 text-center">{tx('Nothing found.')}</div>
           : <div className="rounded-xl border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] overflow-hidden">
             {items.map(it => (
               <div key={it.id} className="bg-[var(--bg-secondary)]">
@@ -174,8 +175,8 @@ export function ModelStore() {
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-center gap-1.5">
                       <span className="text-sm font-medium break-all">{it.id}</span>
-                      {it.source === 'ollama' && it.installed && <span className="px-1.5 py-px rounded text-[10px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">Installed</span>}
-                      {it.source === 'hf' && it.gated && <span className={clsx(chip, 'inline-flex items-center gap-1')}><Lock className="w-2.5 h-2.5" />Gated</span>}
+                      {it.source === 'ollama' && it.installed && <span className="px-1.5 py-px rounded text-[10px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">{tx('Installed')}</span>}
+                      {it.source === 'hf' && it.gated && <span className={clsx(chip, 'inline-flex items-center gap-1')}><Lock className="w-2.5 h-2.5" />{tx('Gated')}</span>}
                       {(it.source === 'hf' ? it.formats : it.capabilities).map(f => <span key={f} className={chip}>{f}</span>)}
                     </span>
                     <span className="block text-[11px] text-[var(--text-muted)] truncate">
@@ -185,8 +186,8 @@ export function ModelStore() {
                     </span>
                   </span>
                   <span className="shrink-0 text-[11px] font-mono text-[var(--text-muted)] flex items-center gap-2 mt-0.5">
-                    <span title="Downloads" className="flex items-center gap-1"><Download className="w-3 h-3" />{num(it.downloads)}</span>
-                    {it.source === 'hf' && <span title="Likes" className="hidden sm:flex items-center gap-1"><Heart className="w-3 h-3" />{num(it.likes)}</span>}
+                    <span title={tx('Downloads')} className="flex items-center gap-1"><Download className="w-3 h-3" />{num(it.downloads)}</span>
+                    {it.source === 'hf' && <span title={tx('Likes')} className="hidden sm:flex items-center gap-1"><Heart className="w-3 h-3" />{num(it.likes)}</span>}
                   </span>
                 </button>
                 {open === it.id && <div className="px-3 sm:px-8 pb-4">
@@ -215,25 +216,25 @@ function OllamaDetail({ name, onStarted }: { name: string; onStarted: () => void
   const shown = all ? m.tags : main;
   return (
     <div className="space-y-3">
-      {m.description && <p className="text-xs text-[var(--text-secondary)] max-w-[75ch]">{m.description}</p>}
+      {m.description && <p className="text-xs text-[var(--text-secondary)] max-w-[75ch]">{tx(m.description)}</p>}
       <div className="rounded-lg border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)]">
         {shown.map(t => {
           const full = `${name}:${t.tag}`;
           return (
             <div key={t.tag} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-xs">
               <span className="font-mono font-medium min-w-[140px]">{t.tag}</span>
-              <span className="text-[var(--text-muted)] flex-1">{[t.size, t.context && `${t.context} context`, t.input && `${t.input} input`, t.updated].filter(Boolean).join(' · ') || 'Alias of another tag'}</span>
+              <span className="text-[var(--text-muted)] flex-1">{[t.size, t.context && `${t.context} context`, t.input && `${t.input} input`, t.updated].filter(Boolean).join(' · ') || tx('Alias of another tag')}</span>
               {t.installed && t.current === false
-                ? <button className={btn.subtle} disabled={working === full} onClick={() => act(full, async () => { await store.pull(full); onStarted(); })}><ArrowUpCircle className="w-3.5 h-3.5 text-amber-400" />Update</button>
-                : t.installed ? <span className="inline-flex items-center gap-1 text-emerald-500"><CheckCircle2 className="w-3.5 h-3.5" />Installed</span>
+                ? <button className={btn.subtle} disabled={working === full} onClick={() => act(full, async () => { await store.pull(full); onStarted(); })}><ArrowUpCircle className="w-3.5 h-3.5 text-amber-400" />{tx('Update')}</button>
+                : t.installed ? <span className="inline-flex items-center gap-1 text-emerald-500"><CheckCircle2 className="w-3.5 h-3.5" />{tx('Installed')}</span>
                 : <button className={btn.subtle} disabled={working === full} onClick={() => act(full, async () => { await store.pull(full); onStarted(); })}>
-                  {working === full ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}Pull</button>}
+                  {working === full ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}{tx('Pull')}</button>}
             </div>
           );
         })}
       </div>
       <div className="flex items-center gap-3 text-[11px]">
-        {m.tags.length > main.length && <button className="underline text-[var(--text-secondary)]" onClick={() => setAll(!all)}>{all ? 'Fewer tags' : `All ${m.tags.length} tags`}</button>}
+        {m.tags.length > main.length && <button className="underline text-[var(--text-secondary)]" onClick={() => setAll(!all)}>{all ? tx('Fewer tags') : tx('All {length} tags', { length: m.tags.length })}</button>}
         <a className="inline-flex items-center gap-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)]" href={`https://ollama.com/library/${name}`} target="_blank" rel="noreferrer">ollama.com<ExternalLink className="w-3 h-3" /></a>
       </div>
       <Err text={error} />
@@ -257,32 +258,32 @@ function HfDetail({ repo, onStarted }: { repo: string; onStarted: () => void }) 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[var(--text-secondary)]">
-        {r.license && <span>License <span className="font-mono">{r.license}</span></span>}
+        {r.license && <span>{tx('License')} <span className="font-mono">{r.license}</span></span>}
         {r.pipeline && <span>{r.pipeline}</span>}
-        {base && <span>Based on {base}</span>}
-        {r.updated && <span>Updated {relTime(Date.parse(r.updated))}</span>}
+        {base && <span>{tx('Based on {base}', { base: base })}</span>}
+        {r.updated && <span>{tx('Updated {v0}', { v0: relTime(Date.parse(r.updated)) })}</span>}
         <a className="inline-flex items-center gap-1 hover:text-[var(--text-primary)]" href={`https://huggingface.co/${repo}`} target="_blank" rel="noreferrer">huggingface.co<ExternalLink className="w-3 h-3" /></a>
       </div>
       {r.gated && <div className="text-[11px] text-amber-500 flex items-start gap-1.5"><Lock className="w-3 h-3 mt-px shrink-0" />
-        Gated: accept its terms on huggingface.co with your account{r.tokenSet ? '. Your saved token is used for the download.' : ', then save a Hugging Face token below.'}</div>}
+        {tx('Gated: accept its terms on huggingface.co with your account')}{r.tokenSet ? '. Your saved token is used for the download.' : tx(', then save a Hugging Face token below.')}</div>}
 
       {r.gguf.length > 0 && <div className="space-y-1.5">
-        <div className="text-xs font-medium">Run in Ollama <span className="text-[var(--text-muted)] font-normal">· pulled as hf.co/{repo}:&lt;quant&gt;</span></div>
+        <div className="text-xs font-medium">{tx('Run in Ollama')} <span className="text-[var(--text-muted)] font-normal">{tx('· pulled as hf.co/')}{repo}:&lt;quant&gt;</span></div>
         <div className="rounded-lg border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)]">
           {r.gguf.map(g => (
             <div key={g.quant} className="flex items-center gap-3 px-3 py-1.5 text-xs">
               <span className="font-mono font-medium w-24">{g.quant}</span>
-              <span className="text-[var(--text-muted)] flex-1">{fmtBytes(g.size)}{g.files > 1 ? ` · ${g.files} parts` : ''}</span>
-              {g.installed ? <span className="inline-flex items-center gap-1 text-emerald-500"><CheckCircle2 className="w-3.5 h-3.5" />Installed</span>
+              <span className="text-[var(--text-muted)] flex-1">{fmtBytes(g.size)}{g.files > 1 ? tx(' · {files} parts', { files: g.files }) : ''}</span>
+              {g.installed ? <span className="inline-flex items-center gap-1 text-emerald-500"><CheckCircle2 className="w-3.5 h-3.5" />{tx('Installed')}</span>
                 : <button className={btn.subtle} disabled={working === g.pull} onClick={() => act(g.pull, async () => { await store.pull(g.pull); onStarted(); })}>
-                  {working === g.pull ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}Pull</button>}
+                  {working === g.pull ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}{tx('Pull')}</button>}
             </div>
           ))}
         </div>
       </div>}
 
       {singles.length > 0 && <div className="space-y-1.5">
-        <div className="text-xs font-medium">Download for ComfyUI <span className="text-[var(--text-muted)] font-normal">· saved in ~/comfyui/models/&lt;folder&gt;</span></div>
+        <div className="text-xs font-medium">{tx('Download for ComfyUI')} <span className="text-[var(--text-muted)] font-normal">· saved in ~/comfyui/models/&lt;folder&gt;</span></div>
         <div className="rounded-lg border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)]">
           {singles.map(f => {
             const dest = dests[f.path] ?? f.dest;
@@ -291,11 +292,11 @@ function HfDetail({ repo, onStarted }: { repo: string; onStarted: () => void }) 
                 <span className="font-mono break-all flex-1 min-w-[200px]">{f.path}</span>
                 <span className="text-[var(--text-muted)] font-mono w-16 text-right">{fmtBytes(f.size)}</span>
                 {f.installed ? <span className="inline-flex items-center gap-1 text-emerald-500"><CheckCircle2 className="w-3.5 h-3.5" />In {f.installed.split('/')[0]}</span> : <>
-                  <select className={clsx(select, 'py-1 text-xs')} value={dest} onChange={e => setDests({ ...dests, [f.path]: e.target.value })} aria-label="Folder">
+                  <select className={clsx(select, 'py-1 text-xs')} value={dest} onChange={e => setDests({ ...dests, [f.path]: e.target.value })} aria-label={tx('Folder')}>
                     {Object.entries(r.dests).map(([k, l]) => <option key={k} value={k} title={l}>{k}</option>)}
                   </select>
                   <button className={btn.subtle} disabled={working === f.path} onClick={() => act(f.path, async () => { await store.file(repo, f.path, dest); onStarted(); })}>
-                    {working === f.path ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}Download</button>
+                    {working === f.path ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}{tx('Download')}</button>
                 </>}
               </div>
             );
@@ -304,14 +305,14 @@ function HfDetail({ repo, onStarted }: { repo: string; onStarted: () => void }) 
       </div>}
 
       {diff.length > 0 && <div className="text-[11px] text-[var(--text-muted)]">
-        <button className="underline" onClick={() => setParts(!parts)}>{parts ? 'Hide' : 'Show'} {diff.length} diffusers-format parts</button>
-        {' '}— sharded weights for the diffusers library; ComfyUI needs single-file weights, so look for a file above or a ComfyUI repack.
+        <button className="underline" onClick={() => setParts(!parts)}>{parts ? tx('Hide') : tx('Show')} {diff.length} {tx('diffusers-format parts')}</button>
+        {' '}{tx('— sharded weights for the diffusers library; ComfyUI needs single-file weights, so look for a file above or a ComfyUI repack.')}
         {parts && <ul className="mt-1.5 space-y-0.5 font-mono">{diff.map(f => <li key={f.path}>{f.path} · {fmtBytes(f.size)}</li>)}</ul>}
       </div>}
-      {!r.gguf.length && !singles.length && !diff.length && <div className="text-xs text-[var(--text-muted)]">No .gguf or .safetensors files here. Pickle formats (.ckpt, .pt, .bin) aren't offered: loading one can run code.</div>}
+      {!r.gguf.length && !singles.length && !diff.length && <div className="text-xs text-[var(--text-muted)]">{tx('No .gguf or .safetensors files here. Pickle formats (.ckpt, .pt, .bin) aren\'t offered: loading one can run code.')}</div>}
 
       {r.readme && <details className="group">
-        <summary className="text-xs font-medium cursor-pointer select-none">Model card</summary>
+        <summary className="text-xs font-medium cursor-pointer select-none">{tx('Model card')}</summary>
         <div className="mt-2 max-h-[420px] overflow-y-auto rounded-lg border border-[var(--border-subtle)] p-3 text-sm"><Markdown text={r.readme} /></div>
       </details>}
       <Err text={error} />
@@ -329,15 +330,15 @@ function HfToken() {
     <section className={clsx(card, 'p-3 space-y-2')}>
       <div className="flex items-center gap-2 text-xs">
         <KeyRound className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-        <span className="font-medium">Hugging Face token</span>
-        <span className="text-[var(--text-muted)]">{set === null ? '' : set ? '· saved (gated repos work once you accept their terms)' : '· not set (only needed for gated repos)'}</span>
+        <span className="font-medium">{tx('Hugging Face token')}</span>
+        <span className="text-[var(--text-muted)]">{set === null ? '' : set ? tx('· saved (gated repos work once you accept their terms)') : tx('· not set (only needed for gated repos)')}</span>
       </div>
       <div className="flex flex-wrap gap-2">
         <input className={clsx(btn.input, 'flex-1 min-w-[220px] font-mono')} type="password" autoComplete="off" value={val} onChange={e => setVal(e.target.value)} placeholder="hf_…" />
         <button className={btn.subtle} disabled={!val.trim() || working === 't'} onClick={() => act('t', async () => {
           const r = await store.token(val.trim()); setVal(''); setSet(true); setMsg(r.user ? `Saved for ${r.user}.` : 'Saved.');
-        })}>{working === 't' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}Save token</button>
-        {set && <button className={btn.ghost} onClick={() => act('r', async () => { await store.token(''); setSet(false); setMsg('Removed.'); })}>Remove</button>}
+        })}>{working === 't' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}{tx('Save token')}</button>
+        {set && <button className={btn.ghost} onClick={() => act('r', async () => { await store.token(''); setSet(false); setMsg('Removed.'); })}>{tx('Remove')}</button>}
       </div>
       {msg && <div className="text-[11px] text-emerald-500">{msg}</div>}
       <Err text={error} />
@@ -377,42 +378,40 @@ export function ModelUpdates() {
       <StoreJobs nonce={nonce} />
       <section className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex-1"><H2>Updates</H2></div>
-          {u && <span className="text-[11px] text-[var(--text-muted)]">Checked {relTime(u.checked)}</span>}
+          <div className="flex-1"><H2>{tx('Updates')}</H2></div>
+          {u && <span className="text-[11px] text-[var(--text-muted)]">{tx('Checked {v0}', { v0: relTime(u.checked) })}</span>}
           {pending.length > 1 && <button className={btn.primary} disabled={!!working} onClick={() => act('all', async () => { for (const p of pending) await store.update(p); })}>
-            <ArrowUpCircle className="w-3.5 h-3.5" />Update all {pending.length}</button>}
+            <ArrowUpCircle className="w-3.5 h-3.5" />{tx('Update all')} {pending.length}</button>}
           <button className={btn.subtle} disabled={checking} onClick={() => check(true)}>
-            {checking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCw className="w-3.5 h-3.5" />}Check now</button>
+            {checking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCw className="w-3.5 h-3.5" />}{tx('Check now')}</button>
         </div>
         <p className="text-[11px] text-[var(--text-muted)] max-w-[75ch]">
-          Ollama models are compared with the registry's current build; files this store downloaded are compared with the
-          repository's current checksum. Shell:B's own models are built here from a base model, so update the base model and
-          rebuild them.
+          {tx('Ollama models are compared with the registry\'s current build; files this store downloaded are compared with the repository\'s current checksum. Shell:B\'s own models are built here from a base model, so update the base model and rebuild them.')}
         </p>
         {!u ? <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-[var(--text-muted)]" /></div> : (
           <div className="rounded-xl border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] overflow-hidden">
-            {pending.length === 0 && <div className="px-3 py-3 text-xs text-emerald-500 flex items-center gap-1.5 bg-[var(--bg-secondary)]"><CheckCircle2 className="w-3.5 h-3.5" />Everything is up to date.</div>}
+            {pending.length === 0 && <div className="px-3 py-3 text-xs text-emerald-500 flex items-center gap-1.5 bg-[var(--bg-secondary)]"><CheckCircle2 className="w-3.5 h-3.5" />{tx('Everything is up to date.')}</div>}
             {[...pending, ...visible].map(i => (
               <div key={`${i.kind}:${i.name}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-xs bg-[var(--bg-secondary)]">
-                <span className={chip}>{i.kind === 'ollama' ? 'Ollama' : 'ComfyUI'}</span>
+                <span className={chip}>{i.kind === 'ollama' ? tx('Ollama') : tx('ComfyUI')}</span>
                 <span className="font-mono font-medium break-all flex-1 min-w-[160px]">{i.name}</span>
                 <span className={clsx('min-w-[110px]', STATUS[i.status][1])} title={i.detail}>{STATUS[i.status][0]}</span>
                 <span className="text-[var(--text-muted)] hidden md:block w-56 truncate" title={i.detail}>{i.repo ?? i.detail}</span>
                 {i.status === 'update' || (i.status === 'missing' && i.kind === 'file')
                   ? <button className={btn.subtle} disabled={working === i.name} onClick={() => act(i.name, () => store.update(i))}>
-                    {working === i.name ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowUpCircle className="w-3.5 h-3.5" />}{i.status === 'missing' ? 'Download again' : 'Update'}</button>
+                    {working === i.name ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowUpCircle className="w-3.5 h-3.5" />}{i.status === 'missing' ? tx('Download again') : tx('Update')}</button>
                   : <span className="w-[86px]" />}
               </div>
             ))}
           </div>
         )}
         {u && rest.length > visible.length && <button className="text-[11px] underline text-[var(--text-secondary)]" onClick={() => setShowAll(true)}>
-          Show the {rest.length - visible.length} that are up to date or built here</button>}
+          {tx('Show the {v0} that are up to date or built here', { v0: rest.length - visible.length })}</button>}
       </section>
 
       <section className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex-1"><H2>ComfyUI model files{files ? ` · ${files.files.length} · ${fmtBytes(files.files.reduce((a, f) => a + f.size, 0))}` : ''}</H2></div>
+          <div className="flex-1"><H2>{tx('ComfyUI model files')}{files ? ` · ${files.files.length} · ${fmtBytes(files.files.reduce((a, f) => a + f.size, 0))}` : ''}</H2></div>
           {files && <span className="text-[11px] text-[var(--text-muted)] flex items-center gap-1"><HardDrive className="w-3 h-3" />{fmtBytes(files.disk.free)} free</span>}
         </div>
         {files && <div className="rounded-xl border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] overflow-hidden">
@@ -421,17 +420,17 @@ export function ModelUpdates() {
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-xs">
                 <span className={chip}>{f.dest}</span>
                 <span className="font-mono break-all flex-1 min-w-[160px]">{f.name}</span>
-                {f.inUse && <span className="px-1.5 rounded text-[10px] border border-[var(--border-subtle)] text-[var(--text-muted)]" title="Shell:B loads this file by name">Shell:B</span>}
-                <span className="text-[var(--text-muted)] hidden md:block w-48 truncate" title={f.source ? `${f.source.repo} / ${f.source.file}` : ''}>{f.source ? f.source.repo : 'Added by hand'}</span>
+                {f.inUse && <span className="px-1.5 rounded text-[10px] border border-[var(--border-subtle)] text-[var(--text-muted)]" title={tx('Shell:B loads this file by name')}>{tx('Shell:B')}</span>}
+                <span className="text-[var(--text-muted)] hidden md:block w-48 truncate" title={f.source ? `${f.source.repo} / ${f.source.file}` : ''}>{f.source ? f.source.repo : tx('Added by hand')}</span>
                 <span className="font-mono text-[var(--text-muted)] w-16 text-right">{fmtBytes(f.size)}</span>
                 {confirm === f.path ? (<>
                   <button className="px-2 py-1 rounded text-[11px] bg-red-500/20 text-red-600 dark:text-red-300 hover:bg-red-500/30"
-                    onClick={() => { setConfirm(null); act(`x:${f.path}`, () => store.remove(f.path, f.inUse)); }}>Delete{f.inUse ? ' anyway' : ''}</button>
-                  <button className="px-2 py-1 rounded text-[11px] hover:bg-[var(--bg-hover)]" onClick={() => setConfirm(null)}>Keep</button>
-                </>) : <button className={clsx(btn.icon, 'hover:text-red-400')} title="Delete from disk" onClick={() => setConfirm(f.path)} disabled={working === `x:${f.path}`}>
+                    onClick={() => { setConfirm(null); act(`x:${f.path}`, () => store.remove(f.path, f.inUse)); }}>{tx('Delete')}{f.inUse ? ' anyway' : ''}</button>
+                  <button className="px-2 py-1 rounded text-[11px] hover:bg-[var(--bg-hover)]" onClick={() => setConfirm(null)}>{tx('Keep')}</button>
+                </>) : <button className={clsx(btn.icon, 'hover:text-red-400')} title={tx('Delete from disk')} onClick={() => setConfirm(f.path)} disabled={working === `x:${f.path}`}>
                   {working === `x:${f.path}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}</button>}
               </div>
-              {confirm === f.path && f.inUse && <div className="px-3 pb-2 text-[11px] text-amber-500">Shell:B loads this file by name; the tools that use it will fail until it's back.</div>}
+              {confirm === f.path && f.inUse && <div className="px-3 pb-2 text-[11px] text-amber-500">{tx('Shell:B loads this file by name; the tools that use it will fail until it\'s back.')}</div>}
             </div>
           ))}
         </div>}

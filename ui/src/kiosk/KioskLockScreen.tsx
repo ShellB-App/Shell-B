@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Lock, Unlock, KeyRound, Terminal, Eye, EyeOff, ShieldCheck, ShieldAlert, AlertCircle, Delete, X } from 'lucide-react';
 import { api, adminKey } from '../api';
 import type { Status } from '../types';
+import { t as tx } from '../i18n';
 
 interface Props {
   open: boolean;
@@ -294,8 +295,8 @@ export function KioskLockScreen({ open, onUnlock, status }: Props) {
             S:B
           </div>
           <div>
-            <div className="text-sm sm:text-base font-bold tracking-tight">SHELL:B WORKSTATION</div>
-            <div className="text-[11px] text-white/50 font-mono">NVIDIA DGX Spark Platform · Terminal Standby</div>
+            <div className="text-sm sm:text-base font-bold tracking-tight">{tx('SHELL:B WORKSTATION')}</div>
+            <div className="text-[11px] text-white/50 font-mono">{tx('NVIDIA DGX Spark Platform · Terminal Standby')}</div>
           </div>
         </div>
 
@@ -305,7 +306,7 @@ export function KioskLockScreen({ open, onUnlock, status }: Props) {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/10 bg-white/5 text-xs text-white/70 hover:text-white hover:bg-white/10 transition"
           >
             <X className="w-3.5 h-3.5" />
-            <span>Cancel</span>
+            <span>{tx('Cancel')}</span>
           </button>
         )}
       </div>
@@ -337,16 +338,16 @@ export function KioskLockScreen({ open, onUnlock, status }: Props) {
               <div className="flex items-center gap-4 text-xs font-mono text-white/60 bg-white/5 border border-white/10 px-4 py-2 rounded-full">
                 <span className={`flex items-center gap-1.5 ${memOk ? 'text-emerald-400' : 'text-amber-400'}`}>
                   <span className={`w-2 h-2 rounded-full ${memOk ? 'bg-emerald-400 animate-ping' : 'bg-amber-400'}`} />
-                  {total ? `Unified memory: ${gb(avail)} of ${gb(total)} GB free` : 'Unified memory: …'}
+                  {total ? tx('Unified memory: {v0} of {v1} GB free', { v0: gb(avail), v1: gb(total) }) : tx('Unified memory: …')}
                 </span>
                 <span>·</span>
-                <span className={down ? 'text-amber-400' : ''}>{!svcs.length ? 'Services: …' : down ? `Services: ${down} offline` : 'Services: online'}</span>
+                <span className={down ? 'text-amber-400' : ''}>{!svcs.length ? tx('Services: …') : down ? tx('Services: {down} offline', { down: down }) : tx('Services: online')}</span>
               </div>
             );
           })()}
           {getKioskPin() === DEFAULT_PIN && (
             <div className="text-[11px] text-amber-300/90 bg-amber-500/10 border border-amber-400/20 px-3 py-1.5 rounded-lg max-w-[40ch] text-center">
-              The default PIN is still in use. Set your own in the kiosk's lock settings.
+              {tx('The default PIN is still in use. Set your own in the kiosk\'s lock settings.')}
             </div>
           )}
         </div>
@@ -377,24 +378,24 @@ export function KioskLockScreen({ open, onUnlock, status }: Props) {
 
             <h2 className="text-lg font-bold tracking-tight text-white mb-1">
               {success
-                ? isPasswordAuthed ? 'Unlocked' : 'Station Authenticated'
+                ? isPasswordAuthed ? tx('Unlocked') : tx('Station Authenticated')
                 : !isPasswordAuthed
-                ? 'Station Authentication Required'
-                : 'Terminal Locked'}
+                ? tx('Station Authentication Required')
+                : tx('Terminal Locked')}
             </h2>
             <p className="text-xs text-white/60 mb-5 max-w-xs leading-relaxed">
               {!isPasswordAuthed
-                ? 'Sign in with your system password to authenticate this station. PIN unlock will be enabled for this station once authenticated.'
+                ? tx('Sign in with your system password to authenticate this station. PIN unlock will be enabled for this station once authenticated.')
                 : mode === 'pin'
-                ? 'Enter PIN to unlock station or switch to password'
-                : 'Enter your Shell:B system password'}
+                ? tx('Enter PIN to unlock station or switch to password')
+                : tx('Enter your Shell:B system password')}
             </p>
 
             {/* First-time requirement banner */}
             {!isPasswordAuthed && !error && (
               <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs mb-4 text-left w-full">
                 <ShieldAlert className="w-4 h-4 shrink-0 text-amber-400" />
-                <span>First sign-in on this device must use the system password. PIN cannot be used yet.</span>
+                <span>{tx('First sign-in on this device must use the system password. PIN cannot be used yet.')}</span>
               </div>
             )}
 
@@ -440,7 +441,7 @@ export function KioskLockScreen({ open, onUnlock, status }: Props) {
                     disabled={verifying || success || !pin}
                     className="h-14 rounded-2xl bg-white/5 hover:bg-white/10 active:scale-95 text-xs font-mono font-semibold uppercase text-white/60 transition flex items-center justify-center disabled:opacity-30"
                   >
-                    Clear
+                    {tx('Clear')}
                   </button>
                   <button
                     onClick={() => handleDigitPress('0')}
@@ -468,7 +469,7 @@ export function KioskLockScreen({ open, onUnlock, status }: Props) {
                   className="text-xs text-[var(--accent-soft)] hover:underline pt-2 flex items-center gap-1.5"
                 >
                   <KeyRound className="w-3.5 h-3.5" />
-                  <span>Use System Password instead</span>
+                  <span>{tx('Use System Password instead')}</span>
                 </button>
               </div>
             ) : (
@@ -478,7 +479,7 @@ export function KioskLockScreen({ open, onUnlock, status }: Props) {
                   <input
                     ref={passInputRef}
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="System password"
+                    placeholder={tx('System password')}
                     value={password}
                     onChange={e => {
                       setPassword(e.target.value);
@@ -502,10 +503,10 @@ export function KioskLockScreen({ open, onUnlock, status }: Props) {
                   className="w-full py-3 rounded-xl bg-[var(--accent)] text-[var(--accent-fg)] font-semibold text-sm hover:opacity-90 active:scale-98 transition shadow-lg disabled:opacity-40"
                 >
                   {verifying
-                    ? 'Verifying…'
+                    ? tx('Verifying…')
                     : !isPasswordAuthed
-                    ? 'Authenticate Station'
-                    : 'Unlock Terminal'}
+                    ? tx('Authenticate Station')
+                    : tx('Unlock Terminal')}
                 </button>
 
                 {isPasswordAuthed && (
@@ -517,7 +518,7 @@ export function KioskLockScreen({ open, onUnlock, status }: Props) {
                     }}
                     className="text-xs text-white/60 hover:text-white hover:underline pt-2"
                   >
-                    Back to PIN keypad
+                    {tx('Back to PIN keypad')}
                   </button>
                 )}
               </form>
@@ -534,15 +535,15 @@ export function KioskLockScreen({ open, onUnlock, status }: Props) {
             className="flex items-center gap-2 px-6 py-3 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-semibold tracking-wider uppercase text-white shadow-2xl backdrop-blur-md cursor-pointer transition active:scale-95 animate-bounce"
           >
             <Terminal className="w-4 h-4 text-[var(--accent)]" />
-            <span>Touch or click to unlock terminal</span>
+            <span>{tx('Touch or click to unlock terminal')}</span>
           </div>
         ) : !isPasswordAuthed ? (
           <p className="text-[11px] text-amber-300/80 font-mono">
-            First-time station access · System password required · PIN unlocks subsequent sessions
+            {tx('First-time station access · System password required · PIN unlocks subsequent sessions')}
           </p>
         ) : (
           <p className="text-[11px] text-white/40 font-mono">
-            Station authenticated · PIN unlock active (Default: {DEFAULT_PIN}) · Or use password
+            {tx('Station authenticated · PIN unlock active (Default: {DEFAULT_PIN}) · Or use password', { DEFAULT_PIN: DEFAULT_PIN })}
           </p>
         )}
       </div>
