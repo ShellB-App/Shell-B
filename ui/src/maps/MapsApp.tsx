@@ -13,9 +13,9 @@ import type { FeatureCollection, Point } from 'geojson';
 import {
   Activity, Anchor, Bookmark, Check, Compass, Copy, Crosshair, Download, Eye, Flag, Globe2, Info, Loader2, LocateFixed,
   Map as MapIcon, MapPin, Navigation, Orbit, PanelLeftClose, PanelLeftOpen, Radar, Rocket, Route as RouteIcon, Ruler,
-  Satellite, Search, Sparkles, Thermometer, Video, Wheat, Hand, X,
+  Satellite, Search, Sparkles, Thermometer, Video, Wheat, Hand, X, Image as ImageIcon, CloudRain,
 } from 'lucide-react';
-import { drawOverlays, fetchBodies, fmtCoord, frameSpec, loadMapLib, styleFor, type MapBody, type MapLib, type MapSpec } from './core';
+import { drawOverlays, fetchBodies, fmtCoord, frameSpec, hasScene, loadMapLib, styleFor, type MapBody, type MapLib, type MapSpec, type TourStop } from './core';
 import { MAPS_HANDOFF, useDarkTheme } from './MapCard';
 import { SolView } from './SolView';
 import { SOL_BODIES, isMajorMoon, moonsOf } from './sol';
@@ -53,8 +53,16 @@ import { KIND_COLOR, KIND_LABEL, PrehistoryCard, SOLAR_LABEL } from './Prehistor
 import { DeepTimePanel } from './DeepTimePanel';
 import { attachIceAge, attachSolarLines, seaLevelAt } from './deeptime';
 import { t } from '../i18n';
-import { useClockState, useClockTime } from './clock';
-import { ASK_ATLAS, OPEN_MEDIA, mediaSrc, type NoteMedia } from './notes';
+import { clockNow, goLive, setClock, useClockState, useClockTime } from './clock';
+import { ASK_ATLAS, NOTES_CHANGED, OPEN_MEDIA, OPEN_MODEL, mediaSrc, type NoteMedia } from './notes';
+import { PLACE_COLOR, fetchPlaces, type Place } from './places';
+import { PlaceCard } from './PlaceCard';
+import { attachBuildings } from './buildings';
+import { IMAGERY_PREF, attachImagery, attachRadar, dayOf, fetchImageryCatalog, fetchRadarFrames, type ImageryHandle, type ImageryLayer, type RadarFrames, type RadarHandle } from './imagery';
+import { TourPlayer } from './TourPlayer';
+import { ModelLightbox, ModelStrip, ModelViewer } from './ModelViewer';
+import { fetchModels, modelById, modelsForSpacecraft, type ModelInfo } from './models';
+import { MeasureProfile } from './MeasureProfile';
 
 export const WORLD_PALETTE: Record<string, { color: string; label?: string }> = {
   sol: { color: '#f59e0b', label: 'Star' },
@@ -128,7 +136,8 @@ type Selection =
   | AnyFeature
   | { kind: 'traverse'; traverse: Traverse; waypoint: TraverseWaypoint }
   | { kind: 'quake'; item: Quake }
-  | { kind: 'prehistory'; item: PrehistorySite };
+  | { kind: 'prehistory'; item: PrehistorySite }
+  | { kind: 'place'; item: Place };
 
 interface Suggestion {
   id: string;
@@ -145,7 +154,7 @@ interface Suggestion {
 }
 
 type Drawer = 'directions' | 'dossier' | 'bookmarks' | 'atlas' | null;
-type GoTo = { body?: string; lat: number; lon: number; zoom?: number; bearing?: number; pitch?: number; pin?: boolean };
+type GoTo = { body?: string; lat: number; lon: number; zoom?: number; bearing?: number; pitch?: number; pin?: boolean; duration?: number };
 
 const LANDMARK_COLOR: Record<Landmark['kind'], string> = {
   mission: '#10b981', spaceport: '#38bdf8', crater: '#a855f7', volcano: '#f97316', mountain: '#f59e0b',
@@ -194,6 +203,7 @@ const selectionKey = (s: Selection | null): { overlay: OverlayId; id: string } |
     case 'launchsite': return { overlay: 'launchsites', id: s.item.id };
     case 'cctv': return { overlay: 'webcams', id: s.item.id };
     case 'prehistory': return { overlay: isCaveSite(s.item) ? 'caves' : 'neolithic', id: s.item.id };
+    case 'place': return { overlay: 'places', id: s.item.key };
     default: return null;
   }
 };
@@ -228,16 +238,38 @@ export function MapsApp() {
   const [lightbox, setLightbox] = useState<NoteMedia | null>(null);
   const [deepYears, setDeepYearsState] = useState<number>(() => store.get<number>(DEEP) ?? 21000);
   const setDeepYears = (y: number) => { setDeepYearsState(y); store.set(DEEP, y); };
+  const [tour, setTour] = useState<{ title?: string; stops: TourStop[] } | null>(null);
+  const [modelBox, setModelBox] = useState<ModelInfo | null>(null);
+  const [places, setPlaces] = useState<Place[]>([]);
+  const [imageryLayer, setImageryLayerState] = useState<string>(() => store.get<string>(IMAGERY_PREF) ?? 'modis');
+  const setImageryLayer = (id: string) => { setImageryLayerState(id); store.set(IMAGERY_PREF, id); };
+  const [imageryCat, setImageryCat] = useState<ImageryLayer[]>([]);
+  const [radarFrames, setRadarFrames] = useState<RadarFrames | null>(null);
+  const [radarFrame, setRadarFrame] = useState<string | null>(null);
+  // a scene handed over from a chat card (layers, time, focus, tour...) is applied once the map is up
+  const [pendingScene, setPendingScene] = useState<MapSpec | null>(() => (handoff && hasScene(handoff) ? handoff : null));
 
   useEffect(() => { if (drawer !== 'atlas') setAtlasRequest(null); }, [drawer]);  // a reopened Atlas shouldn't resend it
   // Cards ask Atlas and open pictures through window events (they sit a few components down)
   useEffect(() => {
     const ask = (e: Event) => { setDrawer('atlas'); setAtlasRequest(r => ({ text: String((e as CustomEvent).detail), n: (r?.n ?? 0) + 1 })); };
     const show = (e: Event) => setLightbox((e as CustomEvent<NoteMedia>).detail);
+    const model = (e: Event) => setModelBox((e as CustomEvent<ModelInfo>).detail);
     window.addEventListener(ASK_ATLAS, ask);
     window.addEventListener(OPEN_MEDIA, show);
-    return () => { window.removeEventListener(ASK_ATLAS, ask); window.removeEventListener(OPEN_MEDIA, show); };
+    window.addEventListener(OPEN_MODEL, model);
+    return () => { window.removeEventListener(ASK_ATLAS, ask); window.removeEventListener(OPEN_MEDIA, show); window.removeEventListener(OPEN_MODEL, model); };
   }, []);
+
+  // Atlas places for this world; refreshed whenever a card changes (Atlas may have added or removed a place)
+  useEffect(() => {
+    let ctrl = new AbortController();
+    const load = () => { ctrl.abort(); ctrl = new AbortController(); fetchPlaces(bodyId, ctrl.signal).then(setPlaces).catch(() => {}); };
+    setPlaces([]);
+    if (bodyId !== 'sol') load();
+    window.addEventListener(NOTES_CHANGED, load);
+    return () => { ctrl.abort(); window.removeEventListener(NOTES_CHANGED, load); };
+  }, [bodyId]);
 
   // Live flights (Earth only): the traffic layer, and one followed flight
   const [planes, setPlanes] = useState<Aircraft[]>([]);
@@ -258,10 +290,11 @@ export function MapsApp() {
   const [measureUnit, setMeasureUnit] = useState<'metric' | 'imperial' | 'nautical'>(() => store.get(MEASURE_UNIT) ?? 'metric');
 
   const [activeRoute, setActiveRoute] = useState<RouteData | null>(null);
+  const clock = useClockState();
 
   const body = bodies?.find(b => b.id === bodyId) ?? null;
   const isEarth = bodyId === 'earth';
-  const worldCtx = { terrain: !!body?.terrain };
+  const worldCtx = { terrain: !!body?.terrain, vector: body?.type === 'vector' };
   const has = (id: OverlayId) => prefs[id] && !!OVERLAYS.find(o => o.id === id)?.on(bodyId, globe, worldCtx);
 
   // ── Map lifecycle ───────────────────────────────────────────────────────
@@ -359,7 +392,7 @@ export function MapsApp() {
       if (target !== bodyId) chooseRef.current(target, true);
       return;
     }
-    map.flyTo({ center: [t.lon, t.lat], zoom: t.zoom ?? Math.max(map.getZoom(), isEarth ? 12 : 6), bearing: t.bearing, pitch: t.pitch, duration: 1200 });
+    map.flyTo({ center: [t.lon, t.lat], zoom: t.zoom ?? Math.max(map.getZoom(), isEarth ? 12 : 6), bearing: t.bearing, pitch: t.pitch, duration: t.duration ?? 1200 });
     if (t.pin) setPin({ lat: t.lat, lon: t.lon });
   }, [bodyId, map, isEarth]);
 
@@ -368,6 +401,9 @@ export function MapsApp() {
     if (!map || !lib || !overlay || (overlay.body ?? 'earth') !== mapState?.body) return;
     const undraw = own(drawOverlays(lib, map, overlay));
     frameSpec(lib, map, overlay, true, { top: 96, bottom: 64, left: 64, right: 64 });
+    if ((overlay.pitch !== undefined || overlay.bearing !== undefined) && !overlay.center) {
+      map.once('moveend', () => mapAlive(map) && map.easeTo({ pitch: overlay.pitch ?? map.getPitch(), bearing: overlay.bearing ?? map.getBearing(), duration: 800 }));
+    }
     return undraw;
   }, [map, lib, overlay, mapState?.body, own]);
 
@@ -394,6 +430,7 @@ export function MapsApp() {
   };
 
   // ── Point datasets ──────────────────────────────────────────────────────
+  const reliefOn = has('relief'), terrain3dOn = has('terrain3d');
   const points = useRef<Partial<Record<OverlayId, PointLayer>>>({});
   const selRef = useRef(selection);
   selRef.current = selection;
@@ -429,6 +466,66 @@ export function MapsApp() {
     const k = selectionKey(selection);
     for (const [id, layer] of Object.entries(points.current)) layer?.select(k?.overlay === id ? k.id : null);
   }, [selection]);
+
+  // ── Atlas places ────────────────────────────────────────────────────────
+  const placesOn = has('places');
+  useEffect(() => {
+    if (!map || !placesOn || !places.length) return;
+    const layer = attachPoints(map, 'places', places.map(p => ({ id: p.key, lat: p.lat, lon: p.lon, name: p.feature, color: p.color || PLACE_COLOR })), { color: PLACE_COLOR, labelZoom: 2 });
+    points.current.places = layer;
+    const k = selectionKey(selRef.current);
+    if (k?.overlay === 'places') layer.select(k.id);
+    layer.hitLayers.forEach(l => hits.current.set(l, f => {
+      const item = places.find(p => p.key === String(f.properties?.id));
+      if (item) { setSelection({ kind: 'place', item }); setPin(null); }
+    }));
+    return own(() => {
+      layer.hitLayers.forEach(l => hits.current.delete(l));
+      if (points.current.places === layer) delete points.current.places;
+      layer.detach();
+    });
+  }, [map, placesOn, places, own]);
+
+  // ── 3D buildings (Earth, OSM heights) ───────────────────────────────────
+  const buildingsOn = has('buildings');
+  useEffect(() => {
+    if (!map || !buildingsOn || mapState?.body !== 'earth') return;
+    return own(attachBuildings(map, dark));
+  }, [map, buildingsOn, dark, mapState?.body, own]);
+
+  // ── Satellite imagery (NASA GIBS), following the clock's date ───────────
+  const imageryOn = has('imagery');
+  const clockT = useClockTime(60_000);
+  const imageryDay = dayOf(clockT);
+  const imageryRef = useRef<ImageryHandle | null>(null);
+  useEffect(() => { if (imageryOn && !imageryCat.length) fetchImageryCatalog().then(c => setImageryCat(c.layers)); }, [imageryOn, imageryCat.length]);
+  useEffect(() => {
+    if (!map || !imageryOn || mapState?.body !== 'earth') return;
+    const spec = imageryCat.find(l => l.id === imageryLayer);
+    const h = attachImagery(map, imageryLayer, spec?.level ?? 9, imageryDay);
+    imageryRef.current = h;
+    return own(() => { if (imageryRef.current === h) imageryRef.current = null; h.detach(); });
+  }, [map, imageryOn, imageryLayer, mapState?.body, reliefOn, own]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { imageryRef.current?.setDay(imageryDay); }, [imageryDay]);
+
+  // ── Rain radar (RainViewer) ─────────────────────────────────────────────
+  const radarOn = has('radar') && clock.live;
+  const radarRef = useRef<RadarHandle | null>(null);
+  useEffect(() => {
+    if (!radarOn) { setRadarFrames(null); setRadarFrame(null); return; }
+    let gone = false;
+    const load = () => fetchRadarFrames().then(f => { if (!gone && f) { setRadarFrames(f); setRadarFrame(cur => (cur && [...f.past, ...f.nowcast].includes(cur) ? cur : f.past[f.past.length - 1] ?? null)); } });
+    load();
+    const t = setInterval(load, 5 * 60_000);
+    return () => { gone = true; clearInterval(t); };
+  }, [radarOn]);
+  useEffect(() => {
+    if (!map || !radarOn || radarFrame == null || mapState?.body !== 'earth') return;
+    const h = attachRadar(map, radarFrame);
+    radarRef.current = h;
+    return own(() => { if (radarRef.current === h) radarRef.current = null; h.detach(); });
+  }, [map, radarOn, radarFrame == null, mapState?.body, own]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (radarFrame != null) radarRef.current?.setFrame(radarFrame); }, [radarFrame]);
 
   // ── Traverses (Moon, Mars) ──────────────────────────────────────────────
   const traversesOn = has('traverses');
@@ -487,7 +584,6 @@ export function MapsApp() {
   }, [map, quakesOn, own]);
 
   // ── Relief and 3D terrain ───────────────────────────────────────────────
-  const reliefOn = has('relief'), terrain3dOn = has('terrain3d');
   useEffect(() => {
     if (!map || !body?.terrain || (!reliefOn && !terrain3dOn) || mapState?.body !== body.id) return;
     return own(attachRelief(map, body, { dark, shade: reliefOn, threeD: terrain3dOn }));
@@ -543,7 +639,6 @@ export function MapsApp() {
   }, [map, lib, bodyId, satsOn, own]);
 
   // ── Flights ─────────────────────────────────────────────────────────────
-  const clock = useClockState();
   const trafficOn = has('flights') && clock.live;  // ADS-B is live only; the layer pauses when the clock leaves "now"
   useEffect(() => {
     setPlanes([]); setTrafficErr(null);
@@ -741,6 +836,64 @@ export function MapsApp() {
   const toggleLayer = (id: OverlayId, on: boolean) => setPrefs(p => { const n = { ...p, [id]: on }; savePrefs(n); return n; });
   const toggleDrawer = (d: Exclude<Drawer, null>) => setDrawer(cur => (cur === d ? null : d));
 
+  /** Find a feature by the name a card shows, on this world (landmarks, curated layers, prehistory, Atlas places). */
+  const findFeature = useCallback((name: string, b: string): { sel: Selection; lat: number; lon: number; overlay: OverlayId | null } | null => {
+    const q = name.trim().toLowerCase();
+    const eq = (s: string) => s.toLowerCase() === q || s.toLowerCase().startsWith(q) || q.startsWith(s.toLowerCase());
+    const lm = getLandmarksForBody(b).find(l => eq(l.name)) ?? getLandmarksForBody(b).find(l => l.name.toLowerCase().includes(q));
+    if (lm) return { sel: { kind: 'landmark', item: lm }, lat: lm.lat, lon: lm.lon, overlay: 'landmarks' };
+    const pl = places.find(p => eq(p.feature));
+    if (pl) return { sel: { kind: 'place', item: pl }, lat: pl.lat, lon: pl.lon, overlay: 'places' };
+    if (b === 'earth') {
+      const pre = PREHISTORY.find(p => eq(p.name) || (p.nameFr && eq(p.nameFr)));
+      if (pre) return { sel: { kind: 'prehistory', item: pre }, lat: pre.lat, lon: pre.lon, overlay: isCaveSite(pre) ? 'caves' : 'neolithic' };
+      const w = WORLD_WONDERS.find(x => eq(x.name)); if (w) return { sel: { kind: 'wonder', item: w }, lat: w.lat, lon: w.lon, overlay: 'wonders' };
+      const sw = SHIPWRECKS.find(x => eq(x.name)); if (sw) return { sel: { kind: 'shipwreck', item: sw }, lat: sw.lat, lon: sw.lon, overlay: 'shipwrecks' };
+      const ls = LAUNCH_SITES.find(x => eq(x.name)); if (ls) return { sel: { kind: 'launchsite', item: ls }, lat: ls.lat, lon: ls.lon, overlay: 'launchsites' };
+      const cam = CCTV_CAMERAS.find(x => eq(x.name)); if (cam) return { sel: { kind: 'cctv', item: cam }, lat: cam.lat, lon: cam.lon, overlay: 'webcams' };
+    }
+    return null;
+  }, [places]);
+
+  /** Apply a map block from Atlas or a chat card: markers and lines, then every scene key it carries. */
+  const applyScene = useCallback((spec: MapSpec) => {
+    const b = (spec.body ?? bodyId).toLowerCase();
+    if (spec.markers?.length || spec.lines?.length) setOverlay({ ...spec, body: b });
+    else if (overlay && b !== (overlay.body ?? 'earth')) setOverlay(null);
+    if (b !== bodyId) chooseRef.current(b, true);
+    if (spec.layers) for (const [k, v] of Object.entries(spec.layers)) if (OVERLAYS.some(o => o.id === k)) toggleLayer(k as OverlayId, v);
+    if (spec.globe !== undefined && spec.globe !== globe) toggleGlobe();
+    if (spec.time) {
+      if (/^now$/i.test(spec.time)) goLive();
+      else { const ms = Date.parse(spec.time); if (Number.isFinite(ms)) setClock(ms); }
+    }
+    if (spec.yearsAgo !== undefined) { setDeepYears(spec.yearsAgo); toggleLayer('iceage', true); }
+    let flew = false;
+    if (spec.center) {
+      goTo({ body: b, lat: spec.center.lat, lon: spec.center.lon, zoom: spec.zoom, pitch: spec.pitch, bearing: spec.bearing });
+      flew = true;
+    }
+    if (spec.focus) {
+      const f = findFeature(spec.focus, b);
+      if (f) {
+        if (f.overlay && !prefs[f.overlay]) toggleLayer(f.overlay, true);
+        setSelection(f.sel); setPin(null);
+        if (!flew) { goTo({ body: b, lat: f.lat, lon: f.lon, zoom: spec.zoom ?? Math.max(map?.getZoom() ?? 0, b === 'earth' ? 11 : 6), pitch: spec.pitch, bearing: spec.bearing }); flew = true; }
+      }
+    }
+    if (!flew && !spec.markers?.length && !spec.lines?.length && (spec.pitch !== undefined || spec.bearing !== undefined) && map) {
+      map.easeTo({ pitch: spec.pitch ?? map.getPitch(), bearing: spec.bearing ?? map.getBearing(), duration: 900 });
+    }
+    if (spec.model) fetchModels().then(all => { const m = modelById(all, spec.model!); if (m) setModelBox(m); });
+    if (spec.tour?.length) { setTour({ title: spec.title, stops: spec.tour }); setSelection(null); }
+  }, [bodyId, overlay, globe, prefs, map, goTo, findFeature]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!map || !pendingScene) return;
+    setPendingScene(null);
+    applyScene(pendingScene);
+  }, [map, pendingScene, applyScene]);
+
   // ── Search ──────────────────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -873,7 +1026,28 @@ export function MapsApp() {
     quakes: quakeCount ?? undefined,
     caves: PREHISTORY.filter(p => isCaveSite(p) && yearsAgo(p) >= deepCut).length,
     neolithic: PREHISTORY.filter(p => !isCaveSite(p) && yearsAgo(p) >= deepCut).length,
+    places: places.length || undefined,
+    imagery: imageryOn ? imageryDay : undefined,
+    radar: radarOn && radarFrame ? new Date(radarFrame).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : undefined,
   };
+  const selectedBrief = selection ? (
+    selection.kind === 'landmark' ? { name: selection.item.name, kind: selection.item.kind }
+    : selection.kind === 'traverse' ? { name: `${selection.traverse.name}: ${selection.waypoint.name}`, kind: 'traverse waypoint' }
+    : selection.kind === 'quake' ? { name: `M ${selection.item.mag.toFixed(1)} ${selection.item.place}`, kind: 'earthquake' }
+    : selection.kind === 'prehistory' ? { name: selection.item.name, kind: KIND_LABEL[selection.item.kind].toLowerCase() }
+    : selection.kind === 'place' ? { name: selection.item.feature, kind: `Atlas place, ${selection.item.kind}` }
+    : { name: selection.item.name, kind: selection.kind === 'cctv' ? 'webcam' : selection.kind === 'launchsite' ? 'spaceport' : selection.kind }
+  ) : orbSel ? { name: orbSel.name, kind: 'spacecraft' } : null;
+  const sceneBrief = [
+    `Layers on: ${OVERLAYS.filter(o => has(o.id)).map(o => o.id).join(', ') || 'none'}`,
+    globe ? 'globe view' : 'flat map',
+    has('iceage') ? `Ice Age coast at ${deepYears.toLocaleString()} years ago` : '',
+    imageryOn ? `imagery ${imageryLayer} for ${imageryDay}` : '',
+    pin ? `Dropped pin at ${fmtCoord(pin.lat, pin.lon)}` : '',
+    flightQ ? `Following flight ${flightQ}` : '',
+    tour ? `A tour is playing (${tour.stops.length} stops)` : '',
+    `Annotated places on this world: ${places.length}`,
+  ].filter(Boolean).join('; ');
   const status = (has('satellites') && (orbStatus?.error ? `Spacecraft: ${orbStatus.error}` : orbStatus?.note))
     || (trafficOn && trafficErr ? `Flights: ${trafficErr}` : null);
 
@@ -1028,7 +1202,8 @@ export function MapsApp() {
               </div>
 
               {measuring && (
-                <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 px-3.5 py-2 rounded-xl border border-[var(--border-subtle)] sb-map-glass text-[12px] max-w-[calc(100%-1.5rem)]">
+                <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 flex flex-col gap-2 px-3.5 py-2 rounded-xl border border-[var(--border-subtle)] sb-map-glass text-[12px] max-w-[calc(100%-1.5rem)]">
+                <div className="flex items-center gap-3">
                   <Ruler className="w-4 h-4 text-teal-400 shrink-0" />
                   <div className="min-w-0">
                     <div className="text-[15px] font-semibold text-[var(--text-primary)] font-mono tabular-nums">
@@ -1051,6 +1226,15 @@ export function MapsApp() {
                     <button onClick={() => { setMeasuring(false); setMeasurePoints([]); }} className="px-2.5 py-1 rounded-md bg-[var(--accent)] text-[var(--accent-fg)] font-medium text-[11px]">Done</button>
                   </div>
                 </div>
+                {body?.terrain && measurePoints.length >= 2 && <MeasureProfile body={body} points={measurePoints} radiusKm={body.radius_km} unit={measureUnit} />}
+                </div>
+              )}
+
+              {tour && (
+                <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+                  <TourPlayer title={tour.title} stops={tour.stops} onClose={() => setTour(null)}
+                    onFly={(t, ms) => goTo({ body: t.body, lat: t.lat, lon: t.lon, zoom: t.zoom, pitch: t.pitch ?? 0, bearing: t.bearing ?? 0, duration: ms })} />
+                </div>
               )}
 
               {/* One detail card at a time, top left under the toolbar */}
@@ -1067,8 +1251,37 @@ export function MapsApp() {
                   ) : selection.kind === 'prehistory' ? (
                     <PrehistoryCard site={selection.item} onClose={clearSelection} onFlyTo={(la, lo) => flyNear(la, lo, 13)}
                       onDeepTime={y => { setDeepYears(y); if (!prefs.iceage) toggleLayer('iceage', true); flyNear(selection.item.lat, selection.item.lon, 6); }} />
+                  ) : selection.kind === 'place' ? (
+                    <PlaceCard place={selection.item} onClose={clearSelection} onFlyTo={(la, lo) => flyNear(la, lo, isEarth ? 12 : 7)} />
                   ) : (
                     <MapFeatureModal feature={selection} onClose={clearSelection} onFlyTo={(la, lo) => flyNear(la, lo, 12)} />
+                  )}
+                </div>
+              )}
+
+              {hasMap && isEarth && (imageryOn || (radarOn && radarFrames)) && (
+                <div className={clsx('absolute left-3 z-20 flex flex-col gap-1.5 pointer-events-none', selection ? 'bottom-14' : 'top-16')}>
+                  {imageryOn && (
+                    <div className="pointer-events-auto flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] sb-map-glass px-2.5 py-1.5 text-[11px]">
+                      <ImageIcon className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <select value={imageryLayer} onChange={e => setImageryLayer(e.target.value)} aria-label="Imagery layer"
+                        className="bg-transparent text-[var(--text-primary)] outline-none max-w-[11rem]">
+                        {(imageryCat.length ? imageryCat : [{ id: imageryLayer, name: imageryLayer, since: '', level: 9, daily: true, note: '' }]).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                      </select>
+                      <span className="font-mono tabular-nums text-[var(--text-secondary)]" title="Follows the map clock; use the time bar to pick a day">{imageryCat.find(l => l.id === imageryLayer)?.daily === false ? 'composite' : imageryDay}</span>
+                    </div>
+                  )}
+                  {radarOn && radarFrames && radarFrame != null && (
+                    <div className="pointer-events-auto flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] sb-map-glass px-2.5 py-1.5 text-[11px]">
+                      <CloudRain className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                      <input type="range" min={0} max={radarFrames.past.length + radarFrames.nowcast.length - 1} step={1} aria-label="Radar frame"
+                        value={Math.max(0, [...radarFrames.past, ...radarFrames.nowcast].indexOf(radarFrame))}
+                        onChange={e => setRadarFrame([...radarFrames.past, ...radarFrames.nowcast][+e.target.value])} className="w-28 accent-sky-400" />
+                      <span className="font-mono tabular-nums text-[var(--text-secondary)]" title={radarFrames.note}>
+                        {new Date(radarFrame).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      <span className="text-[10px] text-[var(--text-muted)]" title={radarFrames.note}>NASA IMERG · {Math.round((Date.now() - Date.parse(radarFrames.past[radarFrames.past.length - 1])) / 3_600_000)} h behind</span>
+                    </div>
                   )}
                 </div>
               )}
@@ -1135,7 +1348,9 @@ export function MapsApp() {
               {lightbox && (
                 <div className="absolute inset-0 z-50 bg-black/85 flex flex-col items-center justify-center p-6 gap-3" onClick={() => setLightbox(null)}
                   role="dialog" aria-label={lightbox.caption} onKeyDown={e => e.key === 'Escape' && setLightbox(null)} tabIndex={-1} ref={el => el?.focus()}>
-                  <img src={mediaSrc(lightbox)} alt={lightbox.caption} className="max-w-full max-h-[calc(100%-4rem)] object-contain rounded" onClick={e => e.stopPropagation()} />
+                  {lightbox.kind === 'model'
+                    ? <ModelViewer src={mediaSrc(lightbox)} alt={lightbox.caption} className="w-full h-[calc(100%-4rem)]" />
+                    : <img src={mediaSrc(lightbox)} alt={lightbox.caption} className="max-w-full max-h-[calc(100%-4rem)] object-contain rounded" onClick={e => e.stopPropagation()} />}
                   <div className="max-w-3xl text-center text-[12px] text-slate-200">
                     {lightbox.caption}
                     {(lightbox.credit || lightbox.license) && <span className="text-slate-400"> · {[lightbox.credit, lightbox.license].filter(Boolean).join(' · ')}</span>}
@@ -1143,6 +1358,8 @@ export function MapsApp() {
                   <button className="absolute top-3 right-3 p-1.5 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Close" onClick={() => setLightbox(null)}><X className="w-4 h-4" /></button>
                 </div>
               )}
+
+              {modelBox && <ModelLightbox model={modelBox} onClose={() => setModelBox(null)} />}
 
               {hasMap && (
                 <MapClock className="absolute z-20 left-1/2 -translate-x-1/2 bottom-16 2xl:bottom-3 max-w-[calc(100%-1.5rem)]"
@@ -1202,22 +1419,18 @@ export function MapsApp() {
                 onClose={() => { setDrawer(null); setActiveRoute(null); }} />
             )}
             {drawer === 'dossier' && (
-              <DossierDrawer bodyId={bodyId} onClose={() => setDrawer(null)}
+              <DossierDrawer bodyId={bodyId} radiusKm={body?.radius_km} onClose={() => setDrawer(null)}
                 onOpenSol={id => { setDrawer(null); setSolFocus({ id }); choose('sol'); }} />
             )}
             {drawer === 'bookmarks' && (
-              <BookmarksModal currentBodyId={bodyId} pinCoord={pin} onClose={() => setDrawer(null)}
+              <BookmarksModal currentBodyId={bodyId} pinCoord={pin} onClose={() => setDrawer(null)} onImport={applyScene}
                 onSelect={bm => goTo({ body: bm.bodyId, lat: bm.lat, lon: bm.lon, zoom: bm.zoom, bearing: bm.bearing ?? 0, pitch: bm.pitch ?? 0, pin: true })} />
             )}
             {drawer === 'atlas' && (
               <AtlasCopilot isOpen request={atlasRequest} onClose={() => setDrawer(null)} bodyId={bodyId} bodyName={body?.name ?? bodyId} viewport={viewport}
-                selectedLandmark={selection?.kind === 'landmark' ? selection.item : null}
+                selected={selectedBrief} scene={sceneBrief}
                 onFlyTo={t => goTo({ body: t.body, lat: t.lat, lon: t.lon, zoom: t.zoom ?? 7, pin: true })}
-                onApplyOverlay={spec => {
-                  const b = (spec.body ?? bodyId).toLowerCase();
-                  setOverlay({ ...spec, body: b });
-                  if (b !== bodyId) chooseRef.current(b);
-                }} />
+                onApplyOverlay={applyScene} />
             )}
           </aside>
         )}
@@ -1253,7 +1466,13 @@ function SpacecraftCard({ info, earth, from, fromPin, layer, onClose }: {
   info: OrbiterInfo; earth: boolean; from: { lat: number; lon: number } | null; fromPin: boolean; layer: OrbiterLayer | null; onClose: () => void;
 }) {
   const [list, setList] = useState<Pass[] | null>(null);
+  const [models, setModels] = useState<ModelInfo[]>([]);
   useEffect(() => setList(null), [info.id]);
+  useEffect(() => {
+    let alive = true;
+    fetchModels().then(all => { if (alive) setModels(modelsForSpacecraft(all, info.name, earth && /^\d+$/.test(info.id) ? +info.id : undefined)); });
+    return () => { alive = false; };
+  }, [info.id, info.name, earth]);
   const when = (ms: number) => new Date(ms).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   return (
     <div className="absolute bottom-14 right-3 w-72 max-h-[calc(100%-8rem)] overflow-y-auto rounded-xl border border-[var(--border-subtle)] sb-map-glass p-3 text-[12px] z-20">
@@ -1301,6 +1520,7 @@ function SpacecraftCard({ info, earth, from, fromPin, layer, onClose }: {
           )}
         </div>
       )}
+      {models.length > 0 && <div className="mt-3 space-y-2">{models.map(m => <ModelStrip key={m.id} model={m} onOpen={mm => window.dispatchEvent(new CustomEvent(OPEN_MODEL, { detail: mm }))} />)}</div>}
       <div className="mt-2 text-[10px] text-[var(--text-muted)]">{earth ? 'Computed here from Celestrak elements' : 'Ground track from JPL Horizons'}</div>
     </div>
   );

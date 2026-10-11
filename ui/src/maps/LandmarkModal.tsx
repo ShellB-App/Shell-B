@@ -1,10 +1,13 @@
 // Floating inspection card for planetary landmarks and historic space exploration landing sites.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { Check, Compass, Copy, ExternalLink, Flag, MapPin, Navigation, Rocket, X } from 'lucide-react';
 import type { Landmark } from './landmarks';
 import { FeatureNotes } from './FeatureNotes';
 import { fmtCoord } from './core';
+import { fetchModels, modelsForLandmark, type ModelInfo } from './models';
+import { ModelStrip } from './ModelViewer';
+import { openModel } from './notes';
 
 interface LandmarkModalProps {
   landmark: Landmark;
@@ -14,6 +17,12 @@ interface LandmarkModalProps {
 
 export function LandmarkModal({ landmark, onClose, onFlyTo }: LandmarkModalProps) {
   const [copied, setCopied] = useState(false);
+  const [models, setModels] = useState<ModelInfo[]>([]);
+  useEffect(() => {
+    let alive = true;
+    fetchModels().then(all => { if (alive) setModels(modelsForLandmark(all, landmark.id)); });
+    return () => { alive = false; };
+  }, [landmark.id]);
 
   const copyCoords = () => {
     navigator.clipboard?.writeText(`${landmark.lat.toFixed(5)}, ${landmark.lon.toFixed(5)}`).then(() => {
@@ -136,6 +145,11 @@ export function LandmarkModal({ landmark, onClose, onFlyTo }: LandmarkModalProps
         </button>
       </div>
 
+      {models.length > 0 && (
+        <div className="mt-3 space-y-2">
+          {models.map(m => <ModelStrip key={m.id} model={m} onOpen={openModel} />)}
+        </div>
+      )}
       <FeatureNotes body={landmark.bodyId} feature={landmark.name} />
     </div>
   );

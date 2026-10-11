@@ -462,6 +462,72 @@ Network → **Share host** names a host that reaches this machine without Access
 `/api/share/*` with cookies stripped; links are built on it.
 The shared page renders Markdown and sandboxes HTML/SVG exactly like the owner's view, and makes no other API calls.
 
+## Worlds
+
+The Worlds app (`#/worlds`, `ui/src/maps/`) is the offline atlas: the Sol orrery, Earth from the OpenStreetMap planet
+(`~/shellb/maps/planet.pmtiles`, Protomaps build) and 21 planets and moons from USGS mosaics (`~/shellb/maps/bodies`),
+with elevation for Earth, Mars, the Moon and Mercury (`~/shellb/maps/terrain`). Server side: `server/maps.py` (tiles,
+glyphs, sprites, terrain, 3D models), `server/planetary.py` (gazetteer, ephemeris, traverses, telemetry),
+`server/sky.py` (spacecraft), `server/flights.py`, `server/weather.py`, `server/worldnotes.py` (cards),
+`server/earthview.py` (imagery and radar proxies).
+
+- **Layers** (the Layers menu, `ui/src/maps/overlays.ts`): Live: flights, spacecraft, earthquakes, day & night,
+  satellite imagery, rain radar. Places: landmarks and landing sites, rover traverses, wonders, shipwrecks, painted caves,
+  Neolithic sites, spaceports, webcams, Atlas places. Reference: relief, 3D terrain, 3D buildings, Ice Age coast, grid,
+  starfield. Only what the current world offers is listed; choices are kept per browser.
+- **Satellite imagery** is NASA GIBS (MODIS Terra since 2000, VIIRS since 2015, false-colour bands 7-2-1, the Blue Marble
+  composite, Black Marble night lights). It follows the map clock's date: rewind the time bar to 14 August 2003 and the
+  layer shows that day. **Rain & snow** is NASA's GPM IMERG precipitation, every half hour, four to seven hours behind
+  real time (a slider picks the frame; RainViewer's free radar tiles stopped answering in 2026, see the module). All of
+  it goes through `server/earthview.py`, which adds the User-Agent, keeps the owner's browser off those services and
+  caches tiles under `data/earth/` (bounded to about 40,000 tiles), so a day once viewed stays viewable offline.
+- **3D buildings** extrude OpenStreetMap heights from the planet tiles (`buildings` layer: `height`, `min_height`)
+  from zoom 14; the map tilts when the layer is turned on. **3D terrain** uses the elevation tiles with the exaggeration
+  scaled by the world's radius.
+- **Measure** draws great circles in km, miles or nautical miles and, on worlds with terrain, an **elevation profile**
+  along the path (`ui/src/maps/elevation.ts` reads the terrarium tiles in the browser) with the climb and descent.
+- **Cards**: clicking a feature opens its card. Below the curated text sits whatever Atlas (or the owner) attached:
+  summary, facts, sections, pictures, sound, video, **3D models** and links (`data/worlds/notes.json`, media copied to
+  `data/worlds/media`, GLB allowed, no SVG/HTML). *Edit* on the card removes items; "Ask Atlas" sends a research request.
+- **Atlas places**: a card note with `lat`/`lon`/`kind` is a point of its own in the *Atlas places* layer (pink pins),
+  so Atlas can put a wreck, a battlefield or a crater on the map that no curated layer has, complete with its card. The
+  owner can remove a place from its card.
+- **3D models** (`~/shellb/maps/models`, `fetch_models.py` there): 51 NASA 3D Resources GLBs (Apollo Lunar Module,
+  Saturn V, Perseverance, Ingenuity, InSight, Viking, the Mars Exploration Rover, Cassini-Huygens, Voyager, Juno, Galileo,
+  Dawn, Magellan, MESSENGER, LRO, MRO, Odyssey, MAVEN, the ISS, Hubble, Webb, the Shuttle, Skylab, Mir, Parker, Pioneer 10,
+  NEAR, Rosetta, Stardust, Deep Impact, OSIRIS-REx and asteroid Bennu, Chandra, Kepler, TESS, SDO, SOHO, Terra, Landsat 8,
+  Gemini, Freedom 7, Friendship 7, Apollo-Soyuz, a DSN dish and more). The catalog maps each model to landmark ids,
+  spacecraft names and NORAD numbers, so the Apollo cards show the Lunar Module, the Perseverance card the rover and the
+  helicopter, the ISS card the station. The Bookmarks drawer's **3D models** tab lists them all; any opens full screen
+  (three.js, loaded on first use: drag to turn, scroll to zoom). `GET /api/maps/models` lists the installed ones;
+  `/api/maps/models/<id>.glb` serves them. NASA says the assets are free and without copyright; keep the credits.
+- **Inside a world**: the dossier drawer (`?dossier`) now has a cross-section of the interior (core, mantle, crust, oceans
+  and ice shells, `ui/src/maps/interior.ts`) for the Sun, the planets and the major moons, from published interior models.
+- **Tours**: a map block with a `tour` list plays as a guided fly-through (`ui/src/maps/TourPlayer.tsx`): stop to stop,
+  with the narration shown and optionally read aloud by the house voice. Atlas writes tours on request ("give me a tour
+  of the Apollo sites").
+- **Import and export** (Bookmarks drawer): GeoJSON, KML or GPX files appear on the map as an overlay; bookmarks export
+  as KML (opens in Google Earth) or GeoJSON.
+
+### Atlas in Worlds
+
+Atlas is the agent behind the Worlds app. The copilot drawer sends every question with a context line: the world, the
+view, the open card (any kind: landmark, wreck, prehistoric site, traverse waypoint, quake, spacecraft, Atlas place),
+the layers that are on, globe or flat, the clock when it isn't live, the Ice Age setting, the dropped pin, a followed
+flight, and how many places are annotated. Atlas answers with text and a ```map block; the copilot applies the block to
+the live map at once, and the "Open in Maps" button on a chat card does the same.
+
+Scene keys of a map block (besides `markers`, `lines`, `body`, `center`, `zoom`, `globe`): `pitch`, `bearing`,
+`layers` (`{"terrain3d": true, "flights": false}`), `time` (ISO date-time or `"now"`), `years_ago` (Ice Age coast),
+`focus` (opens that feature's card), `model` (shows a 3D model by catalog id) and `tour` (stops with `title`, `text`,
+`lat`, `lon`, `zoom`, `pitch`, `bearing`, `body`, `seconds`). The keys are documented for every agent in
+`server/prompts.py` (MAP_CARDS); Atlas's own prompt (`server/defaults.py`) tells it how to drive the app and the cards.
+
+Card tools: `read_map_card` (what a card already holds, or every annotated card) and `annotate_map_feature` (summary,
+facts, sections, media with credit/license/source, links; `remove` to drop items; `lat`/`lon`/`kind` to make a new
+place; `replace` to start over). The owner can do the same with `POST /api/worlds/notes`; `GET /api/worlds/places`
+and `GET /api/worlds/notes/all` list places and annotated cards. Tests: `tests/worlds_test.py`.
+
 ## Languages
 
 Shell:B speaks English and French. The language applies to the interface and to the agents' replies: when it is

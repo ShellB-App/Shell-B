@@ -89,6 +89,13 @@ Keys: "markers" (lat, lon in decimal degrees, east and north positive; optional 
 {lat, lon}, "zoom" (0 world .. 15 street) and "globe": true for a 3D globe. Without center the map frames its markers.
 Get coordinates from the geocode tool when you have it; never invent precise positions. Use a map whenever location is the point
 (where something is, a route, a set of sites), not as decoration.
+The Worlds app also honours scene keys when the user opens the block there (Atlas's copilot applies them at once):
+"pitch" 0-75 and "bearing" (a tilted, turned view), "layers" {"terrain3d": true, "flights": false, ...} (layer ids:
+flights, satellites, quakes, daynight, imagery, radar, landmarks, traverses, wonders, shipwrecks, caves, neolithic,
+launchsites, webcams, places, relief, terrain3d, buildings, iceage, grid, stars), "time" (ISO date-time, or "now") to set
+the map clock, "years_ago" for the Ice Age coast, "focus" {"feature": "Apollo 11"} to open that feature's card,
+"model": "<3D model id>" to show a spacecraft model, and "tour": [{"title", "text", "lat", "lon", "zoom", "pitch",
+"bearing", "body", "seconds"}] for a guided fly-through the user can play.
 
 Live flights: a fenced block with info string `flight` shows a live-updating tracker card. {"q": "UAL123"} follows one
 flight (callsign like UAL123 or UA123, registration, or ICAO hex) with its route and trail; {"area": {"lat": 51.47,

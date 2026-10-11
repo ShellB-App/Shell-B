@@ -3,7 +3,10 @@
 Atlas writes them with the `annotate_map_feature` tool (the owner can too, via POST /api/worlds/notes). Media is
 downloaded once into data/worlds/media and served from here, so cards keep working offline and never hotlink.
 Everything in a note comes from the web, so the UI renders it as plain text, and only an allowlist of media types
-is kept (no SVG or HTML, which could carry script).
+is kept (no SVG or HTML, which could carry script). GLB models are allowed: binary meshes, no script.
+
+A note with a `place` (lat, lon, kind) is also a point of its own on the map ("Atlas places" layer): that is how Atlas
+adds a feature the curated datasets don't have, with a full card from the start.
 """
 from __future__ import annotations
 
@@ -31,7 +34,9 @@ TYPES = {  # content type → (kind, extension)
     "audio/mpeg": ("audio", ".mp3"), "audio/ogg": ("audio", ".ogg"), "audio/wav": ("audio", ".wav"), "audio/x-wav": ("audio", ".wav"),
     "audio/wave": ("audio", ".wav"), "audio/flac": ("audio", ".flac"), "audio/webm": ("audio", ".webm"),
     "video/mp4": ("video", ".mp4"), "video/webm": ("video", ".webm"),
+    "model/gltf-binary": ("model", ".glb"),
 }
+PLACE_KINDS = ("place", "mission", "crater", "volcano", "mountain", "canyon", "plain", "sea", "site", "city", "wreck", "wonder", "event", "route")
 MIME_BY_EXT = {ext: mime for mime, (_, ext) in TYPES.items()}
 _lock = threading.Lock()
 
@@ -86,13 +91,18 @@ async def _fetch_media(url: str) -> dict:
         async with c.stream("GET", url) as r:
             r.raise_for_status()
             mime = r.headers.get("content-type", "").split(";")[0].strip().lower()
-            if mime not in TYPES:
-                raise ValueError(f"{url} is {mime or 'an unknown type'}; cards take JPEG/PNG/GIF/WebP images, MP3/OGG/WAV/FLAC audio or MP4/WebM video")
             buf = bytearray()
             async for chunk in r.aiter_bytes():
                 buf += chunk
                 if len(buf) > MAX_BYTES:
                     raise ValueError(f"{url} is over {MAX_BYTES // 2**20} MB")
+            if mime not in TYPES and bytes(buf[:4]) == b"glTF":
+                mime = "model/gltf-binary"  # GitHub and most mirrors serve GLB as octet-stream
+            if mime not in TYPES:
+                raise ValueError(f"{url} is {mime or 'an unknown type'}; cards take JPEG/PNG/GIF/WebP images, MP3/OGG/WAV/FLAC audio, "
+                                 "MP4/WebM video or GLB 3D models")
+            if mime == "model/gltf-binary" and bytes(buf[:4]) != b"glTF":
+                raise ValueError(f"{url} says it is a GLB model but isn't one")
     kind, ext = TYPES[mime]
     name = hashlib.sha256(bytes(buf)).hexdigest()[:24] + ext
     MEDIA.mkdir(parents=True, exist_ok=True)
@@ -126,10 +136,40 @@ async def annotate(args: dict, by: str) -> tuple[str, dict, list[str]]:
                          "license": _text(m.get("license"), 80), "source": _url(m.get("source_page")) or src,
                          "note": _text(m.get("note"), 300)})
 
+    place = None
+    if args.get("lat") is not None or args.get("lon") is not None:
+        try:
+            lat, lon = float(args.get("lat")), float(args.get("lon"))
+        except (TypeError, ValueError):
+            raise ValueError("lat and lon must be numbers (decimal degrees)")
+        if not (-90 <= lat <= 90) or not (-180 <= lon <= 360):
+            raise ValueError("lat must be within ±90 and lon within ±180")
+        kind = _text(args.get("kind"), 20).lower() or "place"
+        place = {"lat": round(lat, 5), "lon": round(lon - 360 if lon > 180 else lon, 5), "kind": kind if kind in PLACE_KINDS else "place"}
+        color = _text(args.get("color"), 7)
+        if re.fullmatch(r"#[0-9a-fA-F]{6}", color):
+            place["color"] = color
+
     with _lock:
         notes = _load()
         cur = notes.get(key) if not args.get("replace") else None
         cur = cur or {"body": slug(body), "feature": feature, "summary": "", "facts": [], "sections": [], "media": [], "links": []}
+        if place:
+            cur["place"] = {**cur.get("place", {}), **place}
+        for r in (args.get("remove") or [])[:30]:  # drop what's wrong before adding what's right
+            if not isinstance(r, dict) or r.get("part") not in ("facts", "sections", "media", "links", "summary", "place"):
+                problems.append(f"remove needs part = facts | sections | media | links | summary | place: {r!r:.80}")
+                continue
+            if r["part"] == "summary":
+                cur["summary"] = ""
+            elif r["part"] == "place":
+                cur.pop("place", None)
+            else:
+                m = _text(r.get("match"), 200).lower()
+                before = len(cur[r["part"]])
+                cur[r["part"]] = [x for x in cur[r["part"]] if m and m not in " ".join(str(v) for v in x.values()).lower()]
+                if len(cur[r["part"]]) == before:
+                    problems.append(f"nothing in {r['part']} matched {m!r}")
         if args.get("summary"):
             cur["summary"] = _text(args["summary"], 800)
         for f in (args.get("facts") or [])[:30]:
@@ -155,6 +195,35 @@ async def annotate(args: dict, by: str) -> tuple[str, dict, list[str]]:
 @router.get("/notes")
 def get_note(body: str = Query(...), feature: str = Query(...)):
     return _load().get(key_for(body, feature)) or {}
+
+
+def place_rows(body: str | None = None) -> list[dict]:
+    """Every note that is a point of its own, as the Worlds app's places layer wants it."""
+    out = []
+    for key, n in _load().items():
+        p = n.get("place")
+        if not p or (body and n.get("body") != slug(body)):
+            continue
+        out.append({"key": key, "body": n["body"], "feature": n["feature"], "lat": p["lat"], "lon": p["lon"], "kind": p.get("kind", "place"),
+                    "color": p.get("color"), "summary": n.get("summary", ""), "media": len(n.get("media", [])), "by": n.get("by"), "updated": n.get("updated")})
+    return out
+
+
+@router.get("/places")
+def get_places(body: str | None = Query(None)):
+    return {"places": place_rows(body)}
+
+
+@router.get("/notes/all")
+def list_notes(body: str | None = Query(None)):
+    """Every annotated card, briefly (for the Atlas copilot's context and the Worlds app's index)."""
+    rows = []
+    for key, n in _load().items():
+        if body and n.get("body") != slug(body):
+            continue
+        rows.append({"key": key, "body": n["body"], "feature": n["feature"], "facts": len(n.get("facts", [])), "sections": len(n.get("sections", [])),
+                     "media": len(n.get("media", [])), "links": len(n.get("links", [])), "place": n.get("place"), "by": n.get("by"), "updated": n.get("updated")})
+    return {"notes": rows}
 
 
 @router.post("/notes")
@@ -205,14 +274,54 @@ async def annotate_tool(args: dict, ctx: Any) -> ToolResult:
     except ValueError as e:
         return ToolResult(str(e), error=True)
     lines = [f"Updated the {note['feature']} card on {note['body']} ({key}): {len(note['facts'])} facts, "
-             f"{len(note['sections'])} sections, {len(note['media'])} media, {len(note['links'])} links."]
+             f"{len(note['sections'])} sections, {len(note['media'])} media, {len(note['links'])} links"
+             + (f", shown on the map at {note['place']['lat']}, {note['place']['lon']} ({note['place'].get('kind', 'place')})" if note.get("place") else "") + "."]
     if problems:
         lines.append("Problems:\n- " + "\n- ".join(problems))
     lines.append("The card refreshes by itself in the Worlds app; clicking the feature shows it.")
     return ToolResult("\n".join(lines), {"key": key, "body": note["body"], "feature": note["feature"]}, error=bool(problems) and not note["media"] and not note["facts"] and not note["sections"])
 
 
+async def read_tool(args: dict, ctx: Any) -> ToolResult:
+    body = _text(args.get("body"), 40)
+    feature = clean_name(_text(args.get("feature"), 160))
+    if feature:
+        if not body:
+            return ToolResult("Give the world id too ('body').", error=True)
+        note = _load().get(key_for(body, feature))
+        if not note:
+            return ToolResult(f"No card notes yet for {feature} on {body}: the card shows only the curated text. "
+                              "Use annotate_map_feature to add some.")
+        view = {k: v for k, v in note.items() if k != "media"}
+        view["media"] = [{k: m.get(k) for k in ("kind", "caption", "credit", "license", "url", "note")} for m in note.get("media", [])]
+        return ToolResult(json.dumps(view, ensure_ascii=False, indent=1)[:12000], {"key": key_for(body, feature)})
+    rows = list_notes(body or None)["notes"]
+    if not rows:
+        return ToolResult("No cards have been annotated yet" + (f" on {body}" if body else "") + ".")
+    lines = [f"{len(rows)} annotated card(s)" + (f" on {body}" if body else "") + ":"]
+    for r in rows[:80]:
+        where = f" · place at {r['place']['lat']}, {r['place']['lon']}" if r.get("place") else ""
+        lines.append(f"- {r['feature']} ({r['body']}): {r['facts']} facts, {r['sections']} sections, {r['media']} media, {r['links']} links{where}")
+    return ToolResult("\n".join(lines))
+
+
 def register():
+    TOOLS["read_map_card"] = {
+        "fn": read_tool, "service": None,
+        "ui": {"displayName": "Read Map Card", "icon": "BookOpen", "category": "web",
+               "description": "Reads what a Worlds card already holds, or lists every annotated card."},
+        "schema": _fn(
+            "read_map_card",
+            "Read the extra information already attached to a feature's card in the Worlds app (summary, facts, sections, media, "
+            "links, and whether it is a place of its own), so you add to it rather than repeat it. Without 'feature' it lists "
+            "every annotated card, optionally for one world.",
+            {
+                "body": {"type": "string", "description": "World id: 'venus', 'mars', 'moon', 'earth', ..."},
+                "feature": {"type": "string", "description": "The feature's name as its card shows it; omit to list all cards"},
+            },
+            [],
+        ),
+    }
     TOOLS["annotate_map_feature"] = {
         "fn": annotate_tool, "service": None,
         "ui": {"displayName": "Annotate Map Card", "icon": "Pencil", "category": "web",
@@ -220,10 +329,12 @@ def register():
         "schema": _fn(
             "annotate_map_feature",
             "Add verified information to the card a map feature shows when clicked in the Worlds app (landing sites, craters, "
-            "wonders, shipwrecks, any named feature). Merges with what's there: facts and sections replace ones with the same "
-            "label/title, media and links are added. Media URLs must point straight at a JPEG/PNG/GIF/WebP image, MP3/OGG/WAV/FLAC "
-            "audio or MP4/WebM video file (for Wikimedia Commons use the upload.wikimedia.org file URL); they are downloaded and "
-            "kept offline. Give every media item its credit, license and source page.",
+            "wonders, shipwrecks, prehistoric sites, any named feature). Merges with what's there: facts and sections replace ones "
+            "with the same label/title, media and links are added; 'remove' drops items first. Media URLs must point straight at a "
+            "JPEG/PNG/GIF/WebP image, MP3/OGG/WAV/FLAC audio, MP4/WebM video or GLB 3D model file (for Wikimedia Commons use the "
+            "upload.wikimedia.org file URL; NASA 3D Resources GLBs from raw.githubusercontent.com/nasa/NASA-3D-Resources work); "
+            "they are downloaded and kept offline. Give every media item its credit, license and source page. To put a NEW point on "
+            "the map (something no layer has), pass lat, lon and kind: the card then also appears as a pin in the 'Atlas places' layer.",
             {
                 "body": {"type": "string", "description": "World id: 'venus', 'mars', 'moon', 'earth', ..."},
                 "feature": {"type": "string", "description": "The feature's name exactly as its card shows it, e.g. 'Venera 13'"},
@@ -240,6 +351,12 @@ def register():
                     "required": ["url", "caption"]}},
                 "links": {"type": "array", "description": "Further reading", "items": {"type": "object", "properties": {
                     "title": {"type": "string"}, "url": {"type": "string"}}, "required": ["url"]}},
+                "remove": {"type": "array", "description": "Items to drop before adding: {part: facts|sections|media|links, match: text found in the item} or {part: summary|place}",
+                           "items": {"type": "object", "properties": {"part": {"type": "string"}, "match": {"type": "string"}}, "required": ["part"]}},
+                "lat": {"type": "number", "description": "With lon: make this card a point of its own on the map (decimal degrees, north positive)"},
+                "lon": {"type": "number", "description": "East positive"},
+                "kind": {"type": "string", "description": "For a new point: place, mission, crater, volcano, mountain, canyon, plain, sea, site, city, wreck, wonder, event or route"},
+                "color": {"type": "string", "description": "Optional pin colour for a new point, #rrggbb"},
                 "replace": {"type": "boolean", "description": "Start the note over instead of merging (default false)"},
             },
             ["body", "feature"],

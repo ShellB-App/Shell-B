@@ -2,7 +2,7 @@
 // Server: server/worldnotes.py. Notes come from the web, so everything here renders as plain text.
 
 export interface NoteMedia {
-  file: string; kind: 'image' | 'audio' | 'video'; mime: string; url: string;
+  file: string; kind: 'image' | 'audio' | 'video' | 'model'; mime: string; url: string;
   caption: string; credit: string; license: string; source: string; note: string;
 }
 export interface FeatureNote {
@@ -20,6 +20,8 @@ export const NOTES_CHANGED = 'shellb:worlds-notes';
 export const OPEN_MEDIA = 'shellb:worlds-media';
 /** Fired by a card to ask Atlas something: detail = prompt text. */
 export const ASK_ATLAS = 'shellb:worlds-ask-atlas';
+/** Fired by a card to show a catalog 3D model big: detail = ModelInfo. */
+export const OPEN_MODEL = 'shellb:worlds-model';
 
 export const mediaSrc = (m: NoteMedia) => `/api/worlds/media/${m.file}`;
 
@@ -40,3 +42,5 @@ export async function removeNotePart(body: string, feature: string, part?: 'fact
 
 export const askAtlas = (prompt: string) => window.dispatchEvent(new CustomEvent(ASK_ATLAS, { detail: prompt }));
 export const openMedia = (m: NoteMedia) => window.dispatchEvent(new CustomEvent(OPEN_MEDIA, { detail: m }));
+
+export const openModel = (m: import('./models').ModelInfo) => window.dispatchEvent(new CustomEvent(OPEN_MODEL, { detail: m }));

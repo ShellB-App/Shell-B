@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { ChevronDown, Compass, ExternalLink, Info, Loader2, Maximize2, Trash2 } from 'lucide-react';
 import { NOTES_CHANGED, askAtlas, fetchNote, mediaSrc, openMedia, removeNotePart, type FeatureNote, type NoteMedia } from './notes';
+import { ModelViewer } from './ModelViewer';
 
 export function FeatureNotes({ body, feature, askHint }: { body: string; feature: string; askHint?: string }) {
   const [note, setNote] = useState<FeatureNote | null>(null);
@@ -108,6 +109,11 @@ function MediaItem({ m, onRemove }: { m: NoteMedia; onRemove?: () => void }) {
         </button>
       ) : m.kind === 'audio' ? (
         <audio controls preload="none" src={mediaSrc(m)} className="w-full h-9" />
+      ) : m.kind === 'model' ? (
+        <div className="relative h-40 rounded-md border border-[var(--border-subtle)] overflow-hidden bg-gradient-to-b from-[#0b0d14] to-[#141826]">
+          <ModelViewer src={mediaSrc(m)} alt={m.caption} className="absolute inset-0" />
+          <button onClick={() => openMedia(m)} className="absolute top-1.5 right-1.5 p-1 rounded bg-black/50 text-white/90 hover:bg-black/70" title="View larger"><Maximize2 className="w-3.5 h-3.5" /></button>
+        </div>
       ) : (
         <video controls preload="metadata" src={mediaSrc(m)} className="w-full rounded-md bg-black" />
       )}

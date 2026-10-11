@@ -4,6 +4,7 @@ Everything lives outside the repo in ~/shellb/maps (it's ~140 GB):
   planet.pmtiles            Protomaps planet build (vector, OSM), symlink to <date>.pmtiles; <date>.pmtiles.part while downloading
   bodies/catalog.json       other planets and moons: raster mosaics reprojected to Web Mercator, one <id>.pmtiles each
   terrain/catalog.json      elevation (terrarium raster-dem) per world, one <id>.pmtiles each, built by planets/build_dem.py
+  models/catalog.json       3D models (GLB) of spacecraft, landers and rovers from NASA 3D Resources, fetched by models/fetch_models.py
   assets/fonts, assets/sprites   from protomaps/basemaps-assets
 MapLibre reads the .pmtiles files with HTTP range requests, which FileResponse serves.
 """
@@ -19,6 +20,7 @@ router = APIRouter(prefix="/api/maps")
 ROOT = Path.home() / "shellb" / "maps"
 BODIES = ROOT / "bodies"
 TERRAIN = ROOT / "terrain"
+MODELS = ROOT / "models"
 ASSETS = ROOT / "assets"
 PLANET_BYTES = 138_547_794_382  # 20261003 build; only used for the download progress bar
 
@@ -58,6 +60,22 @@ def _terrain() -> dict[str, dict]:
     return out
 
 
+def _models() -> list[dict]:
+    """Installed 3D models: catalog entries whose GLB file exists, each with a `version` (file mtime) for cache-busting URLs."""
+    try:
+        cat = json.loads((MODELS / "catalog.json").read_text())
+    except (OSError, ValueError):
+        return []
+    out = []
+    for m in cat if isinstance(cat, list) else []:
+        if not isinstance(m, dict) or not _ID.match(str(m.get("id", ""))):
+            continue
+        f = MODELS / f"{m['id']}.glb"
+        if f.is_file():
+            out.append({k: v for k, v in m.items() if k != "file"} | {"url": f"/api/maps/models/{m['id']}.glb?v={int(f.stat().st_mtime)}"})
+    return out
+
+
 def _earth() -> dict:
     planet = ROOT / "planet.pmtiles"
     if planet.exists():
@@ -70,7 +88,9 @@ def _earth() -> dict:
 def prompt_note(base: str) -> str:
     """The agent prompt's map section, plus which worlds are installed right now."""
     names = [b["id"] for b in [_earth(), *_bodies()] if b["available"] or b.get("downloading") is not None]
-    return base + ("\nInstalled worlds: " + ", ".join(names) + "." if names else "")
+    models = [m["id"] for m in _models()]
+    return base + ("\nInstalled worlds: " + ", ".join(names) + "." if names else "") + (
+        "\n3D models installed (ids for a map block's \"model\" key, and for cards): " + ", ".join(models) + "." if models else "")
 
 
 @router.get("/catalog")
@@ -78,6 +98,20 @@ def catalog():
     terrain = _terrain()
     bodies = [_earth(), *({k: v for k, v in b.items() if k != "_path"} for b in _bodies())]
     return {"bodies": [{**b, "terrain": terrain.get(b["id"])} for b in bodies]}
+
+
+@router.get("/models")
+def models():
+    return {"models": _models()}
+
+
+@router.get("/models/{mid}.glb")
+def model(mid: str):
+    f = MODELS / f"{mid}.glb"
+    if not _ID.match(mid) or not f.is_file():
+        raise HTTPException(404, "no such model")
+    return FileResponse(f.resolve(), media_type="model/gltf-binary",
+                        headers={"Cache-Control": "public, max-age=31536000, immutable", "X-Content-Type-Options": "nosniff"})
 
 
 @router.get("/terrain/{body}.pmtiles")

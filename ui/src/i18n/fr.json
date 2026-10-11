@@ -3837,5 +3837,13 @@
  "•••••••• (saved)": "•••••••• (enregistré)",
  "← Back": "← Retour",
  "↑↓ to choose · Enter to link · Esc to close": "↑↓ pour choisir · Entrée pour lier · Échap pour fermer",
- "→ origin/": "→ origin/"
+ "→ origin/": "→ origin/",
+ "Satellite imagery": "Imagerie satellite",
+ "NASA daily true colour; follows the clock’s date": "Couleurs vraies NASA, jour par jour ; suit la date de l’horloge",
+ "Atlas places": "Lieux d’Atlas",
+ "Points Atlas added, each with its card": "Points ajoutés par Atlas, chacun avec sa fiche",
+ "3D buildings": "Bâtiments 3D",
+ "Building heights from OpenStreetMap, from street zoom": "Hauteurs des bâtiments d’OpenStreetMap, au zoom rue",
+ "Rain & snow": "Pluie et neige",
+ "NASA satellite precipitation, half-hourly, a few hours behind": "Précipitations vues par satellite (NASA), toutes les demi-heures, quelques heures de retard"
 }

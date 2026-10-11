@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import clsx from 'clsx';
 import { Expand, Globe2, Map as MapIcon, Minimize2, SquareArrowOutUpRight } from 'lucide-react';
-import { drawOverlays, frameSpec, isDark, parseSpec, type MapSpec } from './core';
+import { drawOverlays, frameSpec, hasScene, isDark, parseSpec, type MapSpec } from './core';
 import { MapStatus, useLiveMap } from './useLiveMap';
 
 const subscribeTheme = (f: () => void) => {
@@ -52,6 +52,7 @@ function LiveMap({ spec }: { spec: MapSpec }) {
         <span className="font-medium text-[var(--text-secondary)] truncate">{spec.title ?? body?.name ?? 'Map'}</span>
         {body && body.id !== 'earth' && <span className="uppercase tracking-wider text-[10px]">{body.name}</span>}
         {count > 0 && <span className="tabular-nums">· {spec.markers?.length ? `${spec.markers.length} place${spec.markers.length > 1 ? 's' : ''}` : ''}{spec.markers?.length && spec.lines?.length ? ', ' : ''}{spec.lines?.length ? `${spec.lines.length} route${spec.lines.length > 1 ? 's' : ''}` : ''}</span>}
+        {hasScene(spec) && <span title="This map carries layers, a time, a tour or a 3D model that only the Worlds app shows">· {spec.tour ? `tour, ${spec.tour.length} stops` : spec.model ? '3D model' : 'scene'}</span>}
         <div className="flex-1" />
         <button className="flex items-center gap-1 hover:text-[var(--text-primary)] transition focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--accent)] rounded"
           onClick={() => setTall(t => !t)} title={tall ? 'Shrink' : 'Make taller'}>

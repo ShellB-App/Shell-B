@@ -68,6 +68,7 @@ import routing
 import sky
 import planetary
 import worldnotes
+import earthview
 import datasets
 import wiki
 import legal
@@ -213,6 +214,7 @@ roster.grant_tools("tools_2026_10_10", {  # tools that reached no stored agent b
     "hephaestus": ["leave_message", "check_messages", "find_capability", "self_findings"],
     "minerva": ["leave_message", "check_messages"], "mimir": ["leave_message", "check_messages"], "daedalus": ["leave_message", "check_messages"],
     "atlas": ["find_capability"], "claude": ["find_capability"]})
+roster.grant_tools("tools_worlds_2026_10_11", {"atlas": ["read_map_card"]})
 roster.grant_tools("tools_feeds_2026_10_10", {"shellb": ["feeds", "translate"], "minerva": ["feeds"], "mimir": ["feeds", "translate"], "spark": ["translate"]})
 roster.grant_tools("tools_deeptime_2026_10_10", {"shellb": ["deep_time"], "mimir": ["deep_time"], "minerva": ["deep_time"], "atlas": ["deep_time"]})
 roster.grant_tools("tools_media_2026_10_10", {"shellb": ["transcribe"], "minerva": ["transcribe"], "heimdall": ["transcribe"], "nyx": ["edit_image"], "daedalus": ["edit_image"]})
@@ -300,6 +302,7 @@ app.include_router(routing.router)
 app.include_router(sky.router)
 app.include_router(planetary.router)
 app.include_router(worldnotes.router)
+app.include_router(earthview.router)
 datasets.init()
 wiki.register()
 legal.register()

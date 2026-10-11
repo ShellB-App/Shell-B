@@ -27,9 +27,8 @@ import { api, streamChat } from '../api';
 import { earthLink, fmtKm, fmtLight } from './sky';
 import { NOTES_CHANGED } from './notes';
 import { clockNow, clockState, fmtClock } from './clock';
-import { fmtCoord, parseSpec, type MapSpec } from './core';
+import { fmtCoord, hasScene, parseSpec, type MapSpec } from './core';
 import { Markdown } from '../components/Markdown';
-import type { Landmark } from './landmarks';
 
 interface CopilotMessage {
   id: string;
@@ -46,8 +45,12 @@ interface AtlasCopilotProps {
   bodyId: string;
   bodyName: string;
   viewport: { lat: number; lon: number; zoom: number };
-  selectedLandmark: Landmark | null;
+  /** the open card, whatever kind of feature it is */
+  selected: { name: string; kind: string } | null;
+  /** the rest of the app's state in words: layers on, globe or flat, Ice Age years, followed flight... */
+  scene?: string;
   onFlyTo: (target: { lat: number; lon: number; zoom?: number; body?: string }) => void;
+  /** applies a map block to the live map: markers, lines and the scene keys (layers, time, focus, tour, model) */
   onApplyOverlay: (spec: MapSpec) => void;
   /** A question handed over from elsewhere (e.g. a card's "Ask Atlas"); sent once per new `n`. */
   request?: { text: string; n: number } | null;
@@ -61,7 +64,8 @@ export function AtlasCopilot({
   bodyId,
   bodyName,
   viewport,
-  selectedLandmark,
+  selected,
+  scene,
   onFlyTo,
   onApplyOverlay,
   request,
@@ -149,8 +153,9 @@ export function AtlasCopilot({
       // Build context brief for Atlas
       const contextBrief =
         `[World: ${bodyName} (${bodyId}), Viewport: ${fmtCoord(viewport.lat, viewport.lon)} at zoom ${viewport.zoom.toFixed(1)}` +
-        (selectedLandmark ? `, Open card: "${selectedLandmark.name}" (a ${selectedLandmark.kind})` : '') +
+        (selected ? `, Open card: "${selected.name}" (${selected.kind})` : '') +
         (clockState().live ? '' : `, Map clock set to ${fmtClock(clockNow())} (not now)`) +
+        (scene ? `, ${scene}` : '') +
         ']';
 
       const enrichedPrompt = `${contextBrief}\n\n${q}`;
@@ -189,8 +194,10 @@ export function AtlasCopilot({
         } else if (ev.type === 'done') {
           const final = (ev.message.blocks ?? []).filter(b => b.type === 'text').map(b => (b as { text: string }).text.trim()).filter(Boolean).join('\n\n');
           if (final) fullContent = final;
-          const specMatch = /```(?:map|route)\n([\s\S]*?)\n```/.exec(fullContent);
-          const parsed = specMatch ? parseSpec(specMatch[1]) : null;
+          // every map block in the reply is applied to the live map; the first one stays on the message as a replay button
+          const specs = [...fullContent.matchAll(/```(?:map|route)\n([\s\S]*?)\n```/g)].map(mm => parseSpec(mm[1])).filter((x): x is MapSpec => !!x);
+          const parsed = specs[0] ?? null;
+          for (const sp of specs) if (sp.markers?.length || sp.lines?.length || sp.center || hasScene(sp)) onApplyOverlay(sp);
 
           setMessages(prev =>
             prev.map(m =>
@@ -442,33 +449,22 @@ export function AtlasCopilot({
                         🗺️ {m.mapSpec.title ?? 'Suggested Exploration Site'}
                       </div>
                       <div className="text-[10px] text-[var(--text-muted)] truncate">
-                        {m.mapSpec.markers?.length ?? 0} markers · {m.mapSpec.lines?.length ?? 0} path segments
+                        {m.mapSpec.tour ? `Tour, ${m.mapSpec.tour.length} stops` : `${m.mapSpec.markers?.length ?? 0} markers · ${m.mapSpec.lines?.length ?? 0} path segments`}
+                        {m.mapSpec.layers ? ` · layers: ${Object.entries(m.mapSpec.layers).map(([k, v]) => (v ? k : `no ${k}`)).join(', ')}` : ''}
+                        {m.mapSpec.model ? ` · model: ${m.mapSpec.model}` : ''}
                       </div>
                     </div>
                     <button
                       onClick={() => {
-                        if (m.mapSpec) {
-                          onApplyOverlay(m.mapSpec);
-                          if (m.mapSpec.center) {
-                            onFlyTo({
-                              lat: m.mapSpec.center.lat,
-                              lon: m.mapSpec.center.lon,
-                              zoom: m.mapSpec.zoom ?? 7,
-                              body: m.mapSpec.body
-                            });
-                          } else if (m.mapSpec.markers?.[0]) {
-                            onFlyTo({
-                              lat: m.mapSpec.markers[0].lat,
-                              lon: m.mapSpec.markers[0].lon,
-                              zoom: m.mapSpec.zoom ?? 7,
-                              body: m.mapSpec.body
-                            });
-                          }
+                        if (!m.mapSpec) return;
+                        onApplyOverlay(m.mapSpec);
+                        if (!m.mapSpec.center && !m.mapSpec.tour && m.mapSpec.markers?.[0]) {
+                          onFlyTo({ lat: m.mapSpec.markers[0].lat, lon: m.mapSpec.markers[0].lon, zoom: m.mapSpec.zoom ?? 7, body: m.mapSpec.body });
                         }
                       }}
                       className="px-2.5 py-1.5 rounded-lg bg-sky-500 hover:bg-sky-400 text-white font-medium text-[11px] transition shrink-0 flex items-center gap-1 shadow"
                     >
-                      <Navigation className="w-3 h-3" /> Fly Camera
+                      <Navigation className="w-3 h-3" /> {m.mapSpec.tour ? 'Play again' : 'Show again'}
                     </button>
                   </div>
                 )}

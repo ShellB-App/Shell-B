@@ -5,16 +5,20 @@ import { useClockTime } from './clock';
 import clsx from 'clsx';
 import { Compass, ExternalLink, Globe2, Orbit, Radio, Thermometer, Wind, X } from 'lucide-react';
 import { getDossier, type WorldDossier } from './dossier';
+import { getInterior } from './interior';
+import { InteriorView } from './InteriorView';
 
 interface DossierDrawerProps {
   bodyId: string;
+  /** mean radius for worlds without a dossier (the interior view scales by it) */
+  radiusKm?: number;
   onClose: () => void;
   onOpenSol?: (id: string) => void;
 }
 
 const cToF = (c: number) => Math.round((c * 9) / 5 + 32);
 
-export function DossierDrawer({ bodyId, onClose, onOpenSol }: DossierDrawerProps) {
+export function DossierDrawer({ bodyId, radiusKm, onClose, onOpenSol }: DossierDrawerProps) {
   const d = getDossier(bodyId);
   // Computed from sol.ts (JPL elements) in the browser; the server's /api/planetary/ephemeris (solsys.py) agrees.
   const t = useClockTime(60_000);
@@ -31,12 +35,19 @@ export function DossierDrawer({ bodyId, onClose, onOpenSol }: DossierDrawerProps
             </button>
           </div>
           <p className="mt-4 text-[var(--text-muted)]">Detailed scientific profile pending for {bodyId}.</p>
+          {getInterior(bodyId) && (
+            <div className="mt-4">
+              <h4 className="text-[10px] uppercase font-semibold tracking-wider text-[var(--text-muted)] mb-2">Inside {bodyId}</h4>
+              <InteriorView name={bodyId} radiusKm={radiusKm ?? 1000} interior={getInterior(bodyId)!} />
+            </div>
+          )}
         </div>
       </div>
     );
   }
 
   const gPercent = Math.min(100, Math.max(5, (d.surfaceGravityG / 2.5) * 100));
+  const interior = getInterior(bodyId);
 
   return (
     <div className="w-[21rem] max-w-[calc(100vw-3rem)] h-full bg-[var(--bg-secondary)] border-l border-[var(--border-subtle)] flex flex-col min-h-0 text-[12px] shadow-2xl">
@@ -243,6 +254,14 @@ export function DossierDrawer({ bodyId, onClose, onOpenSol }: DossierDrawerProps
             </div>
           </div>
         </div>
+
+        {/* Interior */}
+        {interior && (
+          <div>
+            <h4 className="text-[10px] uppercase font-semibold tracking-wider text-[var(--text-muted)] mb-2">Inside {d.name}</h4>
+            <InteriorView name={d.name} radiusKm={d.radiusKm} interior={interior} />
+          </div>
+        )}
 
         {/* Geological Features */}
         <div>

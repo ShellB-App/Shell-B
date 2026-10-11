@@ -14,4 +14,6 @@ for (const [name, src] of Object.entries(files)) copyFileSync(src, `${out}/${nam
 mkdirSync(`${out}/three`, { recursive: true });
 for (const f of ['three.module.js', 'three.core.js']) copyFileSync(`node_modules/three/build/${f}`, `${out}/three/${f}`);
 cpSync('node_modules/three/examples/jsm', `${out}/three/addons`, { recursive: true });
-console.log('vendored', [...Object.keys(files), 'three'].join(', '));
+// the Draco decoder the Worlds app's model viewer loads at runtime (NASA's GLBs are Draco-compressed)
+cpSync('node_modules/three/examples/jsm/libs/draco/gltf', `${out}/draco`, { recursive: true });
+console.log('vendored', [...Object.keys(files), 'three', 'draco'].join(', '));
