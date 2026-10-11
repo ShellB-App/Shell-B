@@ -207,7 +207,7 @@ export function App() {
     window.addEventListener('shellb-chats-changed', f);
     return () => window.removeEventListener('shellb-chats-changed', f);
   }, [loadConvs, loadGroups]);
-  const { conv, setConv, convRef, busy, send: sendTurn, stop } = useChat({
+  const { conv, setConv, convRef, busy, load: loadConv, send: sendTurn, stop } = useChat({
     onEvent: (ev, id) => {
       if (ev.type === 'artifact' && convRef.current?.id === id) setPanel({ id: ev.artifact.id, version: ev.artifact.version });
       if (ev.type === 'title') setConvs(prev => prev.map(x => (x.id === id ? { ...x, title: ev.title } : x)));
@@ -710,7 +710,7 @@ export function App() {
                 <span className="text-sm font-medium truncate">{conv?.title ?? (incognito ? t('Incognito chat with {name}', { name: agent.name }) : t('New chat with {name}', { name: agent.name }))}</span>
                 {incognito && <IncognitoMark />}
                 {conv && <FavoriteStar kind="chat" id={conv.id} title={conv.title} />}
-                {conv && !incognito && <Mailbox convId={conv.id} tick={conv.messages.length} />}
+                {conv && !incognito && <Mailbox convId={conv.id} tick={conv.messages.length} onWoke={() => { const id = conv.id; setTimeout(() => { if (convRef.current?.id === id) loadConv(id).catch(() => {}); }, 400); }} />}
                 {conv && (
                   <div className="flex items-center gap-0.5 ml-1">
                     <button className={btn.icon} onClick={() => forkChat(conv.id)} title={t('Fork this conversation')}>

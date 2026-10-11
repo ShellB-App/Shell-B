@@ -105,7 +105,8 @@ export const api = {
   auditLog: (limit = 100, offset = 0, action = '') => req<AuditEntry[]>(`/api/audit-log?limit=${limit}&offset=${offset}${action ? `&action=${encodeURIComponent(action)}` : ''}`),
   feedbackStats: (days = 30) => req<Record<string, { up: number; down: number }>>(`/api/feedback/stats?days=${days}`),
   mailbox: (conv: string, unread = false) => req<{ messages: MailboxNote[]; unread: number }>(`/api/mailbox/${conv}${unread ? '?unread=true' : ''}`),
-  mailboxSend: (conv: string, text: string) => req(`/api/mailbox/${conv}`, { method: 'POST', body: json({ text }) }),
+  mailboxSend: (conv: string, text: string, wake = false) =>
+    req<{ id: string; to: string; delivery: 'started' | 'queued' | 'mailbox' }>(`/api/mailbox/${conv}`, { method: 'POST', body: json({ text, wake }) }),
   mailboxRead: (conv: string) => req(`/api/mailbox/${conv}/read`, { method: 'POST' }),
   authSessions: () => req<AuthSession[]>('/api/auth/sessions'),
   changePassword: (current: string, password: string) => req('/api/auth/password', { method: 'POST', body: json({ current, password }) }),

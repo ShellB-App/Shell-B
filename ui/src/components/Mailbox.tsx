@@ -1,23 +1,43 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { Mail, Send } from 'lucide-react';
+import { Mail, Send, Zap } from 'lucide-react';
 import { api, type MailboxNote } from '../api';
 import { btn, relTime } from './common';
 import { toastError } from './toast';
 import { t as tx } from '../i18n';
 
+const WAKE_KEY = 'shellb.mailbox.wake';
+const readWake = () => { try { return localStorage.getItem(WAKE_KEY) === '1'; } catch { return false; } };
+
 /** The chat's mailbox (server/chatmail.py): notes other conversations left for this one, and a way to leave one
- * yourself. An envelope in the chat header with the unread count; the agent sees unread notes on its next turn. */
-export function Mailbox({ convId, tick }: { convId: string; tick?: number }) {
+ * yourself. An envelope in the chat header with the unread count; the agent sees unread notes on its next turn, or
+ * at once with the wake toggle on (`onWoke` then reloads the chat so its reply streams in). */
+export function Mailbox({ convId, tick, onWoke }: { convId: string; tick?: number; onWoke?: () => void }) {
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
   const [notes, setNotes] = useState<MailboxNote[] | null>(null);
   const [text, setText] = useState('');
+  const [wake, setWake] = useState(readWake);
+  const [sent, setSent] = useState('');
   const box = useRef<HTMLDivElement>(null);
 
   useEffect(() => { api.mailbox(convId, true).then(r => setUnread(r.unread)).catch(() => {}); }, [convId, tick]);
   const load = useCallback(() => api.mailbox(convId).then(r => { setNotes(r.messages.slice().reverse()); setUnread(r.unread); }).catch(toastError(tx('Mailbox'))), [convId]);
   useEffect(() => { if (open) load(); }, [open, load]);
+  useEffect(() => setSent(''), [convId, open]);
+  const toggleWake = () => setWake(w => { try { localStorage.setItem(WAKE_KEY, w ? '0' : '1'); } catch { /* private window */ } return !w; });
+  const submit = () => {
+    const t = text.trim();
+    if (!t) return;
+    api.mailboxSend(convId, t, wake).then(r => {
+      setText('');
+      load();
+      setSent(r.delivery === 'started' ? tx('Sent. The chat is answering now.')
+        : r.delivery === 'queued' ? tx('Sent. The chat will answer when its current reply ends.')
+        : wake ? tx('Left in the mailbox: the chat can\'t be woken right now.') : '');
+      if (r.delivery !== 'mailbox') onWoke?.();
+    }).catch(toastError(tx('Mailbox')));
+  };
   useEffect(() => {
     if (!open) return;
     const away = (e: MouseEvent) => { if (box.current && !box.current.contains(e.target as Node)) setOpen(false); };
@@ -55,10 +75,15 @@ export function Mailbox({ convId, tick }: { convId: string; tick?: number }) {
               </div>
             ))}
           </div>
-          <form className="flex gap-1.5" onSubmit={e => { e.preventDefault(); const t = text.trim(); if (!t) return; api.mailboxSend(convId, t).then(() => { setText(''); load(); }).catch(toastError(tx('Mailbox'))); }}>
-            <input className={clsx(btn.input, 'flex-1')} placeholder={tx('Leave a note for this chat\'s next turn')} value={text} onChange={e => setText(e.target.value)} maxLength={4000} />
-            <button className={btn.icon} type="submit" title={tx('Leave the note')} disabled={!text.trim()}><Send className="w-3.5 h-3.5" /></button>
+          <form className="flex gap-1.5" onSubmit={e => { e.preventDefault(); submit(); }}>
+            <input className={clsx(btn.input, 'flex-1')} placeholder={wake ? tx('Message this chat; it answers right away') : tx('Leave a note for this chat\'s next turn')} value={text} onChange={e => setText(e.target.value)} maxLength={4000} />
+            <button type="button" className={clsx(btn.icon, 'focus-visible:ring-2 focus-visible:ring-[var(--accent)]')} onClick={toggleWake} aria-pressed={wake}
+              title={wake ? tx('Wake on: the chat starts a turn on your note (click to just leave it)') : tx('Wake off: the note waits for the chat\'s next turn (click to wake it)')}>
+              <Zap className={clsx('w-3.5 h-3.5', wake ? 'text-[var(--accent)] fill-current' : 'text-[var(--text-muted)]')} />
+            </button>
+            <button className={btn.icon} type="submit" title={wake ? tx('Send and wake the chat') : tx('Leave the note')} disabled={!text.trim()}><Send className="w-3.5 h-3.5" /></button>
           </form>
+          {sent && <div className="text-[11px] text-[var(--text-muted)]" role="status">{sent}</div>}
         </div>
       )}
     </div>
