@@ -69,6 +69,9 @@ import { DiveView, type View3DTarget } from './DiveView';
 import { attachEffects, effectFor } from './effects';
 import { attachAurora, fetchAurora, type AuroraData } from './aurora';
 import { applySky } from './atmosphere';
+import { EGGS, EGGS_CHANGED, eggByName, eggSubtitle, foundEggs, markFound, onKonami, searchEggs, type EasterEgg } from './eastereggs';
+import { EasterEggCard } from './EasterEggCard';
+import { toast } from '../components/toast';
 
 export const WORLD_PALETTE: Record<string, { color: string; label?: string }> = {
   sol: { color: '#f59e0b', label: 'Star' },
@@ -147,7 +150,7 @@ type Selection =
 
 interface Suggestion {
   id: string;
-  kind: 'coord' | 'flight' | 'landmark' | 'geocode' | 'feature' | 'satellite' | 'prehistory';
+  kind: 'coord' | 'flight' | 'landmark' | 'geocode' | 'feature' | 'satellite' | 'prehistory' | 'egg';
   satId?: string;
   title: string;
   subtitle?: string;
@@ -157,6 +160,7 @@ interface Suggestion {
   landmark?: Landmark;
   feature?: AnyFeature;
   site?: PrehistorySite;
+  egg?: EasterEgg;
 }
 
 type Drawer = 'directions' | 'dossier' | 'bookmarks' | 'atlas' | null;
@@ -423,6 +427,48 @@ export function MapsApp() {
     if (!pin || !map || !lib) return;
     pinMarker.current = new lib.Marker({ color: '#ff5a36', scale: 0.85 }).setLngLat([pin.lon, pin.lat]).addTo(map);
   }, [pin, map, lib]);
+
+  // Easter eggs (./eastereggs.ts): a faint marker when you zoom right in on one, always once it's found or after the
+  // Konami code; clicking it, searching for it or Atlas focusing it opens its card.
+  const [egg, setEgg] = useState<EasterEgg | null>(null);
+  const [eggsFound, setEggsFound] = useState<string[]>(foundEggs);
+  const [eggsLit, setEggsLit] = useState(false);
+  const openEgg = useCallback((e: EasterEgg) => {
+    setSelection(null); setPin(null); setEgg(e);
+    if (markFound(e.id)) toast(t('Secret found: {name} ({n} of {total})', { name: e.name, n: foundEggs().length, total: EGGS.length }), { kind: 'success', ms: 6000 });
+  }, []);
+  useEffect(() => {
+    const sync = () => setEggsFound(foundEggs());
+    window.addEventListener(EGGS_CHANGED, sync);
+    const off = onKonami(() => {
+      setEggsLit(true);
+      toast(t('Konami code! Every secret in Worlds is lit up until you leave.'), { kind: 'success', ms: 6000 });
+    });
+    return () => { window.removeEventListener(EGGS_CHANGED, sync); off(); };
+  }, []);
+  useEffect(() => {
+    if (!map || !lib || !mapState) return;
+    const shown = EGGS.filter(e => e.body === mapState.body).map(e => {
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.title = e.name;
+      el.textContent = e.glyph;
+      el.style.cssText = `width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;`
+        + `color:${e.color};background:rgba(2,12,16,.75);border:1px solid ${e.color};box-shadow:0 0 10px ${e.color}aa;transition:opacity .6s`;
+      el.addEventListener('click', ev => { ev.stopPropagation(); openEgg(e); });
+      const mk = new lib.Marker({ element: el }).setLngLat([e.lon, e.lat]).addTo(map);
+      return { e, el, mk };
+    });
+    const update = () => shown.forEach(({ e, el }) => {
+      const on = eggsLit || eggsFound.includes(e.id) || map.getZoom() >= e.revealZoom;
+      el.style.opacity = on ? '1' : '0';
+      el.style.pointerEvents = on ? 'auto' : 'none';
+    });
+    update();
+    map.on('zoomend', update);
+    return () => { map.off('zoomend', update); shown.forEach(s => s.mk.remove()); };
+  }, [map, lib, mapState, eggsFound, eggsLit, openEgg]);
+  useEffect(() => { if (selection) setEgg(null); }, [selection]);
 
   // ── Click router ────────────────────────────────────────────────────────
   clickRef.current = e => {
@@ -942,7 +988,11 @@ export function MapsApp() {
       goTo({ body: b, lat: spec.center.lat, lon: spec.center.lon, zoom: spec.zoom, pitch: spec.pitch, bearing: spec.bearing });
       flew = true;
     }
-    if (spec.focus) {
+    const egg = spec.focus ? eggByName(spec.focus, b) : null;
+    if (egg) {
+      openEgg(egg);
+      if (!flew) { goTo({ body: b, lat: egg.lat, lon: egg.lon, zoom: spec.zoom ?? 9, pitch: spec.pitch, bearing: spec.bearing }); flew = true; }
+    } else if (spec.focus) {
       const f = findFeature(spec.focus, b);
       if (f) {
         if (f.overlay && !prefs[f.overlay]) toggleLayer(f.overlay, true);
@@ -979,6 +1029,7 @@ export function MapsApp() {
     setSearching(true);
     const timer = setTimeout(async () => {
       const list: Suggestion[] = [];
+      for (const e of searchEggs(q, bodyId)) list.push({ id: `egg-${e.id}`, kind: 'egg', title: e.name, subtitle: eggSubtitle(e), lat: e.lat, lon: e.lon, egg: e });
       const coord = parseCoords(q);
       if (coord) list.push({ id: 'coord', kind: 'coord', title: `${coord.lat.toFixed(4)}, ${coord.lon.toFixed(4)}`, subtitle: 'Go to coordinates', ...coord });
       for (const s of orbLayer.current?.search(q, 5) ?? []) {
@@ -1048,6 +1099,7 @@ export function MapsApp() {
       return;
     }
     if (s.lat == null || s.lon == null) return;
+    if (s.kind === 'egg' && s.egg) { openEgg(s.egg); goTo({ lat: s.lat, lon: s.lon, zoom: Math.max(map?.getZoom() ?? 0, 9) }); return; }
     if (s.kind === 'prehistory' && s.site) {
       const ov = isCaveSite(s.site) ? 'caves' : 'neolithic';
       if (!prefs[ov]) toggleLayer(ov, true);
@@ -1329,6 +1381,13 @@ export function MapsApp() {
                   ) : (
                     <MapFeatureModal feature={selection} onClose={clearSelection} onFlyTo={(la, lo) => flyNear(la, lo, 12)} terrain={!!body?.terrain} />
                   )}
+                </div>
+              )}
+
+              {egg && !selection && egg.body === bodyId && (
+                <div className="absolute top-16 left-3 z-30 max-h-[calc(100%-8rem)] overflow-y-auto rounded-md max-w-[calc(100%-1.5rem)]">
+                  <EasterEggCard egg={egg} onClose={() => setEgg(null)} onFlyTo={() => goTo({ lat: egg.lat, lon: egg.lon, zoom: 11, pitch: 50 })}
+                    onDive={body?.terrain ? () => setView3d({ lat: egg.lat, lon: egg.lon, label: egg.name, kind: 'shipwreck', depthM: egg.depthM }) : undefined} />
                 </div>
               )}
 
@@ -1657,6 +1716,7 @@ function SuggestionIcon({ s }: { s: Suggestion }) {
   if (s.kind === 'flight') return <Radar className={clsx(c, 'text-sky-400')} />;
   if (s.kind === 'coord') return <Crosshair className={clsx(c, 'text-amber-400')} />;
   if (s.kind === 'satellite') return <Satellite className={clsx(c, 'text-sky-400')} />;
+  if (s.kind === 'egg' && s.egg) return <span className={clsx(c, 'text-center leading-none')} style={{ color: s.egg.color }}>{s.egg.glyph}</span>;
   if (s.kind === 'prehistory' && s.site) {
     const Icon = isCaveSite(s.site) ? Hand : Wheat;
     return <Icon className={c} style={{ color: KIND_COLOR[s.site.kind] }} />;
