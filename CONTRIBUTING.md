@@ -1,252 +1,161 @@
 # Contributing to Shell:B 🐚
 
-First off: thank you for being here. Every contribution — whether a bug fix, documentation refinement, a new agent persona, a voice model, or a UI enhancement — makes this project better for everyone who runs it on their own hardware.
+Thank you for being here. A bug fix, a clearer paragraph in the Manual, a French string, a new agent persona, a
+ComfyUI pipeline, a UI polish: each one makes Shell:B better for everyone who runs it on their own hardware.
 
----
+## Where things go
 
-## 💛 Dedication & The Ethos
+| You have… | Take it to |
+| :--- | :--- |
+| A fix or a feature for the app itself | A pull request here (read on) |
+| A theme | [Shell-B-Themes](https://github.com/EveAeternam/Shell-B-Themes): `theme.json`, validator, one-screen checklist |
+| A screensaver | [Shell-B-Screensavers](https://github.com/EveAeternam/Shell-B-Screensavers): one `index.html`, no network, no audio |
+| An agent persona | [Shell-B-Agents](https://github.com/EveAeternam/Shell-B-Agents): `agent.json` for the Agent Lab |
+| A question, an idea, something to show | [Discussions](https://github.com/EveAeternam/Shell-B/discussions) |
+| A bug | [Issues](https://github.com/EveAeternam/Shell-B/issues/new/choose), with the form filled in |
+| A security hole | [SECURITY.md](SECURITY.md), privately. Please not an issue |
 
-> **For Shelby.**  
-> *This project is named in honor of and dedicated to my best friend, Shelby.*
+## 💛 The ethos
 
-Shell:B is built on an unwavering foundation: **your AI assistant belongs to you, not to a corporation.** Everything in this repository is licensed under the [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE) so that no company can take this community's work, wrap it in a proprietary cloud SaaS, and sell it back to users without returning everything to the open-source commons.
+> **For Shelby.** *This project is named in honor of and dedicated to my best friend, Shelby.*
 
-### The Recursive AI-Collaborative Scaffold
+**Your AI assistant belongs to you, not to a corporation.** Everything here is licensed under the
+[AGPL-3.0](LICENSE), so nobody can wrap this community's work in a proprietary cloud service and sell it back without
+returning their changes to the commons.
 
-A significant portion of Shell:B was coded in close collaboration with AI — notably driven by the **Shell:B** models themselves. This recursive craftsmanship is fundamental to the philosophy of the application:
+A large part of Shell:B was written together with AI, and a good part of that by the Shell:B models themselves: she can
+read her own source, propose a change and deploy it once the owner approves. So, naturally:
 
-- **The app evolves according to the needs and self-reflection of the AI and its human collaborator.**
-- Shell:B is not a rigid, finished appliance; it is a **living, extensible scaffold** designed for you to inspect, modify, and make entirely your own.
-- **AI-assisted contributions are welcome and celebrated**: Whether you pair with local Shell:B models, Claude, or other coding agents, we embrace AI-augmented engineering. We only ask that you understand the code you submit, verify that it runs cleanly, uphold our design standards, and take full ownership of your pull request.
-- **Hardware Agnostic**: Shell:B is designed to run locally on whatever hardware you have — whether a laptop, desktop, homelab server, or multi-GPU workstation. We actively welcome optimizations that make Shell:B lighter, faster, and more accessible on lower-spec machines.
+- **AI-assisted contributions are welcome and celebrated.** Pair with local Shell:B models, Claude, or any other coding
+  agent. We only ask that you understand what you submit, that you ran it, and that you own the pull request.
+- **Hardware agnostic.** Shell:B is developed on one machine but written to run on whatever you have, from a laptop to a
+  multi-GPU box. Changes that make it lighter, faster or kinder to small machines are especially welcome.
+- **Local first.** A feature that needs a mandatory cloud account will be looked at sceptically. Local or open-source
+  alternatives always win ties.
 
----
+### Companies
 
-## 🧭 What Kind of Contributions Are Welcome?
+Individuals, students, hobbyists and researchers: welcome from anywhere. If you contribute on behalf of a company you
+must be authorised to contribute under the AGPL-3.0, and your contribution must not gatekeep or enclose features for a
+proprietary fork. Vendor lock-in gets declined.
 
-- **Core Engine & Server Improvements** — FastAPI backend optimizations, streaming response enhancements, SQLite schema migrations, and tool runner reliability.
-- **Dashboard & Studio UI** — React 19 + TypeScript components, responsive layouts, theme refinements, accessibility fixes, and canvas tools.
-- **The Agent Swarm** — Tuned system prompts, new agent archetypes in the Agent Lab, and novel reasoning strategies.
-- **Skills & MCP Connectors** — Claude-compatible `SKILL.md` skills, custom Model Context Protocol (MCP) servers, and local tool integrations.
-- **Multimodal Workflows & Assets** — ComfyUI image pipelines, Kokoro/Piper TTS voices, Whisper STT models, and MusicGen audio workflows.
-- **Hardware & Deployment Optimization** — Docker compose improvements, resource optimization, quantization guides, and VRAM management.
-- **Documentation & Networking** — Step-by-step guides for Tailscale mesh TLS, reverse proxies, offline deployments, and setup troubleshooting.
-- **Translations & Localization** — i18n support for the web cockpit.
+## 🛠️ Development setup
 
----
-
-## 🏢 Corporate Contributions Policy
-
-We welcome individual contributors from anywhere. If you are contributing on behalf of a company:
-
-1. You must have explicit authorization to contribute under the **AGPL-3.0** license.
-2. You must confirm your contribution will not be used to gatekeep, enclose, or restrict features in proprietary forks.
-3. We reserve the right to decline any contribution that appears designed to introduce vendor lock-in or extract value without contributing back.
-
-**TL;DR:** Individuals, students, hobbyists, independent researchers — absolutely welcome. Corporate attempts to turn this project into a proprietary conduit — we will spot it and decline.
-
----
-
-## 🛠️ Development Setup
-
-Shell:B consists of a **FastAPI (Python 3.12)** backend, a **React 19 + TypeScript + Vite + Tailwind CSS** frontend, and an isolated **Docker** sandbox for code execution.
-
-### Prerequisites
-
-- **Python 3.12+**
-- **Node.js 20+ & npm**
-- **Docker & Docker Compose** (for sandboxed code execution)
-- **Ollama** (for local LLM inference)
-- **Git**
-
-### 1. Clone the Repository
+Shell:B is a **FastAPI (Python 3.12)** server, a **React 19 + TypeScript + Vite + Tailwind 3** UI that the server
+serves from `ui/dist`, and a **Docker** sandbox image for code execution. Models come from **Ollama**.
 
 ```bash
-git clone https://github.com/EveAeternam/Shell-B.git
-cd Shell-B
-```
-
-### 2. Backend Setup (`server/`)
-
-Backend code lives in `server/`:
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt  # or install fastapi uvicorn httpx etc.
-
-# Verify Python syntax:
-python3 -m py_compile server/app.py
-```
-
-### 3. Frontend Setup (`ui/`)
-
-Frontend code lives in `ui/`:
-
-```bash
-cd ui
-npm install
-
-# Run hot-reloading dev server on :5173 (proxies /api to :8200):
-npm run dev
-
-# Build production bundle (runs tsc -b and vite build to ui/dist):
-npm run build
-```
-
-### 4. Code Sandbox (`sandbox/`)
-
-Chat sandbox execution runs inside an isolated container:
-
-```bash
+git clone https://github.com/EveAeternam/Shell-B.git ~/shellb/web
+cd ~/shellb/web
+python3 -m venv venv && venv/bin/pip install -r requirements.txt
+cd ui && npm ci && npm run vendor && cd ..     # vendor: offline copies of tailwind, chart.js, mermaid, three
 docker build -t shellb-sandbox sandbox/
+venv/bin/python server/serve.py                # http://127.0.0.1:8200 ; data/admin.key on first sign-in
 ```
 
----
+For UI work, `cd ui && npm run dev` gives hot reload on `:5173` and proxies `/api` to `:8200`. For server work,
+restart the process (or `systemctl --user restart shellb-web` once you run it as a service, see the Manual).
 
-## 📐 Architecture & Standards
+Voice (HERMES), music (ORPHEUS), images (NYX / ComfyUI), private search (SearXNG) and the offline wiki are separate
+local services. Shell:B runs without them; the tools that need them report they are unavailable.
 
-### Crucial Engineering Rules
+### The map
 
-1. **Backend Stack**: **Python 3.12 + FastAPI**. Never write Node.js/Express backend scripts. All server logic lives in `server/`.
-2. **Frontend Stack**: **React 19 + TypeScript (`.tsx`) + Tailwind CSS 3 + Vite**. Never write loose untyped `.jsx`. All UI lives in `ui/`.
-3. **Sandbox vs Codebase**: Ephemeral chat execution writes to `/work` in the sandbox container. Never confuse sandbox scripts with core application files.
-4. **Zero Telemetry**: Shell:B never phones home. Do not add tracking, third-party analytics scripts, or telemetry beacons.
-5. **Privacy First**: Never commit private personal chats, emails, API keys, tokens, or credentials.
+```
+server/app.py        routes and the static UI          server/agent.py   the loop, prompts, tool calls
+server/tools.py      tool registry and runners         server/db.py      SQLite (data/shellb.db)
+server/<thing>.py    one module per subsystem          ui/src/components one file per panel or app
+ui/src/api.ts        the client for /api               ui/src/i18n/      t(), fr.json
+tests/               unittest, *_test.py               docs/MANUAL.md    the reference, kept current
+```
 
-### Legendary Front-End Design Standards
+[AGENTS.md](AGENTS.md) is the short architecture brief Shell:B's own agents read before touching the code. It applies
+to humans too.
 
-Every interface built for or inside Shell:B must uphold world-class design standards:
+## ✅ Before you open a pull request
 
-1. **No "AI Slop"**: Avoid generic purple-blue gradient buttons, floating glassmorphism everywhere, uniform border-radius on every container, and centered-everything layouts.
-2. **Domain-Specific Identity**: Design specifically for the subject matter. Choose a deliberate aesthetic direction (Swiss minimal, tactile instrument, brutalist editorial, quiet utility).
-3. **Typographic Hierarchy**:
-   - Strict scale (1.25x or 1.33x ratio).
-   - Tighter tracking on display headlines (`tracking-tight`), slightly loosened tracking on small metadata badges (`tracking-wider`).
-   - Line length bounded to 55–75 characters (`max-w-[65ch]`). Never stretch body paragraphs edge-to-edge.
-   - Tight headline line-heights (`1.1–1.25`), comfortable body line-heights (`1.5–1.65`). Avoid headline widows.
-4. **Restrained Color & Contrast**:
-   - 60-30-10 palette rule: 60% dominant neutral surface, 30% structural borders/cards, 10% purposeful accent.
-   - In dark mode, use deep tinted neutrals (zinc, slate, dark obsidian) rather than dead `#000000` or washed grey `#222222`.
-   - Strict WCAG AA contrast compliance (minimum 4.5:1 for body text, 3:1 for large display headers).
-5. **Spatial Rhythm & Micro-Interactions**:
-   - Multiples of 4 and 8 for all spacing (`gap-2`, `gap-4`, `p-4`, `p-6`).
-   - 1px crisp borders (`border border-zinc-800/80` or `border-[var(--border-subtle)]`) over heavy muddy drop shadows.
-   - Meaningful interactive states: distinct `:hover`, `:active`, and keyboard `:focus-visible` rings.
-   - Design complete states: skeleton loading states, informative empty states, and constructive error states.
-6. **Content Authenticity**:
-   - Real, domain-specific copy. Never lorem ipsum or generic filler.
-   - Actionable CTAs: "Export report", "Deploy changes", "Run tests" — never vague labels like "Submit".
+1. **Run the checks.** `scripts/check.sh` compiles every server module, runs pyflakes for undefined names, runs the
+   regression suite in `tests/` and type-checks the UI. CI runs the same compile, lint and type check on every pull
+   request. A pull request that fails them won't be reviewed until it passes.
+2. **Shipping something a user will notice?** Add an entry at the top of `docs/changelog.json` (`date`, `area`,
+   `title`, `summary`). It feeds Settings → Changelog in the app and the notes of the next release.
+3. **New UI text?** Wrap it in `t('…')` and add the French line to `ui/src/i18n/fr.json`. `tests/i18n_test.py` fails on
+   any English string without a translation, and it tells you which.
+4. **Touching a route, a tool or a table?** Update the matching section of `docs/MANUAL.md` (or `docs/API.md` for
+   `/api/v1`). The Manual is the reference, not a brochure; it should still be true after your change.
+5. **Tests** live in `tests/<area>_test.py` and start with `from smoke_test import client, shellb`, which gives a
+   scratch copy of the app. Fake project IDs must look real (`proj-` + 12 hex characters) or the ID checks reject
+   them.
 
----
+### The rules that aren't up for discussion
 
-## 🚀 How to Submit a Contribution
+- **Python + FastAPI on the server, TypeScript (`.tsx`) + Tailwind in the UI.** No Node back ends, no untyped `.jsx`.
+- **No telemetry, ever.** No analytics, no beacons, no "anonymous usage statistics". Shell:B never phones home.
+- **Nothing private in git.** No chats, keys, tokens, addresses, screenshots with personal data. `data/` is ignored
+  for a reason. Scrub your screenshots before attaching them.
+- **The sandbox stays sealed.** Code execution keeps `--network none` and the dropped capabilities. Guest cells stay
+  separate containers. If a feature needs a hole, it needs an approval card and a line in SECURITY.md.
+- **Approvals are the owner's.** Anything that leaves the machine or changes it (pushes, emails, deploys, browser form
+  submissions) waits for the owner's approval. Don't add bypasses, even convenient ones.
 
-### 1. Create a Topic Branch
+### Design standards
+
+Shell:B's UI is built to the standard in [AGENTS.md](AGENTS.md#4-legendary-front-end-design-standards). The short
+version: one deliberate aesthetic per surface, a typographic scale, a 60/30/10 palette with WCAG AA contrast, spacing in
+multiples of 4, crisp 1 px borders, real copy, and complete loading, empty and error states. No purple-blue gradient
+buttons, no glassmorphism everywhere, no lorem ipsum.
+
+## 🔀 Branches, commits, pull requests
 
 ```bash
-git checkout -b feat/your-feature-name
-# or
-git checkout -b fix/what-you-fixed
+git checkout -b worlds/wind-legend        # <area>/<what>
 ```
 
-### 2. Make Your Changes & Test
+Commit messages are one sentence in the form the log already uses: `Area: what changed, in plain words`.
 
-- **Backend**: Test syntax with `python3 -m py_compile server/<file>.py` and test endpoints against `http://localhost:8200/api/...`.
-- **Frontend**: Run `npm run build` inside `ui/` to verify zero TypeScript compiler errors.
-- **Docker**: Verify container builds with `docker build -t shellb-sandbox sandbox/`.
+```
+Worlds: wind layer in the earth.nullschool style, from GFS on AWS Open Data
+Backups: skip sockets, archive guest cells' data through their own uid
+Languages: French for the Aphrodite settings strings
+```
 
-### 3. Commit with Conventional Messages
+The pull request template asks for what changed and why, screenshots for UI changes, new dependencies, and how you
+tested it on your hardware. Small, focused pull requests get merged faster than big ones.
 
-Follow clear, imperative commit messages:
+## 🚢 Releases
+
+Shell:B ships continuously; releases are dated snapshots for people who want something to pin.
+
+- Tags are calendar versions: `v2026.10.11`. A second release on the same day adds `.1`.
+- `scripts/release_notes.py` renders the changelog entries since the previous tag as Markdown, grouped by area. The
+  `release` workflow runs it when a tag is pushed and publishes the GitHub Release with those notes.
 
 ```bash
-git commit -m "feat(voice): add Kokoro voice model support for Korean"
-git commit -m "fix(websocket): resolve disconnect on high GPU memory pressure"
-git commit -m "docs(networking): clarify Tailscale TLS setup for non-standard ports"
+scripts/release_notes.py                 # preview the notes for the next release
+git tag v2026.10.11 && git push origin v2026.10.11
 ```
 
-### 4. Open a Pull Request
+## 🐛 Reporting bugs
 
-- **Title & Summary**: Clearly explain what changed and why.
-- **Visuals**: Include before/after screenshots or recordings for any UI changes.
-- **Dependencies**: Explicitly call out any new Python packages or npm dependencies.
-- **Testing**: Describe how you tested the change on your hardware.
+Use the [bug report form](https://github.com/EveAeternam/Shell-B/issues/new/choose). It asks for the steps, what you
+expected, your hardware and model engine, and redacted logs (`journalctl --user -u shellb-web -f`). Search first; a
+thumbs-up on an existing issue helps more than a duplicate.
 
----
+## 💡 Suggesting features
 
-## 🐛 Reporting Bugs
+Open a thread in [Discussions → Ideas](https://github.com/EveAeternam/Shell-B/discussions). Say what problem you are
+solving, how it fits a local-first workflow, and what it costs in memory or GPU. Once an idea has a shape it becomes an
+issue.
 
-Before opening an issue:
+## 🤝 Conduct
 
-1. Search existing issues to ensure it hasn't already been reported.
-2. Check your service logs (`journalctl --user -u shellb-web -f` or docker logs).
-3. Try reproducing in a clean environment.
+Be kind, assume good faith, and remember that people arrive with very different hardware, experience and backgrounds.
+The full text is in [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
-**Bug Report Template:**
+## 📜 License
 
-```markdown
-### Summary
-A clear, concise description of what happened.
-
-### Steps to Reproduce
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
-
-### Expected Behavior
-What you expected to happen.
-
-### Environment & Specs
-- **OS**: Linux / macOS / Windows (WSL)
-- **Hardware**: CPU / RAM / GPU (e.g., RTX 4090, Apple Silicon M-series, CPU-only)
-- **Python Version**: `python3 --version`
-- **Node Version**: `node --version`
-- **Docker Version**: `docker --version`
-- **LLM Engine**: Ollama (model tag) / llama.cpp / Cloud AI
-
-### Relevant Logs
-```
-[Paste redacted logs here — ensure no API keys or personal data are included]
-```
-```
-
----
-
-## 💡 Suggesting Features
-
-We welcome ideas that reinforce Shell:B's core ethos: **local-first, privacy-preserving, and user-owned**.
-
-When submitting a feature suggestion:
-- Describe the actual problem you are trying to solve.
-- Explain how it benefits local AI workflows.
-- Note any hardware or resource implications.
-- Keep in mind: features that require mandatory cloud dependencies or third-party accounts will be evaluated skeptically; local and open-source alternatives are always preferred.
-
----
-
-## 🤝 Code of Conduct
-
-- **Be kind and respectful**: We are all building together.
-- **Assume good faith**: People have varied hardware setups, experience levels, and backgrounds.
-- **Zero tolerance for toxicity**: Harassment, derogatory comments, or abusive behavior will result in a permanent ban.
-- **Respect the license**: If you prefer a different licensing philosophy, you are free to fork under AGPL-3.0. Do not harass maintainers over licensing choices.
-
----
-
-## 📜 License Agreement
-
-All contributions to Shell:B are made under the [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE). By opening a pull request, you certify that:
-
-1. You authored the contribution or have the legal right to submit it under AGPL-3.0.
-2. You grant the community the right to use, modify, and distribute your contribution under the terms of the AGPL-3.0.
-3. You will not retroactively claim proprietary exclusivity over contributed code.
-
----
-
-## 💬 Questions & Community
-
-Have questions or need help setting up? Open an [Issue](https://github.com/EveAeternam/Shell-B/issues) or start a [Discussion](https://github.com/EveAeternam/Shell-B/discussions).
+Every contribution is made under the [AGPL-3.0](LICENSE). By opening a pull request you certify that you wrote the
+contribution or have the right to submit it under that license, and that you grant everyone the right to use, modify
+and distribute it under the same terms.
 
 Thank you for helping keep personal AI open, local, and truly owned by the people who use it.

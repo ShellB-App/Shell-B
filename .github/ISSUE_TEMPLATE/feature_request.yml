@@ -1,0 +1,29 @@
+name: Feature request
+description: Something Shell:B should do. For open-ended ideas, start a Discussion instead.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you're trying to do and what gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you'd like
+      description: How it would work from the user's chair. Which agent, panel or tool it touches.
+    validations:
+      required: true
+  - type: textarea
+    id: cost
+    attributes:
+      label: Local-first fit
+      description: Does it need a cloud account or an online service? What does it cost in memory, GPU or disk? Is there a local alternative?
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Help
+      options:
+        - label: I'd like to build this myself (with or without an AI pair)

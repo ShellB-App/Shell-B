@@ -1,0 +1,38 @@
+name: Checks
+# The static half of scripts/check.sh: compile every server module, pyflakes for undefined names, TypeScript.
+# The regression suite needs a running Shell:B with its local services, so it stays local (scripts/check.sh).
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  server:
+    name: Server compile + lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyflakes
+      - name: py_compile
+        run: python -m py_compile server/*.py clients/*.py tests/*.py
+      - name: pyflakes (undefined names)
+        run: python -m unittest tests/lint_test.py
+      - name: changelog and manual are well-formed
+        run: python -c "import json; d=json.load(open('docs/changelog.json')); assert all({'date','area','title','summary'} <= set(e) for e in d), 'changelog entry missing a field'; print(len(d), 'changelog entries')"
+  ui:
+    name: UI type check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit -p tsconfig.app.json

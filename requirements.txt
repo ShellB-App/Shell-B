@@ -1,0 +1,47 @@
+# Shell:B server dependencies. Install into a venv: python3 -m venv venv && venv/bin/pip install -r requirements.txt
+# Derived from the imports in server/, tests/ and clients/ against the reference venv (Python 3.12, 2026-10-11).
+
+# web server
+fastapi>=0.142
+starlette>=1.7
+uvicorn>=0.54
+httpx>=0.28
+httpcore>=1.0
+websockets>=17
+
+# security: encrypted secrets, sessions, passkeys, two-step sign-in
+cryptography>=50
+PyJWT>=2.15
+webauthn>=3.0
+
+# documents, pictures and office files the agents read and write
+pillow>=12
+pymupdf>=1.28
+pypdf>=6
+python-docx>=1.2
+python-pptx>=1.0
+openpyxl>=3.1
+rapidocr>=3.9
+lxml>=6
+lxml_html_clean>=0.4
+trafilatura>=2.2
+PyYAML>=6
+
+# data and media
+numpy>=2
+soundfile>=0.14
+yt-dlp>=2026.8
+
+# calendars, contacts, mail, remote machines
+python-dateutil>=2.9
+caldav>=3.4
+asyncssh>=2.24
+
+# agents: MCP server and connectors, cloud providers (opt-in), offline wiki, GFS wind data for Worlds
+mcp>=2.2
+anthropic>=1.11
+libzim>=3.13
+eccodes>=2.49
+
+# tests (scripts/check.sh)
+pyflakes>=4

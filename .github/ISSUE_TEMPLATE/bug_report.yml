@@ -1,0 +1,50 @@
+name: Bug report
+description: Something in Shell:B doesn't do what the Manual says it does.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Search existing issues first; a thumbs-up on a duplicate helps more than a new one.
+        **Redact logs and screenshots**: no keys, chats, addresses or other personal data.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what Shell:B did instead.
+      placeholder: |
+        1. Open Settings → Appearance
+        2. Press Install on a community theme
+        3. The tile spins forever; the log says …
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Shell:B version
+      description: The commit or tag you run (`git rev-parse --short HEAD`), or the newest entry under Settings → Changelog.
+      placeholder: d1e091f
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [Chat & agents, Studio, Code, Research, Worlds, Models, Voice, Media (images, music, SFX), Memory & Codex, Guests & Circles, API & MCP, Settings & appearance, Install & networking, Other]
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: OS, CPU/GPU and memory, Python and Node versions, model engine and model tag, how you reach Shell:B (localhost, Tailscale, tunnel).
+      placeholder: |
+        Ubuntu 24.04 · RTX 4090 24 GB · Python 3.12.3 · Node 24 · Ollama 0.12, qwen3:30b · Tailscale HTTPS
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant lines from `journalctl --user -u shellb-web` or the browser console, redacted.
+      render: text
