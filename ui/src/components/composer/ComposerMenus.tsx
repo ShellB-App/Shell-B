@@ -100,10 +100,15 @@ export function ComposerMenus({
           </button>
           {menu === 'agent' && (
             <div
-              className="absolute bottom-full left-0 mb-1.5 w-72 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-xl shadow-2xl p-1 z-40 animate-fade-in"
+              className={clsx(
+                'absolute bottom-full left-0 mb-1.5 w-72 max-w-[calc(100vw-2rem)] bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-xl shadow-2xl p-1 z-40 animate-fade-in',
+                localAgents.length > 6 && 'sm:w-[36rem]' // two columns, so the whole roster fits without scrolling
+              )}
               role="menu"
             >
-              <div className="max-h-[min(60vh,28rem)] overflow-y-auto">{localAgents.map(agentItem)}</div>
+              <div className={clsx('max-h-[min(70vh,36rem)] overflow-y-auto', localAgents.length > 6 && 'sm:grid sm:grid-cols-2 sm:gap-x-0.5')}>
+                {localAgents.map(agentItem)}
+              </div>
               {cloudAgents.length > 0 && (
                 <div
                   className="relative"
