@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
-import { Check, Moon, Sparkles, Sun, Trash2, WandSparkles } from 'lucide-react';
+import { Check, Download, Moon, Sparkles, Sun, Trash2, WandSparkles } from 'lucide-react';
 import type { Settings } from '../types';
 import { api, req } from '../api';
 import { startChatWith } from '../desktop';
@@ -9,6 +9,7 @@ import {
   type Mode, type Swatch, type ThemeId, type ThemeInfo,
 } from '../themes';
 import { btn } from './common';
+import { CommunityThemes } from './Gallery';
 import { t as tx } from '../i18n';
 
 /** A tiny drawing of the app in a theme's colours: rail, sidebar, a title, the stripe, a primary button. */
@@ -120,10 +121,17 @@ export function ThemePicker({ settings, mode, onMode, onDone }: { settings?: Set
           {customs.map(t => (
             <Tile key={t.id} t={t} mode={mode} on={t.id === current} onPick={() => pick(t.id)}
               extra={
-                <button onClick={() => { if (confirm(tx('Delete the theme "{label}"?', { label: t.label }))) remove(t.id); }} title={tx('Delete {label}', { label: t.label })}
-                  className="absolute right-3.5 top-3.5 p-1 rounded bg-[var(--bg-primary)] text-[var(--text-muted)] hover:text-red-400 opacity-0 group-hover/tile:opacity-100 focus-visible:opacity-100 transition">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                <div className="absolute right-3.5 top-3.5 flex gap-1 opacity-0 group-hover/tile:opacity-100 focus-within:opacity-100 transition">
+                  <a href={`/api/gallery/export/theme/${encodeURIComponent(t.id.slice('custom:'.length))}`} download
+                    title={tx('Export {label} as theme.json, ready to share in the community themes repository', { label: t.label })}
+                    className="p-1 rounded bg-[var(--bg-primary)] text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+                    <Download className="w-3.5 h-3.5" />
+                  </a>
+                  <button onClick={() => { if (confirm(tx('Delete the theme "{label}"?', { label: t.label }))) remove(t.id); }} title={tx('Delete {label}', { label: t.label })}
+                    className="p-1 rounded bg-[var(--bg-primary)] text-[var(--text-muted)] hover:text-red-400">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               } />
           ))}
         </div>
@@ -150,6 +158,7 @@ export function ThemePicker({ settings, mode, onMode, onDone }: { settings?: Set
           ))}
         </div>
       </form>
+      <CommunityThemes settings={settings} mode={mode} />
     </div>
   );
 }

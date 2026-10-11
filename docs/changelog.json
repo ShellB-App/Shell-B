@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-10-11",
+    "area": "Appearance",
+    "title": "Community gallery: themes and screensavers shared on GitHub",
+    "summary": "Settings → Appearance now browses two community repositories, EveAeternam/Shell-B-Themes and EveAeternam/Shell-B-Screensavers, and installs from them with one click. Themes arrive as data and go through the same checks as the ones Shell:B designs in chat (hex colours, fixed font and particle lists, contrast nudged to WCAG AA), then join your custom themes. Screensavers become Screensaver projects in the Studio and run like any other: in a sandboxed frame, scripts only, no network. Repositories are fetched as a tarball at a pinned commit and cached, so the gallery works offline once fetched; a refresh button pulls the latest, and an item you already installed shows Apply or Use, and Update when the gallery has a newer version. Your own custom themes get an Export button that saves a theme.json ready for a pull request. Installing needs the owner; agents have no way into the gallery."
+  },
+  {
+    "date": "2026-10-11",
     "area": "Agents",
     "title": "Thalassa, a marine biologist; species lists, survey diversity, literature and photo-ID checks",
     "summary": "New built-in agent Thalassa (🐙) for marine science. The marine tool gains: match, which checks a species list or survey sheet (CSV, TSV, TXT or Excel, French headers too) against WoRMS for misspellings, outdated names and homonyms and saves the corrected table; diversity, with richness, Shannon, Pielou, Simpson and Chao1 per site and pooled; literature, which finds papers through OpenAlex with authors, journal, citations, DOI and open-access links; and verify, which checks whether candidate species for a photo or sighting have been recorded near where it was taken. Species cards now list the Habitats Directive, CITES, IUCN Red List and other policy lists. Type /species in the composer to use it from any chat."

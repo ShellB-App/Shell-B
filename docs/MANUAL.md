@@ -353,6 +353,18 @@ address (`_ShortNameRedirect` in app.py). Check with `tailscale serve status`; r
   the keyboard shortcuts (`?` opens it). The envelope in a chat's header is its mailbox (`server/chatmail.py`): notes
   other chats left for it, and a box to leave one for its next turn. Settings → Account shows the audit log
   (`GET /api/audit-log`), and the Agent Lab shows each agent's thumbs over the last 30 days.
+- **Appearance and the community gallery** (Settings → Appearance; `server/gallery.py`, `ui/src/components/Gallery.tsx`):
+  the built-in themes, the ones Shell:B designs in chat (`design_theme`, `server/themes.py`), and *Community themes*
+  from github.com/EveAeternam/Shell-B-Themes; under *Screensaver style*, *Browse community* lists
+  github.com/EveAeternam/Shell-B-Screensavers. Repositories are fetched like Community Hub skill repositories (one
+  tarball at a pinned commit through `community.fetch_repo`, cached in `data/community/repos`, catalogue in kv
+  `gallery_<kind>`), so the gallery works offline once fetched and a refresh pulls the latest. A theme installs through
+  `themes.clean` (same checks as a chat-designed one) and joins the custom themes with its provenance; a screensaver
+  becomes a Screensaver project in the Studio (the folder's allowed files only, 2 MB a file, 8 MB in all) and runs in
+  the same sandboxed frame as any Studio screensaver. Installed items show Apply/Use, and Update when the gallery has a
+  newer version; reinstalling updates in place. Installing needs the owner (or the admin key) and is audit-logged;
+  there is no agent tool for it. Custom themes have an Export button (`GET /api/gallery/export/theme/<id>`) that
+  saves a `theme.json` ready for a pull request. More sources: `POST /api/gallery/sources {kind, repo, ref}` (owner).
 
 - **Scheduled** (`#/scheduled`, sidebar → Scheduled): prompts that run on their own, once at a set time or on a repeat
   (daily, chosen weekdays, monthly, every N minutes/hours, or any 5-field cron). Each run starts a new chat titled

@@ -182,7 +182,8 @@ let customs: CustomTheme[] = (() => {
   try { const v = JSON.parse(localStorage.getItem(LIST_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; }
 })();
 
-function customInfo(t: CustomTheme): ThemeInfo {
+/** A custom theme (saved, or one from the community gallery) as a picker entry. */
+export function customInfo(t: CustomTheme): ThemeInfo {
   const p = t.palette, mode = t.mode === 'light' ? 'light' : 'dark';
   const kind = t.particles?.kind;
   return {

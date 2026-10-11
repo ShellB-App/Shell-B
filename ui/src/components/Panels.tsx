@@ -32,6 +32,7 @@ import { NetworkSettings } from './NetworkSettings';
 import { ThemePicker } from './ThemePicker';
 import { THEMES, currentTheme, setAmbientOn, setTheme, useAmbientOn } from '../themes';
 import { PREVIEW_SAVER, PREVIEW_SPLASH, SAVER_MINUTES, SAVER_STYLES, saveAmbience, useAmbience, type SaverStyle, type SplashMode } from '../ambience';
+import { CommunitySavers } from './Gallery';
 import { isCell, type GuestPanel } from '../cell';
 import { CellAccountTab, GUEST_ENTRIES, toPanel } from './CellGuest';
 
@@ -315,6 +316,7 @@ function DisplayRows({ onDone }: { onDone?: () => void }) {
       location.hash = `#/studio/${p.id}`;
     } catch (e) { toast(t('Couldn\'t create the project: {e}', { e: String(e) }), { kind: 'error' }); } finally { setCreating(false); }
   };
+  const [browsing, setBrowsing] = useState(false);
   const missing = amb.saverStyle.startsWith('studio:') && !made.some(m => `studio:${m.id}` === amb.saverStyle);
   return (
     <>
@@ -353,6 +355,11 @@ function DisplayRows({ onDone }: { onDone?: () => void }) {
             title={t('Start a Screensaver project in the Studio and describe what you\'d like; Shell:B builds it')}>
             <MonitorPlay className="w-3.5 h-3.5" />{t('Make one in the Studio')}
           </button>
+          <button className={btn.subtle} onClick={() => setBrowsing(true)} title={t('Screensavers other people shared on GitHub; install one with a click')}>
+            <Globe className="w-3.5 h-3.5" />{t('Browse community')}
+          </button>
+          <CommunitySavers open={browsing} onClose={() => setBrowsing(false)}
+            onInstalled={(id, name) => setMade(m => m.some(x => x.id === id) ? m : [...m, { id, name }])} />
           <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] whitespace-nowrap">
             <Toggle on={amb.saverClock} onChange={v => saveAmbience({ saverClock: v })} label={t('Show clock')} />{t('Clock')}
           </label>

@@ -83,6 +83,7 @@ import offline
 import selfmod
 import selfreview
 import community
+import gallery
 import ask
 import themes
 import screen
@@ -237,6 +238,7 @@ nightshift.register()
 app.include_router(selfmod.router)
 app.include_router(selfreview.router)
 app.include_router(community.router)
+app.include_router(gallery.router)
 app.include_router(composer.router)
 app.include_router(sysinfo.router)
 app.include_router(network.router)
