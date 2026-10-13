@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-10-13",
+    "area": "Chat",
+    "title": "Going incognito from a chat makes an incognito copy and leaves the chat alone",
+    "summary": "Typing /incognito in an open chat, or the new eye button beside Fork in the chat header, now continues in an incognito copy of the chat; the chat you were in stays a normal chat. On a blank chat, /incognito still starts a new incognito chat. A chat started from Notes → Brainstorm, or after opening another chat, is no longer made incognito by an incognito draft left over from earlier."
+  },
+  {
     "date": "2026-10-11",
     "area": "Community",
     "title": "Shell:B's repositories moved to the ShellB-App organisation on GitHub",

@@ -1,7 +1,7 @@
 import { t } from './i18n';
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { Archive, ArrowDown, Download, GitFork, Moon, PanelLeft, PanelRight, Printer, Radio, Search, Shapes, Smartphone, Sun, Telescope, Workflow } from 'lucide-react';
+import { Archive, ArrowDown, Download, EyeOff, GitFork, Moon, PanelLeft, PanelRight, Printer, Radio, Search, Shapes, Smartphone, Sun, Telescope, Workflow } from 'lucide-react';
 import { FormFactorSwitcher } from './mobile/FormFactorSwitcher';
 import { api } from './api';
 import type {
@@ -274,6 +274,7 @@ export function App() {
     try {
       const c = await api.conversation(id);
       setConv(c);
+      setIncognitoDraft(false);  // the chat's own flag decides now; a leftover draft must not make the next new chat incognito
       setGroupRoute(null);
       setLibrary(false);
       setScheduled(false);
@@ -378,10 +379,12 @@ export function App() {
   }, [settings]);
   useInstalledApp(status, newChat);
 
-  const ensureConversation = useCallback(async () => {
+  // `incognito` defaults to the blank chat on screen; paths that start a chat elsewhere (Notes) pass false
+  const ensureConversation = useCallback(async (incognito = incognitoDraft) => {
     if (convRef.current) return convRef.current.id;
-    const c = await api.createConversation(agentId, pendingGroup.current ?? undefined, !pendingGroup.current && incognitoDraft);
+    const c = await api.createConversation(agentId, pendingGroup.current ?? undefined, !pendingGroup.current && incognito);
     pendingGroup.current = null;
+    setIncognitoDraft(false);
     const full: Conversation = { ...c, messages: [], artifacts: [] };
     convRef.current = full;
     setConv(full);
@@ -426,7 +429,7 @@ export function App() {
     setCodexRoute(null);
     pendingGroup.current = null;
     history.replaceState(null, '', '#/');
-    const id = await ensureConversation();
+    const id = await ensureConversation(false);
     const att = await api.upload(id, note);
     await send(text, [att]);
   }, [ensureConversation, send]);
@@ -463,9 +466,10 @@ export function App() {
     }
   }, [conv]);
 
-  const forkChat = useCallback(async (convId: string, messageId?: string) => {
+  /** `incognito`: an incognito copy of the chat (server/privacy.py); the original is left as it was */
+  const forkChat = useCallback(async (convId: string, messageId?: string, incognito = false) => {
     try {
-      const newConv = await api.forkConversation(convId, { messageId });
+      const newConv = await api.forkConversation(convId, { messageId, incognito: incognito || undefined });
       await loadConvs();
       location.hash = `#/c/${newConv.id}`;
       setConv(null);
@@ -473,6 +477,13 @@ export function App() {
       alert(`Failed to fork conversation: ${err instanceof Error ? err.message : String(err)}`);
     }
   }, [loadConvs]);
+  // Going incognito from an open chat forks it: the copy is incognito, the chat itself never changes. A blank chat
+  // just becomes an incognito draft.
+  const goIncognito = useCallback(() => {
+    const c = convRef.current;
+    if (c && !c.incognito && c.messages.length) forkChat(c.id, undefined, true);
+    else newChat(undefined, true);
+  }, [convRef, forkChat, newChat]);
 
   const compactChat = useCallback(async (convId: string) => {
     try {
@@ -716,6 +727,11 @@ export function App() {
                     <button className={btn.icon} onClick={() => forkChat(conv.id)} title={t('Fork this conversation')}>
                       <GitFork className="w-3.5 h-3.5 text-[var(--text-muted)] hover:text-[var(--text-primary)]" />
                     </button>
+                    {!incognito && messages.length > 0 && (
+                      <button className={btn.icon} onClick={goIncognito} title={t('Continue in an incognito copy (this chat stays as it is)')}>
+                        <EyeOff className="w-3.5 h-3.5 text-[var(--text-muted)] hover:text-[var(--text-primary)]" />
+                      </button>
+                    )}
                     {messages.length > 4 && (
                       <button className={btn.icon} onClick={() => compactChat(conv.id)} title={t('Compact conversation (summarize older history to save context)')}>
                         <Archive className="w-3.5 h-3.5 text-[var(--text-muted)] hover:text-[var(--text-primary)]" />
@@ -930,7 +946,7 @@ export function App() {
               onEffort={e => setEfforts(prev => ({ ...prev, [agent.id]: e }))}
               modelChoices={modelChoices} onModel={m => setModelPicks(prev => ({ ...prev, [agent.id]: m }))}
               onAgent={selectAgent} busy={busy || !!conv?.streaming} onSend={(t, a, o) => send(t, a, undefined, o?.agentId, o?.mode)} onStop={stop}
-              convId={conv?.id} onCommand={c => newChat(undefined, c === 'incognito')} planMode={planMode} onPlanMode={setPlanMode}
+              convId={conv?.id} onCommand={c => (c === 'incognito' ? goIncognito() : newChat())} planMode={planMode} onPlanMode={setPlanMode}
               ensureConversation={ensureConversation} voiceOk={voiceOk} focusKey={`${conv?.id ?? 'new'}:${focusTick}`}
               onVoiceMode={voiceMode ? undefined : () => setVoiceMode(true)} inbox guest={isCell()}
             />

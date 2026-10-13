@@ -520,6 +520,7 @@ export function KioskApp() {
       try {
         const c = await api.conversation(id);
         setConv(c);
+        setIncognitoDraft(false);  // the chat's own flag decides now; a leftover draft must not make the next new chat incognito
         setAgentId(c.agentId);
         // Ensure chat window is open and focused
         const chatWin = windows.find(w => w.appId === 'chat');
@@ -565,6 +566,18 @@ export function KioskApp() {
     },
     [settings, windows, focusWindow, openApp, setConv]
   );
+  // /incognito in an open chat forks it into an incognito copy (server/privacy.py); the chat itself never changes
+  const goIncognito = useCallback(async () => {
+    const c = convRef.current;
+    if (!c || c.incognito || !c.messages.length) return newChat(undefined, true);
+    try {
+      const fork = await api.forkConversation(c.id, { incognito: true });
+      loadConvs();
+      openConversation(fork.id);
+    } catch (err: unknown) {
+      alert(`Failed to fork conversation: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }, [convRef, newChat, loadConvs, openConversation]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -582,10 +595,12 @@ export function KioskApp() {
   }, [kioskLocked, newChat]);
 
 
-  const ensureConversation = useCallback(async () => {
+  // `incognito` defaults to the blank chat on screen; paths that start a chat elsewhere (Notes) pass false
+  const ensureConversation = useCallback(async (incognito = incognitoDraft) => {
     if (convRef.current) return convRef.current.id;
-    const c = await api.createConversation(agentId, pendingGroup.current ?? undefined, !pendingGroup.current && incognitoDraft);
+    const c = await api.createConversation(agentId, pendingGroup.current ?? undefined, !pendingGroup.current && incognito);
     pendingGroup.current = null;
+    setIncognitoDraft(false);
     const full: Conversation = { ...c, messages: [], artifacts: [] };
     convRef.current = full;
     setConv(full);
@@ -890,7 +905,7 @@ export function KioskApp() {
                           onSend={(t, a, o) => send(t, a, undefined, o?.agentId, o?.mode)}
                           onStop={stop}
                           convId={conv?.id}
-                          onCommand={c => newChat(undefined, c === 'incognito')}
+                          onCommand={c => (c === 'incognito' ? goIncognito() : newChat())}
                           planMode={planMode}
                           onPlanMode={setPlanMode}
                           ensureConversation={ensureConversation}
@@ -919,7 +934,7 @@ export function KioskApp() {
                         onDiscuss={async (text, note) => {
                           convRef.current = null;  // "in a new chat": never the one that happens to be open
                           setConv(null);
-                          const id = await ensureConversation();
+                          const id = await ensureConversation(false);
                           const att = await api.upload(id, note);
                           send(text, [att]);
                           openApp('chat');

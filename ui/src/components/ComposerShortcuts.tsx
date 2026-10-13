@@ -181,7 +181,7 @@ export function useShortcuts(o: Opts) {
           run: () => { replaceToken(''); o.onCommand?.('new'); } });
       }
       if (o.onCommand && match(q, 'incognito', 'private')) {
-        out.push({ key: 'incognito', group: 'Actions', label: '/incognito', hint: 'New chat that isn’t remembered and is deleted after 24 h',
+        out.push({ key: 'incognito', group: 'Actions', label: '/incognito', hint: 'Incognito copy of this chat (it stays as it is), or a new incognito chat',
           icon: <EyeOff className="w-3.5 h-3.5" />, run: () => { replaceToken(''); o.onCommand?.('incognito'); } });
       }
       if (o.onPlanMode && match(q, 'plan')) {

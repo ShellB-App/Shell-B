@@ -593,7 +593,9 @@ async def fork_conversation(conv_id: str, req: Request):
         group_id=conv.get("groupId")
     )
     new_cid = new_conv["id"]
-    if conv.get("incognito"):  # a fork of an incognito chat is incognito too
+    # a fork of an incognito chat is incognito too; `incognito` forks a normal chat into an incognito copy (the
+    # "Incognito" toggle on an open chat): only the copy is flagged, the original stays as it was
+    if conv.get("incognito") or body.get("incognito"):
         import privacy
         privacy.mark_incognito(new_cid)
     if conv.get("adult"):  # and of an Aphrodite chat, hers
