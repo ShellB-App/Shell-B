@@ -18,6 +18,7 @@ import { Composer } from './components/Composer';
 import { findMention } from './components/ComposerShortcuts';
 import { ArtifactPanel } from './components/ArtifactPanel';
 import { AgentLab } from './components/AgentLab';
+import { OPEN_AGENT_STORE } from './agentPicks';
 import { CommandPalette, SettingsModal } from './components/Panels';
 import { IncognitoMark, IncognitoNote, IncognitoStrip } from './components/Incognito';
 import { IntegrationsModal, type ToolsTab } from './components/Integrations';
@@ -41,6 +42,7 @@ import { ContextMeter } from './components/composer/ContextMeter';
 import { isCell, type GuestPanel } from './cell';
 import { GuestPanelHost } from './components/CellGuest';
 import { DocPanel } from './components/DocPanel';
+import { NewChatHome } from './components/NewChatHome';
 import { onDocView, type DocTarget } from './docView';
 
 const Studio = lazy(() => import('./studio/Studio'));
@@ -192,6 +194,12 @@ export function App() {
   // ?shot&settings=<tab> opens Settings on that tab, for headless screenshots (index.html)
   const shotSettings = /[?&]shot\b/.test(location.search) ? /[?&]settings=(\w+)/.exec(location.search)?.[1] : undefined;
   const [modal, setModal] = useState<null | 'agents' | 'tools' | 'settings' | 'palette'>(shotSettings ? 'settings' : null);
+  // "Browse the Agent Store" in the agent menu: open the Agent Lab, which switches itself to the Store
+  useEffect(() => {
+    const on = () => setModal('agents');
+    window.addEventListener(OPEN_AGENT_STORE, on);
+    return () => window.removeEventListener(OPEN_AGENT_STORE, on);
+  }, []);
   const [formFactorOpen, setFormFactorOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsTabId>((shotSettings as SettingsTabId) || 'general');
   const [labAgent, setLabAgent] = useState<string>();
@@ -466,6 +474,15 @@ export function App() {
     }
   }, [conv]);
 
+  // a "Try something" card on the empty chat: the chat switches to the card's agent, and the prompt goes once it has
+  const [pendingStart, setPendingStart] = useState<{ agentId: string; prompt: string } | null>(null);
+  const startWith = useCallback((a: Agent, prompt: string) => { selectAgent(a); setPendingStart({ agentId: a.id, prompt }); }, [selectAgent]);
+  useEffect(() => {
+    if (!pendingStart || agent?.id !== pendingStart.agentId) return;
+    setPendingStart(null);
+    send(pendingStart.prompt, []);
+  }, [pendingStart, agent, send]);
+
   /** `incognito`: an incognito copy of the chat (server/privacy.py); the original is left as it was */
   const forkChat = useCallback(async (convId: string, messageId?: string, incognito = false) => {
     try {
@@ -605,7 +622,8 @@ export function App() {
     <>
       <CommandPalette open={modal === 'palette'} onClose={() => setModal(null)} agents={chatAgents} conversations={convs} theme={theme} actions={paletteActions} settings={settings} />
       <AgentLab open={modal === 'agents'} onClose={() => setModal(null)} agents={agents} tools={tools} models={models} initialId={labAgent}
-        onChanged={id => { loadAgents(); if (id) setLabAgent(id); }} />
+        onChanged={id => { loadAgents(); if (id) setLabAgent(id); }}
+        onChat={id => { const a = agents.find(x => x.id === id); if (a) selectAgent(a); }} />
       <IntegrationsModal open={modal === 'tools'} onClose={() => { setModal(null); setToolsTab(undefined); }} tools={tools} settings={settings} onChanged={loadIntegrations}
         tab={toolsTab} />
       <NewProjectDialog open={newProject} onClose={() => setNewProject(false)}
@@ -883,23 +901,8 @@ export function App() {
           <div ref={scroller} className="h-full overflow-y-auto"
             onScroll={e => { const el = e.currentTarget; setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 80); }}>
             {messages.length === 0 ? (
-              <div className="sf-hero max-w-2xl mx-auto px-4 min-h-full flex flex-col items-center justify-center text-center py-10 animate-fade-in">
-                <AgentAvatar agent={agent} size={56} className="rounded-2xl shadow-xl mb-4" />
-                <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">{greeting()}.</h1>
-                <p className="text-sm text-[var(--text-secondary)] mt-2 max-w-md">
-                  <span className="font-medium text-[var(--text-primary)]">{agent.name}</span> · {agent.description}
-                </p>
-                <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full text-left">
-                  {quick.map(q => (
-                    <button key={q.title} onClick={() => send(q.prompt, [])}
-                      className="sf-card p-3.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-hover)] hover:border-[var(--border-strong)] transition group text-left">
-                      <div className="text-xs font-semibold group-hover:text-[var(--accent-soft)] transition">{q.title}</div>
-                      <div className="text-[12px] text-[var(--text-secondary)] mt-0.5 line-clamp-2">{q.prompt}</div>
-                    </button>
-                  ))}
-                </div>
-                <p className="sf-tagline mt-8 text-[11px] text-[var(--text-muted)]">{t('Overthink. Overcomplicate. Overengineer.')}</p>
-              </div>
+              <NewChatHome agent={agent} agents={chatAgents} quick={quick} greeting={greeting()}
+                onSend={prompt => send(prompt, [])} onStart={startWith} onSelectAgent={selectAgent} onOpenApp={openApp} />
             ) : (
               <div className="max-w-3xl mx-auto px-4 py-6 space-y-7">
                 {foldSummarized(messages).map(m => (

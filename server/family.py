@@ -2,9 +2,9 @@
 
 The official repositories (ShellB-App/Shell-B-*) are always listed and can't be removed. Anyone can run their own
 collection: a repository laid out like the official one of the same kind (folder per item, index.json) that the owner
-adds here with its kind. Adding a theme, screensaver or template repository also registers it as a gallery source
+adds here with its kind. Adding a theme, screensaver, template or agent repository also registers it as a gallery source
 (server/gallery.py) and a skills repository as a Community Hub source (server/community.py), so the matching picker
-starts browsing it; the kinds without an installer yet (agents, worlds, voices, apps, translations) are listed with
+starts browsing it (an agent repository joins the Agent Lab's Store); the kinds without an installer yet (worlds, voices, apps, translations) are listed with
 where they will show up and a link, and their index is still fetched and counted.
 
 Fetching reuses community.fetch_repo (one tarball at a pinned commit, public-internet guard, size cap). Stats per
@@ -28,7 +28,7 @@ KINDS = {  # kind → how it is laid out and where it shows up in the app
     "screensaver": {"label": "Screensavers", "folder": "screensavers", "where": "Settings → Appearance → Screensaver → Browse community", "installs": True},
     "template": {"label": "Studio templates", "folder": "templates", "where": "Studio → New project → Start from a template", "installs": True},
     "skill": {"label": "Skills", "folder": "skills", "where": "Tools & Connectors → Community, then Skills", "installs": True},
-    "agent": {"label": "Agents", "folder": "agents", "where": "Agent Lab → New agent (one-click install planned)", "installs": False},
+    "agent": {"label": "Agents", "folder": "agents", "where": "Agent Lab → Store", "installs": True},
     "world": {"label": "Worlds", "folder": "worlds", "where": "Worlds, via a map block in chat (one-click install planned)", "installs": False},
     "voice": {"label": "Voices", "folder": "voices", "where": "Settings → Speech → Describe (one-click install planned)", "installs": False},
     "app": {"label": "Apps", "folder": "apps", "where": "Studio → New project (one-click install planned)", "installs": False},
@@ -90,7 +90,7 @@ def add(kind: str, repo: str, ref: str = "main", name: str = "") -> dict:
 def _register(entry: dict):
     """Hand the repository to the picker that can install from it, when one exists."""
     try:
-        if entry["kind"] in ("theme", "screensaver", "template"):
+        if entry["kind"] in ("theme", "screensaver", "template", "agent"):
             import gallery
             if entry["kind"] in gallery.KINDS:
                 gallery.add_source(entry["kind"], entry["repo"], entry["ref"])
@@ -112,7 +112,7 @@ def remove(rid: str):
         del stats[rid]
         db.kv_set("family_stats", stats)
     try:
-        if entry["kind"] in ("theme", "screensaver", "template"):
+        if entry["kind"] in ("theme", "screensaver", "template", "agent"):
             import gallery
             gallery.remove_source(re.sub(r"[^a-z0-9]+", "-", entry["repo"].lower()).strip("-"))
     except (KeyError, ImportError):

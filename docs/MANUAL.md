@@ -490,6 +490,12 @@ Making a share needs the owner's session (not localhost trust) and is audited.
 Network → **Share host** names a host that reaches this machine without Access or login in front: `share.shellb.app`
 (set up 2026-10-10) goes through `hub-shellb-edge`, which serves only the app shell, `/assets/*`, `/vendor/*` and
 `/api/share/*` with cookies stripped; links are built on it.
+
+**Access on phones.** When the Access session runs out, every request gets a redirect to Cloudflare's login, which a
+fetch can't follow. `ui/src/net.ts` (`reloadIfEdgeLogin`) spots that (the redirect, or a 401/403 on `/api/auth/me`,
+which Shell:B itself always answers with 200) and reloads the page so Access can sign in, instead of showing
+"Can't reach Shell:B" forever. The manifest link carries `crossorigin="use-credentials"`, since browsers fetch it
+without cookies otherwise and Access turns that away, which stops phones installing the app.
 The shared page renders Markdown and sandboxes HTML/SVG exactly like the owner's view, and makes no other API calls.
 
 ## Worlds

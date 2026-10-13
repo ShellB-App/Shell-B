@@ -42,6 +42,7 @@ const receiveShare = async (request) => {
 };
 
 // Shown when Shell:B can't be reached and this device has never cached the app (first visit, or cleared site data).
+// Its probe doesn't follow redirects: a Cloudflare Access login redirect is an answer too, and the reload signs in.
 const offlinePage = () => new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0a0d1f"><title>Shell:B · offline</title>
 <style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0a0d1f;color:#e5e7eb;font:15px/1.5 system-ui,sans-serif;padding:16px;box-sizing:border-box}
@@ -49,7 +50,7 @@ main{max-width:22rem;text-align:center}h1{font-size:18px;margin:0 0 8px}p{color:
 button{font:inherit;color:#fff;background:#7c3aed;border:0;border-radius:10px;padding:8px 18px;cursor:pointer}</style></head>
 <body><main><h1>Can’t reach Shell:B</h1><p>The Spark may be asleep, restarting or on another network. This page reloads by itself when it answers.</p>
 <button onclick="location.reload()">Try again</button></main>
-<script>setInterval(()=>fetch('/api/auth/me',{cache:'no-store'}).then(()=>location.reload(),()=>{}),5000);addEventListener('online',()=>location.reload())</script>
+<script>setInterval(()=>fetch('/api/auth/me',{cache:'no-store',redirect:'manual'}).then(()=>location.reload(),()=>{}),5000);addEventListener('online',()=>location.reload())</script>
 </body></html>`, { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
 
 self.addEventListener('fetch', (event) => {

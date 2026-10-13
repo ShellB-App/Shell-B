@@ -7,6 +7,24 @@
   },
   {
     "date": "2026-10-13",
+    "area": "Agents",
+    "title": "Agent Store: install ready-made agents in one click",
+    "summary": "The Agent Lab has a Store with ready-made agents from the Shell:B Agents collection on GitHub: Scribe for editing, Tutor for studying, Quartermaster for the household, Navigator for trips, Gamemaster for tabletop games and Chronicler for journaling. Search them or filter by topic, read what each one can use, and press Install: the agent joins your agent menu and runs on your own model, never a cloud one. More agents in the agent menu, and the phone's agent sheet, have a Browse the Agent Store link. Agent repositories added in Settings → Community show up in the Store too."
+  },
+  {
+    "date": "2026-10-13",
+    "area": "Chat",
+    "title": "The agent menu shows the agents you use, with the rest under More agents",
+    "summary": "The agent menu above the message box now lists your six most-used agents instead of every agent at once. More agents opens the full list with a search box; pin agents there to choose exactly which ones the menu shows, or go back to the most-used ones. Cloud agents stay under Cloud unless you pin them. On a phone, the agent sheet gains a search box. The choice is remembered per browser."
+  },
+  {
+    "date": "2026-10-13",
+    "area": "Chat",
+    "title": "The new chat page shows what Shell:B can do",
+    "summary": "Below the agent's starter cards, a new chat now has a What Shell:B can do section with three tabs. Try something offers everyday tasks (prepare for a job interview, polish a cover letter, identify a sea creature, step back into the Neolithic, get notes on your writing, research a topic, summarise a document, make a picture, get a quick answer); each one switches the chat to the agent best at it and sends. Agents lists every agent with what it is for: picking one sets it for the chat and its starter cards change to match. Apps lists every app with a line on what it does, and opens it."
+  },
+  {
+    "date": "2026-10-13",
     "area": "Chat",
     "title": "Going incognito from a chat makes an incognito copy and leaves the chat alone",
     "summary": "Typing /incognito in an open chat, or the new eye button beside Fork in the chat header, now continues in an incognito copy of the chat; the chat you were in stays a normal chat. On a blank chat, /incognito still starts a new incognito chat. A chat started from Notes → Brainstorm, or after opening another chat, is no longer made incognito by an incognito draft left over from earlier."

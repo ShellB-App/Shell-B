@@ -1,15 +1,15 @@
-// Community gallery (server/gallery.py): themes and screensavers published on GitHub, browsed from Settings →
-// Appearance and installed with one click. Themes arrive as data and go through the server's validator; screensavers
+// Community gallery (server/gallery.py): themes, screensavers, templates and agents published on GitHub, browsed from
+// Settings → Appearance, the Studio and the Agent Lab's Store, and installed with one click. Themes arrive as data and go through the server's validator; screensavers
 // become Screensaver projects in the Studio. Installing needs the owner (or the admin key), browsing doesn't.
 import { useCallback, useEffect, useState } from 'react';
 import clsx from 'clsx';
-import { Check, Download, ExternalLink, Globe, MonitorCheck, MonitorPlay, RefreshCw } from 'lucide-react';
+import { Check, Download, ExternalLink, Globe, MessageSquare, MonitorCheck, MonitorPlay, RefreshCw, Search } from 'lucide-react';
 import { api, req } from '../api';
-import type { Settings } from '../types';
+import type { Agent, Settings, ToolInfo } from '../types';
 import { customInfo, loadCustomThemes, setTheme, useTheme, type CustomTheme, type Mode } from '../themes';
 import { PREVIEW_SAVER, loadAmbience, saveAmbience, useAmbience } from '../ambience';
 import { Thumb } from './ThemePicker';
-import { Modal, btn } from './common';
+import { AgentAvatar, Modal, btn } from './common';
 import { toast } from './toast';
 import { t as tx } from '../i18n';
 
@@ -18,10 +18,12 @@ interface Item { id: string; name: string; blurb: string; author: string; author
 export interface GalleryTheme extends Item { mode: Mode; theme: CustomTheme }
 export interface GallerySaver extends Item { clockSafe: boolean; preview: string | null; files: string[] }
 export interface GalleryTemplate extends Item { kind: string; entry: string; brief: string; preview: string | null; files: string[] }
+export interface GalleryAgent extends Item { title: string; avatar: string; color: [string, string]; needs: string[]; model: string;
+  effort: string; tools: string[] }
 interface Source<T> { source: string; repo: string; sha: string; fetched: number; url: string; items: T[] }
 interface Listing<T> { kind: string; sources: Source<T>[]; errors: string[] }
 
-function useListing<T>(kind: 'theme' | 'screensaver' | 'template', open = true) {
+function useListing<T>(kind: 'theme' | 'screensaver' | 'template' | 'agent', open = true) {
   const [data, setData] = useState<Listing<T> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -269,6 +271,100 @@ export function TemplatePicker({ kind, name, onCreated }: { kind: string; name: 
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Agent Lab → Store: ready-made agents from the community repositories. Installing adds the agent to the roster and
+ *  to the agent menu; it runs on this Shell:B's own model (server/gallery.py install_agent). Written for someone who has
+ *  never opened the Agent Lab: what the agent is for, what it can use, one button. */
+export function AgentStore({ agents, tools, onInstalled, onOpen, onChat }: {
+  agents: Agent[];
+  tools: ToolInfo[];
+  onInstalled: (id: string) => void;
+  onOpen: (id: string) => void;
+  onChat?: (id: string) => void;
+}) {
+  const { data, loading, error, load } = useListing<GalleryAgent>('agent');
+  const [busy, setBusy] = useState('');
+  const [query, setQuery] = useState('');
+  const [tag, setTag] = useState('');
+  const toolName = (id: string) => tools.find(t => t.id === id)?.displayName ?? id.replace(/_/g, ' ');
+  const all = (data?.sources ?? []).flatMap(s => s.items.map(it => ({ source: s.source, it })));
+  const tags = [...new Set(all.flatMap(x => x.it.tags))].sort();
+  const q = query.trim().toLowerCase();
+  const shown = all.filter(({ it }) => (!tag || it.tags.includes(tag))
+    && (!q || `${it.name} ${it.title} ${it.blurb} ${it.tags.join(' ')}`.toLowerCase().includes(q)));
+  const install = async (source: string, it: GalleryAgent) => {
+    setBusy(`${source}:${it.id}`);
+    try {
+      const res = await req<{ agent: Agent; notes: string[] }>('/api/gallery/install', { method: 'POST', body: JSON.stringify({ kind: 'agent', source, id: it.id }) });
+      onInstalled(res.agent.id);
+      toast(res.notes.length ? `${tx('{name} is in your agent menu.', { name: it.name })} ${res.notes.join(' ')}` : tx('{name} is in your agent menu.', { name: it.name }));
+      load();
+    } catch (e) { installError(e); } finally { setBusy(''); }
+  };
+  return (
+    <div className="space-y-3">
+      <Header title={tx('Agent Store')} hint={tx('Ready-made agents for writing, studying, planning, games and more')} data={data} loading={loading} onRefresh={() => load(true)} />
+      <p className="text-[11.5px] leading-relaxed text-[var(--text-secondary)]">
+        {tx('Each agent is a set of instructions that runs on your own model, here on this machine. Installing one adds it to your agent menu; you can change or delete it any time.')}
+      </p>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <label className="flex-1 min-w-[12rem] flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-subtle)]">
+          <Search className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)]" />
+          <input value={query} onChange={e => setQuery(e.target.value)} placeholder={tx('Search agents')} aria-label={tx('Search agents')}
+            className="w-full min-w-0 bg-transparent text-sm placeholder-[var(--text-muted)] focus:outline-none" />
+        </label>
+        {tags.length > 1 && ['', ...tags].map(tg => (
+          <button key={tg || 'all'} onClick={() => setTag(tg)} aria-pressed={tag === tg}
+            className={clsx('px-2 py-1 rounded-full text-[11px] border transition',
+              tag === tg ? 'border-[var(--accent)] bg-[var(--accent)]/15 text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-muted)] hover:bg-[var(--bg-hover)]')}>
+            {tg ? tx(tg) : tx('All')}
+          </button>
+        ))}
+      </div>
+      <Notes data={data} error={error} loading={loading} empty={tx('No agents published yet. Make one in the Agent Lab and share it on GitHub.')} />
+      {data && all.length > 0 && shown.length === 0 && <div className="text-[11px] text-[var(--text-muted)]">{tx('No agent matches')}</div>}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+        {shown.map(({ source, it }) => {
+          const key = `${source}:${it.id}`;
+          const mine = it.installed ? agents.find(a => a.id === it.installed) : undefined;
+          const update = !!mine && it.installedVersion !== it.version;
+          return (
+            <div key={key} className={clsx('rounded-xl border p-3 bg-[var(--bg-tertiary)] flex flex-col gap-2', mine ? 'border-[var(--accent)]/50' : 'border-[var(--border-subtle)]')}>
+              <div className="flex items-start gap-2.5">
+                <AgentAvatar agent={{ avatar: it.avatar, color: it.color } as Agent} size={36} className="rounded-lg" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13px] font-semibold truncate">{it.name} <span className="font-normal text-[var(--text-muted)]">· {it.title}</span></div>
+                  <div className="mt-0.5 text-[11.5px] leading-snug text-[var(--text-secondary)]">{it.blurb}</div>
+                </div>
+              </div>
+              {it.tools.length > 0 && (
+                <div className="text-[10.5px] text-[var(--text-muted)] leading-snug">
+                  {tx('Can use: {tools}', { tools: it.tools.map(toolName).join(', ') })}
+                </div>
+              )}
+              <div className="mt-auto flex items-center gap-2">
+                <Credit it={it} />
+                <div className="ml-auto flex gap-1.5 shrink-0">
+                  {mine && onChat && !update && (
+                    <button className={btn.subtle} onClick={() => onChat(mine.id)}><MessageSquare className="w-3.5 h-3.5" />{tx('Chat')}</button>
+                  )}
+                  {mine && !update && (
+                    <button className={btn.ghost} onClick={() => onOpen(mine.id)}>{tx('Edit')}</button>
+                  )}
+                  {(!mine || update) && (
+                    <button className={btn.primary} disabled={busy === key} onClick={() => install(source, it)}>
+                      <Download className="w-3.5 h-3.5" />{update ? tx('Update') : tx('Install')}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
