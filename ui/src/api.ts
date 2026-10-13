@@ -6,7 +6,7 @@ import type {
   ScheduledTask, ScheduledRun, ScheduleDraft, ResearchBoard, ResearchBoardDetail, ResearchItem, NotebookMessage, NotebookCitation, DiscoverHit, StudioType, MegaPlan, MegaPlanDetail, ProjectTodo, ProjectTodoList, SshHost,
   ActivityItem, ActivitySummary, AskAnswer, PendingApproval, CodexCollection, CodexEntry, CodexIndex,
   CliAgent, TtsVoice, Meeting, MeetingSpeaker, MeetingUtterance, MeetingSummaryData, MeetingSummaryItem,
-  BackupInfo, ChangelogEntry, BackupCreateRequest, BackupRestoreResult,
+  BackupInfo, ChangelogEntry, Onboarding, BackupCreateRequest, BackupRestoreResult,
   ChatHit, UsageReport } from './types';
 
 /** The admin key (data/admin.key on the server) unlocks MCP commands, API keys and cloud settings. */
@@ -112,6 +112,8 @@ export const api = {
   changePassword: (current: string, password: string) => req('/api/auth/password', { method: 'POST', body: json({ current, password }) }),
   authRateLimitStatus: () => req<{ ip: string; recentIpFailures: number; maxIpFailuresBeforeLock: number; recentGlobalFailures: number; globalLockActive: boolean }>('/api/auth/status'),
   changelog: () => req<{ entries: ChangelogEntry[]; error: string }>('/api/changelog'),
+  onboarding: () => req<Onboarding>('/api/onboarding'),
+  onboardingSeen: (what: 'welcome' | 'news') => req('/api/onboarding/seen', { method: 'POST', body: json({ what }) }),
   backups: () => req<BackupInfo[]>('/api/backup'),
   createBackup: (b?: BackupCreateRequest) => req<BackupInfo>('/api/backup', { method: 'POST', body: json(b ?? {}) }),
   restoreBackup: (id: string) => req<BackupRestoreResult>(`/api/backup/${encodeURIComponent(id)}/restore`, { method: 'POST' }),

@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-10-13",
+    "area": "Chat",
+    "title": "A short welcome on your first visit, and What's new after an update",
+    "summary": "The first time someone opens Shell:B, a short welcome (three screens, skippable) says what it is, how to pick an agent and where to start; its last button leads to What Shell:B can do on the new chat page. After an update, the new chat page shows a small What's new card once, with up to three plain-language lines; See all changes opens Settings → Changelog. Both are remembered on the server for each person, so they don't come back on another device. Changelog entries reach the card through an optional news line in docs/changelog.json."
+  },
+  {
+    "date": "2026-10-13",
     "area": "Kiosk",
     "title": "New kiosk wallpapers: eight landscapes in place of the old schematics",
     "summary": "Kiosk mode's wallpapers are now drawn scenes: mountains at dusk (the new default), a moonlit forest, dawn at sea, a kelp forest with a whale, desert dusk, the northern lights, the Lascaux frieze on a torchlit cave wall, and plain graphite. They keep the horizon in view on any screen shape, the picker shows each wallpaper itself as its thumbnail, and desktop icon labels stay white and readable on every wallpaper and theme. A wallpaper you'd picked from the old set switches to the new default."
@@ -9,6 +15,7 @@
     "date": "2026-10-13",
     "area": "Agents",
     "title": "Agent Store: install ready-made agents in one click",
+    "news": "The Agent Lab has a Store of ready-made agents, such as an editor, a tutor and a trip planner, to install in one click.",
     "summary": "The Agent Lab has a Store with ready-made agents from the Shell:B Agents collection on GitHub: Scribe for editing, Tutor for studying, Quartermaster for the household, Navigator for trips, Gamemaster for tabletop games and Chronicler for journaling. Search them or filter by topic, read what each one can use, and press Install: the agent joins your agent menu and runs on your own model, never a cloud one. More agents in the agent menu, and the phone's agent sheet, have a Browse the Agent Store link. Agent repositories added in Settings → Community show up in the Store too."
   },
   {
@@ -21,6 +28,7 @@
     "date": "2026-10-13",
     "area": "Chat",
     "title": "The new chat page shows what Shell:B can do",
+    "news": "A new chat now shows what Shell:B can do: everyday tasks to try, and what each agent and app is for.",
     "summary": "Below the agent's starter cards, a new chat now has a What Shell:B can do section with three tabs. Try something offers everyday tasks (prepare for a job interview, polish a cover letter, identify a sea creature, step back into the Neolithic, get notes on your writing, research a topic, summarise a document, make a picture, get a quick answer); each one switches the chat to the agent best at it and sends. Agents lists every agent with what it is for: picking one sets it for the chat and its starter cards change to match. Apps lists every app with a line on what it does, and opens it."
   },
   {
@@ -57,6 +65,7 @@
     "date": "2026-10-11",
     "area": "Agents",
     "title": "Thalassa, a marine biologist; species lists, survey diversity, literature and photo-ID checks",
+    "news": "Thalassa, a marine biologist, can help you identify sea creatures and find the research on them.",
     "summary": "New built-in agent Thalassa (🐙) for marine science. The marine tool gains: match, which checks a species list or survey sheet (CSV, TSV, TXT or Excel, French headers too) against WoRMS for misspellings, outdated names and homonyms and saves the corrected table; diversity, with richness, Shannon, Pielou, Simpson and Chao1 per site and pooled; literature, which finds papers through OpenAlex with authors, journal, citations, DOI and open-access links; and verify, which checks whether candidate species for a photo or sighting have been recorded near where it was taken. Species cards now list the Habitats Directive, CITES, IUCN Red List and other policy lists. Type /species in the composer to use it from any chat."
   },
   {
@@ -69,6 +78,7 @@
     "date": "2026-10-11",
     "area": "Languages",
     "title": "The whole interface in French",
+    "news": "Shell:B can speak French: choose the language in Settings → Languages.",
     "summary": "Research, Agent Lab, Tools & Connectors (API keys, guests, connectors, discover, skills, screen, webhooks), Models and the Model Store, Fleet, Wiki, Radio and the DJ, Shopping, Circles, Secretary, Scheduled, Mega plans, Assets, Generate, Notes, Me, Offline data, the kiosk and the smaller cards follow the interface language. About 1,800 more strings; the catalog holds 3,800."
   },
   {

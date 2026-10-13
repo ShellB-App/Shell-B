@@ -5,11 +5,13 @@ import type { Agent } from '../types';
 import type { Suggestion } from '../suggestions';
 import { APPS, GROUP_LABEL, type AppGroup, type AppId } from './apps';
 import { AgentAvatar } from './common';
+import { useOnboarding, Welcome, WhatsNew } from './Onboarding';
 
 /**
  * The empty chat: the agent's own starter cards, then "What Shell:B can do" for people who don't know yet. Three tabs:
  * Try something (everyday tasks, each answered by the agent best at it), Agents (who is who) and Apps (everything on the
- * rail and in All apps). Everyone sees the same page.
+ * rail and in All apps). Everyone sees the same page, with the first-visit welcome and the What's new card on top of it
+ * (Onboarding.tsx).
  */
 
 interface Starter { title: string; blurb: string; prompt: string; agent: string }
@@ -47,7 +49,7 @@ type Tab = 'try' | 'agents' | 'apps';
 
 const card = 'sf-card rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-hover)] hover:border-[var(--border-strong)] transition group text-left';
 
-export function NewChatHome({ agent, agents, quick, greeting, onSend, onStart, onSelectAgent, onOpenApp }: {
+export function NewChatHome({ agent, agents, quick, greeting, onSend, onStart, onSelectAgent, onOpenApp, onOpenChangelog }: {
   agent: Agent;
   agents: Agent[];
   quick: Suggestion[];
@@ -58,9 +60,13 @@ export function NewChatHome({ agent, agents, quick, greeting, onSend, onStart, o
   onStart: (agent: Agent, prompt: string) => void;
   onSelectAgent: (agent: Agent) => void;
   onOpenApp: (app: AppId) => void;
+  /** Settings → Changelog, from the What's new card */
+  onOpenChangelog: () => void;
 }) {
   const [tab, setTab] = useState<Tab>('try');
   const top = useRef<HTMLDivElement>(null);
+  const canDo = useRef<HTMLElement>(null);
+  const onboarding = useOnboarding();
 
   const showcased = agents.filter(a => !a.unavailable && !NOT_SHOWCASED.has(a.id));
   const byId = new Map(showcased.map(a => [a.id, a]));
@@ -94,6 +100,7 @@ export function NewChatHome({ agent, agents, quick, greeting, onSend, onStart, o
       <p className="text-sm text-[var(--text-secondary)] mt-2 max-w-md">
         <span className="font-medium text-[var(--text-primary)]">{agent.name}</span> · {agent.description}
       </p>
+      {onboarding.news.length > 0 && <WhatsNew news={onboarding.news} onClose={onboarding.closeNews} onSeeAll={onOpenChangelog} />}
       <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full max-w-2xl text-left">
         {quick.map(q => (
           <button key={q.title} onClick={() => onSend(q.prompt)} className={clsx(card, 'p-3.5')}>
@@ -103,7 +110,7 @@ export function NewChatHome({ agent, agents, quick, greeting, onSend, onStart, o
         ))}
       </div>
 
-      <section aria-label={t('What Shell:B can do')} className="mt-10 w-full text-left">
+      <section ref={canDo} aria-label={t('What Shell:B can do')} className="mt-10 w-full text-left scroll-mt-4">
         <div className="flex items-center gap-3 flex-wrap mb-3">
           <h2 className="text-sm font-semibold">{t('What Shell:B can do')}</h2>
           <div role="tablist" className="flex gap-1 p-0.5 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
@@ -175,6 +182,10 @@ export function NewChatHome({ agent, agents, quick, greeting, onSend, onStart, o
           </div>
         )}
       </section>
+
+      {onboarding.welcome && (
+        <Welcome onDone={onboarding.doneWelcome} onShowMe={() => { setTab('try'); canDo.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }); }} />
+      )}
 
       <p className="sf-tagline mt-8 text-[11px] text-[var(--text-muted)]">{t('Overthink. Overcomplicate. Overengineer.')}</p>
     </div>

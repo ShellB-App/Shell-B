@@ -4115,5 +4115,19 @@
  "Painted Cave": "Grotte ornée",
  "Horses, aurochs and hands from Lascaux on a torchlit limestone wall.": "Chevaux, aurochs et mains de Lascaux sur une paroi calcaire éclairée à la torche.",
  "Plain soft graphite with a little light from above.": "Un graphite doux et uni, avec un peu de lumière venue d'en haut.",
- "Load any high-resolution wallpaper image via HTTP/HTTPS URL.": "Chargez n'importe quelle image haute résolution par une URL HTTP/HTTPS."
+ "Load any high-resolution wallpaper image via HTTP/HTTPS URL.": "Chargez n'importe quelle image haute résolution par une URL HTTP/HTTPS.",
+ "Welcome to Shell:B": "Bienvenue dans Shell:B",
+ "Shell:B is an AI assistant that runs on its own computer, not in a company’s cloud. Type a question or a task in the box at the bottom, and send it.": "Shell:B est un assistant IA qui tourne sur son propre ordinateur, pas dans le cloud d’une entreprise. Écrivez une question ou une tâche dans la zone du bas, puis envoyez-la.",
+ "Agents for different jobs": "Un agent pour chaque besoin",
+ "Each agent is good at something different: writing, research, the sea, the distant past, pictures. Pick one in the agent menu by the message box, or type @ and a name.": "Chaque agent a son point fort : l’écriture, la recherche, la mer, le passé lointain, les images. Choisissez-en un dans le menu des agents près de la zone de message, ou tapez @ suivi d’un nom.",
+ "Start with an example": "Commencer par un exemple",
+ "Below each new chat, What Shell:B can do lists everyday things to try, every agent and every app. Pick one and Shell:B takes it from there.": "Sous chaque nouvelle discussion, Ce que Shell:B sait faire propose des choses du quotidien à essayer, tous les agents et toutes les applis. Choisissez-en une et Shell:B s’occupe du reste.",
+ "Step {n} of {total}": "Étape {n} sur {total}",
+ "Show me": "Montrez-moi",
+ "What's new": "Nouveautés",
+ "See all changes": "Voir toutes les nouveautés",
+ "A new chat now shows what Shell:B can do: everyday tasks to try, and what each agent and app is for.": "Une nouvelle discussion montre maintenant ce que Shell:B sait faire : des tâches du quotidien à essayer, et à quoi sert chaque agent et chaque appli.",
+ "The Agent Lab has a Store of ready-made agents, such as an editor, a tutor and a trip planner, to install in one click.": "Le Labo des agents a une Boutique d’agents prêts à l’emploi, comme un éditeur, un tuteur ou un planificateur de voyages, à installer en un clic.",
+ "Thalassa, a marine biologist, can help you identify sea creatures and find the research on them.": "Thalassa, biologiste marine, peut vous aider à identifier des animaux marins et à trouver les recherches à leur sujet.",
+ "Shell:B can speak French: choose the language in Settings → Languages.": "Shell:B parle français : choisissez la langue dans Réglages → Langues."
 }

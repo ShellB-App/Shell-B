@@ -79,7 +79,9 @@ to humans too.
    regression suite in `tests/` and type-checks the UI. CI runs the same compile, lint and type check on every pull
    request. A pull request that fails them won't be reviewed until it passes.
 2. **Shipping something a user will notice?** Add an entry at the top of `docs/changelog.json` (`date`, `area`,
-   `title`, `summary`). It feeds Settings → Changelog in the app and the notes of the next release.
+   `title`, `summary`). It feeds Settings → Changelog in the app and the notes of the next release. A change everyone
+   would notice can also have `news`: one plain sentence for the What's new card on the new chat page, shown once to
+   each person (add its French too; `tests/changelog_test.py` checks).
 3. **New UI text?** Wrap it in `t('…')` and add the French line to `ui/src/i18n/fr.json`. `tests/i18n_test.py` fails on
    any English string without a translation, and it tells you which.
 4. **Touching a route, a tool or a table?** Update the matching section of `docs/MANUAL.md` (or `docs/API.md` for
