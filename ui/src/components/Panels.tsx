@@ -1,4 +1,5 @@
 import { LOCALES, setLocalePref, t, type LocalePref } from '../i18n';
+import { LanguageSelect } from './LanguageSelect';
 import { CommunityRepos } from './CommunityRepos';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
@@ -33,6 +34,7 @@ import { PREVIEW_SAVER, PREVIEW_SPLASH, SAVER_MINUTES, SAVER_STYLES, saveAmbienc
 import { CommunitySavers } from './Gallery';
 import { isCell, type GuestPanel } from '../cell';
 import { CellAccountTab, GUEST_ENTRIES, toPanel } from './CellGuest';
+import { LanguagesSettings } from './LanguagesSettings';
 
 const SERVICE_INFO: Record<string, [string, string]> = {
   ollama: ['Ollama', 'Language models · :11434'],
@@ -95,7 +97,7 @@ interface SettingsProps {
 }
 
 // In a guest's cell the host's tabs don't exist: API keys, the network, host stats, backups and the owner's account.
-const CELL_SETTINGS = new Set<SettingsTabId>(['general', 'appearance', 'speech', 'memory', 'shortcuts', 'notifications', 'changelog', 'account', 'usage']);
+const CELL_SETTINGS = new Set<SettingsTabId>(['general', 'appearance', 'languages', 'speech', 'memory', 'shortcuts', 'notifications', 'changelog', 'account', 'usage']);
 const settingsTab = (t?: SettingsTabId): SettingsTabId => (t && (!isCell() || CELL_SETTINGS.has(t)) ? t : 'general');
 
 export function SettingsContent(p: SettingsProps) {
@@ -104,6 +106,7 @@ export function SettingsContent(p: SettingsProps) {
   const tabs = ([
     { id: 'general', label: 'General', icon: SlidersHorizontal },
     { id: 'appearance', label: 'Appearance', icon: Palette },
+    { id: 'languages', label: 'Languages', icon: Globe },
     { id: 'community', label: 'Community', icon: Library },
     { id: 'apikeys', label: 'API Keys', icon: KeyRound },
     { id: 'speech', label: 'Speech', icon: AudioLines },
@@ -131,6 +134,7 @@ export function SettingsContent(p: SettingsProps) {
       <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5">
         {tab === 'general' && <General {...p} onOpenTab={setTab} />}
         {tab === 'appearance' && <Appearance {...p} />}
+        {tab === 'languages' && <LanguagesSettings onOpenTab={setTab} />}
         {tab === 'community' && <CommunityRepos onOpenTab={setTab} />}
         {tab === 'apikeys' && <ApiKeysSettings settings={p.settings} onSaved={p.onSaved} />}
         {tab === 'speech' && <SpeechTab settings={p.settings} onSaved={p.onSaved} />}
@@ -197,10 +201,18 @@ function General({ settings, agents, models, onSaved, onOpenTab }: SettingsProps
         </select>
       </Row>
       <Row label={t('Language')} hint={t('Interface and replies. Automatic follows the browser')}>
-        <select className={btn.input} value={settings.language ?? ''} onChange={e => { const v = e.target.value as LocalePref; save({ language: v }); setLocalePref(v); }}>
-          <option value="">{t('Automatic')}</option>
-          {LOCALES.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-        </select>
+        <div className="space-y-1.5">
+          <LanguageSelect
+            value={(settings.language ?? '') as LocalePref}
+            onChange={v => {
+              save({ language: v });
+              setLocalePref(v);
+            }}
+          />
+          <button type="button" onClick={() => onOpenTab?.('languages')} className="text-xs text-sky-400 hover:underline flex items-center gap-1">
+            {t('Translation coverage & progress')} →
+          </button>
+        </div>
       </Row>
       <Row label={t('Vision fallback')} hint={t('Handles images when the agent\'s model can\'t see')}>
         <select className={btn.input} value={settings.visionFallbackModel} onChange={e => save({ visionFallbackModel: e.target.value })}>

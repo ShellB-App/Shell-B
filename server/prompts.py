@@ -170,13 +170,43 @@ CODE_TOOLCHAIN = ("Python 3.12 (pytest, hypothesis, ruff, mypy, black, numpy, pa
 
 # ── prompt builders ─────────────────────────────────────────────────────────
 
-LANGUAGES = {"en": "English", "fr": "French"}
+LANGUAGES = {
+    "en": "English",
+    "fr": "French",
+    "gd": "Scottish Gaelic",
+    "ga": "Irish",
+    "cy": "Welsh",
+    "gv": "Manx",
+    "kw": "Cornish",
+    "br": "Breton",
+    "eu": "Basque",
+    "rm": "Romansh",
+    "liv": "Livonian",
+    "smn": "Inari Sami",
+    "es": "Spanish",
+    "ja": "Japanese",
+    "uk": "Ukrainian",
+    "sr": "Serbian",
+    "sr-latn": "Serbian (Latin script)",
+    # Dead and Classical Languages
+    "la": "Latin (Classical Latin)",
+    "grc": "Ancient Greek",
+    "ang": "Old English",
+    "non": "Old Norse",
+    # Fictional and Constructed Languages
+    "eo": "Esperanto",
+    "tlh": "Klingon (tlhIngan Hol)",
+    "sjn": "Sindarin (Elvish)",
+    "val": "High Valyrian",
+    "en-pirate": "Pirate English (talk like a swaggering pirate: ahoy, aye, avast)",
+}
 
 
 def language_note(lang: str) -> str:
     """The interface language (settings `language`, a guest's config): agents answer in it unless the person writes
     in another one. English needs no note; the models default to it."""
-    name = LANGUAGES.get((lang or "").split("-")[0].lower())
+    raw = (lang or "").lower().strip()
+    name = LANGUAGES.get(raw) or LANGUAGES.get(raw.split("-")[0])
     if not name or name == "English":
         return ""
     return (f"## Language\nThis person uses Shell:B in {name}. Reply in {name} unless they write to you in another language or "

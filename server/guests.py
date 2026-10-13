@@ -210,7 +210,9 @@ def clean_config(cfg: dict | None) -> dict:
     out["tools"] = [t for t in cfg.get("tools") or [] if t in GUEST_TOOLS]
     # their own full Shell:B in a container (cells.py), the default since 2026-10-10; off = the lighter guest app (guest_app.py)
     out["cell"] = bool(cfg.get("cell", True))
-    out["language"] = cfg.get("language") if cfg.get("language") in ("en", "fr") else ""  # "" = the browser's (ui/src/i18n)
+    from prompts import LANGUAGES
+    lang = str(cfg.get("language") or "").strip()
+    out["language"] = lang if lang in LANGUAGES or lang.lower() in LANGUAGES or lang in ("en", "fr") else ""
     out["adult"] = bool(cfg.get("adult", False))  # Aphrodite in their own Shell:B: the owner's call per guest, off by default
     return out
 
