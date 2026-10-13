@@ -244,7 +244,7 @@ html[data-skin='synthfield'] .sf-card {
   transition: border-color .15s, transform .15s, background-color .15s;
 }
 html[data-skin='synthfield'] .sf-card::before {
-  content: '0' counter(sf-mission); position: absolute; top: 14px; right: 16px;
+  content: counter(sf-mission, decimal-leading-zero); position: absolute; top: 14px; right: 16px;
   font-family: 'JetBrains Mono Variable', monospace; font-size: 10px; letter-spacing: 0.1em; color: var(--text-muted);
 }
 html[data-skin='synthfield'] .sf-card::after {
