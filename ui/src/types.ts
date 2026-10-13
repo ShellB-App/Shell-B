@@ -425,7 +425,7 @@ export interface Conversation extends ConversationSummary {
 
 export interface Settings {
   /** interface and reply language: '' follows the browser (ui/src/i18n) */
-  language?: '' | 'en' | 'fr';
+  language?: string;
   defaultAgent: string;
   visionFallbackModel: string;
   utilityModel: string;
@@ -963,7 +963,7 @@ export interface BackupRestoreResult {
   safetyBackup?: BackupInfo;
 }
 
-export type SettingsTabId = 'general' | 'appearance' | 'community' | 'speech' | 'network' | 'memory' | 'shortcuts' | 'system' | 'backups' | 'account' | 'apikeys' | 'notifications' | 'changelog' | 'usage';
+export type SettingsTabId = 'general' | 'appearance' | 'languages' | 'community' | 'speech' | 'network' | 'memory' | 'shortcuts' | 'system' | 'backups' | 'account' | 'apikeys' | 'notifications' | 'changelog' | 'usage';
 
 /** server/tokens.py report(): Settings → Usage */
 export interface UsageRow { name: string; prompt: number; completion: number; turns: number; cost?: number }
