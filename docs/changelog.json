@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-10-13",
+    "area": "Kiosk",
+    "title": "New kiosk wallpapers: eight landscapes in place of the old schematics",
+    "summary": "Kiosk mode's wallpapers are now drawn scenes: mountains at dusk (the new default), a moonlit forest, dawn at sea, a kelp forest with a whale, desert dusk, the northern lights, the Lascaux frieze on a torchlit cave wall, and plain graphite. They keep the horizon in view on any screen shape, the picker shows each wallpaper itself as its thumbnail, and desktop icon labels stay white and readable on every wallpaper and theme. A wallpaper you'd picked from the old set switches to the new default."
+  },
+  {
+    "date": "2026-10-13",
     "area": "Agents",
     "title": "Agent Store: install ready-made agents in one click",
     "summary": "The Agent Lab has a Store with ready-made agents from the Shell:B Agents collection on GitHub: Scribe for editing, Tutor for studying, Quartermaster for the household, Navigator for trips, Gamemaster for tabletop games and Chronicler for journaling. Search them or filter by topic, read what each one can use, and press Install: the agent joins your agent menu and runs on your own model, never a cloud one. More agents in the agent menu, and the phone's agent sheet, have a Browse the Agent Store link. Agent repositories added in Settings → Community show up in the Store too."
