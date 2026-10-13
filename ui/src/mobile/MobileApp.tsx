@@ -940,6 +940,10 @@ export function MobileApp() {
                   onStart={startWith}
                   onSelectAgent={selectAgent}
                   onOpenApp={openApp}
+                  onOpenChangelog={() => {
+                    setSettingsTab('changelog');
+                    setModal('settings');
+                  }}
                 />
               ) : (
                 <div className="max-w-xl mx-auto space-y-5 pb-4">

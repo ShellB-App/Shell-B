@@ -977,4 +977,6 @@ export interface UsageReport {
   costs: Record<string, { in?: number; out?: number }>;
 }
 
-export interface ChangelogEntry { date: string; area: string; title: string; summary: string }
+export interface ChangelogEntry { date: string; area: string; title: string; summary: string; news: string }
+/** server/onboarding.py: the first-visit welcome still to show, and the What's new lines not seen yet */
+export interface Onboarding { welcome: boolean; news: { date: string; title: string; news: string }[] }

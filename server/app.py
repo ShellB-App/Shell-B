@@ -103,6 +103,7 @@ import roster
 import sysinfo
 import network
 import changelog
+import onboarding
 import memory
 import episodes
 import chatmail
@@ -246,6 +247,7 @@ app.include_router(composer.router)
 app.include_router(sysinfo.router)
 app.include_router(network.router)
 app.include_router(changelog.router)
+app.include_router(onboarding.router)
 app.include_router(asset_libs.router)
 app.include_router(groups.router)
 app.include_router(docview.router)

@@ -902,7 +902,8 @@ export function App() {
             onScroll={e => { const el = e.currentTarget; setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 80); }}>
             {messages.length === 0 ? (
               <NewChatHome agent={agent} agents={chatAgents} quick={quick} greeting={greeting()}
-                onSend={prompt => send(prompt, [])} onStart={startWith} onSelectAgent={selectAgent} onOpenApp={openApp} />
+                onSend={prompt => send(prompt, [])} onStart={startWith} onSelectAgent={selectAgent} onOpenApp={openApp}
+                onOpenChangelog={() => { setSettingsTab('changelog'); setModal('settings'); }} />
             ) : (
               <div className="max-w-3xl mx-auto px-4 py-6 space-y-7">
                 {foldSummarized(messages).map(m => (
