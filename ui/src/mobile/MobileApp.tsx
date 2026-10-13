@@ -58,6 +58,7 @@ import { CircleShareHost } from '../components/CircleCards';
 import { MobileAppsSheet } from './MobileAppsSheet';
 import { MobileArtifactSheet } from './MobileArtifactSheet';
 import { DocPanel } from '../components/DocPanel';
+import { NewChatHome } from '../components/NewChatHome';
 import { onDocView, type DocTarget } from '../docView';
 import { MobileAgentPicker } from './MobileAgentPicker';
 import { MobileRadioBar } from './MobileRadioBar';
@@ -504,6 +505,21 @@ export function MobileApp() {
     [conv, setConv]
   );
 
+  // a "Try something" card on the empty chat: the chat switches to the card's agent, and the prompt goes once it has
+  const [pendingStart, setPendingStart] = useState<{ agentId: string; prompt: string } | null>(null);
+  const startWith = useCallback(
+    (a: Agent, prompt: string) => {
+      selectAgent(a);
+      setPendingStart({ agentId: a.id, prompt });
+    },
+    [selectAgent]
+  );
+  useEffect(() => {
+    if (!pendingStart || agent?.id !== pendingStart.agentId) return;
+    setPendingStart(null);
+    send(pendingStart.prompt, []);
+  }, [pendingStart, agent, send]);
+
   const moveToGroup = useCallback(
     async (convId: string, gid: string | null) => {
       await api.patchConversation(convId, { groupId: gid });
@@ -908,38 +924,16 @@ export function MobileApp() {
               }}
             >
               {messages.length === 0 ? (
-                <div className="max-w-md mx-auto min-h-full flex flex-col items-center justify-center text-center py-6 animate-fade-in">
-                  <AgentAvatar agent={agent} size={48} className="rounded-2xl shadow-lg mb-3" />
-                  <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">
-                    {greeting()}.
-                  </h1>
-                  <p className="text-xs text-[var(--text-secondary)] mt-1 max-w-xs">
-                    <span className="font-medium text-[var(--text-primary)]">{agent.name}</span> ·{' '}
-                    {agent.description}
-                  </p>
-
-                  {/* Suggestion Chips */}
-                  <div className="mt-6 grid grid-cols-1 gap-2 w-full text-left">
-                    {quick.map(q => (
-                      <button
-                        key={q.title}
-                        onClick={() => send(q.prompt, [])}
-                        className="p-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-hover)] text-left transition group"
-                      >
-                        <div className="text-xs font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent-soft)] transition">
-                          {q.title}
-                        </div>
-                        <div className="text-[11px] text-[var(--text-secondary)] mt-0.5 line-clamp-2 leading-relaxed">
-                          {q.prompt}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-
-                  <p className="mt-6 text-[10px] text-[var(--text-muted)]">
-                    {t('Overthink. Overcomplicate. Overengineer.')}
-                  </p>
-                </div>
+                <NewChatHome
+                  agent={agent}
+                  agents={chatAgents}
+                  quick={quick}
+                  greeting={greeting()}
+                  onSend={prompt => send(prompt, [])}
+                  onStart={startWith}
+                  onSelectAgent={selectAgent}
+                  onOpenApp={openApp}
+                />
               ) : (
                 <div className="max-w-xl mx-auto space-y-5 pb-4">
                   {foldSummarized(messages).map(m => (
