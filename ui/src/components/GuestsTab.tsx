@@ -1,4 +1,5 @@
-import { LOCALES, t } from '../i18n';
+import { LOCALES, t, type LocalePref } from '../i18n';
+import { LanguageSelect } from './LanguageSelect';
 import { useCallback, useEffect, useState } from 'react';
 import { Check, ChevronDown, Copy, Flag, Heart, KeyRound, Link2, Loader2, LockOpen, LogOut, Mail, Pause, Play, Plus, ShieldOff, Trash2, Users } from 'lucide-react';
 import { fmtBytes, req } from '../api';
@@ -16,7 +17,7 @@ const LIMIT_FIELDS = [
   ['audioPerDay', 'Audio clips a day'], ['storageMB', 'Space (MB)'],
 ] as const;
 type LimitKey = typeof LIMIT_FIELDS[number][0];
-type Config = Record<LimitKey, number> & { agents: string[]; tools: string[]; cell: boolean; language?: '' | 'en' | 'fr'; adult?: boolean };
+type Config = Record<LimitKey, number> & { agents: string[]; tools: string[]; cell: boolean; language?: string; adult?: boolean };
 interface Usage { turns: number; tokens: number; images: number; audio: number; reports: number }
 interface Guest {
   id: string; name: string; created: number; disabled: boolean; config: Config; lastSeen: number | null; today: Usage;
@@ -375,14 +376,15 @@ function Limits({ guest, onSave }: { guest: Guest; onSave: (c: Partial<Config>) 
           </label>
         ))}
       </div>
-      <label className="block text-[11px] text-[var(--text-secondary)] max-w-xs">
-        {t('Language')}
-        <select className={btn.input + ' mt-1'} value={cfg.language ?? ''} onChange={e => setCfg(c => ({ ...c, language: e.target.value as Config['language'] }))}>
-          <option value="">{t('Their browser\'s')}</option>
-          {LOCALES.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-        </select>
+      <div className="block text-[11px] text-[var(--text-secondary)] max-w-xs space-y-1">
+        <span>{t('Language')}</span>
+        <LanguageSelect
+          value={(cfg.language ?? '') as LocalePref}
+          onChange={lang => setCfg(c => ({ ...c, language: lang }))}
+          autoLabel={t("Their browser's")}
+        />
         <span className="block mt-1 text-[var(--text-muted)]">{t('Their interface and their agents\' replies. In their own Shell:B it is the starting choice; they can change it in Settings.')}</span>
-      </label>
+      </div>
       <div className="flex items-center justify-between">
         <span className="text-[11px] text-[var(--text-muted)]">{t('0 = no limit. {memories} memories, {v0} tokens today.', { memories: guest.memories, v0: guest.today.tokens.toLocaleString() })}</span>
         <button className={btn.subtle} onClick={() => onSave(cfg)}>{t('Save limits')}</button>
