@@ -48,6 +48,7 @@ import { Feeds } from '../components/Feeds';
 import { MapsApp } from '../maps/MapsApp';
 import { RadioApp } from '../radio/RadioApp';
 import { AgentLab } from '../components/AgentLab';
+import { OPEN_AGENT_STORE } from '../agentPicks';
 import { FormFactorSwitcher } from '../mobile/FormFactorSwitcher';
 import { isThemeId, nextTheme, setTheme as applyTheme } from '../themes';
 
@@ -142,6 +143,12 @@ export function KioskApp() {
   const [kioskLocked, setKioskLocked] = useState(() => /[?&]lock=1/.test(location.search));
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [modal, setModal] = useState<null | 'agents' | 'tools' | 'settings' | 'palette'>(null);
+  // "Browse the Agent Store" in the agent menu: open the Agent Lab, which switches itself to the Store
+  useEffect(() => {
+    const on = () => setModal('agents');
+    window.addEventListener(OPEN_AGENT_STORE, on);
+    return () => window.removeEventListener(OPEN_AGENT_STORE, on);
+  }, []);
   const [settingsTab, setSettingsTab] = useState<SettingsTabId>(() => {
     if (typeof window !== 'undefined') {
       const t = new URLSearchParams(window.location.search).get('tab');

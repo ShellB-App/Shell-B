@@ -1,5 +1,6 @@
 """Community gallery: a fetched repository becomes a catalogue, themes install through the validator, screensavers
-become sandboxed Studio projects with only the folder's allowed files, templates start new projects, installing needs the owner."""
+become sandboxed Studio projects with only the folder's allowed files, templates start new projects, agents join the
+roster as plain personas on a local model, installing needs the owner."""
 import asyncio
 import json
 import os
@@ -21,6 +22,11 @@ THEME = {"name": "Testpool", "blurb": "A test theme", "mode": "light", "author":
          "inks": ["#0f7f73", "#2c6fb0"], "fonts": {"display": "sora", "body": "sora"}, "shape": "round",
          "backdrop": {"sky": ["#f4f9f6", "#cfe4dc"], "horizon": "waves", "horizonColor": "#9fcabd"},
          "particles": {"kind": "bubbles", "colors": ["#ffffff"], "density": 0.7}}
+AGENT = {"name": "Penpal", "title": "Letter writer", "avatar": "✉", "color": ["#7c2d12", "#b45309"],
+         "description": "Writes letters with you.", "systemPrompt": "You are Penpal. " + "You help people write warm, clear letters. " * 4,
+         "model": "default", "needs": ["tools"], "temperature": 7, "effort": "low",
+         "tools": ["web_search", "no_such_tool", "web_search"], "author": "Tester", "license": "MIT", "version": "1.3",
+         "tags": ["writing"], "adult": True, "id": "shellb", "skills": "all"}
 SAVER_HTML = "<!doctype html><html><body><canvas id=c></canvas><script>addEventListener('resize',()=>{});</script></body></html>"
 
 
@@ -50,6 +56,13 @@ def fake_repo(root: Path):
     (root / "templates" / "nokind").mkdir()
     (root / "templates" / "nokind" / "template.json").write_text(json.dumps({"name": "x", "kind": "poster", "author": "a", "license": "MIT"}))
     (root / "templates" / "nokind" / "index.html").write_text("x")
+    a = root / "agents" / "penpal"
+    a.mkdir(parents=True)
+    (a / "agent.json").write_text(json.dumps(AGENT))
+    (root / "agents" / "cloudy").mkdir()
+    (root / "agents" / "cloudy" / "agent.json").write_text(json.dumps({**AGENT, "name": "Cloudy", "model": "anthropic/claude-opus"}))
+    (root / "agents" / "short").mkdir()
+    (root / "agents" / "short" / "agent.json").write_text(json.dumps({**AGENT, "systemPrompt": "Too short."}))
     (root / ".complete").write_text("1")
 
 
@@ -64,10 +77,12 @@ class Gallery(unittest.TestCase):
         fake_repo(root)
         db.kv_set("gallery_sources", [{"id": "test-themes", "kind": "theme", "repo": cls.repo, "ref": cls.sha},
                                       {"id": "test-savers", "kind": "screensaver", "repo": cls.repo, "ref": cls.sha},
-                                      {"id": "test-templates", "kind": "template", "repo": cls.repo, "ref": cls.sha}])
+                                      {"id": "test-templates", "kind": "template", "repo": cls.repo, "ref": cls.sha},
+                                      {"id": "test-agents", "kind": "agent", "repo": cls.repo, "ref": cls.sha}])
         db.kv_set("gallery_theme", {})
         db.kv_set("gallery_screensaver", {})
         db.kv_set("gallery_template", {})
+        db.kv_set("gallery_agent", {})
         db.kv_set(gallery.INSTALLED_KEY, {})
 
     def test_listing_reads_the_pinned_repo(self):
@@ -156,6 +171,45 @@ class Gallery(unittest.TestCase):
         self.assertNotIn("installed", asyncio.run(gallery.listing("template"))["sources"][0]["items"][0])
         for r in (a, b):
             client.delete(f"/api/projects/{r['project']['id']}")
+
+    def test_agent_joins_the_roster_cleaned(self):
+        from roster import get_agents
+        res = asyncio.run(gallery.listing("agent", refresh=True))
+        items = res["sources"][0]["items"]
+        self.assertEqual([i["id"] for i in items], ["cloudy", "penpal"])   # the one with a too-short prompt is skipped
+        pen = next(i for i in items if i["id"] == "penpal")
+        self.assertEqual((pen["name"], pen["title"], pen["tools"], pen["needs"]), ("Penpal", "Letter writer", ["web_search"], ["tools"]))
+        self.assertEqual(client.post("/api/gallery/install", json={"kind": "agent", "source": "test-agents", "id": "penpal"}).status_code, 403)
+
+        res = gallery.install_agent("test-agents", "penpal")
+        a = res["agent"]
+        self.assertEqual(a["id"], "penpal")
+        self.assertEqual(a["model"], next(x for x in get_agents() if x["id"] == "shellb")["model"])   # "default" → the default agent's model
+        self.assertEqual(a["tools"], ["web_search"])
+        self.assertEqual(a["temperature"], 2.0)
+        for k in ("adult", "skills", "needs"):
+            self.assertNotIn(k, a)
+        self.assertIn("no_such_tool", " ".join(res["notes"]))
+        self.assertEqual(a["community"]["version"], "1.3")
+        self.assertTrue(any(x["id"] == "penpal" for x in get_agents()))
+        self.assertFalse(next(x for x in get_agents() if x["id"] == "shellb").get("community"))   # the file's id can't overwrite another agent
+
+        # an update keeps the owner's model and replaces the same agent
+        agents = get_agents()
+        next(x for x in agents if x["id"] == "penpal")["model"] = "my-own:7b"
+        db.kv_set("agents", agents)
+        again = gallery.install_agent("test-agents", "penpal")["agent"]
+        self.assertEqual((again["id"], again["model"]), ("penpal", "my-own:7b"))
+        self.assertEqual(sum(1 for x in get_agents() if x["id"] == "penpal"), 1)
+        self.assertEqual(asyncio.run(gallery.listing("agent"))["sources"][0]["items"][1]["installed"], "penpal")
+
+        # a cloud model is never taken from a file; a named local model only when it is installed
+        cloudy = gallery.install_agent("test-agents", "cloudy")["agent"]
+        self.assertFalse(cloudy["model"].startswith("anthropic/"))
+        self.assertEqual(cloudy["id"], "cloudy")
+        client.delete("/api/agents/cloudy")
+        client.delete("/api/agents/penpal")
+        self.assertIsNone(asyncio.run(gallery.listing("agent"))["sources"][0]["items"][1]["installed"])
 
     def test_sources(self):
         src = gallery.add_source("theme", "https://github.com/Some-One/Their-Themes.git")
