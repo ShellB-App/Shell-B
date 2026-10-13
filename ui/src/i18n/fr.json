@@ -4038,8 +4038,6 @@
  "Every string passes the checks": "Toutes les chaînes passent les vérifications",
  "Try something": "Essayer",
  "What Shell:B can do": "Ce que Shell:B sait faire",
- "Show what Shell:B can do": "Voir ce que Shell:B sait faire",
- "Hide this until you show it again": "Masquer jusqu’à ce que vous l’affichiez de nouveau",
  "Chat with {name}": "Discuter avec {name}",
  "Each agent is good at something different. Pick one for this chat, or type @ and a name to ask one for a single reply.": "Chaque agent a son domaine. Choisissez-en un pour cette discussion, ou tapez @ suivi d’un nom pour lui demander une seule réponse.",
  "Create or tune agents in the Agent Lab": "Créer ou ajuster des agents dans le Labo des agents",

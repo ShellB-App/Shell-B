@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react';
 import clsx from 'clsx';
-import { ChevronDown, ChevronUp } from 'lucide-react';
 import { t } from '../i18n';
 import type { Agent } from '../types';
 import type { Suggestion } from '../suggestions';
@@ -10,7 +9,7 @@ import { AgentAvatar } from './common';
 /**
  * The empty chat: the agent's own starter cards, then "What Shell:B can do" for people who don't know yet. Three tabs:
  * Try something (everyday tasks, each answered by the agent best at it), Agents (who is who) and Apps (everything on the
- * rail and in All apps). People who know their way around hide it once; that and the tab are remembered per browser.
+ * rail and in All apps). Everyone sees the same page.
  */
 
 interface Starter { title: string; blurb: string; prompt: string; agent: string }
@@ -45,10 +44,6 @@ const NOT_SHOWCASED = new Set(['aphrodite']);
 const APP_GROUPS: AppGroup[] = ['make', 'know', 'run'];
 
 type Tab = 'try' | 'agents' | 'apps';
-const KEY = 'shellb.home';
-interface Prefs { hidden?: boolean; tab?: Tab }
-const readPrefs = (): Prefs => { try { return JSON.parse(localStorage.getItem(KEY) || '{}') as Prefs; } catch { return {}; } };
-const savePrefs = (p: Prefs) => { try { localStorage.setItem(KEY, JSON.stringify(p)); } catch { /* private mode */ } };
 
 const card = 'sf-card rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-hover)] hover:border-[var(--border-strong)] transition group text-left';
 
@@ -64,9 +59,7 @@ export function NewChatHome({ agent, agents, quick, greeting, onSend, onStart, o
   onSelectAgent: (agent: Agent) => void;
   onOpenApp: (app: AppId) => void;
 }) {
-  const [prefs, setPrefs] = useState<Prefs>(readPrefs);
-  const tab = prefs.tab ?? 'try';
-  const update = (p: Prefs) => { const next = { ...prefs, ...p }; setPrefs(next); savePrefs(next); };
+  const [tab, setTab] = useState<Tab>('try');
   const top = useRef<HTMLDivElement>(null);
 
   const showcased = agents.filter(a => !a.unavailable && !NOT_SHOWCASED.has(a.id));
@@ -110,89 +103,78 @@ export function NewChatHome({ agent, agents, quick, greeting, onSend, onStart, o
         ))}
       </div>
 
-      {prefs.hidden ? (
-        <button onClick={() => update({ hidden: false })}
-          className="mt-8 inline-flex items-center gap-1 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition">
-          {t('Show what Shell:B can do')} <ChevronDown className="w-3.5 h-3.5" />
-        </button>
-      ) : (
-        <section aria-label={t('What Shell:B can do')} className="mt-10 w-full text-left">
-          <div className="flex items-center gap-3 flex-wrap mb-3">
-            <h2 className="text-sm font-semibold">{t('What Shell:B can do')}</h2>
-            <div role="tablist" className="flex gap-1 p-0.5 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
-              {tabs.map(x => (
-                <button key={x.id} role="tab" aria-selected={tab === x.id} onClick={() => update({ tab: x.id })}
-                  className={clsx('px-2.5 py-1 rounded-md text-xs transition',
-                    tab === x.id ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]')}>
-                  {x.label}
-                </button>
-              ))}
-            </div>
-            <button onClick={() => update({ hidden: true })} title={t('Hide this until you show it again')}
-              className="ml-auto inline-flex items-center gap-1 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition">
-              {t('Hide')} <ChevronUp className="w-3.5 h-3.5" />
+      <section aria-label={t('What Shell:B can do')} className="mt-10 w-full text-left">
+        <div className="flex items-center gap-3 flex-wrap mb-3">
+          <h2 className="text-sm font-semibold">{t('What Shell:B can do')}</h2>
+          <div role="tablist" className="flex gap-1 p-0.5 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+            {tabs.map(x => (
+              <button key={x.id} role="tab" aria-selected={tab === x.id} onClick={() => setTab(x.id)}
+                className={clsx('px-2.5 py-1 rounded-md text-xs transition',
+                  tab === x.id ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]')}>
+                {x.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {tab === 'try' && (
+          <div role="tabpanel" style={NUMBERED} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            {starters.map(s => (
+              <button key={s.title} onClick={() => onStart(s.a, t(s.prompt))} title={t(s.prompt)} className={clsx(card, 'p-3 flex flex-col')}>
+                <span className="text-xs font-semibold group-hover:text-[var(--accent-soft)] transition">{t(s.title)}</span>
+                <span className="text-[12px] text-[var(--text-secondary)] mt-0.5 flex-1">{t(s.blurb)}</span>
+                <span className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
+                  <AgentAvatar agent={s.a} size={14} className="rounded" /> {s.a.name}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {tab === 'agents' && (
+          <div role="tabpanel">
+            <p className="text-[12px] text-[var(--text-secondary)] mb-2.5">
+              {t('Each agent is good at something different. Pick one for this chat, or type @ and a name to ask one for a single reply.')}
+            </p>
+            <div style={NUMBERED} className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">{local.map(agentCard)}</div>
+            {cloud.length > 0 && (<>
+              <h3 className="text-[11px] uppercase tracking-wide text-[var(--text-muted)] mt-4 mb-2">{t('Cloud')}</h3>
+              <div style={NUMBERED} className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">{cloud.map(agentCard)}</div>
+            </>)}
+            <button onClick={() => onOpenApp('agents')} className="mt-3 text-xs text-[var(--accent-soft)] hover:underline">
+              {t('Create or tune agents in the Agent Lab')}
             </button>
           </div>
+        )}
 
-          {tab === 'try' && (
-            <div role="tabpanel" style={NUMBERED} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-              {starters.map(s => (
-                <button key={s.title} onClick={() => onStart(s.a, t(s.prompt))} title={t(s.prompt)} className={clsx(card, 'p-3 flex flex-col')}>
-                  <span className="text-xs font-semibold group-hover:text-[var(--accent-soft)] transition">{t(s.title)}</span>
-                  <span className="text-[12px] text-[var(--text-secondary)] mt-0.5 flex-1">{t(s.blurb)}</span>
-                  <span className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
-                    <AgentAvatar agent={s.a} size={14} className="rounded" /> {s.a.name}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {tab === 'agents' && (
-            <div role="tabpanel">
-              <p className="text-[12px] text-[var(--text-secondary)] mb-2.5">
-                {t('Each agent is good at something different. Pick one for this chat, or type @ and a name to ask one for a single reply.')}
-              </p>
-              <div style={NUMBERED} className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">{local.map(agentCard)}</div>
-              {cloud.length > 0 && (<>
-                <h3 className="text-[11px] uppercase tracking-wide text-[var(--text-muted)] mt-4 mb-2">{t('Cloud')}</h3>
-                <div style={NUMBERED} className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">{cloud.map(agentCard)}</div>
-              </>)}
-              <button onClick={() => onOpenApp('agents')} className="mt-3 text-xs text-[var(--accent-soft)] hover:underline">
-                {t('Create or tune agents in the Agent Lab')}
-              </button>
-            </div>
-          )}
-
-          {tab === 'apps' && (
-            <div role="tabpanel" className="space-y-4">
-              {APP_GROUPS.map(g => {
-                const apps = APPS.filter(a => a.group === g);
-                if (!apps.length) return null;
-                return (
-                  <div key={g}>
-                    <h3 className="text-[11px] uppercase tracking-wide text-[var(--text-muted)] mb-2">{t(GROUP_LABEL[g])}</h3>
-                    <div style={NUMBERED} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                      {apps.map(a => {
-                        const Icon = a.icon;
-                        return (
-                          <button key={a.id} onClick={() => onOpenApp(a.id)} className={clsx(card, 'p-3 flex gap-2.5 items-start')}>
-                            <Icon className="w-4 h-4 mt-0.5 shrink-0" style={{ color: a.tint }} />
-                            <span className="min-w-0">
-                              <span className="block text-xs font-semibold group-hover:text-[var(--accent-soft)] transition">{t(a.label)}</span>
-                              <span className="block text-[12px] text-[var(--text-secondary)] mt-0.5 line-clamp-2">{t(a.hint)}</span>
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
+        {tab === 'apps' && (
+          <div role="tabpanel" className="space-y-4">
+            {APP_GROUPS.map(g => {
+              const apps = APPS.filter(a => a.group === g);
+              if (!apps.length) return null;
+              return (
+                <div key={g}>
+                  <h3 className="text-[11px] uppercase tracking-wide text-[var(--text-muted)] mb-2">{t(GROUP_LABEL[g])}</h3>
+                  <div style={NUMBERED} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {apps.map(a => {
+                      const Icon = a.icon;
+                      return (
+                        <button key={a.id} onClick={() => onOpenApp(a.id)} className={clsx(card, 'p-3 flex gap-2.5 items-start')}>
+                          <Icon className="w-4 h-4 mt-0.5 shrink-0" style={{ color: a.tint }} />
+                          <span className="min-w-0">
+                            <span className="block text-xs font-semibold group-hover:text-[var(--accent-soft)] transition">{t(a.label)}</span>
+                            <span className="block text-[12px] text-[var(--text-secondary)] mt-0.5 line-clamp-2">{t(a.hint)}</span>
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
-      )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
       <p className="sf-tagline mt-8 text-[11px] text-[var(--text-muted)]">{t('Overthink. Overcomplicate. Overengineer.')}</p>
     </div>
