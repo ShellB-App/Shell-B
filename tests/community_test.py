@@ -57,5 +57,16 @@ class Gates(unittest.TestCase):
             community.add_source("not a repo")
 
 
+class Builtins(unittest.TestCase):
+    def test_shipped_skills_show_as_installed_in_the_hub(self):
+        import skills
+        import verify
+        verify.init()
+        self.assertEqual(skills.origin("verify-chat").get("source"), "builtin")
+        inst = community._installed().get("skill:shellb-skills:skills/verify-chat")
+        self.assertEqual((inst or {}).get("name"), "verify-chat")
+        self.assertTrue(inst.get("builtin"))
+
+
 if __name__ == "__main__":
     unittest.main()

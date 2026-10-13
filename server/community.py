@@ -440,6 +440,9 @@ def _installed() -> dict:
     for name, o in (db.kv_get("skill_origins", {}) or {}).items():
         if o.get("itemId") and (skills.SKILLS / name / "SKILL.md").is_file():
             out[o["itemId"]] = {"kind": "skill", "name": name, "sha": o.get("sha", "")}
+        elif o.get("source") == "builtin" and (skills.SKILLS / name / "SKILL.md").is_file():
+            # the skills Shell:B ships (verify-chat, audit-code) are mirrored in Shell-B-Skills: list them as installed
+            out.setdefault(f"skill:shellb-skills:skills/{name}", {"kind": "skill", "name": name, "sha": "", "builtin": True})
     import mcp_hub
     for cfg in mcp_hub.configs():
         com = cfg.get("community") or {}
@@ -541,6 +544,8 @@ async def install(item_id: str, option: str = "", values: dict | None = None, na
         target = skills.slug(name or r["name"])
         mine = skills.origin(target)
         if (skills.SKILLS / target).exists() and mine.get("itemId") != item_id:
+            if mine.get("source") == "builtin":
+                raise ValueError(f"{target!r} comes with Shell:B and is already installed; to try this copy, give it another name")
             raise ValueError(f"You already have a skill called {target!r}; give this one another name")
         h = hashlib.sha1((src / "SKILL.md").read_bytes()).hexdigest()
         await asyncio.to_thread(skills.install_tree, src, target, f"community:{r['source_id']}", enable_skill,
