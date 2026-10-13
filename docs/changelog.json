@@ -7,6 +7,12 @@
   },
   {
     "date": "2026-10-13",
+    "area": "Skills",
+    "title": "Five everyday skills in the Community Hub, and the built-in ones listed as installed",
+    "summary": "The Shell:B community skills now include playbooks for everyday work: job applications (finding openings, tailoring a CV and cover letter, interview practice), research with sources, feedback on your writing, summarizing documents and meetings, and drafting emails. Install them from Tools & Connectors → Community. The two skills that come with Shell:B, Verify chat and Audit code, are in the collection too, and the Hub now shows them as already installed instead of offering an install that would fail."
+  },
+  {
+    "date": "2026-10-13",
     "area": "Kiosk",
     "title": "New kiosk wallpapers: eight landscapes in place of the old schematics",
     "summary": "Kiosk mode's wallpapers are now drawn scenes: mountains at dusk (the new default), a moonlit forest, dawn at sea, a kelp forest with a whale, desert dusk, the northern lights, the Lascaux frieze on a torchlit cave wall, and plain graphite. They keep the horizon in view on any screen shape, the picker shows each wallpaper itself as its thumbnail, and desktop icon labels stay white and readable on every wallpaper and theme. A wallpaper you'd picked from the old set switches to the new default."
