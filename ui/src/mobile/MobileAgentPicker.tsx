@@ -1,8 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import clsx from 'clsx';
-import { Check, X, Sparkles, Cloud } from 'lucide-react';
+import { Check, X, Sparkles, Cloud, Search, Store } from 'lucide-react';
 import type { Agent } from '../types';
 import { AgentAvatar } from '../components/common';
+import { matchesAgent, openAgentStore, recordAgentPick } from '../agentPicks';
+import { t } from '../i18n';
 
 interface Props {
   open: boolean;
@@ -13,8 +15,9 @@ interface Props {
 }
 
 export function MobileAgentPicker({ open, onClose, agents, activeId, onSelect }: Props) {
+  const [query, setQuery] = useState('');
   useEffect(() => {
-    if (!open) return;
+    if (!open) { setQuery(''); return; }
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -45,13 +48,27 @@ export function MobileAgentPicker({ open, onClose, agents, activeId, onSelect }:
           </button>
         </header>
 
+        {agents.length > 6 && (
+          <label className="shrink-0 mx-3 mt-3 flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+            <Search className="w-4 h-4 shrink-0 text-[var(--text-muted)]" />
+            <input
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder={t('Search agents')}
+              aria-label={t('Search agents')}
+              className="w-full min-w-0 bg-transparent text-base placeholder-[var(--text-muted)] focus:outline-none"
+            />
+          </label>
+        )}
+
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {agents.map(a => {
+          {agents.filter(a => matchesAgent(a, query)).map(a => {
             const active = a.id === activeId;
             return (
               <button
                 key={a.id}
                 onClick={() => {
+                  recordAgentPick(a.id);
                   onSelect(a);
                   onClose();
                 }}
@@ -88,6 +105,14 @@ export function MobileAgentPicker({ open, onClose, agents, activeId, onSelect }:
             );
           })}
         </div>
+
+        <button
+          onClick={() => { onClose(); openAgentStore(); }}
+          className="shrink-0 mx-3 mb-3 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-sm font-medium hover:bg-[var(--bg-hover)]"
+        >
+          <Store className="w-4 h-4 text-[var(--accent)]" />
+          {t('Browse the Agent Store')}
+        </button>
       </div>
     </div>
   );

@@ -10,9 +10,14 @@ import {
   Cloud,
   Cpu,
   ListChecks,
+  MoreHorizontal,
+  Pin,
+  Search,
+  Store,
 } from 'lucide-react';
 import type { Agent, Effort, ModelInfo } from '../../types';
 import { AgentAvatar } from '../common';
+import { matchesAgent, openAgentStore, quickAgents, recordAgentPick, resetAgentPins, toggleAgentPin, useAgentPicks } from '../../agentPicks';
 
 export const EFFORTS: { id: Effort; label: string; hint: string }[] = [
   { id: 'off', label: 'Instant', hint: 'No deliberation' },
@@ -50,23 +55,39 @@ export function ComposerMenus({
 }: ComposerMenusProps) {
   const [menu, setMenu] = useState<'agent' | 'effort' | 'model' | null>(null);
   const [cloudOpen, setCloudOpen] = useState(false);
+  // 'quick': the pinned or most-used agents; 'all': every agent, searchable, with pins
+  const [view, setView] = useState<'quick' | 'all'>('quick');
+  const [query, setQuery] = useState('');
+  const picks = useAgentPicks();
 
   useEffect(() => {
-    if (menu !== 'agent') setCloudOpen(false);
+    if (menu !== 'agent') {
+      setCloudOpen(false);
+      setView('quick');
+      setQuery('');
+    }
   }, [menu]);
 
-  const localAgents = agents.filter(a => !a.cloud);
-  const cloudAgents = agents.filter(a => a.cloud);
+  const quick = quickAgents(agents, picks);
+  // the agent in use always shows, even when it isn't pinned (a cloud one already shows on the Cloud row)
+  if (!agent.cloud && !quick.some(a => a.id === agent.id) && agents.some(a => a.id === agent.id)) quick.unshift(agent);
+  const quickIds = quick.map(a => a.id);
+  const cloudAgents = agents.filter(a => a.cloud && !quickIds.includes(a.id));
+  const hidden = agents.length - quick.length - cloudAgents.length;
+  const found = [...agents.filter(a => !a.cloud), ...agents.filter(a => a.cloud)].filter(a => matchesAgent(a, query));
+
+  const choose = (a: Agent) => {
+    recordAgentPick(a.id);
+    onAgent(a);
+    setMenu(null);
+  };
 
   const agentItem = (a: Agent) => (
     <button
       key={a.id}
       role="menuitem"
       title={a.unavailable || a.description}
-      onClick={() => {
-        onAgent(a);
-        setMenu(null);
-      }}
+      onClick={() => choose(a)}
       className={clsx(
         'w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition',
         a.id === agent.id ? 'bg-[var(--accent)]/15' : 'hover:bg-[var(--bg-hover)]'
@@ -76,6 +97,7 @@ export function ComposerMenus({
       <span className="min-w-0 flex-1">
         <span className="block text-xs font-semibold truncate">
           {a.name} <span className="font-normal text-[var(--text-muted)]">· {a.title}</span>
+          {a.cloud && <Cloud className="inline w-3 h-3 ml-1 -mt-0.5 text-sky-400" aria-label={t('Cloud')} />}
         </span>
         <span className="block text-[11px] text-[var(--text-muted)] truncate">
           {a.unavailable || a.description}
@@ -83,6 +105,27 @@ export function ComposerMenus({
       </span>
     </button>
   );
+
+  const pinnedRow = (a: Agent) => {
+    const pinned = quickIds.includes(a.id);
+    return (
+      <div key={a.id} className="flex items-center gap-0.5">
+        <div className="min-w-0 flex-1">{agentItem(a)}</div>
+        <button
+          onClick={() => toggleAgentPin(a.id, quickIds)}
+          aria-pressed={pinned}
+          title={pinned ? t('Remove from the menu') : t('Show in the menu')}
+          aria-label={pinned ? t('Remove {name} from the menu', { name: a.name }) : t('Show {name} in the menu', { name: a.name })}
+          className={clsx(
+            'shrink-0 p-1.5 rounded-lg transition hover:bg-[var(--bg-hover)]',
+            pinned ? 'text-[var(--accent)]' : 'text-[var(--text-muted)] opacity-50 hover:opacity-100'
+          )}
+        >
+          <Pin className={clsx('w-3.5 h-3.5', pinned && 'fill-current')} />
+        </button>
+      </div>
+    );
+  };
 
   return (
     <>
@@ -102,12 +145,66 @@ export function ComposerMenus({
             <div
               className={clsx(
                 'absolute bottom-full left-0 mb-1.5 w-72 max-w-[calc(100vw-2rem)] bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-xl shadow-2xl p-1 z-40 animate-fade-in',
-                localAgents.length > 6 && 'sm:w-[36rem]' // two columns, so the whole roster fits without scrolling
+                view === 'all' && 'sm:w-80'
               )}
               role="menu"
             >
-              <div className={clsx('max-h-[min(70vh,36rem)] overflow-y-auto', localAgents.length > 6 && 'sm:grid sm:grid-cols-2 sm:gap-x-0.5')}>
-                {localAgents.map(agentItem)}
+              {view === 'all' ? (
+                <>
+                  <div className="flex items-center gap-1 p-0.5">
+                    <button
+                      onClick={() => { setView('quick'); setQuery(''); }}
+                      className="shrink-0 p-1.5 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-hover)]"
+                      aria-label={t('Back')}
+                      title={t('Back')}
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <label className="flex-1 min-w-0 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-subtle)]">
+                      <Search className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)]" />
+                      <input
+                        autoFocus
+                        value={query}
+                        onChange={e => setQuery(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && found[0]) choose(found[0]);
+                          if (e.key === 'Escape') setMenu(null);
+                        }}
+                        placeholder={t('Search agents')}
+                        aria-label={t('Search agents')}
+                        className="w-full min-w-0 bg-transparent text-xs placeholder-[var(--text-muted)] focus:outline-none"
+                      />
+                    </label>
+                  </div>
+                  <div className="max-h-[min(55vh,26rem)] overflow-y-auto mt-0.5">
+                    {found.map(pinnedRow)}
+                    {found.length === 0 && (
+                      <div className="px-2 py-3 text-center text-xs text-[var(--text-muted)]">{t('No agent matches')}</div>
+                    )}
+                  </div>
+                  <div className="mt-1 pt-1 border-t border-[var(--border-subtle)] flex items-center gap-2 px-2 py-1 text-[11px] text-[var(--text-muted)]">
+                    <span className="flex-1 min-w-0">
+                      {picks.pinned ? t('Pinned agents show in the menu') : t('The menu shows your most-used agents; pin some to choose')}
+                    </span>
+                    {picks.pinned && (
+                      <button onClick={resetAgentPins} className="shrink-0 underline hover:text-[var(--text-primary)]">
+                        {t('Use most-used')}
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    role="menuitem"
+                    onClick={() => { setMenu(null); openAgentStore(); }}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs font-semibold transition hover:bg-[var(--bg-hover)]"
+                  >
+                    <Store className="w-3.5 h-3.5 text-[var(--accent)]" />
+                    {t('Browse the Agent Store')}
+                  </button>
+                </>
+              ) : (
+              <>
+              <div className="max-h-[min(60vh,30rem)] overflow-y-auto">
+                {quick.map(agentItem)}
               </div>
               {cloudAgents.length > 0 && (
                 <div
@@ -115,7 +212,7 @@ export function ComposerMenus({
                   onMouseEnter={() => setCloudOpen(true)}
                   onMouseLeave={() => setCloudOpen(false)}
                 >
-                  {localAgents.length > 0 && <div className="my-1 border-t border-[var(--border-subtle)]" />}
+                  {quick.length > 0 && <div className="my-1 border-t border-[var(--border-subtle)]" />}
                   <button
                     role="menuitem"
                     aria-haspopup="menu"
@@ -123,7 +220,7 @@ export function ComposerMenus({
                     onClick={() => setCloudOpen(o => !o)}
                     className={clsx(
                       'w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition',
-                      cloudOpen ? 'bg-[var(--bg-hover)]' : agent.cloud ? 'bg-[var(--accent)]/15' : 'hover:bg-[var(--bg-hover)]'
+                      cloudOpen ? 'bg-[var(--bg-hover)]' : agent.cloud && !quickIds.includes(agent.id) ? 'bg-[var(--accent)]/15' : 'hover:bg-[var(--bg-hover)]'
                     )}
                   >
                     <span className="w-5 h-5 rounded-full bg-sky-500/15 flex items-center justify-center shrink-0">
@@ -132,7 +229,7 @@ export function ComposerMenus({
                     <span className="flex-1 min-w-0 text-xs font-semibold">
                       Cloud{' '}
                       <span className="font-normal text-[var(--text-muted)]">
-                        · {agent.cloud ? agent.name : `${cloudAgents.length} agent${cloudAgents.length === 1 ? '' : 's'}`}
+                        · {agent.cloud && !quickIds.includes(agent.id) ? agent.name : `${cloudAgents.length} agent${cloudAgents.length === 1 ? '' : 's'}`}
                       </span>
                     </span>
                     <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)]" />
@@ -156,6 +253,23 @@ export function ComposerMenus({
                     </div>
                   )}
                 </div>
+              )}
+              <div className="my-1 border-t border-[var(--border-subtle)]" />
+              <button
+                role="menuitem"
+                onClick={() => { setCloudOpen(false); setView('all'); }}
+                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition hover:bg-[var(--bg-hover)]"
+              >
+                <span className="w-5 h-5 rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center shrink-0">
+                  <MoreHorizontal className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                </span>
+                <span className="flex-1 min-w-0 text-xs font-semibold">
+                  {t('More agents')}
+                  {hidden > 0 && <span className="font-normal text-[var(--text-muted)]"> · {t('{n} more', { n: hidden })}</span>}
+                </span>
+                <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+              </button>
+              </>
               )}
             </div>
           )}

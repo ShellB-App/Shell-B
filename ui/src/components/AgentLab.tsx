@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
-import { BrainCircuit, Cloud, Copy, Cpu, Network, Plus, RotateCcw, Save, Sparkles, Trash2 } from 'lucide-react';
+import { BrainCircuit, Cloud, Copy, Cpu, Network, Plus, RotateCcw, Save, Sparkles, Store, Trash2 } from 'lucide-react';
 import type { Agent, Effort, ModelInfo, Skill, ToolInfo } from '../types';
 import { api, fmtBytes } from '../api';
 import { AgentAvatar, Modal, btn, toolIcon } from './common';
 import { connectorIcon } from './Integrations';
 import { t as tx } from '../i18n';
+import { AgentStore } from './Gallery';
+import { OPEN_AGENT_STORE, loadAgentPicks, pinAgent, quickAgents } from '../agentPicks';
 
 const isCloudModel = (m: string) => /^(anthropic|gemini|openai|claude-code|antigravity|codex)\//.test(m);
 
@@ -31,9 +33,19 @@ interface Props {
   models: ModelInfo[];
   initialId?: string;
   onChanged: (focusId?: string) => void;
+  /** start chatting with an agent (the Store's Chat button); the Lab closes */
+  onChat?: (id: string) => void;
 }
 
-export function AgentLab({ open, onClose, agents, tools, models, initialId, onChanged }: Props) {
+export function AgentLab({ open, onClose, agents, tools, models, initialId, onChanged, onChat }: Props) {
+  // the Store (community agents) in place of the editor; "Browse the Agent Store" in the agent menu opens the Lab on it
+  const [store, setStore] = useState(false);
+  useEffect(() => {
+    const on = () => setStore(true);
+    window.addEventListener(OPEN_AGENT_STORE, on);
+    return () => window.removeEventListener(OPEN_AGENT_STORE, on);
+  }, []);
+  useEffect(() => { if (!open) setStore(false); }, [open]);
   const [selId, setSelId] = useState<string | undefined>(initialId ?? agents[0]?.id);
   const [draft, setDraft] = useState<Agent | null>(null);
   const [ratings, setRatings] = useState<Record<string, { up: number; down: number }>>({});  // thumbs per agent, last 30 days (server/feedback.py)
@@ -94,9 +106,9 @@ export function AgentLab({ open, onClose, agents, tools, models, initialId, onCh
       <div className="flex-1 min-h-0 flex flex-col sm:flex-row">
         <div className="sm:w-56 shrink-0 border-b sm:border-b-0 sm:border-r border-[var(--border-subtle)] p-2 overflow-y-auto flex sm:flex-col gap-1">
           {agents.map(a => (
-            <button key={a.id} onClick={() => { setIsNew(false); setSelId(a.id); }}
+            <button key={a.id} onClick={() => { setStore(false); setIsNew(false); setSelId(a.id); }}
               className={clsx('flex items-center gap-2 px-2 py-1.5 rounded-lg text-left shrink-0 sm:w-full transition',
-                !isNew && a.id === selId ? 'bg-[var(--accent)]/15' : 'hover:bg-[var(--bg-hover)]')}>
+                !store && !isNew && a.id === selId ? 'bg-[var(--accent)]/15' : 'hover:bg-[var(--bg-hover)]')}>
               <AgentAvatar agent={a} size={24} />
               <span className="min-w-0 hidden sm:block">
                 <span className="block text-xs font-semibold truncate">{a.name}</span>
@@ -106,10 +118,23 @@ export function AgentLab({ open, onClose, agents, tools, models, initialId, onCh
               </span>
             </button>
           ))}
-          <button onClick={() => startNew()} className={clsx(btn.ghost, 'sm:w-full justify-center sm:mt-1 border border-dashed border-[var(--border-strong)] shrink-0')}>
+          <button onClick={() => { setStore(false); startNew(); }} className={clsx(btn.ghost, 'sm:w-full justify-center sm:mt-1 border border-dashed border-[var(--border-strong)] shrink-0')}>
             <Plus className="w-3.5 h-3.5" /><span className="hidden sm:inline">{tx('New agent')}</span>
           </button>
+          <button onClick={() => setStore(true)} aria-pressed={store}
+            className={clsx(btn.ghost, 'sm:w-full justify-center shrink-0 border', store ? 'border-[var(--accent)] bg-[var(--accent)]/15 text-[var(--text-primary)]' : 'border-[var(--border-subtle)]')}>
+            <Store className="w-3.5 h-3.5" /><span>{tx('Store')}</span>
+          </button>
         </div>
+
+        {store ? (
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5">
+            <AgentStore agents={agents} tools={tools}
+              onInstalled={id => { pinAgent(id, quickAgents(agents, loadAgentPicks()).map(a => a.id)); onChanged(); }}
+              onOpen={id => { setStore(false); setIsNew(false); setSelId(id); }}
+              onChat={onChat ? id => { onChat(id); onClose(); } : undefined} />
+          </div>
+        ) : (<>
 
         <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-5">
           <div className="flex items-start gap-3">
@@ -279,9 +304,10 @@ export function AgentLab({ open, onClose, agents, tools, models, initialId, onCh
 
           {error && <div className="text-xs text-red-400">{error}</div>}
         </div>
+        </>)}
       </div>
 
-      <footer className="shrink-0 px-4 py-3 border-t border-[var(--border-subtle)] flex items-center justify-between gap-2 bg-[var(--bg-secondary)]">
+      {!store && <footer className="shrink-0 px-4 py-3 border-t border-[var(--border-subtle)] flex items-center justify-between gap-2 bg-[var(--bg-secondary)]">
         <div className="flex items-center gap-1">
           {!isNew && <button className={btn.ghost} onClick={() => startNew(draft)}><Copy className="w-3.5 h-3.5" />{tx('Duplicate')}</button>}
           {!isNew && draft.builtin && (
@@ -298,7 +324,7 @@ export function AgentLab({ open, onClose, agents, tools, models, initialId, onCh
           {isNew && <button className={btn.subtle} onClick={() => setIsNew(false)}>{tx('Cancel')}</button>}
           <button className={btn.primary} disabled={!dirty || saving || !draft.name.trim()} onClick={save}><Save className="w-3.5 h-3.5" />{isNew ? tx('Create') : tx('Save')}</button>
         </div>
-      </footer>
+      </footer>}
     </Modal>
   );
 }
