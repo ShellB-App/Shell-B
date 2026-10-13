@@ -18,6 +18,7 @@ import { Composer } from './components/Composer';
 import { findMention } from './components/ComposerShortcuts';
 import { ArtifactPanel } from './components/ArtifactPanel';
 import { AgentLab } from './components/AgentLab';
+import { OPEN_AGENT_STORE } from './agentPicks';
 import { CommandPalette, SettingsModal } from './components/Panels';
 import { IncognitoMark, IncognitoNote, IncognitoStrip } from './components/Incognito';
 import { IntegrationsModal, type ToolsTab } from './components/Integrations';
@@ -192,6 +193,12 @@ export function App() {
   // ?shot&settings=<tab> opens Settings on that tab, for headless screenshots (index.html)
   const shotSettings = /[?&]shot\b/.test(location.search) ? /[?&]settings=(\w+)/.exec(location.search)?.[1] : undefined;
   const [modal, setModal] = useState<null | 'agents' | 'tools' | 'settings' | 'palette'>(shotSettings ? 'settings' : null);
+  // "Browse the Agent Store" in the agent menu: open the Agent Lab, which switches itself to the Store
+  useEffect(() => {
+    const on = () => setModal('agents');
+    window.addEventListener(OPEN_AGENT_STORE, on);
+    return () => window.removeEventListener(OPEN_AGENT_STORE, on);
+  }, []);
   const [formFactorOpen, setFormFactorOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsTabId>((shotSettings as SettingsTabId) || 'general');
   const [labAgent, setLabAgent] = useState<string>();
@@ -605,7 +612,8 @@ export function App() {
     <>
       <CommandPalette open={modal === 'palette'} onClose={() => setModal(null)} agents={chatAgents} conversations={convs} theme={theme} actions={paletteActions} settings={settings} />
       <AgentLab open={modal === 'agents'} onClose={() => setModal(null)} agents={agents} tools={tools} models={models} initialId={labAgent}
-        onChanged={id => { loadAgents(); if (id) setLabAgent(id); }} />
+        onChanged={id => { loadAgents(); if (id) setLabAgent(id); }}
+        onChat={id => { const a = agents.find(x => x.id === id); if (a) selectAgent(a); }} />
       <IntegrationsModal open={modal === 'tools'} onClose={() => { setModal(null); setToolsTab(undefined); }} tools={tools} settings={settings} onChanged={loadIntegrations}
         tab={toolsTab} />
       <NewProjectDialog open={newProject} onClose={() => setNewProject(false)}

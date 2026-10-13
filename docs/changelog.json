@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-10-13",
+    "area": "Agents",
+    "title": "Agent Store: install ready-made agents in one click",
+    "summary": "The Agent Lab has a Store with ready-made agents from the Shell:B Agents collection on GitHub: Scribe for editing, Tutor for studying, Quartermaster for the household, Navigator for trips, Gamemaster for tabletop games and Chronicler for journaling. Search them or filter by topic, read what each one can use, and press Install: the agent joins your agent menu and runs on your own model, never a cloud one. More agents in the agent menu, and the phone's agent sheet, have a Browse the Agent Store link. Agent repositories added in Settings → Community show up in the Store too."
+  },
+  {
+    "date": "2026-10-13",
     "area": "Chat",
     "title": "The agent menu shows the agents you use, with the rest under More agents",
     "summary": "The agent menu above the message box now lists your six most-used agents instead of every agent at once. More agents opens the full list with a search box; pin agents there to choose exactly which ones the menu shows, or go back to the most-used ones. Cloud agents stay under Cloud unless you pin them. On a phone, the agent sheet gains a search box. The choice is remembered per browser."

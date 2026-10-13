@@ -13,10 +13,11 @@ import {
   MoreHorizontal,
   Pin,
   Search,
+  Store,
 } from 'lucide-react';
 import type { Agent, Effort, ModelInfo } from '../../types';
 import { AgentAvatar } from '../common';
-import { matchesAgent, quickAgents, recordAgentPick, resetAgentPins, toggleAgentPin, useAgentPicks } from '../../agentPicks';
+import { matchesAgent, openAgentStore, quickAgents, recordAgentPick, resetAgentPins, toggleAgentPin, useAgentPicks } from '../../agentPicks';
 
 export const EFFORTS: { id: Effort; label: string; hint: string }[] = [
   { id: 'off', label: 'Instant', hint: 'No deliberation' },
@@ -191,6 +192,14 @@ export function ComposerMenus({
                       </button>
                     )}
                   </div>
+                  <button
+                    role="menuitem"
+                    onClick={() => { setMenu(null); openAgentStore(); }}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs font-semibold transition hover:bg-[var(--bg-hover)]"
+                  >
+                    <Store className="w-3.5 h-3.5 text-[var(--accent)]" />
+                    {t('Browse the Agent Store')}
+                  </button>
                 </>
               ) : (
               <>

@@ -40,6 +40,17 @@ export function toggleAgentPin(id: string, shown: string[]) {
   save({ ...p, pinned: pinned.includes(id) ? pinned.filter(x => x !== id) : [...pinned, id] });
 }
 
+/** Put an agent in the menu (a fresh install from the Agent Store), keeping what the menu showed. */
+export function pinAgent(id: string, shown: string[]) {
+  const p = loadAgentPicks();
+  const pinned = p.pinned ?? shown;
+  if (!pinned.includes(id)) save({ ...p, pinned: [...pinned, id] });
+}
+
+/** Opens the Agent Lab on its Store; the app shells open the Lab and the Lab switches to the Store. */
+export const OPEN_AGENT_STORE = 'shellb-agent-store';
+export const openAgentStore = () => window.dispatchEvent(new Event(OPEN_AGENT_STORE));
+
 /** Back to the most-used agents. */
 export function resetAgentPins() {
   save({ ...loadAgentPicks(), pinned: null });

@@ -46,6 +46,7 @@ import { Secretary } from '../components/Secretary';
 import { MapsApp } from '../maps/MapsApp';
 import { RadioApp } from '../radio/RadioApp';
 import { AgentLab } from '../components/AgentLab';
+import { OPEN_AGENT_STORE } from '../agentPicks';
 import { isThemeId, nextTheme, setTheme as applyTheme } from '../themes';
 import { isCell, type GuestPanel } from '../cell';
 import { GuestPanelHost } from '../components/CellGuest';
@@ -198,6 +199,12 @@ export function MobileApp() {
   const [doc, setDoc] = useState<DocTarget | null>(null);
   useEffect(() => onDocView(setDoc), []);
   const [modal, setModal] = useState<null | 'agents' | 'tools' | 'settings' | 'palette'>(null);
+  // "Browse the Agent Store" in the agent menu: open the Agent Lab, which switches itself to the Store
+  useEffect(() => {
+    const on = () => setModal('agents');
+    window.addEventListener(OPEN_AGENT_STORE, on);
+    return () => window.removeEventListener(OPEN_AGENT_STORE, on);
+  }, []);
   const [guestPanel, setGuestPanel] = useState<GuestPanel | null>(null);  // a guest's cell: the gateway's panels (CellGuest.tsx)
   const [settingsTab, setSettingsTab] = useState<SettingsTabId>('general');
   const [labAgent, setLabAgent] = useState<string>();
@@ -1171,6 +1178,10 @@ export function MobileApp() {
         onChanged={id => {
           loadAgents();
           if (id) setLabAgent(id);
+        }}
+        onChat={id => {
+          const a = agents.find(x => x.id === id);
+          if (a) selectAgent(a);
         }}
       />
 

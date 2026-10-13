@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
-import { Check, X, Sparkles, Cloud, Search } from 'lucide-react';
+import { Check, X, Sparkles, Cloud, Search, Store } from 'lucide-react';
 import type { Agent } from '../types';
 import { AgentAvatar } from '../components/common';
-import { matchesAgent, recordAgentPick } from '../agentPicks';
+import { matchesAgent, openAgentStore, recordAgentPick } from '../agentPicks';
 import { t } from '../i18n';
 
 interface Props {
@@ -105,6 +105,14 @@ export function MobileAgentPicker({ open, onClose, agents, activeId, onSelect }:
             );
           })}
         </div>
+
+        <button
+          onClick={() => { onClose(); openAgentStore(); }}
+          className="shrink-0 mx-3 mb-3 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-sm font-medium hover:bg-[var(--bg-hover)]"
+        >
+          <Store className="w-4 h-4 text-[var(--accent)]" />
+          {t('Browse the Agent Store')}
+        </button>
       </div>
     </div>
   );

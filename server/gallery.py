@@ -1,8 +1,10 @@
-"""Community gallery: themes and screensavers other people published on GitHub, browsed and installed from Settings.
+"""Community gallery: themes, screensavers, Studio templates and agents other people published on GitHub, browsed and
+installed from Settings, the Studio and the Agent Lab's Store.
 
 Sources (kv `gallery_sources`, the owner can add more): a GitHub repository per kind, laid out like
 ShellB-App/Shell-B-Themes (themes/<id>/theme.json), ShellB-App/Shell-B-Screensavers (screensavers/<id>/index.html
-+ saver.json + preview image) and ShellB-App/Shell-B-Studio-Templates (templates/<id>/template.json + project files). Each is fetched the way the Community Hub fetches skill repositories: one tarball at a
++ saver.json + preview image), ShellB-App/Shell-B-Studio-Templates (templates/<id>/template.json + project files) and
+ShellB-App/Shell-B-Agents (agents/<id>/agent.json). Each is fetched the way the Community Hub fetches skill repositories: one tarball at a
 pinned commit (community.fetch_repo, public-internet guard, tarfile "data" filter, size cap), kept under data/community/
 repos, so browsing works offline once a source has been fetched. The catalogue (index.json, or the folders when a fork
 has none) is cached in kv `gallery_<kind>` with the commit it came from.
@@ -14,6 +16,9 @@ Installing is owner-only and never silent (an admin key or owner session, audit-
     dotfiles) and runs like any Studio screensaver: index.html in a sandboxed iframe, scripts only, no same-origin
   - a template becomes a new Studio project of its kind (same file rules), its brief in DESIGN.md; every use is a new
     project, so nothing is marked installed
+  - an agent goes through clean_agent: only the persona fields the Agent Lab edits, within the format's limits, its
+    tools cut to the agent tools this Shell:B has, never the adult flag; it runs on the owner's default chat model
+    unless it names a local model that is installed, and never on a cloud model, so installing can't send chats out
 Nothing here is reachable by agents: there is no tool, so a chat can't install a look the owner didn't pick.
 """
 import asyncio
@@ -33,17 +38,22 @@ import db
 import themes
 
 router = APIRouter(prefix="/api/gallery")
-KINDS = ("theme", "screensaver", "template")
+KINDS = ("theme", "screensaver", "template", "agent")
 DEFAULT_SOURCES = [
     {"id": "shellb-themes", "kind": "theme", "repo": "ShellB-App/Shell-B-Themes", "ref": "main"},
     {"id": "shellb-screensavers", "kind": "screensaver", "repo": "ShellB-App/Shell-B-Screensavers", "ref": "main"},
     {"id": "shellb-templates", "kind": "template", "repo": "ShellB-App/Shell-B-Studio-Templates", "ref": "main"},
+    {"id": "shellb-agents", "kind": "agent", "repo": "ShellB-App/Shell-B-Agents", "ref": "main"},
 ]
 INSTALLED_KEY = "gallery_installed"
 REFRESH_AFTER = 24 * 3600
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,39}$")
 REPO_RE = re.compile(r"^[\w.-]+/[\w.-]+$")
 URL_RE = re.compile(r"^https?://[^\s\"'<>]{1,200}$")
+HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+MODEL_RE = re.compile(r"^[A-Za-z0-9][\w.\-/:]{0,99}$")
+EFFORTS = ("off", "low", "medium", "high")
+NEEDS = ("tools", "vision", "thinking")
 SAVER_FILES = {".html", ".css", ".js", ".json", ".svg", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".woff2", ".txt", ".md"}
 TEMPLATE_FILES = SAVER_FILES | {".mjs", ".ts", ".ico", ".woff", ".ttf", ".otf", ".py", ".toml", ".yaml", ".yml", ".csv", ".glb", ".gltf", ".mp3", ".ogg", ".wav"}
 TEMPLATE_MAX_FILE, TEMPLATE_MAX_FOLDER = 4 * 2**20, 16 * 2**20
@@ -56,7 +66,10 @@ def sources() -> list[dict]:
     v = db.kv_get("gallery_sources")
     if not isinstance(v, list) or not v:
         return [dict(s) for s in DEFAULT_SOURCES]
-    return [s for s in v if isinstance(s, dict) and s.get("kind") in KINDS and REPO_RE.match(str(s.get("repo") or ""))]
+    out = [s for s in v if isinstance(s, dict) and s.get("kind") in KINDS and REPO_RE.match(str(s.get("repo") or ""))]
+    # a kind added after the owner saved their own list (agents, 2026-10) still gets its official source
+    have = {s["kind"] for s in out}
+    return out + [dict(s) for s in DEFAULT_SOURCES if s["kind"] not in have]
 
 
 def add_source(kind: str, repo: str, ref: str = "main") -> dict:
@@ -185,12 +198,68 @@ def _template_items(root: Path) -> list[dict]:
     return items
 
 
+def clean_agent(spec: dict) -> tuple[dict, list[str], str]:
+    """An agent.json from the internet → the persona fields the Agent Lab stores, notes on what was changed, and the
+    model it asks for ("default" or a tag).
+    Raises ValueError when it isn't an agent at all. Anything outside the format (an id, adult, skills…) is dropped."""
+    from tools import TOOLS
+    if not isinstance(spec, dict):
+        raise ValueError("not an agent file")
+    notes = []
+    s = lambda k, n: str(spec.get(k) or "").strip()[:n]
+    name, title, prompt = s("name", 32), s("title", 40), str(spec.get("systemPrompt") or "").strip()
+    if not name or len(prompt) < 80:
+        raise ValueError("an agent needs a name and a system prompt of at least 80 characters")
+    if len(prompt) > 12000:
+        prompt = prompt[:12000]
+        notes.append("The system prompt was cut to 12,000 characters.")
+    color = spec.get("color")
+    if not (isinstance(color, list) and len(color) == 2 and all(isinstance(c, str) and HEX_RE.match(c) for c in color)):
+        color = ["#475569", "#1e293b"]
+    try:
+        temperature = min(2.0, max(0.0, float(spec.get("temperature", 0.6))))
+    except (TypeError, ValueError):
+        temperature = 0.6
+    effort = spec.get("effort") if spec.get("effort") in EFFORTS else "medium"
+    wanted = [t for t in (spec.get("tools") or []) if isinstance(t, str)][:40]
+    usable = {tid for tid, t in TOOLS.items() if not t.get("hidden") and t.get("scope", "agent") == "agent"}
+    tools = list(dict.fromkeys(t for t in wanted if t in usable))
+    missing = [t for t in wanted if t not in usable]
+    if missing:
+        notes.append(f"Left out tools this Shell:B doesn't have: {', '.join(missing[:8])}.")
+    model = s("model", 100) or "default"
+    agent = {"name": name, "title": title or "Specialist", "avatar": s("avatar", 8) or "◆", "color": color,
+             "description": s("description", 200), "systemPrompt": prompt, "temperature": round(temperature, 2),
+             "effort": effort, "tools": tools, "builtin": False}
+    return agent, notes, (model if model == "default" or MODEL_RE.match(model) else "default")
+
+
+def _agent_items(root: Path) -> list[dict]:
+    items = []
+    for f in sorted(root.glob("agents/*/agent.json")):
+        aid = f.parent.name
+        if not ID_RE.match(aid):
+            continue
+        try:
+            spec = json.loads(f.read_text())
+            agent, _, model = clean_agent(spec)
+        except (OSError, ValueError):
+            continue
+        items.append({"id": aid, "name": agent["name"], "title": agent["title"], "avatar": agent["avatar"], "color": agent["color"],
+                      "blurb": agent["description"], "author": str(spec.get("author") or "")[:80], "authorUrl": _url(spec.get("homepage")),
+                      "license": str(spec.get("license") or "")[:40], "version": str(spec.get("version") or "1.0")[:20],
+                      "tags": [str(t)[:24] for t in (spec.get("tags") or [])[:8] if isinstance(t, str)],
+                      "needs": [n for n in (spec.get("needs") or []) if n in NEEDS], "model": model, "effort": agent["effort"],
+                      "tools": agent["tools"], "path": f"agents/{aid}/agent.json"})
+    return items
+
+
 async def refresh_source(src: dict) -> dict:
     """Fetch the source at its current commit and rebuild its part of the catalogue."""
     repo = await community.resolve_repo(src["repo"])
     sha = await community._ls_remote(repo, src.get("ref") or "main")
     root = await community.fetch_repo(repo, sha)
-    items = {"theme": _theme_items, "screensaver": _saver_items, "template": _template_items}[src["kind"]](root)
+    items = {"theme": _theme_items, "screensaver": _saver_items, "template": _template_items, "agent": _agent_items}[src["kind"]](root)
     entry = {"repo": repo, "ref": src.get("ref") or "main", "sha": sha, "fetched": time.time(), "items": items}
     cache = db.kv_get(f"gallery_{src['kind']}") or {}
     if not isinstance(cache, dict):
@@ -247,6 +316,10 @@ async def listing(kind: str, refresh: bool = False) -> dict:
                     it["installed"] = None
                 if kind == "screensaver" and not db.get_project(rec["target"]):
                     it["installed"] = None
+                if kind == "agent":
+                    from roster import get_agents
+                    if not any(a["id"] == rec["target"] for a in get_agents()):
+                        it["installed"] = None
                 if kind == "template":  # a template is a starting point: every use makes a new project, nothing to mark
                     it.pop("installed", None); it.pop("installedVersion", None)
     return {"kind": kind, "sources": out, "errors": errors}
@@ -350,6 +423,47 @@ def install_template(source: str, item_id: str, name: str = "") -> dict:
     return {"kind": "template", "project": projects.project_summary(db.get_project(pid))}
 
 
+def install_agent(source: str, item_id: str, local_models: set[str] | None = None) -> dict:
+    """The community agent joins the roster (a second install updates the same agent). `local_models` are the Ollama
+    tags installed here: a named local model is used only when it is one of them, otherwise the default agent's model."""
+    from roster import get_agents, get_settings
+    entry, it = _find("agent", source, item_id)
+    try:
+        spec = json.loads((community._repo_dir(entry["repo"], entry["sha"]) / it["path"]).read_text())
+    except (OSError, ValueError):
+        raise KeyError("The agent file is missing from the fetched copy; refresh the store")
+    agent, notes, wanted = clean_agent(spec)
+    agents = get_agents()
+    default = next((a for a in agents if a["id"] == get_settings().get("defaultAgent")), None) or next(iter(agents), {})
+    base = default.get("model") or "ShellB-Swift"
+    names = local_models or set()
+    if wanted != "default" and (wanted in names or f"{wanted}:latest" in names):
+        model = wanted
+    else:
+        model = base
+        if wanted != "default":
+            notes.append(f"{wanted} isn't installed here, so it uses {model}; change it in the Agent Lab.")
+    old = installed().get(f"agent:{source}:{item_id}")
+    ids = {a["id"] for a in agents}
+    if old and old["target"] in ids:
+        aid = old["target"]
+    else:
+        aid = item_id if item_id not in ids else next(f"{item_id}-{n}" for n in range(2, 100) if f"{item_id}-{n}" not in ids)
+    prov = {"repo": entry["repo"], "path": it["path"], "sha": entry["sha"], "author": it["author"], "version": it["version"],
+            "license": it["license"], "source": source, "item": item_id}
+    saved = {**agent, "id": aid, "model": model, "community": prov}
+    idx = next((i for i, a in enumerate(agents) if a["id"] == aid), None)
+    if idx is None:
+        agents.append(saved)
+    else:  # an update keeps what the owner tuned that the file doesn't set: context size, skills, model choice
+        keep = {k: agents[idx][k] for k in ("numCtx", "skills", "model") if k in agents[idx]}
+        agents[idx] = {**saved, **keep}
+        saved = agents[idx]
+    db.kv_set("agents", agents)
+    _remember("agent", source, item_id, aid, entry["sha"], it["version"])
+    return {"kind": "agent", "agent": saved, "notes": notes}
+
+
 # ── routes ────────────────────────────────────────────────────────────────────
 
 @router.get("/sources")
@@ -384,7 +498,7 @@ async def api_list(kind: str, refresh: int = 0):
     try:
         return await listing(kind, refresh=bool(refresh))
     except KeyError:
-        raise HTTPException(404, "kind is theme, screensaver or template")
+        raise HTTPException(404, "kind is theme, screensaver, template or agent")
 
 
 @router.get("/{kind}/{source}/{item_id}/preview")
@@ -413,6 +527,8 @@ async def api_install(req: Request):
     try:
         if kind == "template":
             res = await asyncio.to_thread(install_template, source, item_id, str(b.get("name") or ""))
+        elif kind == "agent":
+            res = await asyncio.to_thread(install_agent, source, item_id, await _local_models())
         else:
             res = await asyncio.to_thread(install_theme if kind == "theme" else install_screensaver, source, item_id)
     except KeyError as e:
@@ -420,11 +536,21 @@ async def api_install(req: Request):
     except ValueError as e:
         raise HTTPException(400, str(e))
     db.audit_log("gallery:install", {"kind": kind, "source": source, "id": item_id,
-                                     "as": res.get("theme", {}).get("id") or res.get("project", {}).get("id")})
+                                     "as": res.get("theme", {}).get("id") or res.get("project", {}).get("id") or res.get("agent", {}).get("id")})
     if kind in ("screensaver", "template"):
         import projects
         projects.cover_later(res["project"]["id"])  # needs the event loop, so here and not in the worker thread
     return res
+
+
+async def _local_models() -> set[str]:
+    """The Ollama tags installed here; empty when Ollama doesn't answer (the agent then uses the default model)."""
+    from tools import OLLAMA
+    try:
+        async with httpx.AsyncClient(timeout=3) as c:
+            return {m["name"] for m in (await c.get(f"{OLLAMA}/api/tags")).json().get("models", [])}
+    except (httpx.HTTPError, ValueError, KeyError, TypeError):
+        return set()
 
 
 def _owner_display() -> str:

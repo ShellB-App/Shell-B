@@ -4046,5 +4046,12 @@
  "Show {name} in the menu": "Afficher {name} dans le menu",
  "Pinned agents show in the menu": "Les agents épinglés s’affichent dans le menu",
  "The menu shows your most-used agents; pin some to choose": "Le menu affiche vos agents les plus utilisés ; épinglez-en pour choisir",
- "Use most-used": "Les plus utilisés"
+ "Use most-used": "Les plus utilisés",
+ "Agent Store": "Boutique d’agents",
+ "Browse the Agent Store": "Parcourir la boutique d’agents",
+ "Ready-made agents for writing, studying, planning, games and more": "Des agents prêts à l’emploi pour écrire, étudier, organiser, jouer et plus encore",
+ "Each agent is a set of instructions that runs on your own model, here on this machine. Installing one adds it to your agent menu; you can change or delete it any time.": "Chaque agent est un ensemble d’instructions qui tourne sur votre propre modèle, ici sur cette machine. L’installer l’ajoute à votre menu d’agents ; vous pouvez le modifier ou le supprimer à tout moment.",
+ "No agents published yet. Make one in the Agent Lab and share it on GitHub.": "Aucun agent publié pour l’instant. Créez-en un dans le Labo des agents et partagez-le sur GitHub.",
+ "Can use: {tools}": "Peut utiliser : {tools}",
+ "{name} is in your agent menu.": "{name} est dans votre menu d’agents."
 }
