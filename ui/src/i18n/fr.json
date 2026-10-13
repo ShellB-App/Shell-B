@@ -4003,5 +4003,16 @@
  "Yours": "Les vôtres",
  "maintained with Shell:B, always listed": "maintenus avec Shell:B, toujours listés",
  "not fetched yet": "pas encore récupéré",
- "{n} items": "{n} éléments"
+ "{n} items": "{n} éléments",
+ "Search agents": "Rechercher un agent",
+ "No agent matches": "Aucun agent ne correspond",
+ "More agents": "Plus d’agents",
+ "{n} more": "{n} de plus",
+ "Remove from the menu": "Retirer du menu",
+ "Show in the menu": "Afficher dans le menu",
+ "Remove {name} from the menu": "Retirer {name} du menu",
+ "Show {name} in the menu": "Afficher {name} dans le menu",
+ "Pinned agents show in the menu": "Les agents épinglés s’affichent dans le menu",
+ "The menu shows your most-used agents; pin some to choose": "Le menu affiche vos agents les plus utilisés ; épinglez-en pour choisir",
+ "Use most-used": "Les plus utilisés"
 }

@@ -2,6 +2,12 @@
   {
     "date": "2026-10-13",
     "area": "Chat",
+    "title": "The agent menu shows the agents you use, with the rest under More agents",
+    "summary": "The agent menu above the message box now lists your six most-used agents instead of every agent at once. More agents opens the full list with a search box; pin agents there to choose exactly which ones the menu shows, or go back to the most-used ones. Cloud agents stay under Cloud unless you pin them. On a phone, the agent sheet gains a search box. The choice is remembered per browser."
+  },
+  {
+    "date": "2026-10-13",
+    "area": "Chat",
     "title": "Going incognito from a chat makes an incognito copy and leaves the chat alone",
     "summary": "Typing /incognito in an open chat, or the new eye button beside Fork in the chat header, now continues in an incognito copy of the chat; the chat you were in stays a normal chat. On a blank chat, /incognito still starts a new incognito chat. A chat started from Notes → Brainstorm, or after opening another chat, is no longer made incognito by an incognito draft left over from earlier."
   },
