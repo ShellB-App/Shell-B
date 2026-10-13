@@ -285,6 +285,7 @@ export function MobileApp() {
     try {
       const c = await api.conversation(id);
       setConv(c);
+      setIncognitoDraft(false);  // the chat's own flag decides now; a leftover draft must not make the next new chat incognito
       setGroupRoute(null);
       setLibrary(false);
       setScheduled(false);
@@ -375,10 +376,12 @@ export function MobileApp() {
   }, [settings, setConv]);
   useInstalledApp(status, newChat);
 
-  const ensureConversation = useCallback(async () => {
+  // `incognito` defaults to the blank chat on screen; paths that start a chat elsewhere (Notes) pass false
+  const ensureConversation = useCallback(async (incognito = incognitoDraft) => {
     if (convRef.current) return convRef.current.id;
-    const c = await api.createConversation(agentId, pendingGroup.current ?? undefined, !pendingGroup.current && incognitoDraft);
+    const c = await api.createConversation(agentId, pendingGroup.current ?? undefined, !pendingGroup.current && incognito);
     pendingGroup.current = null;
+    setIncognitoDraft(false);
     const full: Conversation = { ...c, messages: [], artifacts: [] };
     convRef.current = full;
     setConv(full);
@@ -775,7 +778,7 @@ export function MobileApp() {
                 onDiscuss={async (text, note) => {
                   convRef.current = null;  // "in a new chat": never the one that happens to be open
                   setConv(null);
-                  const id = await ensureConversation();
+                  const id = await ensureConversation(false);
                   const att = await api.upload(id, note);
                   send(text, [att]);
                 }}

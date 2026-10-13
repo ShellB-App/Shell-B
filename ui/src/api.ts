@@ -155,7 +155,7 @@ export const api = {
   patchConversation: (id: string, patch: Partial<ConversationSummary>) =>
     req<ConversationSummary>(`/api/conversations/${id}`, { method: 'PATCH', body: json(patch) }),
   deleteConversation: (id: string) => req(`/api/conversations/${id}`, { method: 'DELETE' }),
-  forkConversation: (id: string, body?: { messageId?: string; title?: string }) =>
+  forkConversation: (id: string, body?: { messageId?: string; title?: string; incognito?: boolean }) =>
     req<ConversationSummary>(`/api/conversations/${id}/fork`, { method: 'POST', body: json(body || {}) }),
   compactConversation: (id: string, body?: { keepRecent?: number }) =>
     req<{ ok: boolean; compacted: boolean; summary?: string; compactedCount?: number; remainingCount?: number; message?: string }>(
