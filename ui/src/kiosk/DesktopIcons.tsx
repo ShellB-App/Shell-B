@@ -128,7 +128,7 @@ export function DesktopIcons({ onOpenApp, status }: Props) {
                 'text-[11px] font-medium tracking-tight mt-1.5 px-1.5 py-0.5 rounded max-w-[90px] truncate drop-shadow',
                 isSel
                   ? 'bg-[var(--accent)] text-[var(--accent-fg)]'
-                  : 'text-[var(--text-primary)] group-hover:text-white'
+                  : 'text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.9),0_0_8px_rgba(0,0,0,0.6)]'
               )}
             >
               {t(app.label)}

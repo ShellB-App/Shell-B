@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2560 1600" width="2560" height="1600" preserveAspectRatio="xMidYMax slice"><defs><filter id="grain" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="4" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><linearGradient id="wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5a3a24"/><stop offset="0.5" stop-color="#9a6a42"/><stop offset="1" stop-color="#4a2e1c"/></linearGradient><filter id="rock" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.0022 0.0035" numOctaves="5" seed="12" result="n"/><feDiffuseLighting in="n" surfaceScale="38" lighting-color="#ffe2b8" result="lit"><feDistantLight azimuth="215" elevation="38"/></feDiffuseLighting><feComposite in="lit" in2="SourceGraphic" operator="arithmetic" k1="1.15" k2="0" k3="0" k4="0"/></filter><radialGradient id="torch"><stop offset="0" stop-color="#ffb766" stop-opacity="0.45"/><stop offset="0.45" stop-color="#ffb766" stop-opacity="0.18"/><stop offset="1" stop-color="#ffb766" stop-opacity="0"/></radialGradient><radialGradient id="vignette" cx="0.5" cy="0.5" r="0.75"><stop offset="0.45" stop-color="#120a06" stop-opacity="0"/><stop offset="1" stop-color="#120a06" stop-opacity="0.85"/></radialGradient></defs><rect width="2560" height="1600" fill="url(#wall)" filter="url(#rock)"/><ellipse cx="1075.2" cy="992.0" rx="1408.0" ry="880.0000000000001" fill="url(#torch)" style="mix-blend-mode:screen"/><svg viewBox='0 0 1600 420' x='179.2' y='576' width='2201.6' height='577.9' opacity='0.82'>
+  <defs>
+    <!-- paint soaked into rough limestone: ragged edges and a mottled fill -->
+    <filter id='lx-rough' x='-5%' y='-5%' width='110%' height='110%'>
+      <feTurbulence type='fractalNoise' baseFrequency='0.035' numOctaves='3' seed='7' result='n'/>
+      <feDisplacementMap in='SourceGraphic' in2='n' scale='5' xChannelSelector='R' yChannelSelector='G' result='d'/>
+      <feTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='2' seed='3' result='grain'/>
+      <feColorMatrix in='grain' type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -0.6 1.1' result='holes'/>
+      <feComposite in='d' in2='holes' operator='in'/>
+    </filter>
+    <filter id='lx-spray' x='-40%' y='-40%' width='180%' height='180%'>
+      <feGaussianBlur stdDeviation='9' result='b'/>
+      <feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='1' seed='11' result='g'/>
+      <feComposite in='b' in2='g' operator='in'/>
+    </filter>
+    <!-- a left hand, fingers up, for the stencils -->
+    <path id='lx-hand' d='M0 70 C-4 52 -8 40 -16 30 C-21 23 -16 17 -10 22 L-2 33 L-6 -6 C-7 -14 2 -15 3 -7 L7 22 L9 -18 C10 -26 19 -25 18 -17 L17 22 L23 -12 C25 -20 33 -18 31 -10 L25 26 L33 2 C36 -5 43 -2 41 5 L32 40 C30 54 28 64 26 72 Z'/>
+    <mask id='lx-hm1' maskUnits='userSpaceOnUse'><rect x='-200' y='-200' width='2000' height='800' fill='white'/><use href='#hand' transform='translate(1056 112) rotate(-12) scale(1.15)' fill='black'/></mask>
+    <mask id='lx-hm2' maskUnits='userSpaceOnUse'><rect x='-200' y='-200' width='2000' height='800' fill='white'/><use href='#hand' transform='translate(1112 92) rotate(9) scale(1.05)' fill='black'/></mask>
+    <mask id='lx-hm3' maskUnits='userSpaceOnUse'><rect x='-200' y='-200' width='2000' height='800' fill='white'/><use href='#hand' transform='translate(232 66) rotate(-4) scale(1.1)' fill='black'/></mask>
+  </defs>
+
+  <!-- hand stencils: ochre blown around a hand pressed to the wall -->
+  <g opacity='0.85'>
+    <circle cx='1072' cy='140' r='64' fill='#b3412a' filter='url(#lx-spray)' mask='url(#lx-hm1)'/>
+    <circle cx='1128' cy='118' r='58' fill='#7a2a1c' filter='url(#lx-spray)' mask='url(#lx-hm2)'/>
+    <circle cx='248' cy='96' r='60' fill='#b3412a' filter='url(#lx-spray)' mask='url(#lx-hm3)'/>
+  </g>
+
+  <g filter='url(#lx-rough)'>
+    <!-- great aurochs, facing right, the Hall of the Bulls -->
+    <path fill='#1c120d' fill-opacity='0.12' stroke='#1c120d' stroke-width='9' stroke-linejoin='round' stroke-linecap='round'
+      d='M470 250 C480 224 504 206 540 198 C600 188 660 186 716 176 C756 168 786 150 808 142 C824 136 840 140 850 150
+         C866 164 878 182 882 198 C884 210 876 218 864 220 C852 222 844 230 838 242 C830 258 818 268 804 272
+         C800 292 798 310 794 330 L784 330 C784 312 782 296 778 284 C740 290 690 292 652 288 C640 288 628 290 618 292
+         C616 306 614 318 612 330 L602 330 C602 316 600 304 596 294 C570 290 540 288 516 284 C510 300 506 318 504 332
+         L494 332 C494 312 492 296 488 282 C476 276 468 266 470 250 Z'/>
+    <path fill='none' stroke='#1c120d' stroke-width='8' stroke-linecap='round'
+      d='M818 144 C806 112 812 90 838 76 M846 148 C852 116 874 100 904 98 M470 250 C454 260 446 282 448 310'/>
+    <path fill='#1c120d' d='M854 168 a5 4 0 1 0 0.1 0 Z'/>
+    <!-- red ochre wash on the bull's shoulder -->
+    <path fill='#9c3a22' fill-opacity='0.55' d='M700 192 C740 186 780 180 806 170 C820 196 812 230 790 252 C760 262 720 262 690 250 C676 230 680 206 700 192 Z'/>
+
+    <!-- Chinese horse, facing left: round belly, red body, black mane and legs -->
+    <path fill='#a9532c' fill-opacity='0.82' stroke='#1c120d' stroke-width='6' stroke-linejoin='round'
+      d='M112 246 C116 234 130 214 150 198 C156 190 160 184 164 178 L170 168 L176 182 C200 186 236 190 280 194
+         C330 198 368 206 384 226 C392 238 390 254 382 264 C378 276 374 290 372 306 L376 330 L364 330 L360 304
+         C350 290 342 284 330 284 C300 300 250 302 222 290 C218 302 214 316 212 330 L200 330 C200 314 200 300 198 286
+         C190 272 182 258 176 246 C166 254 150 262 130 262 C118 262 110 256 112 246 Z'/>
+    <path fill='none' stroke='#1c120d' stroke-width='10' stroke-linecap='round' d='M170 172 C192 180 220 186 252 190'/>
+    <path fill='none' stroke='#1c120d' stroke-width='7' stroke-linecap='round' d='M384 228 C402 236 408 256 404 286'/>
+
+    <!-- stag, facing left, antlers raised -->
+    <g transform='translate(-50 0)'>
+    <path fill='#1c120d' fill-opacity='0.08' stroke='#1c120d' stroke-width='5.5' stroke-linejoin='round'
+      d='M1250 250 C1254 238 1262 230 1272 226 C1280 214 1288 206 1296 206 C1300 216 1304 226 1312 232 C1340 236 1380 236 1410 240
+         C1430 244 1440 256 1438 270 C1436 288 1434 306 1432 322 L1422 322 C1422 306 1420 292 1416 282 C1390 286 1360 286 1338 282
+         C1336 298 1334 312 1332 324 L1322 324 C1322 308 1320 294 1316 282 C1300 272 1288 262 1280 256 C1270 258 1258 258 1250 250 Z'/>
+    <path fill='none' stroke='#1c120d' stroke-width='4.5' stroke-linecap='round'
+      d='M1292 208 C1280 180 1270 160 1250 146 M1272 168 C1258 166 1248 160 1240 150 M1262 154 C1262 140 1256 128 1248 120
+         M1300 208 C1306 180 1318 160 1340 148 M1316 172 C1330 170 1340 164 1348 152 M1328 158 C1332 144 1340 134 1352 128'/>
+    </g>
+
+    <!-- bison, facing right: the hump and the beard, black with ochre flank -->
+    <path fill='#1c120d' fill-opacity='0.78' stroke='#1c120d' stroke-width='5' stroke-linejoin='round' transform='translate(-4 0)'
+      d='M1462 296 C1462 272 1476 254 1496 246 C1506 222 1524 204 1550 200 C1570 198 1584 210 1592 226 C1600 240 1604 256 1598 272
+         C1594 284 1586 290 1578 292 C1574 304 1566 312 1556 316 C1556 326 1558 334 1560 342 L1550 342 C1546 334 1544 326 1542 318
+         C1526 320 1508 318 1496 314 C1494 324 1492 334 1490 342 L1480 342 C1480 330 1478 318 1472 310 C1466 306 1462 302 1462 296 Z'/>
+    <path fill='#a9532c' fill-opacity='0.75' transform='translate(-4 0)' d='M1500 262 C1520 254 1546 252 1562 262 C1566 280 1556 296 1536 300 C1516 302 1500 296 1494 284 C1492 274 1494 266 1500 262 Z'/>
+    <path fill='none' stroke='#1c120d' stroke-width='4' stroke-linecap='round' transform='translate(-4 0)' d='M1586 222 C1594 208 1604 204 1612 208'/>
+
+    <!-- signs: rows of red dots and a grid, as in the Shaft and the Axial Gallery -->
+    <g fill='#b3412a'>
+      <circle cx='930' cy='238' r='7'/><circle cx='952' cy='234' r='7'/><circle cx='974' cy='238' r='7'/><circle cx='996' cy='234' r='7'/>
+      <circle cx='941' cy='262' r='6'/><circle cx='963' cy='258' r='6'/><circle cx='985' cy='262' r='6'/>
+      <circle cx='446' cy='120' r='6'/><circle cx='466' cy='116' r='6'/><circle cx='486' cy='120' r='6'/>
+    </g>
+    <path fill='none' stroke='#7a2a1c' stroke-width='4' transform='translate(-64 0)' d='M1180 250 h70 v40 h-70 Z M1203 250 v40 M1227 250 v40 M1180 270 h70'/>
+  </g>
+</svg>
+<rect width="2560" height="1600" fill="url(#vignette)"/><rect width="2560" height="1600" filter="url(#grain)" opacity="0.32" style="mix-blend-mode:overlay"/></svg>
